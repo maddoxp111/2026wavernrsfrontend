@@ -945,27 +945,6 @@
     }
   }
 
-  // ── Profile Image Upload ──
-  async function uploadProfileImage(inputId, field) {
-    const input = document.getElementById(inputId);
-    const file = input?.files?.[0];
-    if (!file) return;
-    const statusEl = document.getElementById(`${field}-status`);
-    if (statusEl) statusEl.textContent = 'Uploading…';
-    try {
-      const form = new FormData();
-      form.append('image', file);
-      const res = await apiUpload('/upload/image', form);
-      const urlInput = document.getElementById(field === 'profile_image_url' ? 'edit-avatar' : 'edit-banner');
-      if (urlInput) urlInput.value = res.url;
-      if (statusEl) statusEl.textContent = '✓ Uploaded';
-      const preview = document.getElementById('profile_image_url-preview');
-      if (field === 'profile_image_url' && preview) { preview.src = res.url; preview.style.display = ''; }
-    } catch (err) {
-      if (statusEl) statusEl.textContent = 'Upload failed';
-    }
-  }
-
   // ── Comp Audio Upload ──
   let compAudioFiles = []; // Array of File objects queued for upload when Comp is submitted
 
