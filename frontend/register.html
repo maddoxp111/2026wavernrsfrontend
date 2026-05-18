@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stream — sign up</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+<div class="auth-card">
+  <div class="auth-logo">stream</div>
+  <h1 class="auth-title">Create account</h1>
+  <p class="auth-subtitle">Upload and share your music</p>
+
+  <div id="alert-container"></div>
+
+  <div class="form-group">
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="yourname" autocomplete="username">
+    <span class="form-hint">Lowercase letters, numbers, underscores. Min 3 characters.</span>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="Min 6 characters" autocomplete="new-password">
+  </div>
+  <div class="form-group">
+    <label for="password2">Confirm password</label>
+    <input type="password" id="password2" placeholder="••••••••" autocomplete="new-password">
+  </div>
+
+  <button class="btn btn-primary btn-lg" style="width:100%" id="register-btn" onclick="doRegister()">Create account</button>
+
+  <div class="auth-footer">
+    Already have an account? <a href="/login.html">Log in</a>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  if (isLoggedIn()) location.href = '/index.html';
+
+  document.getElementById('password2').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doRegister();
+  });
+
+  async function doRegister() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const password2 = document.getElementById('password2').value;
+    clearAlert('alert-container');
+
+    if (!username || !password || !password2) return showAlert('alert-container', 'Please fill in all fields');
+    if (password !== password2) return showAlert('alert-container', 'Passwords do not match');
+    if (!/^[a-z0-9_]{3,}$/i.test(username)) return showAlert('alert-container', 'Username can only contain letters, numbers, and underscores (min 3 chars)');
+
+    const btn = document.getElementById('register-btn');
+    btn.textContent = 'Creating account…';
+    btn.disabled = true;
+
+    try {
+      const { token, user } = await api('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      location.href = '/dashboard.html';
+    } catch (err) {
+      showAlert('alert-container', err.message);
+      btn.textContent = 'Create account';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

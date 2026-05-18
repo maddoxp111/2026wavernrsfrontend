@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stream — discover</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/index.html" class="nav-logo">stream</a>
+  <div class="nav-links">
+    <a href="/index.html" id="tab-discover-link" class="active">Discover</a>
+    <a href="/index.html?tab=trending" id="tab-trending-link">Trending</a>
+  </div>
+  <div style="flex:1;max-width:300px;">
+    <input type="text" id="search-input" placeholder="Search tracks or artists…" style="background:var(--bg);">
+  </div>
+  <div class="nav-right" id="nav-right"></div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title" id="page-title">Discover</h1>
+    <div id="genre-filter" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
+  </div>
+
+  <div id="alert-container"></div>
+
+  <div id="tracks-container">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Player -->
+<div id="player" class="hidden">
+  <div class="player-track">
+    <div class="player-cover" id="player-cover">🎵</div>
+    <div>
+      <div class="player-title" id="player-title">—</div>
+      <div class="player-artist" id="player-artist">—</div>
+    </div>
+  </div>
+  <div class="player-controls">
+    <button class="player-btn" onclick="togglePlay()" id="player-play-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+  <div class="player-progress">
+    <span class="player-time" id="time-elapsed">0:00</span>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <span class="player-time" id="time-total">0:00</span>
+  </div>
+  <div class="player-volume">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-secondary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  let activeTab = params.get('tab') || 'discover';
+  let activeGenre = null;
+
+  document.getElementById('tab-discover-link').className = activeTab === 'discover' ? 'active' : '';
+  document.getElementById('tab-trending-link').className = activeTab === 'trending' ? 'active' : '';
+  document.getElementById('page-title').textContent = activeTab === 'trending' ? 'Trending' : 'Discover';
+
+  updateNav();
+  initPlayer();
+
+  async function loadGenres() {
+    try {
+      const genres = await api('/discover/genres');
+      const el = document.getElementById('genre-filter');
+      if (!genres.length) return;
+      el.innerHTML = `<button class="badge" style="cursor:pointer;background:var(--purple);color:white;" onclick="filterGenre(null)">All</button>` +
+        genres.map(g => `<button class="badge" style="cursor:pointer;" onclick="filterGenre('${g}')">${g}</button>`).join('');
+    } catch (_) {}
+  }
+
+  function filterGenre(genre) {
+    activeGenre = genre;
+    loadTracks();
+  }
+
+  async function loadTracks() {
+    const container = document.getElementById('tracks-container');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const endpoint = activeTab === 'trending' ? '/discover/trending' : `/discover${activeGenre ? `?genre=${activeGenre}` : ''}`;
+      const tracks = await api(endpoint);
+
+      if (!tracks.length) {
+        container.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">🎵</div>
+          <div class="empty-title">No tracks yet</div>
+          <div class="empty-desc">Be the first to upload something.</div>
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="track-grid">${tracks.map(trackCard).join('')}</div>`;
+    } catch (err) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load tracks</div></div>`;
+    }
+  }
+
+  function trackCard(t) {
+    const cover = t.cover_url
+      ? `<img src="${t.cover_url}" alt="cover" onerror="this.style.display='none'">`
+      : `<span class="track-cover-placeholder">🎵</span>`;
+    return `
+      <div class="track-card" onclick="openTrack('${t.id}')">
+        <div class="track-cover">
+          ${cover}
+          <div class="track-play-overlay">
+            <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="track-info">
+          <div class="track-title">${t.title}</div>
+          <div class="track-artist">${t.artists?.display_name || 'Unknown'}</div>
+          <div class="track-meta">
+            <span>${fmtNum(t.play_count)} plays</span>
+            ${t.genre ? `<span class="badge">${t.genre}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function playThis(track) {
+    playTrack({
+      ...track,
+      artist_name: track.artists?.display_name,
+    });
+  }
+
+  function openTrack(id) {
+    location.href = `/track.html?id=${id}`;
+  }
+
+  loadGenres();
+  loadTracks();
+</script>
+</body>
+</html>

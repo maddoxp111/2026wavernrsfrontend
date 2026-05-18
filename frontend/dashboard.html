@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stream — dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/index.html" class="nav-logo">stream</a>
+  <div class="nav-links">
+    <a href="/index.html">Discover</a>
+  </div>
+  <div class="nav-right" id="nav-right"></div>
+</nav>
+
+<div class="container" style="padding-top:32px;padding-bottom:48px;">
+  <div id="alert-container" style="margin-bottom:16px;"></div>
+
+  <div class="dashboard-grid" id="dashboard">
+    <div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Player -->
+<div id="player" class="hidden">
+  <div class="player-track">
+    <div class="player-cover" id="player-cover">🎵</div>
+    <div>
+      <div class="player-title" id="player-title">—</div>
+      <div class="player-artist" id="player-artist">—</div>
+    </div>
+  </div>
+  <div class="player-controls">
+    <button class="player-btn player-btn-play" onclick="togglePlay()" id="player-play-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+  <div class="player-progress">
+    <span class="player-time" id="time-elapsed">0:00</span>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <span class="player-time" id="time-total">0:00</span>
+  </div>
+  <div class="player-volume">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-secondary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-title">Delete track?</div>
+    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the track from your profile. The file will remain on Internet Archive.</p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+<script>
+  if (!isLoggedIn()) location.href = '/login.html';
+
+  updateNav();
+  initPlayer();
+
+  let me = null;
+  let artist = null;
+  let tracks = [];
+  let pendingDeleteId = null;
+
+  async function loadDashboard() {
+    try {
+      me = await api('/auth/me');
+      artist = me.artist;
+      tracks = await api(`/artists/${artist.id}/tracks`);
+      render();
+    } catch (err) {
+      if (err.message.includes('401')) return location.href = '/login.html';
+      showAlert('alert-container', 'Failed to load dashboard: ' + err.message);
+    }
+  }
+
+  function render() {
+    const totalPlays = tracks.reduce((s, t) => s + (t.play_count || 0), 0);
+    const avatarContent = artist.profile_image_url
+      ? `<img src="${artist.profile_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : artist.display_name?.[0]?.toUpperCase();
+
+    document.getElementById('dashboard').innerHTML = `
+      <!-- Sidebar -->
+      <div class="dashboard-sidebar">
+        <!-- Profile card -->
+        <div class="card" style="padding:20px;text-align:center;margin-bottom:16px;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--purple);color:white;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;margin:0 auto 12px;overflow:hidden;">
+            ${avatarContent}
+          </div>
+          <div style="font-weight:700;font-size:16px;">${artist.display_name}</div>
+          <div style="font-size:13px;color:var(--text-secondary);">@${me.username}</div>
+          <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${tracks.length}</strong><br>tracks</div>
+            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${fmtNum(totalPlays)}</strong><br>plays</div>
+          </div>
+          <a href="/artist.html?id=${artist.id}" class="btn btn-secondary btn-sm" style="margin-top:14px;width:100%;justify-content:center;">View public page</a>
+        </div>
+
+        <!-- Edit profile -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Edit Profile</div>
+          <div class="form-group">
+            <label>Display name</label>
+            <input type="text" id="edit-name" value="${artist.display_name || ''}" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label>Bio</label>
+            <textarea id="edit-bio" rows="3" placeholder="Tell people about yourself…">${artist.bio || ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Profile image URL</label>
+            <input type="url" id="edit-avatar" value="${artist.profile_image_url || ''}" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Banner image URL</label>
+            <input type="url" id="edit-banner" value="${artist.banner_url || ''}" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" id="edit-location" value="${artist.location || ''}" placeholder="City, Country">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Website</label>
+            <input type="url" id="edit-website" value="${artist.website || ''}" placeholder="https://...">
+          </div>
+          <div id="profile-alert" style="margin-top:10px;"></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="saveProfile()">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div>
+        <!-- Upload card -->
+        <div class="card" style="padding:24px;margin-bottom:24px;">
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Upload a track</div>
+
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" id="upload-title" placeholder="Track name">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="form-group">
+              <label>Genre</label>
+              <input type="text" id="upload-genre" placeholder="e.g. Hip-Hop, R&B">
+            </div>
+            <div class="form-group">
+              <label>Cover image URL</label>
+              <input type="url" id="upload-cover" placeholder="https://...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="upload-desc" rows="2" placeholder="Optional note about the track…"></textarea>
+          </div>
+
+          <!-- Upload zone -->
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <div class="upload-zone-icon">🎵</div>
+            <div class="upload-zone-text" id="upload-zone-text">Drop audio file here or click to browse</div>
+            <div class="upload-zone-hint">MP3, WAV, FLAC, M4A — up to 200MB</div>
+          </div>
+          <input type="file" id="file-input" accept="audio/*" style="display:none" onchange="onFileSelect(event)">
+
+          <div class="or-divider">or paste a Google Drive link</div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">
+          </div>
+
+          <div id="upload-alert" style="margin-top:12px;"></div>
+          <div id="upload-progress" style="display:none;margin-top:12px;">
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;" id="upload-status">Uploading to Internet Archive…</div>
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;background:var(--purple);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="upload-btn" onclick="doUpload()">Upload track</button>
+        </div>
+
+        <!-- Tracks list -->
+        <div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your tracks <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${tracks.length})</span></div>
+          <div id="my-tracks"></div>
+        </div>
+      </div>`;
+
+    renderTracks();
+  }
+
+  function renderTracks() {
+    const el = document.getElementById('my-tracks');
+    if (!tracks.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-icon">🎵</div><div class="empty-title">No tracks yet</div><div class="empty-desc">Upload your first track above.</div></div>`;
+      return;
+    }
+
+    el.innerHTML = `<div class="track-list">` + tracks.map(t => {
+      const cover = t.cover_url ? `<img src="${t.cover_url}" alt="">` : '🎵';
+      return `
+        <div class="track-row">
+          <div class="track-row-cover">${cover}</div>
+          <div class="track-row-info">
+            <div class="track-row-title">${t.title}</div>
+            <div class="track-row-artist">${t.genre || ''} · ${fmtNum(t.play_count)} plays · ${timeAgo(t.created_at)}</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <a href="/track.html?id=${t.id}" class="btn btn-secondary btn-sm">Open</a>
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete('${t.id}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+  }
+
+  let selectedFile = null;
+
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.add('dragover');
+  }
+  function onDragLeave() {
+    document.getElementById('upload-zone').classList.remove('dragover');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  }
+  function onFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) setFile(file);
+  }
+  function setFile(file) {
+    selectedFile = file;
+    document.getElementById('upload-zone-text').textContent = `✓ ${file.name}`;
+    document.getElementById('drive-url').value = '';
+  }
+
+  async function doUpload() {
+    const title = document.getElementById('upload-title').value.trim();
+    const genre = document.getElementById('upload-genre').value.trim();
+    const cover_url = document.getElementById('upload-cover').value.trim();
+    const description = document.getElementById('upload-desc').value.trim();
+    const drive_url = document.getElementById('drive-url').value.trim();
+    clearAlert('upload-alert');
+
+    if (!title) return showAlert('upload-alert', 'Title is required');
+    if (!selectedFile && !drive_url) return showAlert('upload-alert', 'Choose a file or paste a Google Drive link');
+
+    const btn = document.getElementById('upload-btn');
+    btn.disabled = true;
+    btn.textContent = 'Uploading…';
+
+    const progress = document.getElementById('upload-progress');
+    const bar = document.getElementById('upload-bar');
+    const status = document.getElementById('upload-status');
+    progress.style.display = 'block';
+
+    // Fake progress animation while uploading
+    let pct = 0;
+    const timer = setInterval(() => {
+      pct = Math.min(pct + Math.random() * 8, 85);
+      bar.style.width = pct + '%';
+    }, 600);
+
+    try {
+      status.textContent = drive_url ? 'Downloading from Drive & uploading to Internet Archive…' : 'Uploading to Internet Archive…';
+
+      let track;
+      if (selectedFile) {
+        const form = new FormData();
+        form.append('file', selectedFile);
+        form.append('title', title);
+        if (genre) form.append('genre', genre);
+        if (cover_url) form.append('cover_url', cover_url);
+        if (description) form.append('description', description);
+        track = await apiUpload('/tracks', form);
+      } else {
+        track = await api('/tracks', {
+          method: 'POST',
+          body: JSON.stringify({ title, genre, cover_url, description, drive_url }),
+        });
+      }
+
+      clearInterval(timer);
+      bar.style.width = '100%';
+      status.textContent = '✓ Upload complete!';
+
+      tracks.unshift(track);
+      selectedFile = null;
+      document.getElementById('upload-zone-text').textContent = 'Drop audio file here or click to browse';
+      document.getElementById('upload-title').value = '';
+      document.getElementById('upload-genre').value = '';
+      document.getElementById('upload-cover').value = '';
+      document.getElementById('upload-desc').value = '';
+      document.getElementById('drive-url').value = '';
+      document.getElementById('file-input').value = '';
+
+      renderTracks();
+      showAlert('upload-alert', '✓ Track uploaded!', 'success');
+    } catch (err) {
+      clearInterval(timer);
+      showAlert('upload-alert', err.message || 'Upload failed');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Upload track';
+      setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0%'; }, 3000);
+    }
+  }
+
+  async function saveProfile() {
+    clearAlert('profile-alert');
+    const updates = {
+      display_name: document.getElementById('edit-name').value.trim(),
+      bio: document.getElementById('edit-bio').value.trim(),
+      profile_image_url: document.getElementById('edit-avatar').value.trim(),
+      banner_url: document.getElementById('edit-banner').value.trim(),
+      location: document.getElementById('edit-location').value.trim(),
+      website: document.getElementById('edit-website').value.trim(),
+    };
+    if (!updates.display_name) return showAlert('profile-alert', 'Display name is required');
+    try {
+      artist = await api(`/artists/${artist.id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      });
+      showAlert('profile-alert', '✓ Profile saved', 'success');
+    } catch (err) {
+      showAlert('profile-alert', err.message);
+    }
+  }
+
+  function confirmDelete(id) {
+    pendingDeleteId = id;
+    document.getElementById('delete-modal').classList.add('open');
+    document.getElementById('confirm-delete-btn').onclick = doDelete;
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').classList.remove('open');
+    pendingDeleteId = null;
+  }
+
+  async function doDelete() {
+    if (!pendingDeleteId) return;
+    try {
+      await api(`/tracks/${pendingDeleteId}`, { method: 'DELETE' });
+      tracks = tracks.filter(t => t.id !== pendingDeleteId);
+      closeDeleteModal();
+      renderTracks();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

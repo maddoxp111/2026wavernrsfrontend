@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>stream</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/index.html" class="nav-logo">stream</a>
+  <div class="nav-links">
+    <a href="/index.html">Discover</a>
+    <a href="/index.html?tab=trending">Trending</a>
+  </div>
+  <div class="nav-right" id="nav-right"></div>
+</nav>
+
+<div class="container" style="max-width:760px;">
+  <div id="track-container">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- Player -->
+<div id="player" class="hidden">
+  <div class="player-track">
+    <div class="player-cover" id="player-cover">🎵</div>
+    <div>
+      <div class="player-title" id="player-title">—</div>
+      <div class="player-artist" id="player-artist">—</div>
+    </div>
+  </div>
+  <div class="player-controls">
+    <button class="player-btn player-btn-play" onclick="togglePlay()" id="player-play-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>
+  <div class="player-progress">
+    <span class="player-time" id="time-elapsed">0:00</span>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <span class="player-time" id="time-total">0:00</span>
+  </div>
+  <div class="player-volume">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-secondary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.05" value="0.8">
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+<script>
+  updateNav();
+  initPlayer();
+
+  const trackId = new URLSearchParams(location.search).get('id');
+  let track = null;
+  let liked = false;
+
+  if (!trackId) location.href = '/index.html';
+
+  async function loadTrack() {
+    try {
+      track = await api(`/tracks/${trackId}`);
+      liked = track.user_liked;
+      document.title = `${track.title} — stream`;
+      renderTrack();
+      playTrack({ ...track, artist_name: track.artists?.display_name });
+      loadComments();
+    } catch (err) {
+      document.getElementById('track-container').innerHTML =
+        `<div class="empty-state"><div class="empty-title">Track not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+    }
+  }
+
+  function renderTrack() {
+    const artist = track.artists || {};
+    const cover = track.cover_url
+      ? `<img src="${track.cover_url}" alt="cover" style="width:100%;height:100%;object-fit:cover;">`
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;">🎵</div>`;
+
+    document.getElementById('track-container').innerHTML = `
+      <div style="padding:32px 0;">
+        <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:var(--purple-bg);flex-shrink:0;">
+            ${cover}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;">${track.title}</div>
+            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-secondary);font-weight:500;">${artist.display_name || 'Unknown'}</a>
+            ${track.genre ? `<div style="margin-top:10px;"><span class="badge">${track.genre}</span></div>` : ''}
+            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-secondary);line-height:1.6;">${track.description}</p>` : ''}
+            <div style="display:flex;align-items:center;gap:12px;margin-top:20px;">
+              <button class="btn btn-primary" onclick="togglePlay()" id="main-play-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Play
+              </button>
+              <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
+                ${liked ? '♥' : '♡'} ${fmtNum(track.like_count)}
+              </button>
+              <span style="font-size:13px;color:var(--text-tertiary);">${fmtNum(track.play_count)} plays</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:40px;">
+          <h2 class="section-title">Comments</h2>
+          <div id="comment-form" style="margin-bottom:20px;">
+            ${isLoggedIn() ? `
+              <div style="display:flex;gap:10px;align-items:flex-start;">
+                <textarea id="comment-input" placeholder="Add a comment…" style="flex:1;min-height:60px;"></textarea>
+                <button class="btn btn-primary" onclick="postComment()">Post</button>
+              </div>
+            ` : `<p style="font-size:14px;color:var(--text-secondary);">
+              <a href="/login.html" style="color:var(--purple);font-weight:500;">Log in</a> to leave a comment.
+            </p>`}
+          </div>
+          <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>`;
+  }
+
+  async function toggleLike() {
+    if (!isLoggedIn()) return location.href = '/login.html';
+    try {
+      const res = await api(`/tracks/${trackId}/like`, { method: 'POST' });
+      liked = res.liked;
+      const count = liked ? track.like_count + 1 : track.like_count - 1;
+      track.like_count = count;
+      document.getElementById('like-btn').innerHTML = `${liked ? '♥' : '♡'} ${fmtNum(count)}`;
+    } catch (_) {}
+  }
+
+  async function loadComments() {
+    try {
+      const comments = await api(`/tracks/${trackId}/comments`);
+      const el = document.getElementById('comments-list');
+      if (!el) return;
+      if (!comments.length) {
+        el.innerHTML = `<p style="color:var(--text-tertiary);font-size:14px;">No comments yet.</p>`;
+        return;
+      }
+      el.innerHTML = comments.map(c => `
+        <div class="comment-item">
+          <div class="comment-avatar">${c.users?.username?.[0]?.toUpperCase() || '?'}</div>
+          <div>
+            <span class="comment-username">${c.users?.username || 'unknown'}</span>
+            <span class="comment-time">${timeAgo(c.created_at)}</span>
+            <div class="comment-content">${c.content}</div>
+          </div>
+        </div>`).join('');
+    } catch (_) {}
+  }
+
+  async function postComment() {
+    const input = document.getElementById('comment-input');
+    const content = input?.value.trim();
+    if (!content) return;
+    try {
+      await api(`/tracks/${trackId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+      input.value = '';
+      loadComments();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  loadTrack();
+</script>
+</body>
+</html>
