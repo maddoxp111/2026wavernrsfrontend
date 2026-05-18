@@ -189,16 +189,41 @@ function initPlayer() {
 
   document.addEventListener('touchstart', _unlockIOS, { once: true, passive: true });
 
-  // Restore saved track
+  // Save playback state before navigating away
+  window.addEventListener('pagehide', () => {
+    if (audio && currentTrack && audio.src) {
+      currentTrack._savedTime = audio.currentTime;
+      currentTrack._wasPlaying = !audio.paused;
+      localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
+    }
+  });
+
+  // Restore saved track and resume playback if it was playing
   const saved = localStorage.getItem(PLAYER_KEY);
   if (saved) {
     try {
       const t = JSON.parse(saved);
       currentTrack = t;
       _renderAll(t);
-      audio.src = t.ia_url;
-      audio.currentTime = t._savedTime || 0;
       document.getElementById('player')?.classList.remove('hidden');
+      if (t.ia_url) {
+        const resumeTime = t._savedTime || 0;
+        const wasPlaying = t._wasPlaying;
+        audio.src = t.ia_url;
+        if (wasPlaying) {
+          // Mute while seeking to avoid hearing audio from position 0
+          audio.muted = true;
+          audio.addEventListener('canplay', () => {
+            if (resumeTime > 1) audio.currentTime = resumeTime;
+            audio.muted = false;
+            audio.play().catch(() => _showTapToPlay());
+          }, { once: true });
+          audio.load();
+        }
+        // Clear the flag so a future restore doesn't auto-play a paused track
+        delete t._wasPlaying;
+        localStorage.setItem(PLAYER_KEY, JSON.stringify(t));
+      }
     } catch (_) {}
   }
 
