@@ -33,8 +33,9 @@
 
   <!-- Tabs -->
   <div class="tabs" style="margin-bottom:24px;">
-    <button class="tab" id="tab-recent" onclick="setTab('recent')">Recent</button>
+    <button class="tab" id="tab-recent" onclick="setTab('recent')">Recent Edits</button>
     <button class="tab" id="tab-trending" onclick="setTab('trending')">Trending</button>
+    <button class="tab" id="tab-comps" onclick="setTab('comps')">Comps</button>
   </div>
 
   <div id="tracks-container">
@@ -78,6 +79,7 @@
     activeTab = tab;
     document.getElementById('tab-recent').classList.toggle('active', tab === 'recent');
     document.getElementById('tab-trending').classList.toggle('active', tab === 'trending');
+    document.getElementById('tab-comps').classList.toggle('active', tab === 'comps');
     loadTracks();
     // Update URL without reload
     const u = new URL(location.href);
@@ -116,6 +118,16 @@
     const container = document.getElementById('tracks-container');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
+      if (activeTab === 'comps') {
+        const comps = await api('/discover/comps');
+        if (!comps.length) {
+          container.innerHTML = `<div class="empty-state"><div class="empty-icon">💿</div><div class="empty-title">No comps yet</div></div>`;
+          return;
+        }
+        container.innerHTML = `<div class="track-grid">${comps.map(compCard).join('')}</div>`;
+        return;
+      }
+
       let tracks = [];
       if (activeTab === 'trending') {
         tracks = await api('/discover/trending');
@@ -140,6 +152,27 @@
     } catch (err) {
       container.innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load</div><div class="empty-desc">${escHtml(err.message)}</div></div>`;
     }
+  }
+
+  function compCard(c) {
+    const cover = c.cover_url
+      ? `<img src="${c.cover_url}" alt="cover" onerror="this.style.display='none'">`
+      : '';
+    const eraName = c.era_tag?.name || '';
+    return `
+      <div class="track-card" onclick="location.href='/album.html?id=${c.id}'">
+        <div class="track-cover" style="cursor:pointer;">
+          ${cover}
+          <div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em;">Comp</div>
+        </div>
+        <div class="track-info">
+          <div class="track-title">${escHtml(c.title)}</div>
+          <div class="track-artist">${escHtml(c.artists?.display_name || 'Unknown')}</div>
+          <div class="track-meta">
+            ${eraName ? `<span class="badge">${escHtml(eraName)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
   }
 
   function trackCard(t) {

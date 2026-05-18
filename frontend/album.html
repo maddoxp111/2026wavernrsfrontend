@@ -67,7 +67,7 @@
   async function loadAlbum() {
     try {
       album = await api(`/albums/${albumId}`);
-      albumTracks = album.tracks || [];
+      albumTracks = (album.album_tracks || []).sort((a, b) => a.position - b.position);
       document.title = `${album.title} — wavernrs stream`;
       renderAlbum();
     } catch (err) {

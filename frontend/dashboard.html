@@ -86,7 +86,14 @@
     </div>
     <div class="form-group">
       <label>Cover image URL</label>
-      <input type="url" id="edit-track-cover" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="url" id="edit-track-cover" placeholder="https://..." style="flex:1;">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;white-space:nowrap;">
+          Upload
+          <input type="file" id="edit-track-cover-file" accept="image/*" style="display:none" onchange="uploadModalCover('edit-track-cover-file','edit-track-cover','edit-track-cover-status')">
+        </label>
+      </div>
+      <span id="edit-track-cover-status" style="font-size:12px;color:var(--text-secondary);"></span>
     </div>
     <div class="form-group">
       <label>Description</label>
@@ -114,7 +121,14 @@
     </div>
     <div class="form-group">
       <label>Cover image URL</label>
-      <input type="url" id="edit-album-cover" placeholder="https://...">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="url" id="edit-album-cover" placeholder="https://..." style="flex:1;">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;white-space:nowrap;">
+          Upload
+          <input type="file" id="edit-album-cover-file" accept="image/*" style="display:none" onchange="uploadModalCover('edit-album-cover-file','edit-album-cover','edit-album-cover-status')">
+        </label>
+      </div>
+      <span id="edit-album-cover-status" style="font-size:12px;color:var(--text-secondary);"></span>
     </div>
     <div class="form-group">
       <label>Description</label>
@@ -346,36 +360,19 @@
               <input type="file" id="comp-cover-input" accept="image/*" style="display:none" onchange="onCompCoverSelect(event)">
             </div>
 
-            <!-- Tracklist builder -->
+            <!-- Tracklist builder: upload audio files, drag to reorder -->
             <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Tracklist</div>
-
-            <!-- Upload audio files directly -->
-            <div class="form-group">
-              <label>Upload audio files (creates new Edits + adds to this Comp)</label>
+            <div class="form-group" style="margin-bottom:0;">
               <div class="upload-zone" id="comp-audio-zone" onclick="document.getElementById('comp-audio-files').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="onCompAudioDrop(event)">
                 <div class="upload-zone-icon">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
                 </div>
                 <div class="upload-zone-text">Drop audio files or click to browse</div>
-                <div class="upload-zone-hint">MP3, WAV, FLAC — multiple files supported</div>
+                <div class="upload-zone-hint">MP3, WAV, FLAC — multiple files, drag to reorder</div>
               </div>
               <input type="file" id="comp-audio-files" accept="audio/*" multiple style="display:none" onchange="onCompAudioSelect(event)">
               <div id="comp-audio-queue" class="tracklist" style="margin-top:8px;"></div>
             </div>
-
-            <!-- Search your edits to add -->
-            <div class="form-group">
-              <label>Add edits from your library</label>
-              <div style="display:flex;gap:8px;">
-                <input type="text" id="track-search" placeholder="Search your edits…" oninput="filterMyTracks(this.value)">
-              </div>
-            </div>
-            <div id="my-tracks-picker" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px;">
-              <!-- populated by renderTrackPicker() -->
-            </div>
-
-            <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Tracklist (drag to reorder)</div>
-            <div class="tracklist" id="comp-tracklist"></div>
 
             <div id="comp-upload-alert" style="margin-top:12px;"></div>
             <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="comp-upload-btn" onclick="doUploadComp()">Upload Comp</button>
@@ -397,7 +394,6 @@
 
     renderTracks();
     renderComps();
-    renderTrackPicker('');
   }
 
   function switchUploadTab(tab) {
@@ -456,111 +452,33 @@
     }).join('') + `</div>`;
   }
 
-  function filterMyTracks(q) {
-    renderTrackPicker(q);
-  }
-
-  function renderTrackPicker(q) {
-    const el = document.getElementById('my-tracks-picker');
-    if (!el) return;
-    const filtered = q
-      ? tracks.filter(t => t.title.toLowerCase().includes(q.toLowerCase()))
-      : tracks;
-    if (!filtered.length) {
-      el.innerHTML = `<div style="padding:12px;font-size:13px;color:var(--text-tertiary);">No edits found.</div>`;
-      return;
-    }
-    el.innerHTML = filtered.map(t => {
-      const alreadyAdded = compTracklist.some(x => x.track_id === t.id);
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-subtle);" class="${alreadyAdded ? '' : 'track-row'}" onclick="${alreadyAdded ? '' : `addToTracklist('${t.id}')`}" style="cursor:${alreadyAdded ? 'default' : 'pointer'};">
-        <div style="width:32px;height:32px;border-radius:4px;background:var(--purple-bg);overflow:hidden;flex-shrink:0;">
-          ${t.cover_url ? `<img src="${t.cover_url}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">🎵</div>'}
-        </div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(t.title)}</div>
-        </div>
-        <button class="btn btn-sm ${alreadyAdded ? 'btn-secondary' : 'btn-primary'}" onclick="event.stopPropagation();${alreadyAdded ? '' : `addToTracklist('${t.id}')`}" ${alreadyAdded ? 'disabled' : ''}>${alreadyAdded ? 'Added' : '+'}</button>
-      </div>`;
-    }).join('');
-  }
-
-  function addToTracklist(trackId) {
-    const track = tracks.find(t => t.id === trackId);
-    if (!track) return;
-    if (compTracklist.some(x => x.track_id === trackId)) return;
-    compTracklist.push({
-      track_id: trackId,
-      position: compTracklist.length + 1,
-      title: track.title,
-      artist_name: artist.display_name,
-      cover_url: track.cover_url,
-    });
-    renderCompTracklist();
-    renderTrackPicker(document.getElementById('track-search')?.value || '');
-  }
-
-  function removeFromTracklist(trackId) {
-    compTracklist = compTracklist.filter(x => x.track_id !== trackId);
-    compTracklist.forEach((x, i) => x.position = i + 1);
-    renderCompTracklist();
-    renderTrackPicker(document.getElementById('track-search')?.value || '');
-  }
-
-  function renderCompTracklist() {
-    const el = document.getElementById('comp-tracklist');
-    if (!el) return;
-    if (!compTracklist.length) {
-      el.innerHTML = `<div style="padding:12px;font-size:13px;color:var(--text-tertiary);text-align:center;border:1px dashed var(--border);border-radius:var(--radius-sm);">Add edits from your library above</div>`;
-      return;
-    }
-    el.innerHTML = compTracklist.map((item, i) => `
-      <div class="tracklist-item" draggable="true" data-index="${i}"
-        ondragstart="onTLDragStart(event,${i})"
-        ondragover="onTLDragOver(event,${i})"
-        ondrop="onTLDrop(event,${i})"
-        ondragend="onTLDragEnd(event)">
-        <span class="tracklist-drag-handle">⠿</span>
-        <span class="tracklist-num">${i + 1}</span>
-        <div class="tracklist-cover">
-          ${item.cover_url ? `<img src="${item.cover_url}" alt="">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;">🎵</div>'}
-        </div>
-        <div class="tracklist-info">
-          <div class="tracklist-title">${escHtml(item.title)}</div>
-          <div class="tracklist-artist">${escHtml(item.artist_name || '')}</div>
-        </div>
-        <button class="tracklist-remove" onclick="removeFromTracklist('${item.track_id}')">×</button>
-      </div>`).join('');
-  }
-
-  // Drag-drop for tracklist reordering
-  function onTLDragStart(e, index) {
+  // Drag-to-reorder for comp audio queue
+  function onAQDragStart(e, index) {
     dragSrcIndex = index;
     e.currentTarget.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   }
 
-  function onTLDragOver(e, index) {
+  function onAQDragOver(e, index) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('.tracklist-item').forEach((el, i) => {
+    document.querySelectorAll('#comp-audio-queue .tracklist-item').forEach((el, i) => {
       el.classList.toggle('drag-over', i === index && i !== dragSrcIndex);
     });
   }
 
-  function onTLDrop(e, index) {
+  function onAQDrop(e, index) {
     e.preventDefault();
     if (dragSrcIndex === null || dragSrcIndex === index) return;
-    const moved = compTracklist.splice(dragSrcIndex, 1)[0];
-    compTracklist.splice(index, 0, moved);
-    compTracklist.forEach((x, i) => x.position = i + 1);
+    const moved = compAudioFiles.splice(dragSrcIndex, 1)[0];
+    compAudioFiles.splice(index, 0, moved);
     dragSrcIndex = null;
-    renderCompTracklist();
-    renderTrackPicker(document.getElementById('track-search')?.value || '');
+    renderCompAudioQueue();
   }
 
-  function onTLDragEnd(e) {
+  function onAQDragEnd(e) {
     e.currentTarget.classList.remove('dragging');
-    document.querySelectorAll('.tracklist-item').forEach(el => el.classList.remove('drag-over'));
+    document.querySelectorAll('#comp-audio-queue .tracklist-item').forEach(el => el.classList.remove('drag-over'));
     dragSrcIndex = null;
   }
 
@@ -699,7 +617,6 @@
       document.getElementById('cover-input').value = '';
 
       renderTracks();
-      renderTrackPicker('');
       showAlert('upload-alert', '✓ Edit uploaded!', 'success');
     } catch (err) {
       clearInterval(timer);
@@ -719,7 +636,7 @@
     clearAlert('comp-upload-alert');
 
     if (!title) return showAlert('comp-upload-alert', 'Title is required');
-    if (!compTracklist.length && !compAudioFiles.length) return showAlert('comp-upload-alert', 'Add at least one edit to the tracklist or upload audio files');
+    if (!compAudioFiles.length) return showAlert('comp-upload-alert', 'Add at least one audio file to the tracklist');
 
     const btn = document.getElementById('comp-upload-btn');
     btn.disabled = true;
@@ -728,31 +645,28 @@
     const statusEl = document.getElementById('comp-upload-alert');
 
     try {
-      // Upload queued audio files first, collect their track IDs
+      // Upload each audio file in order; mark as album_only so they don't appear as standalone edits
       const uploadedTrackIds = [];
       for (let i = 0; i < compAudioFiles.length; i++) {
         const f = compAudioFiles[i];
-        if (statusEl) statusEl.innerHTML = `<div class="alert alert-success">Uploading audio ${i+1}/${compAudioFiles.length}: ${escHtml(f.name)}…</div>`;
+        if (statusEl) statusEl.innerHTML = `<div class="alert alert-success">Uploading ${i+1}/${compAudioFiles.length}: ${escHtml(f.name)}…</div>`;
         const audioForm = new FormData();
         audioForm.append('file', f);
-        audioForm.append('title', f.name.replace(/\.[^.]+$/, ''));
+        audioForm.append('title', f.name.replace(/\.[^.]+$/, '').replace(/_/g, ' '));
         if (era_tag_id) audioForm.append('era_tag_id', era_tag_id);
+        audioForm.append('album_only', 'true');
         try {
           const t = await apiUpload('/tracks', audioForm);
           uploadedTrackIds.push(t.id);
-          tracks.unshift(t);
         } catch (err) {
           console.error('Failed to upload', f.name, err.message);
         }
       }
 
-      // Combine uploaded track IDs with manually selected tracklist
-      const manualTracks = compTracklist.map((x, i) => ({ track_id: x.track_id, position: i + 1 }));
-      const uploadedTracks = uploadedTrackIds.map((id, i) => ({ track_id: id, position: manualTracks.length + i + 1 }));
-      const allTracks = [...manualTracks, ...uploadedTracks];
+      const allTracks = uploadedTrackIds.map((id, i) => ({ track_id: id, position: i + 1 }));
 
       if (!allTracks.length) {
-        showAlert('comp-upload-alert', 'No valid tracks to add to comp');
+        showAlert('comp-upload-alert', 'No tracks were uploaded successfully');
         btn.disabled = false;
         btn.textContent = 'Upload Comp';
         return;
@@ -769,7 +683,6 @@
 
       const comp = await apiUpload('/albums', form);
       comps.unshift(comp);
-      compTracklist = [];
       compAudioFiles = [];
       compCoverFile = null;
       document.getElementById('comp-title').value = '';
@@ -777,12 +690,8 @@
       document.getElementById('comp-desc').value = '';
       document.getElementById('comp-cover-zone-text').textContent = 'Drop image or click to browse';
       document.getElementById('comp-cover-input').value = '';
-      renderCompTracklist();
       renderCompAudioQueue();
       renderComps();
-      renderTracks();
-      renderTrackPicker('');
-      document.querySelector('[data-count-comps]')?.setAttribute('data-count-comps', comps.length);
       showAlert('comp-upload-alert', '✓ Comp created!', 'success');
     } catch (err) {
       showAlert('comp-upload-alert', err.message || 'Failed to create comp');
@@ -832,7 +741,6 @@
       tracks = tracks.filter(t => t.id !== pendingDeleteId);
       closeDeleteModal();
       renderTracks();
-      renderTrackPicker('');
     } catch (err) {
       alert(err.message);
     }
@@ -975,10 +883,15 @@
     if (!container) return;
     if (!compAudioFiles.length) { container.innerHTML = ''; return; }
     container.innerHTML = compAudioFiles.map((f, i) => `
-      <div class="tracklist-item" style="opacity:1;">
+      <div class="tracklist-item" draggable="true" data-index="${i}"
+        ondragstart="onAQDragStart(event,${i})"
+        ondragover="onAQDragOver(event,${i})"
+        ondrop="onAQDrop(event,${i})"
+        ondragend="onAQDragEnd(event)">
+        <span class="tracklist-drag-handle">⠿</span>
         <div class="tracklist-num">${i+1}</div>
         <div class="tracklist-info" style="flex:1;">
-          <div class="tracklist-title">${escHtml(f.name)}</div>
+          <div class="tracklist-title">${escHtml(f.name.replace(/\.[^.]+$/, '').replace(/_/g, ' '))}</div>
           <div class="tracklist-artist">${(f.size / 1024 / 1024).toFixed(1)} MB</div>
         </div>
         <button class="tracklist-remove" onclick="removeCompAudioFile(${i})">×</button>
@@ -988,6 +901,24 @@
   function removeCompAudioFile(i) {
     compAudioFiles.splice(i, 1);
     renderCompAudioQueue();
+  }
+
+  async function uploadModalCover(inputId, urlFieldId, statusId) {
+    const input = document.getElementById(inputId);
+    const file = input?.files?.[0];
+    if (!file) return;
+    const statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.textContent = 'Uploading…';
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const result = await apiUpload('/upload/image', form);
+      const urlEl = document.getElementById(urlFieldId);
+      if (urlEl) urlEl.value = result.url;
+      if (statusEl) statusEl.textContent = '✓ Uploaded';
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Upload failed';
+    }
   }
 
   async function uploadProfileImage(inputId, field) {
