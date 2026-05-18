@@ -6,12 +6,42 @@ const PLAYER_KEY = 'player_current';
 let audio = null;
 let currentTrack = null;
 
+// iOS audio unlock: play a silent sound on first touch to unlock audio
+let _iosUnlocked = false;
+function _unlockIOS() {
+  if (_iosUnlocked) return;
+  _iosUnlocked = true;
+  if (!audio) return;
+  const savedSrc = audio.src;
+  const savedTime = audio.currentTime;
+  const wasPaused = audio.paused;
+  audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//sQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+  audio.volume = 0;
+  audio.play().then(() => {
+    audio.pause();
+    audio.src = savedSrc;
+    audio.currentTime = savedTime;
+    audio.volume = 0.8;
+    if (!wasPaused && savedSrc) audio.play().catch(() => {});
+  }).catch(() => {
+    audio.src = savedSrc;
+    audio.currentTime = savedTime;
+    audio.volume = 0.8;
+  });
+  document.removeEventListener('touchstart', _unlockIOS);
+  document.removeEventListener('touchend', _unlockIOS);
+}
+
 function initPlayer() {
   const playerEl = document.getElementById('player');
   if (!playerEl) return;
 
   audio = new Audio();
   audio.volume = 0.8;
+
+  // iOS unlock on first touch
+  document.addEventListener('touchstart', _unlockIOS, { once: true, passive: true });
+  document.addEventListener('touchend', _unlockIOS, { once: true, passive: true });
 
   // Restore track from localStorage (page navigation)
   const saved = localStorage.getItem(PLAYER_KEY);
@@ -53,7 +83,11 @@ function initPlayer() {
     }
   });
 
-  audio.addEventListener('ended', () => setPlayBtn(false));
+  audio.addEventListener('ended', () => {
+    setPlayBtn(false);
+    // Fire custom event so album pages can auto-advance
+    document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
+  });
   audio.addEventListener('play', () => setPlayBtn(true));
   audio.addEventListener('pause', () => setPlayBtn(false));
   audio.addEventListener('error', () => {
@@ -70,10 +104,36 @@ function playTrack(track) {
 
   audio.src = track.ia_url;
   audio.currentTime = 0;
-  audio.play().catch(console.error);
+
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(err => {
+      if (err.name === 'NotAllowedError') {
+        // Show tap-to-play overlay
+        _showTapToPlay();
+      } else {
+        console.error(err);
+      }
+    });
+  }
 
   renderPlayerTrack(track);
   playerEl.classList.remove('hidden');
+}
+
+function _showTapToPlay() {
+  let overlay = document.getElementById('tap-to-play-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tap-to-play-overlay';
+    overlay.style.cssText = 'position:fixed;bottom:calc(var(--player-height) + 12px);left:50%;transform:translateX(-50%);background:var(--purple);color:white;padding:10px 20px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;z-index:250;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+    overlay.textContent = 'Tap to play';
+    overlay.addEventListener('click', () => {
+      togglePlay();
+      overlay.remove();
+    });
+    document.body.appendChild(overlay);
+  }
 }
 
 function renderPlayerTrack(track) {

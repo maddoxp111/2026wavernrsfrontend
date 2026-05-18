@@ -29,13 +29,13 @@ async function api(path, options = {}) {
   return data;
 }
 
-async function apiUpload(path, formData) {
+async function apiUpload(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
+    method,
     headers,
     body: formData,
   });
@@ -103,14 +103,45 @@ function clearAlert(containerId) {
   if (el) el.innerHTML = '';
 }
 
+// Load active site banners (public endpoint)
+async function loadActiveBanners() {
+  try {
+    const res = await fetch(`${API_BASE}/site/banners`);
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => []);
+    return Array.isArray(data) ? data : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+// Render banners above nav
+async function renderSiteBanners() {
+  const banners = await loadActiveBanners();
+  if (!banners.length) return;
+  const container = document.createElement('div');
+  container.id = 'site-banners';
+  banners.forEach(b => {
+    const el = document.createElement('div');
+    el.className = `site-banner ${b.type || 'info'}`;
+    el.textContent = b.message;
+    container.appendChild(el);
+  });
+  document.body.insertBefore(container, document.body.firstChild);
+}
+
 // Shared nav HTML
 function renderNav(activePage = '') {
   return `
   <nav>
-    <a href="/index.html" class="nav-logo">stream</a>
+    <a href="/index.html" class="nav-logo">wavernrs stream</a>
     <div class="nav-links">
-      <a href="/index.html" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
-      <a href="/index.html?tab=trending" class="${activePage === 'trending' ? 'active' : ''}">Trending</a>
+      <a href="/index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
+      <a href="/discover.html" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
+    </div>
+    <div style="flex:1;max-width:260px;" class="nav-search-wrap">
+      <input type="text" id="nav-search" placeholder="Search edits, artists…"
+        onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
     </div>
     <div class="nav-right" id="nav-right"></div>
   </nav>`;
