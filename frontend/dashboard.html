@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>stream — dashboard</title>
+  <title>wavernrs stream — dashboard</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <nav>
-  <a href="/index.html" class="nav-logo">stream</a>
+  <a href="/index.html" class="nav-logo">wavernrs stream</a>
   <div class="nav-links">
-    <a href="/index.html">Discover</a>
+    <a href="/index.html">Home</a>
+    <a href="/discover.html">Discover</a>
+  </div>
+  <div style="flex:1;max-width:260px;" class="nav-search-wrap">
+    <input type="text" placeholder="Search edits, artists…"
+      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
   </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
 
 <div class="container" style="padding-top:32px;padding-bottom:48px;">
   <div id="alert-container" style="margin-bottom:16px;"></div>
-
   <div class="dashboard-grid" id="dashboard">
     <div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div>
   </div>
@@ -51,14 +55,26 @@
   </div>
 </div>
 
-<!-- Delete Confirm Modal -->
+<!-- Delete Edit Confirm Modal -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
-    <div class="modal-title">Delete track?</div>
-    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the track from your profile. The file will remain on Internet Archive.</p>
+    <div class="modal-title">Delete edit?</div>
+    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the edit from your profile. The file will remain on Internet Archive.</p>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
       <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Comp Confirm Modal -->
+<div class="modal-overlay" id="delete-comp-modal">
+  <div class="modal">
+    <div class="modal-title">Delete comp?</div>
+    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the comp. The individual edits will not be deleted.</p>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeleteCompModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-comp-btn">Delete</button>
     </div>
   </div>
 </div>
@@ -74,13 +90,31 @@
   let me = null;
   let artist = null;
   let tracks = [];
+  let comps = [];
+  let eraTags = [];
   let pendingDeleteId = null;
+  let pendingDeleteCompId = null;
+
+  // Upload Edit state
+  let selectedFile = null;
+
+  // Upload Comp state
+  let compTracklist = []; // [{track_id, position, title, artist_name, cover_url}]
+  let compCoverFile = null;
+  let editCoverFile = null;
+  let dragSrcIndex = null;
 
   async function loadDashboard() {
     try {
-      me = await api('/auth/me');
+      [me, eraTags] = await Promise.all([
+        api('/auth/me'),
+        api('/eratags').catch(() => []),
+      ]);
       artist = me.artist;
-      tracks = await api(`/artists/${artist.id}/tracks`);
+      [tracks, comps] = await Promise.all([
+        api(`/artists/${artist.id}/tracks`),
+        api(`/albums/by-artist/${artist.id}`).catch(() => []),
+      ]);
       render();
     } catch (err) {
       if (err.message.includes('401')) return location.href = '/login.html';
@@ -88,11 +122,20 @@
     }
   }
 
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function eraTagOptions(selectedId) {
+    return `<option value="">No era tag</option>` +
+      eraTags.map(t => `<option value="${t.id}" ${selectedId == t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+  }
+
   function render() {
     const totalPlays = tracks.reduce((s, t) => s + (t.play_count || 0), 0);
     const avatarContent = artist.profile_image_url
       ? `<img src="${artist.profile_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-      : artist.display_name?.[0]?.toUpperCase();
+      : escHtml(artist.display_name?.[0]?.toUpperCase() || '?');
 
     document.getElementById('dashboard').innerHTML = `
       <!-- Sidebar -->
@@ -102,10 +145,11 @@
           <div style="width:72px;height:72px;border-radius:50%;background:var(--purple);color:white;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;margin:0 auto 12px;overflow:hidden;">
             ${avatarContent}
           </div>
-          <div style="font-weight:700;font-size:16px;">${artist.display_name}</div>
-          <div style="font-size:13px;color:var(--text-secondary);">@${me.username}</div>
+          <div style="font-weight:700;font-size:16px;">${escHtml(artist.display_name)}</div>
+          <div style="font-size:13px;color:var(--text-secondary);">@${escHtml(me.username)}</div>
           <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${tracks.length}</strong><br>tracks</div>
+            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${tracks.length}</strong><br>edits</div>
+            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${comps.length}</strong><br>comps</div>
             <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${fmtNum(totalPlays)}</strong><br>plays</div>
           </div>
           <a href="/artist.html?id=${artist.id}" class="btn btn-secondary btn-sm" style="margin-top:14px;width:100%;justify-content:center;">View public page</a>
@@ -116,27 +160,27 @@
           <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Edit Profile</div>
           <div class="form-group">
             <label>Display name</label>
-            <input type="text" id="edit-name" value="${artist.display_name || ''}" placeholder="Your name">
+            <input type="text" id="edit-name" value="${escHtml(artist.display_name || '')}" placeholder="Your name">
           </div>
           <div class="form-group">
             <label>Bio</label>
-            <textarea id="edit-bio" rows="3" placeholder="Tell people about yourself…">${artist.bio || ''}</textarea>
+            <textarea id="edit-bio" rows="3" placeholder="Tell people about yourself…">${escHtml(artist.bio || '')}</textarea>
           </div>
           <div class="form-group">
             <label>Profile image URL</label>
-            <input type="url" id="edit-avatar" value="${artist.profile_image_url || ''}" placeholder="https://...">
+            <input type="url" id="edit-avatar" value="${escHtml(artist.profile_image_url || '')}" placeholder="https://...">
           </div>
           <div class="form-group">
             <label>Banner image URL</label>
-            <input type="url" id="edit-banner" value="${artist.banner_url || ''}" placeholder="https://...">
+            <input type="url" id="edit-banner" value="${escHtml(artist.banner_url || '')}" placeholder="https://...">
           </div>
           <div class="form-group">
             <label>Location</label>
-            <input type="text" id="edit-location" value="${artist.location || ''}" placeholder="City, Country">
+            <input type="text" id="edit-location" value="${escHtml(artist.location || '')}" placeholder="City, Country">
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label>Website</label>
-            <input type="url" id="edit-website" value="${artist.website || ''}" placeholder="https://...">
+            <input type="url" id="edit-website" value="${escHtml(artist.website || '')}" placeholder="https://...">
           </div>
           <div id="profile-alert" style="margin-top:10px;"></div>
           <button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="saveProfile()">Save changes</button>
@@ -145,78 +189,163 @@
 
       <!-- Main content -->
       <div>
-        <!-- Upload card -->
+        <!-- Upload card with tabs -->
         <div class="card" style="padding:24px;margin-bottom:24px;">
-          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Upload a track</div>
-
-          <div class="form-group">
-            <label>Title *</label>
-            <input type="text" id="upload-title" placeholder="Track name">
+          <div class="tabs" style="margin-bottom:20px;">
+            <button class="tab active" id="upload-tab-edit" onclick="switchUploadTab('edit')">Upload Edit</button>
+            <button class="tab" id="upload-tab-comp" onclick="switchUploadTab('comp')">Upload Comp</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+          <!-- Upload Edit form -->
+          <div id="upload-edit-form">
             <div class="form-group">
-              <label>Genre</label>
-              <input type="text" id="upload-genre" placeholder="e.g. Hip-Hop, R&B">
+              <label>Title *</label>
+              <input type="text" id="upload-title" placeholder="Edit name">
             </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label>Era Tag</label>
+                <select id="upload-era-tag">
+                  ${eraTagOptions(null)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Description</label>
+                <textarea id="upload-desc" rows="2" placeholder="Optional note about the edit…" style="min-height:42px;"></textarea>
+              </div>
+            </div>
+
+            <!-- Cover image upload -->
             <div class="form-group">
-              <label>Cover image URL</label>
-              <input type="url" id="upload-cover" placeholder="https://...">
+              <label>Cover image</label>
+              <div class="upload-zone" id="cover-zone" style="padding:16px;" onclick="document.getElementById('cover-input').click()"
+                ondragover="onCoverDragOver(event)" ondragleave="onCoverDragLeave(event)" ondrop="onCoverDrop(event)">
+                <div class="upload-zone-icon" style="font-size:20px;">🖼️</div>
+                <div class="upload-zone-text" id="cover-zone-text" style="font-size:13px;">Drop image or click to browse</div>
+                <div class="upload-zone-hint">PNG, JPG, WEBP</div>
+              </div>
+              <input type="file" id="cover-input" accept="image/*" style="display:none" onchange="onCoverSelect(event)">
             </div>
-          </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea id="upload-desc" rows="2" placeholder="Optional note about the track…"></textarea>
-          </div>
 
-          <!-- Upload zone -->
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-            <div class="upload-zone-icon">🎵</div>
-            <div class="upload-zone-text" id="upload-zone-text">Drop audio file here or click to browse</div>
-            <div class="upload-zone-hint">MP3, WAV, FLAC, M4A — up to 200MB</div>
-          </div>
-          <input type="file" id="file-input" accept="audio/*" style="display:none" onchange="onFileSelect(event)">
-
-          <div class="or-divider">or paste a Google Drive link</div>
-
-          <div class="form-group" style="margin-bottom:0;">
-            <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">
-          </div>
-
-          <div id="upload-alert" style="margin-top:12px;"></div>
-          <div id="upload-progress" style="display:none;margin-top:12px;">
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;" id="upload-status">Uploading to Internet Archive…</div>
-            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;background:var(--purple);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>
+            <!-- Audio upload zone -->
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+              ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+              <div class="upload-zone-icon">🎵</div>
+              <div class="upload-zone-text" id="upload-zone-text">Drop audio file here or click to browse</div>
+              <div class="upload-zone-hint">MP3, WAV, FLAC, M4A — up to 200MB</div>
             </div>
+            <input type="file" id="file-input" accept="audio/*" style="display:none" onchange="onFileSelect(event)">
+
+            <div class="or-divider">or paste a Google Drive link</div>
+
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">
+            </div>
+
+            <div id="upload-alert" style="margin-top:12px;"></div>
+            <div id="upload-progress" style="display:none;margin-top:12px;">
+              <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;" id="upload-status">Uploading to Internet Archive…</div>
+              <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+                <div style="height:100%;background:var(--purple);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="upload-btn" onclick="doUpload()">Upload Edit</button>
           </div>
-          <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="upload-btn" onclick="doUpload()">Upload track</button>
+
+          <!-- Upload Comp form -->
+          <div id="upload-comp-form" style="display:none;">
+            <div class="form-group">
+              <label>Comp Title *</label>
+              <input type="text" id="comp-title" placeholder="Comp name">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label>Era Tag</label>
+                <select id="comp-era-tag">
+                  ${eraTagOptions(null)}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Description</label>
+                <textarea id="comp-desc" rows="2" placeholder="About this comp…" style="min-height:42px;"></textarea>
+              </div>
+            </div>
+
+            <!-- Comp cover upload -->
+            <div class="form-group">
+              <label>Comp cover</label>
+              <div class="upload-zone" id="comp-cover-zone" style="padding:16px;" onclick="document.getElementById('comp-cover-input').click()"
+                ondragover="e=>{e.preventDefault();document.getElementById('comp-cover-zone').classList.add('dragover');}"
+                ondragleave="document.getElementById('comp-cover-zone').classList.remove('dragover');"
+                ondrop="onCompCoverDrop(event)">
+                <div class="upload-zone-icon" style="font-size:20px;">🖼️</div>
+                <div class="upload-zone-text" id="comp-cover-zone-text" style="font-size:13px;">Drop image or click to browse</div>
+              </div>
+              <input type="file" id="comp-cover-input" accept="image/*" style="display:none" onchange="onCompCoverSelect(event)">
+            </div>
+
+            <!-- Tracklist builder -->
+            <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Tracklist</div>
+
+            <!-- Search your edits to add -->
+            <div class="form-group">
+              <label>Add edits from your library</label>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="track-search" placeholder="Search your edits…" oninput="filterMyTracks(this.value)">
+              </div>
+            </div>
+            <div id="my-tracks-picker" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px;">
+              <!-- populated by renderTrackPicker() -->
+            </div>
+
+            <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Tracklist (drag to reorder)</div>
+            <div class="tracklist" id="comp-tracklist"></div>
+
+            <div id="comp-upload-alert" style="margin-top:12px;"></div>
+            <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="comp-upload-btn" onclick="doUploadComp()">Upload Comp</button>
+          </div>
         </div>
 
-        <!-- Tracks list -->
-        <div>
-          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your tracks <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${tracks.length})</span></div>
+        <!-- Your Edits -->
+        <div style="margin-bottom:32px;">
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your Edits <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${tracks.length})</span></div>
           <div id="my-tracks"></div>
+        </div>
+
+        <!-- Your Comps -->
+        <div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your Comps <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${comps.length})</span></div>
+          <div id="my-comps"></div>
         </div>
       </div>`;
 
     renderTracks();
+    renderComps();
+    renderTrackPicker('');
+  }
+
+  function switchUploadTab(tab) {
+    document.getElementById('upload-tab-edit').classList.toggle('active', tab === 'edit');
+    document.getElementById('upload-tab-comp').classList.toggle('active', tab === 'comp');
+    document.getElementById('upload-edit-form').style.display = tab === 'edit' ? '' : 'none';
+    document.getElementById('upload-comp-form').style.display = tab === 'comp' ? '' : 'none';
   }
 
   function renderTracks() {
     const el = document.getElementById('my-tracks');
     if (!tracks.length) {
-      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-icon">🎵</div><div class="empty-title">No tracks yet</div><div class="empty-desc">Upload your first track above.</div></div>`;
+      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-icon">🎵</div><div class="empty-title">No edits yet</div><div class="empty-desc">Upload your first edit above.</div></div>`;
       return;
     }
-
     el.innerHTML = `<div class="track-list">` + tracks.map(t => {
       const cover = t.cover_url ? `<img src="${t.cover_url}" alt="">` : '🎵';
+      const eraName = t.era_tag?.name || t.genre || '';
       return `
         <div class="track-row">
           <div class="track-row-cover">${cover}</div>
           <div class="track-row-info">
-            <div class="track-row-title">${t.title}</div>
-            <div class="track-row-artist">${t.genre || ''} · ${fmtNum(t.play_count)} plays · ${timeAgo(t.created_at)}</div>
+            <div class="track-row-title">${escHtml(t.title)}</div>
+            <div class="track-row-artist">${eraName ? escHtml(eraName) + ' · ' : ''}${fmtNum(t.play_count)} plays · ${timeAgo(t.created_at)}</div>
           </div>
           <div style="display:flex;gap:8px;margin-left:auto;">
             <a href="/track.html?id=${t.id}" class="btn btn-secondary btn-sm">Open</a>
@@ -226,8 +355,177 @@
     }).join('') + `</div>`;
   }
 
-  let selectedFile = null;
+  function renderComps() {
+    const el = document.getElementById('my-comps');
+    if (!comps.length) {
+      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-icon">💿</div><div class="empty-title">No comps yet</div><div class="empty-desc">Create your first comp above.</div></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="track-list">` + comps.map(c => {
+      const cover = c.cover_url ? `<img src="${c.cover_url}" alt="">` : '💿';
+      return `
+        <div class="track-row">
+          <div class="track-row-cover">${cover}</div>
+          <div class="track-row-info">
+            <div class="track-row-title">${escHtml(c.title)}</div>
+            <div class="track-row-artist">${c.track_count || 0} edits · ${timeAgo(c.created_at)}</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <a href="/album.html?id=${c.id}" class="btn btn-secondary btn-sm">Open</a>
+            <button class="btn btn-danger btn-sm" onclick="confirmDeleteComp('${c.id}')">Delete</button>
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+  }
 
+  function filterMyTracks(q) {
+    renderTrackPicker(q);
+  }
+
+  function renderTrackPicker(q) {
+    const el = document.getElementById('my-tracks-picker');
+    if (!el) return;
+    const filtered = q
+      ? tracks.filter(t => t.title.toLowerCase().includes(q.toLowerCase()))
+      : tracks;
+    if (!filtered.length) {
+      el.innerHTML = `<div style="padding:12px;font-size:13px;color:var(--text-tertiary);">No edits found.</div>`;
+      return;
+    }
+    el.innerHTML = filtered.map(t => {
+      const alreadyAdded = compTracklist.some(x => x.track_id === t.id);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border-subtle);" class="${alreadyAdded ? '' : 'track-row'}" onclick="${alreadyAdded ? '' : `addToTracklist('${t.id}')`}" style="cursor:${alreadyAdded ? 'default' : 'pointer'};">
+        <div style="width:32px;height:32px;border-radius:4px;background:var(--purple-bg);overflow:hidden;flex-shrink:0;">
+          ${t.cover_url ? `<img src="${t.cover_url}" style="width:100%;height:100%;object-fit:cover;">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">🎵</div>'}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(t.title)}</div>
+        </div>
+        <button class="btn btn-sm ${alreadyAdded ? 'btn-secondary' : 'btn-primary'}" onclick="event.stopPropagation();${alreadyAdded ? '' : `addToTracklist('${t.id}')`}" ${alreadyAdded ? 'disabled' : ''}>${alreadyAdded ? 'Added' : '+'}</button>
+      </div>`;
+    }).join('');
+  }
+
+  function addToTracklist(trackId) {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    if (compTracklist.some(x => x.track_id === trackId)) return;
+    compTracklist.push({
+      track_id: trackId,
+      position: compTracklist.length + 1,
+      title: track.title,
+      artist_name: artist.display_name,
+      cover_url: track.cover_url,
+    });
+    renderCompTracklist();
+    renderTrackPicker(document.getElementById('track-search')?.value || '');
+  }
+
+  function removeFromTracklist(trackId) {
+    compTracklist = compTracklist.filter(x => x.track_id !== trackId);
+    compTracklist.forEach((x, i) => x.position = i + 1);
+    renderCompTracklist();
+    renderTrackPicker(document.getElementById('track-search')?.value || '');
+  }
+
+  function renderCompTracklist() {
+    const el = document.getElementById('comp-tracklist');
+    if (!el) return;
+    if (!compTracklist.length) {
+      el.innerHTML = `<div style="padding:12px;font-size:13px;color:var(--text-tertiary);text-align:center;border:1px dashed var(--border);border-radius:var(--radius-sm);">Add edits from your library above</div>`;
+      return;
+    }
+    el.innerHTML = compTracklist.map((item, i) => `
+      <div class="tracklist-item" draggable="true" data-index="${i}"
+        ondragstart="onTLDragStart(event,${i})"
+        ondragover="onTLDragOver(event,${i})"
+        ondrop="onTLDrop(event,${i})"
+        ondragend="onTLDragEnd(event)">
+        <span class="tracklist-drag-handle">⠿</span>
+        <span class="tracklist-num">${i + 1}</span>
+        <div class="tracklist-cover">
+          ${item.cover_url ? `<img src="${item.cover_url}" alt="">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:16px;">🎵</div>'}
+        </div>
+        <div class="tracklist-info">
+          <div class="tracklist-title">${escHtml(item.title)}</div>
+          <div class="tracklist-artist">${escHtml(item.artist_name || '')}</div>
+        </div>
+        <button class="tracklist-remove" onclick="removeFromTracklist('${item.track_id}')">×</button>
+      </div>`).join('');
+  }
+
+  // Drag-drop for tracklist reordering
+  function onTLDragStart(e, index) {
+    dragSrcIndex = index;
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onTLDragOver(e, index) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.tracklist-item').forEach((el, i) => {
+      el.classList.toggle('drag-over', i === index && i !== dragSrcIndex);
+    });
+  }
+
+  function onTLDrop(e, index) {
+    e.preventDefault();
+    if (dragSrcIndex === null || dragSrcIndex === index) return;
+    const moved = compTracklist.splice(dragSrcIndex, 1)[0];
+    compTracklist.splice(index, 0, moved);
+    compTracklist.forEach((x, i) => x.position = i + 1);
+    dragSrcIndex = null;
+    renderCompTracklist();
+    renderTrackPicker(document.getElementById('track-search')?.value || '');
+  }
+
+  function onTLDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.tracklist-item').forEach(el => el.classList.remove('drag-over'));
+    dragSrcIndex = null;
+  }
+
+  // Cover image handlers (edit)
+  function onCoverDragOver(e) {
+    e.preventDefault();
+    document.getElementById('cover-zone').classList.add('dragover');
+  }
+  function onCoverDragLeave() {
+    document.getElementById('cover-zone').classList.remove('dragover');
+  }
+  function onCoverDrop(e) {
+    e.preventDefault();
+    document.getElementById('cover-zone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) setCoverFile(file);
+  }
+  function onCoverSelect(e) {
+    const file = e.target.files[0];
+    if (file) setCoverFile(file);
+  }
+  function setCoverFile(file) {
+    editCoverFile = file;
+    document.getElementById('cover-zone-text').textContent = `✓ ${file.name}`;
+  }
+
+  // Comp cover handlers
+  function onCompCoverDrop(e) {
+    e.preventDefault();
+    document.getElementById('comp-cover-zone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) setCompCoverFile(file);
+  }
+  function onCompCoverSelect(e) {
+    const file = e.target.files[0];
+    if (file) setCompCoverFile(file);
+  }
+  function setCompCoverFile(file) {
+    compCoverFile = file;
+    document.getElementById('comp-cover-zone-text').textContent = `✓ ${file.name}`;
+  }
+
+  // Audio file handlers
   function onDragOver(e) {
     e.preventDefault();
     document.getElementById('upload-zone').classList.add('dragover');
@@ -253,8 +551,7 @@
 
   async function doUpload() {
     const title = document.getElementById('upload-title').value.trim();
-    const genre = document.getElementById('upload-genre').value.trim();
-    const cover_url = document.getElementById('upload-cover').value.trim();
+    const era_tag_id = document.getElementById('upload-era-tag').value;
     const description = document.getElementById('upload-desc').value.trim();
     const drive_url = document.getElementById('drive-url').value.trim();
     clearAlert('upload-alert');
@@ -271,7 +568,6 @@
     const status = document.getElementById('upload-status');
     progress.style.display = 'block';
 
-    // Fake progress animation while uploading
     let pct = 0;
     const timer = setInterval(() => {
       pct = Math.min(pct + Math.random() * 8, 85);
@@ -286,14 +582,14 @@
         const form = new FormData();
         form.append('file', selectedFile);
         form.append('title', title);
-        if (genre) form.append('genre', genre);
-        if (cover_url) form.append('cover_url', cover_url);
+        if (era_tag_id) form.append('era_tag_id', era_tag_id);
         if (description) form.append('description', description);
+        if (editCoverFile) form.append('cover_file', editCoverFile);
         track = await apiUpload('/tracks', form);
       } else {
         track = await api('/tracks', {
           method: 'POST',
-          body: JSON.stringify({ title, genre, cover_url, description, drive_url }),
+          body: JSON.stringify({ title, era_tag_id: era_tag_id || undefined, description, drive_url }),
         });
       }
 
@@ -303,23 +599,68 @@
 
       tracks.unshift(track);
       selectedFile = null;
+      editCoverFile = null;
       document.getElementById('upload-zone-text').textContent = 'Drop audio file here or click to browse';
+      document.getElementById('cover-zone-text').textContent = 'Drop image or click to browse';
       document.getElementById('upload-title').value = '';
-      document.getElementById('upload-genre').value = '';
-      document.getElementById('upload-cover').value = '';
+      document.getElementById('upload-era-tag').value = '';
       document.getElementById('upload-desc').value = '';
       document.getElementById('drive-url').value = '';
       document.getElementById('file-input').value = '';
+      document.getElementById('cover-input').value = '';
 
       renderTracks();
-      showAlert('upload-alert', '✓ Track uploaded!', 'success');
+      renderTrackPicker('');
+      showAlert('upload-alert', '✓ Edit uploaded!', 'success');
     } catch (err) {
       clearInterval(timer);
       showAlert('upload-alert', err.message || 'Upload failed');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Upload track';
+      btn.textContent = 'Upload Edit';
       setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0%'; }, 3000);
+    }
+  }
+
+  async function doUploadComp() {
+    const title = document.getElementById('comp-title').value.trim();
+    const era_tag_id = document.getElementById('comp-era-tag').value;
+    const description = document.getElementById('comp-desc').value.trim();
+    clearAlert('comp-upload-alert');
+
+    if (!title) return showAlert('comp-upload-alert', 'Title is required');
+    if (!compTracklist.length) return showAlert('comp-upload-alert', 'Add at least one edit to the tracklist');
+
+    const btn = document.getElementById('comp-upload-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating comp…';
+
+    try {
+      const form = new FormData();
+      form.append('title', title);
+      if (era_tag_id) form.append('era_tag_id', era_tag_id);
+      if (description) form.append('description', description);
+      if (compCoverFile) form.append('cover_file', compCoverFile);
+      form.append('tracks', JSON.stringify(compTracklist.map((x, i) => ({ track_id: x.track_id, position: i + 1 }))));
+
+      const comp = await apiUpload('/albums', form);
+      comps.unshift(comp);
+      compTracklist = [];
+      compCoverFile = null;
+      document.getElementById('comp-title').value = '';
+      document.getElementById('comp-era-tag').value = '';
+      document.getElementById('comp-desc').value = '';
+      document.getElementById('comp-cover-zone-text').textContent = 'Drop image or click to browse';
+      document.getElementById('comp-cover-input').value = '';
+      renderCompTracklist();
+      renderComps();
+      document.querySelector('[data-count-comps]')?.setAttribute('data-count-comps', comps.length);
+      showAlert('comp-upload-alert', '✓ Comp created!', 'success');
+    } catch (err) {
+      showAlert('comp-upload-alert', err.message || 'Failed to create comp');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Upload Comp';
     }
   }
 
@@ -363,6 +704,30 @@
       tracks = tracks.filter(t => t.id !== pendingDeleteId);
       closeDeleteModal();
       renderTracks();
+      renderTrackPicker('');
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function confirmDeleteComp(id) {
+    pendingDeleteCompId = id;
+    document.getElementById('delete-comp-modal').classList.add('open');
+    document.getElementById('confirm-delete-comp-btn').onclick = doDeleteComp;
+  }
+
+  function closeDeleteCompModal() {
+    document.getElementById('delete-comp-modal').classList.remove('open');
+    pendingDeleteCompId = null;
+  }
+
+  async function doDeleteComp() {
+    if (!pendingDeleteCompId) return;
+    try {
+      await api(`/albums/${pendingDeleteCompId}`, { method: 'DELETE' });
+      comps = comps.filter(c => c.id !== pendingDeleteCompId);
+      closeDeleteCompModal();
+      renderComps();
     } catch (err) {
       alert(err.message);
     }

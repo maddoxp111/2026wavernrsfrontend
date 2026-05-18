@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>stream</title>
+  <title>wavernrs stream — edit</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <nav>
-  <a href="/index.html" class="nav-logo">stream</a>
+  <a href="/index.html" class="nav-logo">wavernrs stream</a>
   <div class="nav-links">
-    <a href="/index.html">Discover</a>
-    <a href="/index.html?tab=trending">Trending</a>
+    <a href="/index.html">Home</a>
+    <a href="/discover.html">Discover</a>
+  </div>
+  <div style="flex:1;max-width:260px;" class="nav-search-wrap">
+    <input type="text" placeholder="Search edits, artists…"
+      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
   </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
@@ -59,20 +63,26 @@
   const trackId = new URLSearchParams(location.search).get('id');
   let track = null;
   let liked = false;
+  // Map commentId -> user's vote (1 or -1 or 0)
+  const myVotes = {};
 
   if (!trackId) location.href = '/index.html';
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
   async function loadTrack() {
     try {
       track = await api(`/tracks/${trackId}`);
       liked = track.user_liked;
-      document.title = `${track.title} — stream`;
+      document.title = `${track.title} — wavernrs stream`;
       renderTrack();
       playTrack({ ...track, artist_name: track.artists?.display_name });
       loadComments();
     } catch (err) {
       document.getElementById('track-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Track not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
     }
   }
 
@@ -82,18 +92,20 @@
       ? `<img src="${track.cover_url}" alt="cover" style="width:100%;height:100%;object-fit:cover;">`
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;">🎵</div>`;
 
+    const eraName = track.era_tag?.name || track.genre || '';
+
     document.getElementById('track-container').innerHTML = `
       <div style="padding:32px 0;">
         <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
-          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:var(--purple-bg);flex-shrink:0;">
+          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a2e,#2d1b6e);flex-shrink:0;">
             ${cover}
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;">${track.title}</div>
-            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-secondary);font-weight:500;">${artist.display_name || 'Unknown'}</a>
-            ${track.genre ? `<div style="margin-top:10px;"><span class="badge">${track.genre}</span></div>` : ''}
-            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-secondary);line-height:1.6;">${track.description}</p>` : ''}
-            <div style="display:flex;align-items:center;gap:12px;margin-top:20px;">
+            <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;">${escHtml(track.title)}</div>
+            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-secondary);font-weight:500;">${escHtml(artist.display_name || 'Unknown')}</a>
+            ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
+            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-secondary);line-height:1.6;">${escHtml(track.description)}</p>` : ''}
+            <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="togglePlay()" id="main-play-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 Play
@@ -115,7 +127,7 @@
                 <button class="btn btn-primary" onclick="postComment()">Post</button>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-secondary);">
-              <a href="/login.html" style="color:var(--purple);font-weight:500;">Log in</a> to leave a comment.
+              <a href="/login.html" style="color:var(--purple-light);font-weight:500;">Log in</a> to leave a comment.
             </p>`}
           </div>
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -143,15 +155,59 @@
         el.innerHTML = `<p style="color:var(--text-tertiary);font-size:14px;">No comments yet.</p>`;
         return;
       }
-      el.innerHTML = comments.map(c => `
-        <div class="comment-item">
-          <div class="comment-avatar">${c.users?.username?.[0]?.toUpperCase() || '?'}</div>
-          <div>
-            <span class="comment-username">${c.users?.username || 'unknown'}</span>
-            <span class="comment-time">${timeAgo(c.created_at)}</span>
-            <div class="comment-content">${c.content}</div>
-          </div>
-        </div>`).join('');
+      el.innerHTML = comments.map(c => {
+        const net = (c.upvotes || 0) - (c.downvotes || 0);
+        const myVote = myVotes[c.id] || 0;
+        return `
+          <div class="comment-item" id="comment-${c.id}">
+            <div class="comment-avatar">${escHtml((c.users?.username || '?')[0].toUpperCase())}</div>
+            <div style="flex:1;min-width:0;">
+              <span class="comment-username">${escHtml(c.users?.username || 'unknown')}</span>
+              <span class="comment-time">${timeAgo(c.created_at)}</span>
+              <div class="comment-content">${escHtml(c.content)}</div>
+              <div class="comment-votes">
+                <button class="vote-btn ${myVote === 1 ? 'active-up' : ''}" onclick="voteComment('${c.id}', 1)">
+                  ▲ <span id="vote-up-${c.id}">${c.upvotes || 0}</span>
+                </button>
+                <button class="vote-btn ${myVote === -1 ? 'active-down' : ''}" onclick="voteComment('${c.id}', -1)">
+                  ▼ <span id="vote-down-${c.id}">${c.downvotes || 0}</span>
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch (_) {}
+  }
+
+  async function voteComment(commentId, vote) {
+    if (!isLoggedIn()) return location.href = '/login.html';
+    try {
+      const res = await api(`/tracks/${trackId}/comments/${commentId}/vote`, {
+        method: 'POST',
+        body: JSON.stringify({ vote }),
+      });
+      // Toggle: if same vote, remove it
+      if (myVotes[commentId] === vote) {
+        myVotes[commentId] = 0;
+      } else {
+        myVotes[commentId] = vote;
+      }
+      // Update displayed counts
+      if (res.upvotes !== undefined) {
+        const upEl = document.getElementById(`vote-up-${commentId}`);
+        const downEl = document.getElementById(`vote-down-${commentId}`);
+        if (upEl) upEl.textContent = res.upvotes || 0;
+        if (downEl) downEl.textContent = res.downvotes || 0;
+      }
+      // Update button active state
+      const commentEl = document.getElementById(`comment-${commentId}`);
+      if (commentEl) {
+        commentEl.querySelectorAll('.vote-btn').forEach((btn, i) => {
+          const v = i === 0 ? 1 : -1;
+          btn.classList.toggle('active-up', myVotes[commentId] === 1 && v === 1);
+          btn.classList.toggle('active-down', myVotes[commentId] === -1 && v === -1);
+        });
+      }
     } catch (_) {}
   }
 

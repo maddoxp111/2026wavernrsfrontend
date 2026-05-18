@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs stream — admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Password gate -->
+<div id="auth-gate" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div class="auth-card">
+    <div class="auth-logo">wavernrs stream</div>
+    <h1 class="auth-title">Admin Panel</h1>
+    <p class="auth-subtitle">Enter the admin password to continue</p>
+    <div id="gate-alert"></div>
+    <div class="form-group">
+      <label>Admin password</label>
+      <input type="password" id="admin-pw" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') verifyAdmin()">
+    </div>
+    <button class="btn btn-primary btn-lg" style="width:100%" onclick="verifyAdmin()">Enter</button>
+  </div>
+</div>
+
+<!-- Admin content -->
+<div id="admin-content" style="display:none;">
+  <nav>
+    <a href="/index.html" class="nav-logo">wavernrs stream</a>
+    <div class="nav-links">
+      <span style="color:var(--text-secondary);font-size:14px;font-weight:500;">Admin Panel</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-ghost btn-sm" onclick="location.href='/index.html'">← Back to site</button>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top:32px;max-width:1000px;padding-bottom:60px;">
+    <div id="admin-alert" style="margin-bottom:16px;"></div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showAdminTab('banners')">Banners</button>
+      <button class="tab" onclick="showAdminTab('eratags')">Era Tags</button>
+      <button class="tab" onclick="showAdminTab('users')">Users</button>
+      <button class="tab" onclick="showAdminTab('content')">Content</button>
+    </div>
+
+    <!-- Banners tab -->
+    <div id="tab-banners">
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+          <label>Message</label>
+          <input type="text" id="banner-msg" placeholder="Banner message...">
+        </div>
+        <div class="form-group" style="width:120px;margin-bottom:0;">
+          <label>Type</label>
+          <select id="banner-type">
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="success">Success</option>
+            <option value="error">Error</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="createBanner()">Add Banner</button>
+      </div>
+      <div id="banners-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Era Tags tab -->
+    <div id="tab-eratags" style="display:none;">
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+          <label>Era Tag Name</label>
+          <input type="text" id="eratag-name" placeholder="e.g. 2000s, Drill..." onkeydown="if(event.key==='Enter') createEraTag()">
+        </div>
+        <button class="btn btn-primary" onclick="createEraTag()">Add Era Tag</button>
+      </div>
+      <div id="eratags-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Users tab -->
+    <div id="tab-users" style="display:none;">
+      <div id="users-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Content tab -->
+    <div id="tab-content" style="display:none;">
+      <div class="tabs" style="border-bottom:none;margin-bottom:16px;">
+        <button class="tab active" id="content-tab-edits" onclick="showContentTab('edits')">Edits</button>
+        <button class="tab" id="content-tab-comps" onclick="showContentTab('comps')">Comps</button>
+      </div>
+      <div id="content-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  let adminPw = null;
+  let activeAdminTab = 'banners';
+  let activeContentTab = 'edits';
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function adminApi(path, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Admin-Password': adminPw,
+      ...(options.headers || {}),
+    };
+    return fetch(`${API_BASE}${path}`, { ...options, headers })
+      .then(async res => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        return data;
+      });
+  }
+
+  async function verifyAdmin() {
+    const pw = document.getElementById('admin-pw').value;
+    if (!pw) return showAlert('gate-alert', 'Enter the admin password');
+    clearAlert('gate-alert');
+
+    try {
+      await fetch(`${API_BASE}/admin/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw },
+      }).then(async r => {
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || 'Invalid password');
+        }
+      });
+
+      adminPw = pw;
+      sessionStorage.setItem('admin_pw', pw);
+      document.getElementById('auth-gate').style.display = 'none';
+      document.getElementById('admin-content').style.display = '';
+      loadAll();
+    } catch (err) {
+      showAlert('gate-alert', err.message || 'Invalid password');
+    }
+  }
+
+  function showAdminTab(tab) {
+    activeAdminTab = tab;
+    ['banners', 'eratags', 'users', 'content'].forEach(t => {
+      const el = document.getElementById(`tab-${t}`);
+      if (el) el.style.display = t === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.tabs .tab').forEach((btn, i) => {
+      const tabs = ['banners', 'eratags', 'users', 'content'];
+      btn.classList.toggle('active', tabs[i] === tab);
+    });
+    // Load data for the tab
+    if (tab === 'banners') loadBanners();
+    else if (tab === 'eratags') loadEraTags();
+    else if (tab === 'users') loadUsers();
+    else if (tab === 'content') loadContent();
+  }
+
+  function showContentTab(tab) {
+    activeContentTab = tab;
+    document.getElementById('content-tab-edits').classList.toggle('active', tab === 'edits');
+    document.getElementById('content-tab-comps').classList.toggle('active', tab === 'comps');
+    loadContent();
+  }
+
+  function loadAll() {
+    loadBanners();
+  }
+
+  async function loadBanners() {
+    const el = document.getElementById('banners-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const banners = await adminApi('/admin/banners');
+      if (!banners.length) {
+        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No banners.</div>`;
+        return;
+      }
+      el.innerHTML = `<table class="admin-table">
+        <thead><tr><th>Message</th><th>Type</th><th>Active</th><th>Actions</th></tr></thead>
+        <tbody>${banners.map(b => `
+          <tr>
+            <td>${escHtml(b.message)}</td>
+            <td><span class="site-banner ${b.type || 'info'}" style="padding:2px 8px;display:inline-block;border-radius:4px;">${escHtml(b.type || 'info')}</span></td>
+            <td>
+              <button class="btn btn-sm ${b.active ? 'btn-primary' : 'btn-secondary'}" onclick="toggleBanner('${b.id}',${b.active})">
+                ${b.active ? 'Active' : 'Inactive'}
+              </button>
+            </td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteBanner('${b.id}')">Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function createBanner() {
+    const message = document.getElementById('banner-msg').value.trim();
+    const type = document.getElementById('banner-type').value;
+    if (!message) return showAlert('admin-alert', 'Enter a banner message');
+    try {
+      await adminApi('/admin/banners', {
+        method: 'POST',
+        body: JSON.stringify({ message, type }),
+      });
+      document.getElementById('banner-msg').value = '';
+      clearAlert('admin-alert');
+      loadBanners();
+    } catch (err) {
+      showAlert('admin-alert', err.message);
+    }
+  }
+
+  async function deleteBanner(id) {
+    if (!confirm('Delete this banner?')) return;
+    try {
+      await adminApi(`/admin/banners/${id}`, { method: 'DELETE' });
+      loadBanners();
+    } catch (err) {
+      showAlert('admin-alert', err.message);
+    }
+  }
+
+  async function toggleBanner(id, active) {
+    try {
+      await adminApi(`/admin/banners/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !active }),
+      });
+      loadBanners();
+    } catch (err) {
+      showAlert('admin-alert', err.message);
+    }
+  }
+
+  async function loadEraTags() {
+    const el = document.getElementById('eratags-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const tags = await fetch(`${API_BASE}/eratags`).then(r => r.json());
+      if (!tags.length) {
+        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No era tags.</div>`;
+        return;
+      }
+      el.innerHTML = `<table class="admin-table">
+        <thead><tr><th>Name</th><th>ID</th><th>Actions</th></tr></thead>
+        <tbody>${tags.map(t => `
+          <tr>
+            <td><span class="era-pill" style="cursor:default;">${escHtml(t.name)}</span></td>
+            <td style="color:var(--text-tertiary);">${t.id}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteEraTag(${t.id})">Delete</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function createEraTag() {
+    const name = document.getElementById('eratag-name').value.trim();
+    if (!name) return showAlert('admin-alert', 'Enter a tag name');
+    try {
+      await fetch(`${API_BASE}/eratags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPw },
+        body: JSON.stringify({ name }),
+      }).then(async r => {
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || 'Failed');
+        }
+      });
+      document.getElementById('eratag-name').value = '';
+      clearAlert('admin-alert');
+      loadEraTags();
+    } catch (err) {
+      showAlert('admin-alert', err.message);
+    }
+  }
+
+  async function deleteEraTag(id) {
+    if (!confirm('Delete this era tag?')) return;
+    try {
+      await fetch(`${API_BASE}/eratags/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': adminPw },
+      }).then(async r => {
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || 'Failed');
+        }
+      });
+      loadEraTags();
+    } catch (err) {
+      showAlert('admin-alert', err.message);
+    }
+  }
+
+  async function loadUsers() {
+    const el = document.getElementById('users-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const users = await adminApi('/admin/users');
+      if (!users.length) {
+        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No users.</div>`;
+        return;
+      }
+      el.innerHTML = `<table class="admin-table">
+        <thead><tr><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${users.map(u => {
+          const status = u.banned_until ? `<span style="color:var(--red);">Banned</span>` :
+                         u.timeout_until ? `<span style="color:#FCD34D;">Timeout</span>` :
+                         `<span style="color:var(--green);">Active</span>`;
+          const actions = u.banned_until
+            ? `<button class="btn btn-secondary btn-sm" onclick="unbanUser('${u.id}')">Unban</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="timeoutUser('${u.id}')">Timeout</button>
+               <button class="btn btn-danger btn-sm" onclick="banUser('${u.id}')">Ban</button>`;
+          return `
+            <tr>
+              <td style="font-weight:500;">${escHtml(u.username)}</td>
+              <td style="color:var(--text-secondary);">${new Date(u.created_at).toLocaleDateString()}</td>
+              <td>${status}</td>
+              <td style="display:flex;gap:6px;">${actions}</td>
+            </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function banUser(id) {
+    if (!confirm('Ban this user permanently?')) return;
+    try {
+      await adminApi(`/admin/users/${id}/ban`, { method: 'POST' });
+      loadUsers();
+    } catch (err) { showAlert('admin-alert', err.message); }
+  }
+
+  async function unbanUser(id) {
+    try {
+      await adminApi(`/admin/users/${id}/ban`, { method: 'DELETE' });
+      loadUsers();
+    } catch (err) { showAlert('admin-alert', err.message); }
+  }
+
+  async function timeoutUser(id) {
+    const hours = prompt('Timeout duration in hours:');
+    if (!hours || isNaN(hours)) return;
+    try {
+      await adminApi(`/admin/users/${id}/timeout`, {
+        method: 'POST',
+        body: JSON.stringify({ hours: parseInt(hours) }),
+      });
+      loadUsers();
+    } catch (err) { showAlert('admin-alert', err.message); }
+  }
+
+  async function loadContent() {
+    const el = document.getElementById('content-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      if (activeContentTab === 'edits') {
+        const data = await adminApi('/discover').catch(() => api('/discover'));
+        const tracks = (data.recent || []).concat(data.trending || []);
+        const seen = new Set();
+        const unique = tracks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; });
+        if (!unique.length) {
+          el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No edits.</div>`;
+          return;
+        }
+        el.innerHTML = `<table class="admin-table">
+          <thead><tr><th>Title</th><th>Artist</th><th>Plays</th><th>Actions</th></tr></thead>
+          <tbody>${unique.map(t => `
+            <tr>
+              <td><a href="/track.html?id=${t.id}" style="color:var(--purple-light);">${escHtml(t.title)}</a></td>
+              <td style="color:var(--text-secondary);">${escHtml(t.artists?.display_name || '')}</td>
+              <td style="color:var(--text-tertiary);">${fmtNum(t.play_count)}</td>
+              <td><button class="btn btn-danger btn-sm" onclick="deleteTrack('${t.id}')">Remove</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+      } else {
+        // Comps — no public listing endpoint, try admin route
+        try {
+          const comps = await adminApi('/admin/albums');
+          if (!comps.length) {
+            el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No comps.</div>`;
+            return;
+          }
+          el.innerHTML = `<table class="admin-table">
+            <thead><tr><th>Title</th><th>Artist</th><th>Actions</th></tr></thead>
+            <tbody>${comps.map(c => `
+              <tr>
+                <td><a href="/album.html?id=${c.id}" style="color:var(--purple-light);">${escHtml(c.title)}</a></td>
+                <td style="color:var(--text-secondary);">${escHtml(c.artists?.display_name || '')}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="deleteComp('${c.id}')">Remove</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`;
+        } catch (_) {
+          el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">Comp listing not available.</div>`;
+        }
+      }
+    } catch (err) {
+      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  async function deleteTrack(id) {
+    if (!confirm('Remove this edit?')) return;
+    try {
+      await adminApi(`/admin/tracks/${id}`, { method: 'DELETE' });
+      loadContent();
+    } catch (err) { showAlert('admin-alert', err.message); }
+  }
+
+  async function deleteComp(id) {
+    if (!confirm('Remove this comp?')) return;
+    try {
+      await adminApi(`/admin/albums/${id}`, { method: 'DELETE' });
+      loadContent();
+    } catch (err) { showAlert('admin-alert', err.message); }
+  }
+
+  // Auto-login from session storage
+  const savedPw = sessionStorage.getItem('admin_pw');
+  if (savedPw) {
+    document.getElementById('admin-pw').value = savedPw;
+    verifyAdmin();
+  }
+</script>
+</body>
+</html>
