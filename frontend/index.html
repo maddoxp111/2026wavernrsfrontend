@@ -52,6 +52,26 @@
 
 </div>
 
+<!-- Mobile bottom nav -->
+<div class="mobile-bottom-nav">
+  <a href="/index.html" class="mobile-nav-item active">
+    <span class="mobile-nav-icon">🏠</span>
+    <span>Home</span>
+  </a>
+  <a href="/discover.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔍</span>
+    <span>Discover</span>
+  </a>
+  <a href="/search.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔎</span>
+    <span>Search</span>
+  </a>
+  <a href="/dashboard.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🎛️</span>
+    <span>Dashboard</span>
+  </a>
+</div>
+
 <!-- Player -->
 <div id="player" class="hidden">
   <div class="player-track">
@@ -105,15 +125,25 @@
 
   function renderQuickGrid(recent, trending) {
     const el = document.getElementById('quick-grid');
-    const combined = [...recent, ...trending];
+
+    // Try recently played first
+    let historyItems = [];
+    try { historyItems = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch {}
+
+    const combined = historyItems.length >= 4 ? historyItems : [...recent, ...trending];
     const seen = new Set();
     const unique = combined.filter(t => {
-      if (seen.has(t.id)) return false;
+      if (!t || !t.id || seen.has(t.id)) return false;
       seen.add(t.id);
       return true;
     });
     const items = unique.slice(0, 8);
+
     if (!items.length) { el.style.display = 'none'; return; }
+
+    // Add section label
+    const label = historyItems.length >= 4 ? 'Recently Played' : 'Popular Right Now';
+    el.insertAdjacentHTML('beforebegin', `<div style="font-size:20px;font-weight:700;margin-bottom:16px;">${label}</div>`);
 
     el.innerHTML = items.map(t => {
       const coverHtml = t.cover_url

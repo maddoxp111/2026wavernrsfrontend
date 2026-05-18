@@ -28,6 +28,26 @@
   </div>
 </div>
 
+<!-- Mobile bottom nav -->
+<div class="mobile-bottom-nav">
+  <a href="/index.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🏠</span>
+    <span>Home</span>
+  </a>
+  <a href="/discover.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔍</span>
+    <span>Discover</span>
+  </a>
+  <a href="/search.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔎</span>
+    <span>Search</span>
+  </a>
+  <a href="/dashboard.html" class="mobile-nav-item active">
+    <span class="mobile-nav-icon">🎛️</span>
+    <span>Dashboard</span>
+  </a>
+</div>
+
 <!-- Player -->
 <div id="player" class="hidden">
   <div class="player-track">
@@ -75,6 +95,62 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeDeleteCompModal()">Cancel</button>
       <button class="btn btn-danger" id="confirm-delete-comp-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Edit Modal -->
+<div class="modal-overlay" id="edit-track-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">Edit Edit</div>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="edit-track-title" placeholder="Track name">
+    </div>
+    <div class="form-group">
+      <label>Era Tag</label>
+      <select id="edit-track-era"></select>
+    </div>
+    <div class="form-group">
+      <label>Cover image URL</label>
+      <input type="url" id="edit-track-cover" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="edit-track-desc" rows="2"></textarea>
+    </div>
+    <div id="edit-track-alert" style="margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEditTrackModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditTrack()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Comp Modal -->
+<div class="modal-overlay" id="edit-album-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">Edit Comp</div>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="edit-album-title" placeholder="Comp name">
+    </div>
+    <div class="form-group">
+      <label>Era Tag</label>
+      <select id="edit-album-era"></select>
+    </div>
+    <div class="form-group">
+      <label>Cover image URL</label>
+      <input type="url" id="edit-album-cover" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="edit-album-desc" rows="2"></textarea>
+    </div>
+    <div id="edit-album-alert" style="margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('edit-album-modal').classList.remove('open');editingAlbumId=null;">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditAlbum()">Save</button>
     </div>
   </div>
 </div>
@@ -349,6 +425,7 @@
           </div>
           <div style="display:flex;gap:8px;margin-left:auto;">
             <a href="/track.html?id=${t.id}" class="btn btn-secondary btn-sm">Open</a>
+            <button class="btn btn-secondary btn-sm" onclick="openEditTrackModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="confirmDelete('${t.id}')">Delete</button>
           </div>
         </div>`;
@@ -372,6 +449,7 @@
           </div>
           <div style="display:flex;gap:8px;margin-left:auto;">
             <a href="/album.html?id=${c.id}" class="btn btn-secondary btn-sm">Open</a>
+            <button class="btn btn-secondary btn-sm" onclick="openEditAlbumModal(${JSON.stringify(c).replace(/"/g,'&quot;')})">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="confirmDeleteComp('${c.id}')">Delete</button>
           </div>
         </div>`;
@@ -552,6 +630,7 @@
   async function doUpload() {
     const title = document.getElementById('upload-title').value.trim();
     const era_tag_id = document.getElementById('upload-era-tag').value;
+    if (!era_tag_id) return showAlert('upload-alert', 'Era tag is required');
     const description = document.getElementById('upload-desc').value.trim();
     const drive_url = document.getElementById('drive-url').value.trim();
     clearAlert('upload-alert');
@@ -568,14 +647,24 @@
     const status = document.getElementById('upload-status');
     progress.style.display = 'block';
 
-    let pct = 0;
+    status.textContent = drive_url ? '📡 Connecting to Google Drive…' : '📦 Preparing upload…';
+    bar.style.width = '10%';
+
+    let pct = 10;
     const timer = setInterval(() => {
-      pct = Math.min(pct + Math.random() * 8, 85);
+      if (pct < 30) pct += 3;
+      else if (pct < 60) pct += 1.5;
+      else if (pct < 80) pct += 0.5;
+      else pct = Math.min(pct + 0.1, 84);
       bar.style.width = pct + '%';
-    }, 600);
+
+      if (pct > 15 && pct < 40) status.textContent = '☁️ Uploading to Internet Archive… (this can take 1-2 minutes for large files)';
+      if (pct > 40 && pct < 70) status.textContent = '☁️ Uploading to Internet Archive… (this can take a while for large files, please don\'t close the page)';
+      if (pct > 70) status.textContent = '⏳ Almost there… finalizing upload…';
+    }, 800);
 
     try {
-      status.textContent = drive_url ? 'Downloading from Drive & uploading to Internet Archive…' : 'Uploading to Internet Archive…';
+      status.textContent = drive_url ? '📡 Connecting to Google Drive…' : '☁️ Uploading to Internet Archive… (this can take 1-2 minutes for large files)';
 
       let track;
       if (selectedFile) {
@@ -625,6 +714,7 @@
   async function doUploadComp() {
     const title = document.getElementById('comp-title').value.trim();
     const era_tag_id = document.getElementById('comp-era-tag').value;
+    if (!era_tag_id) return showAlert('comp-upload-alert', 'Era tag is required');
     const description = document.getElementById('comp-desc').value.trim();
     clearAlert('comp-upload-alert');
 
@@ -730,6 +820,90 @@
       renderComps();
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  // ── Edit Track Modal ──
+  let editingTrackId = null;
+
+  function openEditTrackModal(track) {
+    editingTrackId = track.id;
+    document.getElementById('edit-track-title').value = track.title || '';
+    document.getElementById('edit-track-cover').value = track.cover_url || '';
+    document.getElementById('edit-track-desc').value = track.description || '';
+    api('/eratags').then(tags => {
+      document.getElementById('edit-track-era').innerHTML =
+        '<option value="">No era tag</option>' +
+        tags.map(t => `<option value="${t.id}" ${track.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+    }).catch(() => {});
+    document.getElementById('edit-track-modal').classList.add('open');
+  }
+
+  function closeEditTrackModal() {
+    document.getElementById('edit-track-modal').classList.remove('open');
+    editingTrackId = null;
+  }
+
+  async function saveEditTrack() {
+    const title = document.getElementById('edit-track-title').value.trim();
+    if (!title) return showAlert('edit-track-alert', 'Title is required');
+    clearAlert('edit-track-alert');
+    try {
+      const updated = await api(`/tracks/${editingTrackId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title,
+          era_tag_id: document.getElementById('edit-track-era').value || null,
+          cover_url: document.getElementById('edit-track-cover').value.trim() || null,
+          description: document.getElementById('edit-track-desc').value.trim() || null,
+        }),
+      });
+      tracks = tracks.map(t => t.id === editingTrackId ? { ...t, ...updated } : t);
+      closeEditTrackModal();
+      renderTracks();
+      showAlert('alert-container', '✓ Edit updated', 'success');
+    } catch (err) {
+      showAlert('edit-track-alert', err.message);
+    }
+  }
+
+  // ── Edit Album Modal ──
+  let editingAlbumId = null;
+
+  function openEditAlbumModal(album) {
+    editingAlbumId = album.id;
+    document.getElementById('edit-album-title').value = album.title || '';
+    document.getElementById('edit-album-cover').value = album.cover_url || '';
+    document.getElementById('edit-album-desc').value = album.description || '';
+    api('/eratags').then(tags => {
+      document.getElementById('edit-album-era').innerHTML =
+        '<option value="">No era tag</option>' +
+        tags.map(t => `<option value="${t.id}" ${album.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+    }).catch(() => {});
+    document.getElementById('edit-album-modal').classList.add('open');
+  }
+
+  async function saveEditAlbum() {
+    const title = document.getElementById('edit-album-title').value.trim();
+    if (!title) return showAlert('edit-album-alert', 'Title is required');
+    clearAlert('edit-album-alert');
+    try {
+      const updated = await api(`/albums/${editingAlbumId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title,
+          era_tag_id: document.getElementById('edit-album-era').value || null,
+          cover_url: document.getElementById('edit-album-cover').value.trim() || null,
+          description: document.getElementById('edit-album-desc').value.trim() || null,
+        }),
+      });
+      comps = comps.map(a => a.id === editingAlbumId ? { ...a, ...updated } : a);
+      document.getElementById('edit-album-modal').classList.remove('open');
+      editingAlbumId = null;
+      renderComps();
+      showAlert('alert-container', '✓ Comp updated', 'success');
+    } catch (err) {
+      showAlert('edit-album-alert', err.message);
     }
   }
 

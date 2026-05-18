@@ -42,6 +42,26 @@
   </div>
 </div>
 
+<!-- Mobile bottom nav -->
+<div class="mobile-bottom-nav">
+  <a href="/index.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🏠</span>
+    <span>Home</span>
+  </a>
+  <a href="/discover.html" class="mobile-nav-item active">
+    <span class="mobile-nav-icon">🔍</span>
+    <span>Discover</span>
+  </a>
+  <a href="/search.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔎</span>
+    <span>Search</span>
+  </a>
+  <a href="/dashboard.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🎛️</span>
+    <span>Dashboard</span>
+  </a>
+</div>
+
 <!-- Player -->
 <div id="player" class="hidden">
   <div class="player-track">
@@ -74,7 +94,7 @@
 <script>
   const params = new URLSearchParams(location.search);
   let activeTab = params.get('tab') || 'recent';
-  let activeEra = params.get('era') ? parseInt(params.get('era')) : null;
+  let activeEra = params.get('era') || null;
 
   updateNav();
   initPlayer();
@@ -125,12 +145,10 @@
     try {
       let tracks = [];
       if (activeTab === 'trending') {
-        // trending doesn't filter by era in current API, load all trending
-        const data = await api('/discover');
-        tracks = data.trending || [];
+        tracks = await api('/discover/trending');
       } else if (activeEra) {
         tracks = await api(`/discover/era/${activeEra}`);
-        if (!Array.isArray(tracks)) tracks = tracks.tracks || tracks.recent || [];
+        if (!Array.isArray(tracks)) tracks = [];
       } else {
         const data = await api('/discover');
         tracks = data.recent || [];

@@ -25,6 +25,26 @@
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
 
+<!-- Mobile bottom nav -->
+<div class="mobile-bottom-nav">
+  <a href="/index.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🏠</span>
+    <span>Home</span>
+  </a>
+  <a href="/discover.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔍</span>
+    <span>Discover</span>
+  </a>
+  <a href="/search.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🔎</span>
+    <span>Search</span>
+  </a>
+  <a href="/dashboard.html" class="mobile-nav-item">
+    <span class="mobile-nav-icon">🎛️</span>
+    <span>Dashboard</span>
+  </a>
+</div>
+
 <!-- Player -->
 <div id="player" class="hidden">
   <div class="player-track">
@@ -64,6 +84,8 @@
   let artist = null;
   let tracks = [];
   let comps = [];
+  let isFollowing = false;
+  let followerCount = 0;
 
   function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -76,11 +98,35 @@
         api(`/artists/${artistId}/tracks`),
         api(`/albums/by-artist/${artistId}`).catch(() => []),
       ]);
+      // Load follow status (fails silently if table doesn't exist)
+      try {
+        const followData = await api(`/artists/${artistId}/follow`);
+        isFollowing = followData.following || false;
+        followerCount = followData.follower_count || 0;
+      } catch {}
       document.title = `${artist.display_name} — wavernrs stream`;
       render();
     } catch (_) {
       document.getElementById('page-container').innerHTML =
         `<div class="empty-state"><div class="empty-title">Artist not found</div></div>`;
+    }
+  }
+
+  async function toggleFollow() {
+    if (!isLoggedIn()) return location.href = '/login.html';
+    try {
+      const res = await api(`/artists/${artistId}/follow`, { method: 'POST' });
+      isFollowing = res.following;
+      followerCount = res.follower_count;
+      const btn = document.getElementById('follow-btn');
+      if (btn) {
+        btn.textContent = isFollowing ? 'Following' : 'Follow';
+        btn.className = `btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} btn-sm`;
+      }
+      const countEl = document.getElementById('follower-count');
+      if (countEl) countEl.textContent = fmtNum(followerCount);
+    } catch (err) {
+      alert(err.message);
     }
   }
 
@@ -109,12 +155,14 @@
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <div class="artist-name">${escHtml(artist.display_name)}</div>
           ${isOwner ? `<a href="/dashboard.html" class="btn btn-secondary btn-sm">Edit profile</a>` : ''}
+          ${!isOwner ? `<button class="btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} btn-sm" id="follow-btn" onclick="toggleFollow()">${isFollowing ? 'Following' : 'Follow'}</button>` : ''}
         </div>
         ${artist.bio ? `<div class="artist-bio">${escHtml(artist.bio)}</div>` : ''}
         <div class="artist-stats">
           <div class="artist-stat"><strong>${tracks.length}</strong> edits</div>
           <div class="artist-stat"><strong>${comps.length}</strong> comps</div>
           <div class="artist-stat"><strong>${fmtNum(totalPlays)}</strong> total plays</div>
+          <div class="artist-stat"><strong id="follower-count">${fmtNum(followerCount)}</strong> followers</div>
           ${artist.location ? `<div class="artist-stat">📍 ${escHtml(artist.location)}</div>` : ''}
           ${artist.website ? `<div class="artist-stat"><a href="${escHtml(artist.website)}" target="_blank" rel="noopener" style="color:var(--purple-light);">Website ↗</a></div>` : ''}
         </div>

@@ -254,29 +254,53 @@
         return;
       }
       el.innerHTML = `<table class="admin-table">
-        <thead><tr><th>Name</th><th>ID</th><th>Actions</th></tr></thead>
-        <tbody>${tags.map(t => `
+        <thead><tr><th>Order</th><th>Name</th><th>ID</th><th>Actions</th></tr></thead>
+        <tbody>${tags.map((t, i) => `
           <tr>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="moveEraTag('${t.id}', ${i}, -1, eraTagsCache)" ${i === 0 ? 'disabled' : ''}>↑</button>
+              <button class="btn btn-ghost btn-sm" onclick="moveEraTag('${t.id}', ${i}, 1, eraTagsCache)" ${i === tags.length - 1 ? 'disabled' : ''}>↓</button>
+            </td>
             <td><span class="era-pill" style="cursor:default;">${escHtml(t.name)}</span></td>
             <td style="color:var(--text-tertiary);">${t.id}</td>
             <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteEraTag(${t.id})">Delete</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteEraTag('${t.id}')">Delete</button>
             </td>
           </tr>`).join('')}
         </tbody>
       </table>`;
+      eraTagsCache = tags;
     } catch (err) {
       el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+    }
+  }
+
+  let eraTagsCache = [];
+
+  async function moveEraTag(id, currentIndex, direction, tags) {
+    const newIndex = currentIndex + direction;
+    if (newIndex < 0 || newIndex >= tags.length) return;
+    const pw = sessionStorage.getItem('admin_pw');
+    const a = tags[currentIndex], b = tags[newIndex];
+    try {
+      await Promise.all([
+        fetch(`${API_BASE}/eratags/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: newIndex }) }),
+        fetch(`${API_BASE}/eratags/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: currentIndex }) }),
+      ]);
+      loadEraTags();
+    } catch (err) {
+      showAlert('admin-alert', 'Reorder failed: ' + err.message);
     }
   }
 
   async function createEraTag() {
     const name = document.getElementById('eratag-name').value.trim();
     if (!name) return showAlert('admin-alert', 'Enter a tag name');
+    const pw = sessionStorage.getItem('admin_pw');
     try {
       await fetch(`${API_BASE}/eratags`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPw },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw },
         body: JSON.stringify({ name }),
       }).then(async r => {
         if (!r.ok) {
@@ -294,10 +318,11 @@
 
   async function deleteEraTag(id) {
     if (!confirm('Delete this era tag?')) return;
+    const pw = sessionStorage.getItem('admin_pw');
     try {
       await fetch(`${API_BASE}/eratags/${id}`, {
         method: 'DELETE',
-        headers: { 'X-Admin-Password': adminPw },
+        headers: { 'X-Admin-Password': pw },
       }).then(async r => {
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
@@ -306,7 +331,7 @@
       });
       loadEraTags();
     } catch (err) {
-      showAlert('admin-alert', err.message);
+      showAlert('admin-alert', 'Delete failed: ' + err.message);
     }
   }
 

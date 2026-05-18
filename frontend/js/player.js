@@ -102,6 +102,15 @@ function playTrack(track) {
   currentTrack = { ...track, _savedTime: 0 };
   localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
 
+  // Maintain recently_played list (max 8, no duplicates)
+  const HISTORY_KEY = 'recently_played';
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { history = []; }
+  history = history.filter(h => h.id !== track.id);
+  history.unshift({ ...track, _savedTime: undefined });
+  if (history.length > 8) history = history.slice(0, 8);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
   audio.src = track.ia_url;
   audio.currentTime = 0;
 
