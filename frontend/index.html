@@ -16,11 +16,12 @@
   </div>
   <div style="flex:1;max-width:260px;" class="nav-search-wrap">
     <input type="text" id="nav-search" placeholder="Search edits, artists…"
-      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
+      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)navigate('/search.html?q='+encodeURIComponent(q));}">
   </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
 
+<div id="view">
 <div class="container" style="padding-top:28px;">
 
   <!-- Quick access grid -->
@@ -55,7 +56,7 @@
 
 <!-- Mobile bottom nav -->
 <div class="mobile-bottom-nav">
-  <a href="/index.html" class="mobile-nav-item active">
+  <a href="/index.html" class="mobile-nav-item active" style="text-decoration:none;">
     <span class="mobile-nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></span>
     <span>Home</span>
   </a>
@@ -72,9 +73,11 @@
     <span>Dashboard</span>
   </a>
 </div>
+</div><!-- #view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
 <script>
   updateNav();
   initPlayer();
@@ -125,7 +128,7 @@
         ? `<img src="${t.cover_url}" alt="" onerror="this.style.display='none'">`
         : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--purple-bg);">🎵</div>`;
       const clickAction = isAlbum
-        ? `location.href='/album.html?id=${t.id}'`
+        ? `navigate('/album.html?id=${t.id}')`
         : `playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
       return `
         <div class="quick-item" onclick="${clickAction}">
@@ -148,7 +151,7 @@
     const isAlbum = item._type === 'album';
     const coverHtml = item.cover_url ? `<img src="${item.cover_url}" alt="" onerror="this.style.display='none'">` : '';
     const clickAction = isAlbum
-      ? `location.href='/album.html?id=${item.id}'`
+      ? `navigate('/album.html?id=${item.id}')`
       : `openTrack('${item.id}')`;
     return `
       <div class="scroll-card" onclick="${clickAction}" style="cursor:pointer;">
@@ -171,7 +174,7 @@
   }
 
   function openTrack(id) {
-    location.href = `/track.html?id=${id}`;
+    navigate(`/track.html?id=${id}`);
   }
 
   function escHtml(s) {

@@ -181,6 +181,8 @@ function closeFullPlayer() {
 }
 
 function initPlayer() {
+  if (window._playerInited) return;
+  window._playerInited = true;
   injectPlayer();
 
   audio = new Audio();
@@ -279,6 +281,15 @@ function _onTimeUpdate() {
     currentTrack._savedTime = audio.currentTime;
     localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
   }
+  if ('mediaSession' in navigator && audio.duration) {
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: audio.duration,
+        playbackRate: audio.playbackRate,
+        position: audio.currentTime,
+      });
+    } catch (_) {}
+  }
 }
 
 function playTrack(track) {
@@ -304,6 +315,20 @@ function playTrack(track) {
 
   _renderAll(track);
   playerEl.classList.remove('hidden');
+
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || '',
+      artist: track.artist_name || track.artists?.display_name || '',
+      artwork: track.cover_url ? [{ src: track.cover_url, sizes: '512x512', type: 'image/jpeg' }] : [],
+    });
+    navigator.mediaSession.setActionHandler('play', () => audio.play());
+    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', () => skipPrev());
+    navigator.mediaSession.setActionHandler('nexttrack', () => skipNext());
+    navigator.mediaSession.setActionHandler('seekbackward', e => { audio.currentTime -= e.seekOffset || 10; });
+    navigator.mediaSession.setActionHandler('seekforward', e => { audio.currentTime += e.seekOffset || 10; });
+  }
 }
 
 function _renderAll(track) {

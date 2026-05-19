@@ -16,11 +16,12 @@
   </div>
   <div style="flex:1;max-width:260px;" class="nav-search-wrap">
     <input type="text" id="nav-search" placeholder="Search edits, artists…"
-      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
+      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)navigate('/search.html?q='+encodeURIComponent(q));}">
   </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
 
+<div id="view">
 <div class="container">
   <div class="page-header" style="padding-bottom:20px;">
     <h1 class="page-title">Discover</h1>
@@ -61,9 +62,11 @@
     <span>Dashboard</span>
   </a>
 </div>
+</div><!-- #view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   let activeTab = params.get('tab') || 'recent';
@@ -149,7 +152,7 @@
       ? `<img src="${item.cover_url}" alt="cover" onerror="this.style.display='none'">`
       : `<span class="track-cover-placeholder">🎵</span>`;
     const eraName = item.era_tag?.name || item.genre || '';
-    const clickAction = isAlbum ? `location.href='/album.html?id=${item.id}'` : `openTrack('${item.id}')`;
+    const clickAction = isAlbum ? `navigate('/album.html?id=${item.id}')` : `openTrack('${item.id}')`;
     return `
       <div class="track-card" onclick="${clickAction}" style="cursor:pointer;">
         <div class="track-cover">
@@ -178,7 +181,7 @@
   }
 
   function openTrack(id) {
-    location.href = `/track.html?id=${id}`;
+    navigate(`/track.html?id=${id}`);
   }
 
   function escHtml(s) {

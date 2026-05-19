@@ -16,11 +16,12 @@
   </div>
   <div style="flex:1;max-width:260px;" class="nav-search-wrap">
     <input type="text" placeholder="Search edits, artists…"
-      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
+      onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)navigate('/search.html?q='+encodeURIComponent(q));}">
   </div>
   <div class="nav-right" id="nav-right"></div>
 </nav>
 
+<div id="view">
 <div class="container" style="max-width:760px;">
   <div id="album-container">
     <div class="loading"><div class="spinner"></div></div>
@@ -46,15 +47,17 @@
     <span>Dashboard</span>
   </a>
 </div>
+</div><!-- #view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
 <script>
   updateNav();
   initPlayer();
 
   const albumId = new URLSearchParams(location.search).get('id');
-  if (!albumId) location.href = '/index.html';
+  if (!albumId) navigate('/index.html');
 
   let album = null;
   let albumTracks = [];
@@ -153,14 +156,16 @@
     });
   }
 
-  // Auto-advance when track ends
-  document.addEventListener('trackEnded', () => {
+  // Auto-advance when track ends (register cleanup so it doesn't fire on other pages)
+  const _onTrackEnded = () => {
     if (currentTrackIndex >= 0 && currentTrackIndex < albumTracks.length - 1) {
       playAtIndex(currentTrackIndex + 1);
     } else {
       currentTrackIndex = -1;
     }
-  });
+  };
+  document.addEventListener('trackEnded', _onTrackEnded);
+  window._pageCleanup.push(() => document.removeEventListener('trackEnded', _onTrackEnded));
 
   loadAlbum();
 </script>
