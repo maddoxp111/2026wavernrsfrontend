@@ -953,21 +953,28 @@ textarea { resize: vertical; min-height: 80px; }
   .scroll-card-cover { width: 150px; height: 150px; }
 }
 
+/* ── BOTTOM SHELL (single fixed container for nav + player) ── */
+#bottom-shell {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav {
   display: none;
-  position: fixed;
-  bottom: var(--player-height);
-  left: 0;
-  right: 0;
   height: 52px;
   background: rgba(10,10,10,0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid var(--border);
-  z-index: 150;
   align-items: center;
   justify-content: space-around;
+  order: 1;
 }
 
 .mobile-nav-item {
@@ -1015,10 +1022,7 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ── PLAYER BAR (new desktop layout) ── */
 .player-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
   height: var(--player-height);
   background: rgba(10,10,10,0.97);
   backdrop-filter: blur(24px);
@@ -1028,9 +1032,9 @@ textarea { resize: vertical; min-height: 80px; }
   align-items: center;
   padding: 0 16px;
   gap: 8px;
-  z-index: 200;
+  order: 2;
 }
-.player-bar.hidden { transform: translateY(100%); }
+.player-bar.hidden { display: none; }
 
 /* Desktop: show full layout, hide mini */
 .player-mini { display: none; }

@@ -14,7 +14,7 @@ function _unlockIOS() {
 }
 
 function injectPlayer() {
-  document.getElementById('player')?.remove();
+  document.getElementById('bottom-shell')?.remove();
   document.getElementById('player-fullscreen')?.remove();
 
   // ── PLAYER BAR ──
@@ -81,7 +81,13 @@ function injectPlayer() {
       </button>
     </div>
   `;
-  document.body.appendChild(bar);
+  // ── BOTTOM SHELL: single fixed container so iOS never separates the two bars ──
+  const shell = document.createElement('div');
+  shell.id = 'bottom-shell';
+  const mobileNav = document.querySelector('.mobile-bottom-nav');
+  if (mobileNav) shell.appendChild(mobileNav);
+  shell.appendChild(bar);
+  document.body.appendChild(shell);
 
   // ── FULL-SCREEN PLAYER (mobile) ──
   const fs = document.createElement('div');
