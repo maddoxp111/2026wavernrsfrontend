@@ -117,6 +117,7 @@ async function loadActiveBanners() {
 
 // Render banners above nav
 async function renderSiteBanners() {
+  if (document.getElementById('site-banners')) return;
   const banners = await loadActiveBanners();
   if (!banners.length) return;
   const container = document.createElement('div');

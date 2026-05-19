@@ -64,3 +64,6 @@ function _updateNavActive() {
     item.classList.toggle('active', path.endsWith(item.getAttribute('href')));
   });
 }
+
+// Set correct active state on initial page load
+_updateNavActive();
