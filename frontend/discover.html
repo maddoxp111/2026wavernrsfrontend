@@ -33,9 +33,8 @@
 
   <!-- Tabs -->
   <div class="tabs" style="margin-bottom:24px;">
-    <button class="tab" id="tab-recent" onclick="setTab('recent')">Recent Edits</button>
+    <button class="tab" id="tab-recent" onclick="setTab('recent')">Recent</button>
     <button class="tab" id="tab-trending" onclick="setTab('trending')">Trending</button>
-    <button class="tab" id="tab-comps" onclick="setTab('comps')">Comps</button>
   </div>
 
   <div id="tracks-container">
@@ -76,10 +75,10 @@
 
   // Set active tab styles
   function setTab(tab) {
+    if (tab === 'comps') tab = 'recent'; // redirect legacy comps tab to recent
     activeTab = tab;
     document.getElementById('tab-recent').classList.toggle('active', tab === 'recent');
     document.getElementById('tab-trending').classList.toggle('active', tab === 'trending');
-    document.getElementById('tab-comps').classList.toggle('active', tab === 'comps');
     loadTracks();
     // Update URL without reload
     const u = new URL(location.href);
@@ -118,83 +117,56 @@
     const container = document.getElementById('tracks-container');
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      if (activeTab === 'comps') {
-        const comps = await api('/discover/comps');
-        if (!comps.length) {
-          container.innerHTML = `<div class="empty-state"><div class="empty-icon">💿</div><div class="empty-title">No comps yet</div></div>`;
-          return;
-        }
-        container.innerHTML = `<div class="track-grid">${comps.map(compCard).join('')}</div>`;
-        return;
-      }
-
-      let tracks = [];
+      let items = [];
       if (activeTab === 'trending') {
-        tracks = await api('/discover/trending');
+        items = await api('/discover/trending');
       } else if (activeEra) {
-        tracks = await api(`/discover/era/${activeEra}`);
-        if (!Array.isArray(tracks)) tracks = [];
+        items = await api(`/discover/era/${activeEra}`);
+        if (!Array.isArray(items)) items = [];
       } else {
         const data = await api('/discover');
-        tracks = data.recent || [];
+        items = data.recent || [];
       }
 
-      if (!tracks.length) {
+      if (!items.length) {
         container.innerHTML = `<div class="empty-state">
           <div class="empty-icon">🎵</div>
-          <div class="empty-title">No edits yet</div>
+          <div class="empty-title">Nothing here yet</div>
           <div class="empty-desc">Be the first to upload something.</div>
         </div>`;
         return;
       }
 
-      container.innerHTML = `<div class="track-grid">${tracks.map(trackCard).join('')}</div>`;
+      container.innerHTML = `<div class="track-grid">${items.map(trackCard).join('')}</div>`;
     } catch (err) {
       container.innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load</div><div class="empty-desc">${escHtml(err.message)}</div></div>`;
     }
   }
 
-  function compCard(c) {
-    const cover = c.cover_url
-      ? `<img src="${c.cover_url}" alt="cover" onerror="this.style.display='none'">`
-      : '';
-    const eraName = c.era_tag?.name || '';
-    return `
-      <div class="track-card" onclick="location.href='/album.html?id=${c.id}'">
-        <div class="track-cover" style="cursor:pointer;">
-          ${cover}
-          <div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em;">Comp</div>
-        </div>
-        <div class="track-info">
-          <div class="track-title">${escHtml(c.title)}</div>
-          <div class="track-artist">${escHtml(c.artists?.display_name || 'Unknown')}</div>
-          <div class="track-meta">
-            ${eraName ? `<span class="badge">${escHtml(eraName)}</span>` : ''}
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function trackCard(t) {
-    const cover = t.cover_url
-      ? `<img src="${t.cover_url}" alt="cover" onerror="this.style.display='none'">`
+  function trackCard(item) {
+    const isAlbum = item._type === 'album';
+    const cover = item.cover_url
+      ? `<img src="${item.cover_url}" alt="cover" onerror="this.style.display='none'">`
       : `<span class="track-cover-placeholder">🎵</span>`;
-    const eraName = t.era_tag?.name || t.genre || '';
+    const eraName = item.era_tag?.name || item.genre || '';
+    const clickAction = isAlbum ? `location.href='/album.html?id=${item.id}'` : `openTrack('${item.id}')`;
     return `
-      <div class="track-card" onclick="openTrack('${t.id}')">
+      <div class="track-card" onclick="${clickAction}" style="cursor:pointer;">
         <div class="track-cover">
           ${cover}
-          <div class="track-play-overlay">
-            <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-          </div>
+          ${isAlbum
+            ? `<div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;">COMP</div>`
+            : `<div class="track-play-overlay">
+                <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(item).replace(/"/g,'&quot;')})">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+              </div>`}
         </div>
         <div class="track-info">
-          <div class="track-title">${escHtml(t.title)}</div>
-          <div class="track-artist">${escHtml(t.artists?.display_name || 'Unknown')}</div>
+          <div class="track-title">${escHtml(item.title)}</div>
+          <div class="track-artist">${escHtml(item.artists?.display_name || 'Unknown')}</div>
           <div class="track-meta">
-            <span>${fmtNum(t.play_count)} plays</span>
+            ${item.play_count !== undefined ? `<span>${fmtNum(item.play_count)} plays</span>` : ''}
             ${eraName ? `<span class="badge">${escHtml(eraName)}</span>` : ''}
           </div>
         </div>

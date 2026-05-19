@@ -50,14 +50,6 @@
     </div>
   </div>
 
-  <!-- New Comps section -->
-  <div class="scroll-section" id="comps-section" style="display:none;">
-    <div class="scroll-section-header">
-      <span class="scroll-section-title">New Comps</span>
-      <a href="/discover.html" class="scroll-section-link">Show all</a>
-    </div>
-    <div class="scroll-row" id="comps-row"></div>
-  </div>
 
 </div>
 
@@ -97,10 +89,6 @@
       renderQuickGrid(recent, trending);
       renderScrollRow('new-releases-row', recent);
       renderScrollRow('trending-row', trending);
-      if (data.comps && data.comps.length) {
-        document.getElementById('comps-section').style.display = '';
-        renderCompRow('comps-row', data.comps);
-      }
     } catch (err) {
       document.getElementById('new-releases-row').innerHTML =
         `<div style="color:var(--text-tertiary);font-size:14px;padding:12px 0;">Failed to load.</div>`;
@@ -132,11 +120,15 @@
     el.insertAdjacentHTML('beforebegin', `<div style="font-size:20px;font-weight:700;margin-bottom:16px;">${label}</div>`);
 
     el.innerHTML = items.map(t => {
+      const isAlbum = t._type === 'album';
       const coverHtml = t.cover_url
         ? `<img src="${t.cover_url}" alt="" onerror="this.style.display='none'">`
         : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--purple-bg);">🎵</div>`;
+      const clickAction = isAlbum
+        ? `location.href='/album.html?id=${t.id}'`
+        : `playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
       return `
-        <div class="quick-item" onclick="playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+        <div class="quick-item" onclick="${clickAction}">
           <div class="quick-item-cover">${coverHtml}</div>
           <div class="quick-item-title">${escHtml(t.title)}</div>
         </div>`;
@@ -152,40 +144,26 @@
     el.innerHTML = tracks.map(t => scrollCard(t)).join('');
   }
 
-  function scrollCard(t) {
-    const coverHtml = t.cover_url
-      ? `<img src="${t.cover_url}" alt="" onerror="this.style.display='none'">`
-      : '';
+  function scrollCard(item) {
+    const isAlbum = item._type === 'album';
+    const coverHtml = item.cover_url ? `<img src="${item.cover_url}" alt="" onerror="this.style.display='none'">` : '';
+    const clickAction = isAlbum
+      ? `location.href='/album.html?id=${item.id}'`
+      : `openTrack('${item.id}')`;
     return `
-      <div class="scroll-card" onclick="openTrack('${t.id}')">
+      <div class="scroll-card" onclick="${clickAction}" style="cursor:pointer;">
         <div class="scroll-card-cover">
           ${coverHtml}
+          ${isAlbum ? `<div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;">COMP</div>` : `
           <div class="scroll-card-overlay">
-            <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+            <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(item).replace(/"/g,'&quot;')})">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
             </button>
-          </div>
+          </div>`}
         </div>
-        <div class="scroll-card-title">${escHtml(t.title)}</div>
-        <div class="scroll-card-sub">${escHtml(t.artists?.display_name || 'Unknown')}</div>
+        <div class="scroll-card-title">${escHtml(item.title)}</div>
+        <div class="scroll-card-sub">${escHtml(item.artists?.display_name || 'Unknown')}</div>
       </div>`;
-  }
-
-  function renderCompRow(rowId, comps) {
-    const el = document.getElementById(rowId);
-    if (!comps.length) { el.innerHTML = ''; return; }
-    el.innerHTML = comps.map(c => {
-      const cover = c.cover_url ? `<img src="${c.cover_url}" alt="" onerror="this.style.display='none'">` : '';
-      return `
-        <div class="scroll-card" onclick="location.href='/album.html?id=${c.id}'">
-          <div class="scroll-card-cover" style="cursor:pointer;">
-            ${cover}
-            <div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em;">Comp</div>
-          </div>
-          <div class="scroll-card-title">${escHtml(c.title)}</div>
-          <div class="scroll-card-sub">${escHtml(c.artists?.display_name || 'Unknown')}</div>
-        </div>`;
-    }).join('');
   }
 
   function playThis(track) {
