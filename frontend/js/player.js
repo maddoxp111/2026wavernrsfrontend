@@ -224,7 +224,7 @@ function initPlayer() {
           audio.addEventListener('canplay', () => {
             if (resumeTime > 1) audio.currentTime = resumeTime;
             audio.muted = false;
-            audio.play().catch(() => _showTapToPlay());
+            audio.play().catch(() => {});
           }, { once: true });
           audio.load();
         }
@@ -317,7 +317,7 @@ function playTrack(track) {
   audio.src = track.ia_url;
   audio.currentTime = 0;
   const p = audio.play();
-  if (p) p.catch(err => { if (err.name === 'NotAllowedError') _showTapToPlay(); });
+  if (p) p.catch(() => {});
 
   _renderAll(track);
   playerEl.classList.remove('hidden');
@@ -392,17 +392,6 @@ function _setPlayBtns(playing) {
   if (b1) b1.innerHTML = icon;
   if (b2) b2.innerHTML = mini;
   if (b3) b3.innerHTML = pfs;
-}
-
-function _showTapToPlay() {
-  let o = document.getElementById('tap-to-play-overlay');
-  if (o) return;
-  o = document.createElement('div');
-  o.id = 'tap-to-play-overlay';
-  o.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--purple);color:white;padding:10px 20px;border-radius:24px;font-size:14px;font-weight:600;cursor:pointer;z-index:250;';
-  o.textContent = 'Tap to play';
-  o.onclick = () => { togglePlay(); o.remove(); };
-  document.body.appendChild(o);
 }
 
 // Stubs for pages that need skip prev/next (album.html overrides these)

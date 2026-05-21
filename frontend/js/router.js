@@ -27,7 +27,8 @@ window.navigate = async function(url) {
     const pageScript = inlineScripts[inlineScripts.length - 1];
     if (pageScript) {
       const s = document.createElement('script');
-      s.textContent = pageScript.textContent;
+      // Wrap in IIFE so const/let declarations don't conflict across navigations
+      s.textContent = `(function(){\n${pageScript.textContent}\n})();`;
       document.head.appendChild(s);
     }
 
