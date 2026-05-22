@@ -60,7 +60,7 @@
   initPlayer();
 
   var artistId = new URLSearchParams(location.search).get('id');
-  if (!artistId) navigate('/index.html');
+  if (!artistId || artistId === 'null' || artistId === 'undefined') navigate('/index.html');
 
   var artist = null;
   var uploads = [];
@@ -92,7 +92,8 @@
       document.title = `${artist.display_name} — wavernrs stream`;
       render();
     } catch (_) {
-      document.getElementById('page-container').innerHTML =
+      const el = document.getElementById('page-container');
+      if (el) el.innerHTML =
         `<div class="empty-state"><div class="empty-title">Artist not found</div></div>`;
     }
   }
