@@ -22,6 +22,10 @@ window.navigate = async function(url) {
     const curView = document.getElementById('view');
     if (newView && curView) curView.replaceWith(newView.cloneNode(true));
 
+    // Push state FIRST so location.search is correct when page script reads it
+    history.pushState(null, doc.title, url);
+    _updateNavActive();
+
     // Extract and run the last inline <script> (the page init block)
     const inlineScripts = [...doc.querySelectorAll('script:not([src])')];
     const pageScript = inlineScripts[inlineScripts.length - 1];
@@ -31,8 +35,6 @@ window.navigate = async function(url) {
       document.head.appendChild(s);
     }
 
-    history.pushState(null, doc.title, url);
-    _updateNavActive();
     window.scrollTo(0, 0);
   } catch (_) {
     location.assign(url); // fallback: real navigation
