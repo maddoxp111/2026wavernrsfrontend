@@ -110,72 +110,61 @@
         return;
       }
 
-      let html = '';
+      var html = '';
 
+      // ── Artists: horizontal avatar row (unchanged) ──
       if (artists.length) {
-        html += `<div class="search-results-section">
-          <div class="search-results-title">Artists</div>
-          <div class="scroll-row">
-            ${artists.map(a => `
-              <div class="scroll-card" onclick="navigate('/artist.html?id=${a.id}')">
-                <div class="scroll-card-cover" style="border-radius:50%;">
-                  ${a.profile_image_url ? `<img src="${a.profile_image_url}" alt="" onerror="this.style.display='none'">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--purple-light);background:var(--purple-bg);">${escHtml((a.display_name||'?')[0].toUpperCase())}</div>`}
-                </div>
-                <div class="scroll-card-title" style="text-align:center;">${escHtml(a.display_name)}</div>
-              </div>`).join('')}
-          </div>
-        </div>`;
+        html += '<div class="search-results-section">' +
+          '<div class="search-results-title">Artists</div>' +
+          '<div class="scroll-row">' +
+          artists.map(function(a) {
+            var avatar = a.profile_image_url
+              ? '<img src="' + escHtml(a.profile_image_url) + '" alt="" onerror="this.style.display=\'none\'">'
+              : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--purple-light);background:var(--purple-bg);">' + escHtml((a.display_name||'?')[0].toUpperCase()) + '</div>';
+            return '<div class="scroll-card" onclick="navigate(\'/artist.html?id=' + a.id + '\')">' +
+              '<div class="scroll-card-cover" style="border-radius:50%;">' + avatar + '</div>' +
+              '<div class="scroll-card-title" style="text-align:center;">' + escHtml(a.display_name) + '</div>' +
+            '</div>';
+          }).join('') +
+          '</div></div>';
       }
 
-      if (tracks.length) {
-        html += `<div class="search-results-section">
-          <div class="search-results-title">Edits</div>
-          <div class="track-grid">
-            ${tracks.map(t => {
-              const cover = t.cover_url
-                ? `<img src="${t.cover_url}" alt="cover" onerror="this.style.display='none'">`
-                : `<span class="track-cover-placeholder">🎵</span>`;
-              return `
-                <div class="track-card" onclick="navigate('/track.html?id=${t.id}')">
-                  <div class="track-cover">
-                    ${cover}
-                    <div class="track-play-overlay">
-                      <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="track-info">
-                    <div class="track-title">${escHtml(t.title)}</div>
-                    <div class="track-artist">${escHtml(t.artists?.display_name || 'Unknown')}</div>
-                    <div class="track-meta"><span>${fmtNum(t.play_count)} plays</span></div>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>`;
-      }
+      // ── Tracks + Comps: Spotify-style list rows ──
+      var allResults = [];
+      tracks.forEach(function(t) { allResults.push({ _type: 'track', item: t }); });
+      albums.forEach(function(a) { allResults.push({ _type: 'album', item: a }); });
 
-      if (albums.length) {
-        html += `<div class="search-results-section">
-          <div class="search-results-title">Comps</div>
-          <div class="track-grid">
-            ${albums.map(a => {
-              const cover = a.cover_url
-                ? `<img src="${a.cover_url}" alt="cover" onerror="this.style.display='none'">`
-                : `<span class="track-cover-placeholder">💿</span>`;
-              return `
-                <div class="track-card" onclick="navigate('/album.html?id=${a.id}')">
-                  <div class="track-cover">${cover}</div>
-                  <div class="track-info">
-                    <div class="track-title">${escHtml(a.title)}</div>
-                    <div class="track-artist">${escHtml(a.artists?.display_name || a.artist_name || 'Unknown')}</div>
-                    <div class="track-meta"><span class="badge">Comp</span></div>
-                  </div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>`;
+      if (allResults.length) {
+        html += '<div class="search-results-section"><div class="search-results-list">' +
+          allResults.map(function(r) {
+            var item = r.item;
+            var isAlbum = r._type === 'album';
+            var coverSrc = item.cover_url || '';
+            var coverEl = coverSrc
+              ? '<img src="' + escHtml(coverSrc) + '" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML=\'<span style=&quot;font-size:22px;&quot;>' + (isAlbum ? '💿' : '🎵') + '</span>\'">'
+              : '<span style="font-size:22px;">' + (isAlbum ? '💿' : '🎵') + '</span>';
+            var artistName = escHtml(item.artists?.display_name || item.artist_name || 'Unknown');
+            var typeLabel = isAlbum ? 'Comp' : 'Edit';
+            var subtitle = typeLabel + ' · ' + artistName;
+            var clickAction = isAlbum
+              ? 'navigate(\'/album.html?id=' + item.id + '\')'
+              : 'playThis(' + JSON.stringify(item).replace(/"/g,'&quot;') + ')';
+            var playStop = isAlbum ? '' :
+              '<button onclick="event.stopPropagation();playThis(' + JSON.stringify(item).replace(/"/g,'&quot;') + ')" ' +
+              'style="background:none;border:none;cursor:pointer;padding:0;margin-right:8px;flex-shrink:0;" title="Play">' +
+              '<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>' +
+              '</button>';
+            return '<div class="search-result-row" onclick="' + clickAction + '">' +
+              '<div style="width:52px;height:52px;flex-shrink:0;border-radius:6px;overflow:hidden;background:var(--surface-2);display:flex;align-items:center;justify-content:center;">' + coverEl + '</div>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(item.title) + '</div>' +
+                '<div style="font-size:13px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + subtitle + '</div>' +
+              '</div>' +
+              playStop +
+              '<span style="flex-shrink:0;background:var(--surface-2);color:var(--text-secondary);font-size:12px;font-weight:500;padding:4px 12px;border-radius:4px;">' + typeLabel + '</span>' +
+            '</div>';
+          }).join('') +
+        '</div></div>';
       }
 
       el.innerHTML = html;
