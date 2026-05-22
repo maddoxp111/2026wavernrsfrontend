@@ -288,7 +288,7 @@
 
           <!-- Title -->
           <div class="form-group">
-            <label>Title *</label>
+            <label id="upload-title-label">Title <span style="color:var(--text-secondary);font-size:12px;">(comp name for multi-song uploads, track name for single)</span></label>
             <input type="text" id="upload-title" placeholder="Name">
           </div>
 
@@ -304,12 +304,12 @@
             <textarea id="upload-desc" rows="2" placeholder="Optional…" style="min-height:42px;"></textarea>
           </div>
 
-          <!-- Audio files — single or multiple -->
+          <!-- Audio files — additive queue -->
           <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
             <div class="upload-zone-icon">&#x1F3B5;</div>
-            <div class="upload-zone-text" id="upload-zone-text">Drop audio file(s) here or click to browse</div>
-            <div class="upload-zone-hint">MP3, WAV, FLAC — single file or multiple for a multi-track upload</div>
+            <div class="upload-zone-text" id="upload-zone-text">Drop audio file(s) here or click to add to queue</div>
+            <div class="upload-zone-hint">MP3, WAV, FLAC — click or drop to keep adding songs to the queue below</div>
           </div>
           <input type="file" id="file-input" accept="audio/*" multiple style="display:none" onchange="onFileSelect(event)">
 
@@ -370,8 +370,13 @@
     }).join('') + `</div>`;
   }
 
+  function cleanTitle(filename) {
+    return filename.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').trim();
+  }
+
   function onFileSelect(e) {
-    selectedFiles = Array.from(e.target.files);
+    var newItems = Array.from(e.target.files).map(function(f) { return { file: f, title: cleanTitle(f.name) }; });
+    selectedFiles = selectedFiles.concat(newItems);
     renderUploadQueue();
     e.target.value = '';
   }
@@ -379,26 +384,66 @@
   function onDrop(e) {
     e.preventDefault();
     document.getElementById('upload-zone').classList.remove('dragover');
-    selectedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
+    var newItems = Array.from(e.dataTransfer.files)
+      .filter(function(f) { return f.type.startsWith('audio/'); })
+      .map(function(f) { return { file: f, title: cleanTitle(f.name) }; });
+    selectedFiles = selectedFiles.concat(newItems);
     renderUploadQueue();
   }
 
   function renderUploadQueue() {
-    const el = document.getElementById('upload-queue');
-    if (!selectedFiles.length) { el.innerHTML = ''; return; }
-    const txt = document.getElementById('upload-zone-text');
+    var el = document.getElementById('upload-queue');
+    var txt = document.getElementById('upload-zone-text');
+    if (!selectedFiles.length) {
+      el.innerHTML = '';
+      txt.textContent = 'Drop audio file(s) here or click to add to queue';
+      return;
+    }
     txt.textContent = selectedFiles.length === 1
-      ? selectedFiles[0].name
-      : `${selectedFiles.length} files selected`;
-    el.innerHTML = selectedFiles.length <= 1 ? '' : selectedFiles.map((f, i) => `
-      <div class="tracklist-item">
-        <div class="tracklist-num">${i+1}</div>
-        <div class="tracklist-info" style="flex:1;">
-          <div class="tracklist-title">${escHtml(f.name.replace(/\.[^.]+$/, '').replace(/_/g, ' '))}</div>
-          <div class="tracklist-artist">${(f.size/1024/1024).toFixed(1)} MB</div>
-        </div>
-        <button class="tracklist-remove" onclick="selectedFiles.splice(${i},1);renderUploadQueue()">&#xD7;</button>
-      </div>`).join('');
+      ? '1 song queued — add more or press Upload'
+      : selectedFiles.length + ' songs queued — add more or press Upload';
+    el.innerHTML = selectedFiles.map(function(item, i) {
+      return '<div class="tracklist-item" draggable="true" id="qi-' + i + '"' +
+        ' ondragstart="qDragStart(event,' + i + ')"' +
+        ' ondragover="qDragOver(event,' + i + ')"' +
+        ' ondrop="qDragDrop(event,' + i + ')"' +
+        ' ondragend="qDragEnd()">' +
+        '<div style="cursor:grab;padding:0 8px 0 0;font-size:16px;color:var(--text-secondary);user-select:none;" title="Drag to reorder">⠿</div>' +
+        '<div class="tracklist-num" style="min-width:20px;">' + (i+1) + '</div>' +
+        '<div class="tracklist-info" style="flex:1;min-width:0;">' +
+          '<input type="text" value="' + escHtml(item.title) + '"' +
+            ' oninput="selectedFiles[' + i + '].title=this.value"' +
+            ' style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);' +
+            'color:var(--text);font-size:13px;padding:2px 0;outline:none;" placeholder="Track title">' +
+          '<div class="tracklist-artist">' + (item.file.size/1024/1024).toFixed(1) + ' MB</div>' +
+        '</div>' +
+        '<button class="tracklist-remove" style="flex-shrink:0;" onclick="selectedFiles.splice(' + i + ',1);renderUploadQueue()">&#xD7;</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  var _qDragSrc = null;
+  function qDragStart(e, i) {
+    _qDragSrc = i;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function() { var el = document.getElementById('qi-'+i); if (el) el.style.opacity = '0.4'; }, 0);
+  }
+  function qDragOver(e, i) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.borderTop = ''; });
+    if (i !== _qDragSrc) { var el = document.getElementById('qi-'+i); if (el) el.style.borderTop = '2px solid var(--purple)'; }
+  }
+  function qDragDrop(e, i) {
+    e.stopPropagation();
+    if (_qDragSrc === null || _qDragSrc === i) return;
+    var moved = selectedFiles.splice(_qDragSrc, 1)[0];
+    selectedFiles.splice(i, 0, moved);
+    renderUploadQueue();
+  }
+  function qDragEnd() {
+    _qDragSrc = null;
+    document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.opacity = ''; el.style.borderTop = ''; });
   }
 
   async function doUpload() {
@@ -407,8 +452,10 @@
     const description = document.getElementById('upload-desc').value.trim();
     const drive_url = document.getElementById('drive-url').value.trim();
 
-    if (!title) return showAlert('upload-alert', 'Title is required');
-    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'Add an audio file or paste a Drive link');
+    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'Add at least one audio file or paste a Drive link');
+    if (!title && selectedFiles.length !== 1) return showAlert('upload-alert', 'Title is required');
+    // For single-file uploads, fall back to the queue item's title
+    var effectiveTitle = title || (selectedFiles[0] && selectedFiles[0].title) || '';
 
     const btn = document.getElementById('upload-btn');
     const progress = document.getElementById('upload-progress');
@@ -421,41 +468,41 @@
 
     try {
       if (selectedFiles.length > 1) {
-        // Multi-file: create an album
-        const uploadedTrackIds = [];
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const f = selectedFiles[i];
-          statusEl.textContent = `Uploading ${i+1}/${selectedFiles.length}: ${f.name}…`;
-          bar.style.width = `${Math.round((i / selectedFiles.length) * 80)}%`;
-          const form = new FormData();
-          form.append('file', f);
-          form.append('title', f.name.replace(/\.[^.]+$/, '').replace(/_/g, ' '));
+        // Multi-file: upload each track then create an album/comp
+        var uploadedTrackIds = [];
+        for (var i = 0; i < selectedFiles.length; i++) {
+          var item = selectedFiles[i];
+          statusEl.textContent = 'Uploading ' + (i+1) + '/' + selectedFiles.length + ': ' + item.title + '…';
+          bar.style.width = Math.round((i / selectedFiles.length) * 80) + '%';
+          var form = new FormData();
+          form.append('file', item.file);
+          form.append('title', item.title);
           if (era_tag_id) form.append('era_tag_id', era_tag_id);
-          const t = await apiUpload('/tracks', form);
+          var t = await apiUpload('/tracks', form);
           uploadedTrackIds.push(t.id);
         }
-        statusEl.textContent = 'Creating upload…';
+        statusEl.textContent = 'Creating comp…';
         bar.style.width = '90%';
-        const albumForm = new FormData();
-        albumForm.append('title', title);
+        var albumForm = new FormData();
+        albumForm.append('title', effectiveTitle);
         if (era_tag_id) albumForm.append('era_tag_id', era_tag_id);
         if (description) albumForm.append('description', description);
         if (editCoverFile) albumForm.append('cover_file', editCoverFile);
-        albumForm.append('tracks', JSON.stringify(uploadedTrackIds.map((id, i) => ({ track_id: id, position: i + 1 }))));
-        const album = await apiUpload('/albums', albumForm);
+        albumForm.append('tracks', JSON.stringify(uploadedTrackIds.map(function(id, i) { return { track_id: id, position: i + 1 }; })));
+        var album = await apiUpload('/albums', albumForm);
         uploads.unshift({ ...album, _type: 'album' });
       } else {
         // Single file or drive link: create a track
-        const form = new FormData();
-        if (selectedFiles[0]) form.append('file', selectedFiles[0]);
+        var form = new FormData();
+        if (selectedFiles[0]) form.append('file', selectedFiles[0].file);
         if (drive_url) form.append('drive_url', drive_url);
-        form.append('title', title);
+        form.append('title', effectiveTitle);
         if (era_tag_id) form.append('era_tag_id', era_tag_id);
         if (description) form.append('description', description);
         if (editCoverFile) form.append('cover_file', editCoverFile);
         bar.style.width = '60%';
         statusEl.textContent = 'Uploading to Internet Archive…';
-        const track = await apiUpload('/tracks', form);
+        var track = await apiUpload('/tracks', form);
         uploads.unshift({ ...track, _type: 'track' });
       }
 
@@ -469,7 +516,6 @@
       document.getElementById('drive-url').value = '';
       document.getElementById('cover-input').value = '';
       document.getElementById('file-input').value = '';
-      document.getElementById('upload-zone-text').textContent = 'Drop audio file(s) here or click to browse';
       document.getElementById('cover-zone-text').textContent = 'Drop image or click to browse';
       renderUploadQueue();
       renderUploads();
