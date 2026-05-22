@@ -45,6 +45,22 @@ async function apiUpload(path, formData, method = 'POST') {
   return data;
 }
 
+// Smart nav search: search in-place if already on search page, else navigate
+function navSearch(q) {
+  if (!q || q.length < 2) return;
+  if (typeof doSearch === 'function') {
+    // Already on the search page — update URL and run search in-place
+    const u = new URL(location.href);
+    u.searchParams.set('q', q);
+    history.pushState(null, '', u);
+    const el = document.getElementById('search-q');
+    if (el) el.value = q;
+    doSearch(q);
+  } else {
+    navigate('/search.html?q=' + encodeURIComponent(q));
+  }
+}
+
 // Update nav based on auth state
 function updateNav() {
   const user = getUser();
