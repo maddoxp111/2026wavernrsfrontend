@@ -48,7 +48,9 @@ async function apiUpload(path, formData, method = 'POST') {
 // Smart nav search: search in-place if already on search page, else navigate
 function navSearch(q) {
   if (!q || q.length < 2) return;
-  if (typeof doSearch === 'function') {
+  // Check both that doSearch exists AND that we're actually on the search page
+  // (doSearch stays defined globally after SPA navigation away from search.html)
+  if (typeof doSearch === 'function' && location.pathname.endsWith('/search.html')) {
     // Already on the search page — update URL and run search in-place
     const u = new URL(location.href);
     u.searchParams.set('q', q);
