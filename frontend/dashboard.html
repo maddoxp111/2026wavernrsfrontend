@@ -14,6 +14,7 @@
     <a href="/index.html">Home</a>
     <a href="/discover.html">Discover</a>
     <a href="/charts.html">Charts</a>
+    <a href="/playlists.html">Playlists</a>
   </div>
   <div style="flex:1;max-width:260px;" class="nav-search-wrap">
     <input type="text" placeholder="Search edits, artists…"
@@ -336,30 +337,6 @@
         <div>
           <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your Uploads <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${uploads.length})</span></div>
           <div id="my-uploads"></div>
-        </div>
-
-        <!-- My Playlists -->
-        <div style="margin-top:32px;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div style="font-size:16px;font-weight:600;">My Playlists</div>
-            <button class="btn btn-secondary btn-sm" onclick="toggleNewPlaylistForm()">＋ New Playlist</button>
-          </div>
-          <div id="new-playlist-form" style="display:none;margin-bottom:16px;">
-            <div class="card" style="padding:16px;">
-              <div class="form-group">
-                <label>Playlist name *</label>
-                <input type="text" id="new-playlist-title" placeholder="Name your playlist…" onkeydown="if(event.key==='Enter')createPlaylist()">
-              </div>
-              <div class="form-group" style="margin-bottom:0;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                  <input type="checkbox" id="new-playlist-public" checked> Public
-                </label>
-              </div>
-              <div id="new-playlist-alert" style="margin-top:8px;"></div>
-              <button class="btn btn-primary" style="margin-top:12px;" onclick="createPlaylist()">Create Playlist</button>
-            </div>
-          </div>
-          <div id="my-playlists"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>`;
 
@@ -781,71 +758,7 @@
     }
   }
 
-  // ── Playlists ──────────────────────────────────────────────────────────────
-  var myPlaylists = [];
-
-  async function loadPlaylists() {
-    try {
-      myPlaylists = await api('/playlists/mine');
-      renderPlaylists();
-    } catch (_) {
-      var el = document.getElementById('my-playlists');
-      if (el) el.innerHTML = '<p style="font-size:14px;color:var(--text-secondary);">Could not load playlists.</p>';
-    }
-  }
-
-  function renderPlaylists() {
-    var el = document.getElementById('my-playlists');
-    if (!el) return;
-    if (!myPlaylists || !myPlaylists.length) {
-      el.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="empty-desc">No playlists yet — create one above.</div></div>';
-      return;
-    }
-    el.innerHTML = '<div class="scroll-row">' +
-      myPlaylists.map(function(p) {
-        var cnt = p.track_count || 0;
-        return '<div class="scroll-card" onclick="navigate(\'/playlist.html?id=' + p.id + '\')">' +
-          '<div class="scroll-card-cover" style="display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--purple-bg);">🎵</div>' +
-          '<div class="scroll-card-title">' + escHtml(p.title) + '</div>' +
-          '<div class="scroll-card-artist">' + cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒') + '</div>' +
-        '</div>';
-      }).join('') +
-    '</div>';
-  }
-
-  function toggleNewPlaylistForm() {
-    var f = document.getElementById('new-playlist-form');
-    if (!f) return;
-    var visible = f.style.display !== 'none';
-    f.style.display = visible ? 'none' : '';
-    if (!visible) {
-      var inp = document.getElementById('new-playlist-title');
-      if (inp) setTimeout(function() { inp.focus(); }, 50);
-    }
-  }
-
-  async function createPlaylist() {
-    var titleEl = document.getElementById('new-playlist-title');
-    var title = titleEl ? titleEl.value.trim() : '';
-    if (!title) { showAlert('new-playlist-alert', 'Please enter a name'); return; }
-    var isPublic = document.getElementById('new-playlist-public') ? document.getElementById('new-playlist-public').checked : true;
-    try {
-      var pl = await api('/playlists', {
-        method: 'POST',
-        body: JSON.stringify({ title: title, is_public: isPublic }),
-      });
-      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
-      myPlaylists.unshift(pl);
-      renderPlaylists();
-      document.getElementById('new-playlist-form').style.display = 'none';
-      if (titleEl) titleEl.value = '';
-      navigate('/playlist.html?id=' + pl.id);
-    } catch (err) {
-      showAlert('new-playlist-alert', err.message || 'Failed to create playlist');
-    }
-  }
-
-  loadDashboard().then(function() { loadPlaylists(); });
+  loadDashboard();
 </script>
 </body>
 </html>
