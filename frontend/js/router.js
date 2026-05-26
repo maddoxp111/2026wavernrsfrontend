@@ -5,6 +5,13 @@ window.navigate = async function(url) {
   const target = new URL(url, location.href);
   if (target.pathname + target.search === location.pathname + location.search) return;
 
+  // Auth pages are standalone (no #view) — always do a full navigation
+  const path = target.pathname;
+  if (path.endsWith('/login.html') || path.endsWith('/register.html')) {
+    location.assign(url);
+    return;
+  }
+
   // Run teardown registered by the previous page
   window._pageCleanup.forEach(fn => { try { fn(); } catch (_) {} });
   window._pageCleanup = [];
@@ -15,12 +22,18 @@ window.navigate = async function(url) {
     const html = await res.text();
     const doc = new DOMParser().parseFromString(html, 'text/html');
 
+    // If the target page has no #view, it's a standalone page — fall back to real navigation
+    const newView = doc.getElementById('view');
+    if (!newView) {
+      location.assign(url);
+      return;
+    }
+
     document.title = doc.title;
 
     // Swap only #view — nav and player stay alive
-    const newView = doc.getElementById('view');
     const curView = document.getElementById('view');
-    if (newView && curView) curView.replaceWith(newView.cloneNode(true));
+    if (curView) curView.replaceWith(newView.cloneNode(true));
 
     // Push state FIRST so location.search is correct when page script reads it
     history.pushState(null, doc.title, url);
