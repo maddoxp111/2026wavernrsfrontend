@@ -51,16 +51,18 @@
       ? `<img src="${album.cover_url}" alt="cover" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;object-fit:cover;">`
       : '';
 
-    // Update page background gradient to match album cover
-    if (typeof coverHues === 'function') {
-      var c = coverHues(album.title || '');
-      var bg = document.getElementById('wv-page-bg');
-      if (bg) {
+    // Update page background gradient from actual cover image colors
+    if (typeof extractCoverHues === 'function') {
+      extractCoverHues(album.cover_url, album.title || '', function(c) {
+        var bg = document.getElementById('wv-page-bg');
+        if (!bg) return;
+        var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
         bg.style.background =
-          'radial-gradient(ellipse 90% 70% at 10% 20%, hsla(' + c.h1 + ',' + c.s1 + '%,' + (c.l1+22) + '%,0.55) 0%, transparent 55%),' +
-          'radial-gradient(ellipse 70% 80% at 85% 60%, hsla(' + c.h2 + ',' + c.s2 + '%,' + (c.l2+22) + '%,0.45) 0%, transparent 60%),' +
+          'radial-gradient(ellipse 130% 90% at -5% 0%, hsla(' + c.h1 + ',85%,' + (isDark ? 36 : 54) + '%,0.90) 0%, transparent 52%),' +
+          'radial-gradient(ellipse 110% 130% at 105% 100%, hsla(' + c.h2 + ',80%,' + (isDark ? 30 : 48) + '%,0.80) 0%, transparent 58%),' +
+          'radial-gradient(ellipse 70% 60% at 50% 50%, hsla(' + c.h1 + ',70%,' + (isDark ? 25 : 60) + '%,0.35) 0%, transparent 70%),' +
           'var(--page-bg)';
-      }
+      });
     }
 
     document.getElementById('album-container').innerHTML = `

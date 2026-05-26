@@ -107,19 +107,17 @@ function renderHero() {
 
   var coverBg = coverGradient(seed);
 
-  // Update the full page background to be a vivid gradient derived from the hero's cover colors
-  var c = coverHues(seed);
+  // Update the full page background — extract real colors from the cover image
   var pageBgEl = document.getElementById('wv-page-bg');
-  if (pageBgEl) {
-    // Use cover hues at high saturation/lightness as prominent background washes
+  extractCoverHues(item.cover_url, seed, function(c) {
+    if (!pageBgEl) return;
     var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-    var opacity1 = isDark ? '0.60' : '0.50';
-    var opacity2 = isDark ? '0.50' : '0.40';
     pageBgEl.style.background =
-      'radial-gradient(ellipse 100% 80% at 0% 0%, hsla(' + c.h1 + ',' + (c.s1 + 15) + '%,' + (isDark ? 45 : 65) + '%,' + opacity1 + ') 0%, transparent 60%),' +
-      'radial-gradient(ellipse 80% 100% at 100% 100%, hsla(' + c.h2 + ',' + (c.s2 + 10) + '%,' + (isDark ? 40 : 60) + '%,' + opacity2 + ') 0%, transparent 65%),' +
+      'radial-gradient(ellipse 130% 90% at -5% 0%, hsla(' + c.h1 + ',85%,' + (isDark ? 36 : 54) + '%,0.90) 0%, transparent 52%),' +
+      'radial-gradient(ellipse 110% 130% at 105% 100%, hsla(' + c.h2 + ',80%,' + (isDark ? 30 : 48) + '%,0.80) 0%, transparent 58%),' +
+      'radial-gradient(ellipse 70% 60% at 50% 50%, hsla(' + c.h1 + ',70%,' + (isDark ? 25 : 60) + '%,0.35) 0%, transparent 70%),' +
       'var(--page-bg)';
-  }
+  });
 
   var heroHtml =
     '<div class="wv-card lg-highlight" id="hero-card" style="padding:24px;display:flex;gap:28px;align-items:center;">' +

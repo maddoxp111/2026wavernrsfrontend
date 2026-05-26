@@ -99,6 +99,76 @@ function coverGradient(seed) {
   return `linear-gradient(135deg, hsl(${c.h1},${c.s1}%,${c.l1}%) 0%, hsl(${c.h2},${c.s2}%,${c.l2}%) 100%)`;
 }
 
+// ── Extract dominant hues from an actual cover image via canvas ────────────
+// Falls back to coverHues(seed) on CORS failure or missing URL.
+// callback({ h1, s1, l1, h2, s2, l2 })
+function extractCoverHues(coverUrl, seed, callback) {
+  if (!coverUrl) { callback(coverHues(seed)); return; }
+
+  var img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = function() {
+    try {
+      var SIZE = 48;
+      var canvas = document.createElement('canvas');
+      canvas.width = canvas.height = SIZE;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, SIZE, SIZE);
+      var data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+
+      var colorful = [];
+      for (var i = 0; i < data.length; i += 4) {
+        var r = data[i], g = data[i + 1], b = data[i + 2];
+        var max = Math.max(r, g, b), min = Math.min(r, g, b);
+        var lum = (max + min) / 2;
+        if (lum < 20 || lum > 235) continue; // skip very dark / very light
+        var chroma = max - min;
+        if (chroma < 28) continue; // skip greys
+        var h;
+        if (max === r)      h = 60 * (((g - b) / chroma + 6) % 6);
+        else if (max === g) h = 60 * ((b - r) / chroma + 2);
+        else                h = 60 * ((r - g) / chroma + 4);
+        colorful.push({ h: Math.round(h), sat: chroma / max });
+      }
+
+      if (colorful.length < 5) { callback(coverHues(seed)); return; }
+
+      colorful.sort(function(a, b) { return b.sat - a.sat; });
+      var top = colorful.slice(0, Math.max(6, Math.floor(colorful.length * 0.3)));
+
+      var h1 = _circularMeanHue(top.slice(0, Math.ceil(top.length / 2)).map(function(c) { return c.h; }));
+
+      // h2: look for a meaningfully different hue; otherwise offset h1 by 80
+      var distant = top.filter(function(c) {
+        var d = Math.abs(c.h - h1);
+        return Math.min(d, 360 - d) > 40;
+      });
+      var h2 = distant.length >= 3
+        ? _circularMeanHue(distant.slice(0, Math.ceil(distant.length / 2)).map(function(c) { return c.h; }))
+        : (h1 + 80) % 360;
+
+      callback({ h1: h1, s1: 80, l1: 52, h2: h2, s2: 75, l2: 46 });
+    } catch (e) {
+      // SecurityError from CORS-blocked canvas or other error — fall back
+      callback(coverHues(seed));
+    }
+  };
+  img.onerror = function() { callback(coverHues(seed)); };
+  // Append cache-bust only if same origin to avoid CORS issues; for external URLs use as-is
+  img.src = coverUrl;
+}
+
+function _circularMeanHue(hues) {
+  if (!hues.length) return 0;
+  var sinSum = 0, cosSum = 0;
+  for (var i = 0; i < hues.length; i++) {
+    var rad = hues[i] * Math.PI / 180;
+    sinSum += Math.sin(rad);
+    cosSum += Math.cos(rad);
+  }
+  return Math.round(((Math.atan2(sinSum, cosSum) * 180 / Math.PI) + 360) % 360);
+}
+
 // Render a cover art div — seed = title string, size = px number, opts = { label, badge, radius, pct }
 // pct=true makes it 100% × 100% (for use inside a padding-top:100% wrapper)
 function coverHTML(seed, size, opts) {
