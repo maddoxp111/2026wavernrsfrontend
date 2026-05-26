@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — settings</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div id="view">
+  <div style="max-width:560px;">
+    <div class="scroll-section-title" style="margin-bottom:4px;">Settings</div>
+    <div style="color:var(--text-2);font-size:13px;margin-bottom:28px;">Manage your profile and preferences</div>
+
+    <div id="alert-container" style="margin-bottom:16px;"></div>
+
+    <!-- Profile section -->
+    <div class="wv-settings-section">
+      <div class="wv-settings-title">Artist Profile</div>
+      <div class="wv-card" style="padding:24px;">
+
+        <!-- Avatar preview + upload -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+          <div style="width:72px;height:72px;border-radius:50%;overflow:hidden;background:var(--glass-medium-bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--brand);" id="avatar-preview-wrap">
+            <span id="avatar-initials">?</span>
+          </div>
+          <div>
+            <input type="file" id="profile-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage('profile-img-file','profile_image_url')">
+            <button class="wv-pill" onclick="document.getElementById('profile-img-file').click()">Upload photo</button>
+            <span id="profile_image_url-status" style="font-size:12px;color:var(--text-2);margin-left:8px;"></span>
+          </div>
+        </div>
+
+        <div class="wv-form-field">
+          <label class="wv-form-label">Display name *</label>
+          <input class="wv-input" type="text" id="edit-name" placeholder="Your name">
+        </div>
+
+        <div class="wv-form-field">
+          <label class="wv-form-label">Bio</label>
+          <textarea class="wv-input" id="edit-bio" rows="3" placeholder="Tell people about yourself…" style="border-radius:var(--r-md);resize:vertical;"></textarea>
+        </div>
+
+        <div class="wv-form-field">
+          <label class="wv-form-label">Location</label>
+          <input class="wv-input" type="text" id="edit-location" placeholder="City, Country">
+        </div>
+
+        <div class="wv-form-field">
+          <label class="wv-form-label">Website</label>
+          <input class="wv-input" type="url" id="edit-website" placeholder="https://…">
+        </div>
+
+        <!-- Hidden fields updated by image uploads -->
+        <input type="hidden" id="edit-avatar">
+        <input type="hidden" id="edit-banner">
+
+        <div class="wv-form-field">
+          <label class="wv-form-label">Banner image</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="wv-input" type="url" id="edit-banner-url" placeholder="https://…" style="flex:1;" oninput="document.getElementById('edit-banner').value=this.value">
+            <input type="file" id="banner-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage('banner-img-file','banner_url')">
+            <button class="wv-pill" onclick="document.getElementById('banner-img-file').click()">Upload</button>
+          </div>
+          <span id="banner_url-status" style="font-size:12px;color:var(--text-2);"></span>
+        </div>
+
+        <div id="profile-alert" style="margin-top:4px;"></div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button class="wv-pill brand" style="padding:10px 24px;" onclick="saveProfile()">Save changes</button>
+          <button class="wv-pill" onclick="loadSettings()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account section -->
+    <div class="wv-settings-section">
+      <div class="wv-settings-title">Account</div>
+      <div class="wv-card" style="padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:500;" id="settings-username">Username</div>
+            <div style="font-size:12px;color:var(--text-2);">Your login username</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--hair);">
+          <button class="wv-pill" style="color:var(--red);" onclick="if(confirm('Log out?'))logout()">Log out</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Theme section -->
+    <div class="wv-settings-section">
+      <div class="wv-settings-title">Appearance</div>
+      <div class="wv-card" style="padding:24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:500;">Theme</div>
+            <div style="font-size:12px;color:var(--text-2);">Light or dark mode</div>
+          </div>
+          <button class="wv-pill" onclick="window.toggleTheme?.()" id="theme-toggle-btn">Toggle theme</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /view -->
+
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+  if (!isLoggedIn()) navigate('/login.html');
+  initPlayer();
+
+  var me = null;
+  var artist = null;
+
+  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  async function loadSettings() {
+    try {
+      me = await api('/auth/me');
+      artist = me.artist;
+      if (!artist) throw new Error('No artist profile. Try logging out and back in.');
+
+      document.getElementById('edit-name').value = artist.display_name || '';
+      document.getElementById('edit-bio').value = artist.bio || '';
+      document.getElementById('edit-location').value = artist.location || '';
+      document.getElementById('edit-website').value = artist.website || '';
+      document.getElementById('edit-avatar').value = artist.profile_image_url || '';
+      document.getElementById('edit-banner').value = artist.banner_url || '';
+      document.getElementById('edit-banner-url').value = artist.banner_url || '';
+      document.getElementById('settings-username').textContent = '@' + (me.username || '');
+
+      // Avatar display
+      const wrap = document.getElementById('avatar-preview-wrap');
+      if (artist.profile_image_url) {
+        wrap.innerHTML = '<img src="'+escHtml(artist.profile_image_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;">';
+      } else {
+        const initials = (artist.display_name || me.username || '?').charAt(0).toUpperCase();
+        document.getElementById('avatar-initials').textContent = initials;
+      }
+    } catch (err) {
+      if (err.message.includes('401')) return navigate('/login.html');
+      showAlert('alert-container', 'Failed to load: ' + err.message);
+    }
+  }
+
+  async function saveProfile() {
+    clearAlert('profile-alert');
+    const updates = {
+      display_name: document.getElementById('edit-name').value.trim(),
+      bio: document.getElementById('edit-bio').value.trim(),
+      profile_image_url: document.getElementById('edit-avatar').value.trim() || null,
+      banner_url: document.getElementById('edit-banner').value.trim() || null,
+      location: document.getElementById('edit-location').value.trim() || null,
+      website: document.getElementById('edit-website').value.trim() || null,
+    };
+    if (!updates.display_name) return showAlert('profile-alert', 'Display name is required');
+    try {
+      artist = await api('/artists/'+artist.id, { method: 'PUT', body: JSON.stringify(updates) });
+      showAlert('profile-alert', '✓ Profile saved', 'success');
+    } catch (err) {
+      showAlert('profile-alert', err.message);
+    }
+  }
+
+  async function uploadProfileImage(inputId, field) {
+    const input = document.getElementById(inputId);
+    const file = input?.files?.[0];
+    if (!file) return;
+    const statusEl = document.getElementById(field+'-status');
+    if (statusEl) statusEl.textContent = 'Uploading…';
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const result = await apiUpload('/upload/image', form);
+      const url = result.url;
+      if (field === 'profile_image_url') {
+        document.getElementById('edit-avatar').value = url;
+        const wrap = document.getElementById('avatar-preview-wrap');
+        wrap.innerHTML = '<img src="'+url+'" alt="" style="width:100%;height:100%;object-fit:cover;">';
+      } else if (field === 'banner_url') {
+        document.getElementById('edit-banner').value = url;
+        document.getElementById('edit-banner-url').value = url;
+      }
+      if (statusEl) statusEl.textContent = '✓ Uploaded';
+    } catch (err) {
+      if (statusEl) statusEl.textContent = 'Upload failed';
+    }
+  }
+
+  loadSettings();
+</script>
+</body>
+</html>

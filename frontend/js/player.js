@@ -81,13 +81,14 @@ function injectPlayer() {
       </button>
     </div>
   `;
-  // ── BOTTOM SHELL: single fixed container so iOS never separates the two bars ──
-  const shell = document.createElement('div');
-  shell.id = 'bottom-shell';
-  const mobileNav = document.querySelector('.mobile-bottom-nav');
-  if (mobileNav) shell.appendChild(mobileNav);
-  shell.appendChild(bar);
-  document.body.appendChild(shell);
+  // Inject player into the designated slot (created by layout.js)
+  const slot = document.getElementById('wv-player-slot');
+  if (slot) {
+    slot.appendChild(bar);
+  } else {
+    // Fallback: append to body if shell not ready
+    document.body.appendChild(bar);
+  }
 
   // ── FULL-SCREEN PLAYER (mobile) ──
   const fs = document.createElement('div');

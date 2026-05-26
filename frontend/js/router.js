@@ -24,7 +24,11 @@ window.navigate = async function(url) {
 
     // Push state FIRST so location.search is correct when page script reads it
     history.pushState(null, doc.title, url);
-    _updateNavActive();
+
+    // Update active nav states
+    if (typeof window._updateNavActive === 'function') {
+      window._updateNavActive();
+    }
 
     // Extract and run the last inline <script> (the page init block)
     const inlineScripts = [...doc.querySelectorAll('script:not([src])')];
@@ -36,6 +40,11 @@ window.navigate = async function(url) {
     }
 
     window.scrollTo(0, 0);
+
+    // Scroll the content area to top (in new layout #wv-content handles scroll)
+    const contentEl = document.getElementById('wv-content');
+    if (contentEl) contentEl.scrollTop = 0;
+
   } catch (_) {
     location.assign(url); // fallback: real navigation
   }
@@ -57,15 +66,7 @@ window.addEventListener('popstate', () => {
   navigate(location.pathname + location.search);
 });
 
-function _updateNavActive() {
-  const path = location.pathname;
-  document.querySelectorAll('nav .nav-links a[href]').forEach(a => {
-    a.classList.toggle('active', path.endsWith(a.getAttribute('href')));
-  });
-  document.querySelectorAll('.mobile-nav-item[href]').forEach(item => {
-    item.classList.toggle('active', path.endsWith(item.getAttribute('href')));
-  });
+// Initial active state (layout.js will handle this, but set a fallback)
+if (typeof window._updateNavActive === 'function') {
+  window._updateNavActive();
 }
-
-// Set correct active state on initial page load
-_updateNavActive();

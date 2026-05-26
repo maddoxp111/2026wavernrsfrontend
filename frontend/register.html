@@ -3,41 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — sign up</title>
+  <title>wavernrs — sign up</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body class="auth-page">
-<div class="auth-card">
-  <div class="auth-logo">wavernrs stream</div>
-  <h1 class="auth-title">Create account</h1>
-  <p class="auth-subtitle">Upload and share your music</p>
+<body>
+<div class="wv-auth-page theme-light" id="auth-root">
+  <div class="wv-auth-card wv-card">
+    <div style="font-size:22px;font-weight:800;letter-spacing:-0.04em;color:var(--brand);margin-bottom:24px;">wavernrs</div>
+    <div class="wv-auth-title">Create account</div>
+    <div class="wv-auth-sub">Upload and share your music</div>
 
-  <div id="alert-container"></div>
+    <div id="alert-container"></div>
 
-  <div class="form-group">
-    <label for="username">Username</label>
-    <input type="text" id="username" placeholder="yourname" autocomplete="username">
-    <span class="form-hint">Lowercase letters, numbers, underscores. Min 3 characters.</span>
-  </div>
-  <div class="form-group">
-    <label for="password">Password</label>
-    <input type="password" id="password" placeholder="Min 6 characters" autocomplete="new-password">
-  </div>
-  <div class="form-group">
-    <label for="password2">Confirm password</label>
-    <input type="password" id="password2" placeholder="••••••••" autocomplete="new-password">
-  </div>
+    <div class="wv-form-field">
+      <label class="wv-form-label" for="username">Username</label>
+      <input class="wv-input" type="text" id="username" placeholder="yourname" autocomplete="username">
+      <div style="font-size:11px;color:var(--text-3);margin-top:4px;">Letters, numbers, underscores. Min 3 characters.</div>
+    </div>
+    <div class="wv-form-field">
+      <label class="wv-form-label" for="password">Password</label>
+      <input class="wv-input" type="password" id="password" placeholder="Min 6 characters" autocomplete="new-password">
+    </div>
+    <div class="wv-form-field">
+      <label class="wv-form-label" for="password2">Confirm password</label>
+      <input class="wv-input" type="password" id="password2" placeholder="••••••••" autocomplete="new-password">
+    </div>
 
-  <button class="btn btn-primary btn-lg" style="width:100%" id="register-btn" onclick="doRegister()">Create account</button>
+    <button class="wv-pill brand" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px;" id="register-btn" onclick="doRegister()">Create account</button>
 
-  <div class="auth-footer">
-    Already have an account? <a href="/login.html">Log in</a>
+    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-2);">
+      Already have an account? <a href="/login.html" style="color:var(--brand);font-weight:500;">Log in</a>
+    </div>
   </div>
 </div>
 
 <script src="/js/api.js"></script>
 <script>
+  var _t = localStorage.getItem('wv-theme') || 'light';
+  document.getElementById('auth-root').className = 'wv-auth-page theme-' + _t;
+
   if (isLoggedIn()) location.href = '/index.html';
+
+  function showAlert(containerId, msg) {
+    const el = document.getElementById(containerId);
+    if (el) el.innerHTML = '<div class="wv-form-error">' + msg + '</div>';
+  }
+  function clearAlert(containerId) {
+    const el = document.getElementById(containerId);
+    if (el) el.innerHTML = '';
+  }
 
   document.getElementById('password2').addEventListener('keydown', e => {
     if (e.key === 'Enter') doRegister();
