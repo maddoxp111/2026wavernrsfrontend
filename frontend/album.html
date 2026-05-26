@@ -31,10 +31,6 @@
   var albumTracks = [];
   var currentTrackIndex = -1;
 
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
   async function loadAlbum() {
     try {
       album = await api(`/albums/${albumId}`);
@@ -50,58 +46,73 @@
   function renderAlbum() {
     const artist = album.artists || {};
     const eraName = album.era_tag?.name || album.genre || '';
-    const cover = album.cover_url
-      ? `<img src="${album.cover_url}" alt="cover" style="width:100%;height:100%;object-fit:cover;">`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;">💿</div>`;
+    const coverBg = (typeof coverGradient === 'function') ? coverGradient(album.title || '') : 'linear-gradient(135deg,#1a0a2e,#2d1b6e)';
+    const coverInner = album.cover_url
+      ? `<img src="${album.cover_url}" alt="cover" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;mix-blend-mode:overlay;opacity:0.5;">`
+      : '';
+
+    // Update page background gradient to match album cover
+    if (typeof coverHues === 'function') {
+      var c = coverHues(album.title || '');
+      var bg = document.getElementById('wv-page-bg');
+      if (bg) {
+        bg.style.background =
+          'radial-gradient(ellipse 90% 70% at 10% 20%, hsla(' + c.h1 + ',' + c.s1 + '%,' + (c.l1+22) + '%,0.55) 0%, transparent 55%),' +
+          'radial-gradient(ellipse 70% 80% at 85% 60%, hsla(' + c.h2 + ',' + c.s2 + '%,' + (c.l2+22) + '%,0.45) 0%, transparent 60%),' +
+          'var(--page-bg)';
+      }
+    }
 
     document.getElementById('album-container').innerHTML = `
-      <div style="padding:32px 0;">
-        <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
-          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a2e,#2d1b6e);flex-shrink:0;">
-            ${cover}
+      <div style="padding:28px 0;">
+        <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap;margin-bottom:32px;">
+          <div style="width:200px;height:200px;border-radius:18px;overflow:hidden;background:${coverBg};position:relative;flex-shrink:0;box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+            <div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,transparent 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,transparent 60%);z-index:1;"></div>
+            ${coverInner}
+            <div style="position:absolute;top:10px;left:10px;padding:2px 8px;background:rgba(255,255,255,0.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;z-index:2;">comp</div>
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-tertiary);margin-bottom:6px;">Comp</div>
-            <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;">${escHtml(album.title)}</div>
-            <a href="/artist.html?id=${artist.id}" style="font-size:15px;color:var(--text-secondary);font-weight:500;">${escHtml(artist.display_name || 'Unknown')}</a>
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:6px;">Compilation</div>
+            <div style="font-size:32px;font-weight:800;letter-spacing:-0.04em;line-height:1.05;margin-bottom:6px;">${escHtml(album.title)}</div>
+            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-2);font-weight:500;">${escHtml(artist.display_name || 'Unknown')}</a>
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
-            ${album.description ? `<p style="margin-top:10px;font-size:14px;color:var(--text-secondary);line-height:1.6;">${escHtml(album.description)}</p>` : ''}
-            <div style="margin-top:10px;font-size:13px;color:var(--text-tertiary);">${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}</div>
-            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+            ${album.description ? `<p style="margin-top:10px;font-size:14px;color:var(--text-2);line-height:1.6;">${escHtml(album.description)}</p>` : ''}
+            <div style="margin-top:8px;font-size:13px;color:var(--text-3);">${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}</div>
+            <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="playAll()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 Play All
               </button>
               <a href="${API_BASE}/albums/${albumId}/download" class="btn btn-secondary" id="download-comp-btn">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                 Download Zip
               </a>
             </div>
           </div>
         </div>
 
-        <div style="margin-top:32px;">
-          <h2 class="section-title">Tracklist</h2>
-          <div class="track-list" id="tracklist">
-            ${albumTracks.length === 0 ? `<div class="empty-state" style="padding:24px;"><div class="empty-desc">No edits in this comp yet.</div></div>` :
-              albumTracks.map((t, i) => {
-                const trackData = t.tracks || t;
-                const cover = trackData.cover_url ? `<img src="${trackData.cover_url}" alt="">` : '🎵';
-                return `
-                  <div class="track-row" onclick="playAtIndex(${i})">
-                    <div class="track-row-num">${i + 1}</div>
-                    <div class="track-row-cover">${cover}</div>
-                    <div class="track-row-info">
-                      <div class="track-row-title">${escHtml(trackData.title || 'Unknown')}</div>
-                      <div class="track-row-artist">${escHtml(trackData.artists?.display_name || artist.display_name || 'Unknown')}</div>
-                    </div>
-                    <span class="track-row-plays">${fmtNum(trackData.play_count)} plays</span>
-                    <button onclick="event.stopPropagation();openAddToPlaylist({id:'${trackData.id}',title:${JSON.stringify(trackData.title || '')},cover_url:${JSON.stringify(trackData.cover_url || '')},ia_url:${JSON.stringify(trackData.ia_url || '')},artist_name:${JSON.stringify(trackData.artists?.display_name || artist.display_name || '')}})"
-                      style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:16px;color:var(--text-secondary);flex-shrink:0;" title="Save to playlist">＋</button>
-                    <a href="/track.html?id=${trackData.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-tertiary);padding:4px 8px;">Open</a>
-                  </div>`;
-              }).join('')}
-          </div>
+        <h2 class="section-title">Tracklist</h2>
+        <div class="track-list" id="tracklist">
+          ${albumTracks.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No edits yet</div></div>` :
+            albumTracks.map((t, i) => {
+              const td = t.tracks || t;
+              const tdCoverBg = (typeof coverGradient === 'function') ? coverGradient(td.title || '') : '#333';
+              const tdCoverStyle = `width:40px;height:40px;border-radius:8px;flex-shrink:0;background:${tdCoverBg};position:relative;overflow:hidden;`;
+              const tdCoverImg = td.cover_url ? `<img src="${td.cover_url}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.5;">` : '';
+              return `
+                <div class="track-row" id="trow-${i}" onclick="playAtIndex(${i})">
+                  <div class="track-row-num">${i + 1}</div>
+                  <div style="${tdCoverStyle}">${tdCoverImg}</div>
+                  <div class="track-row-info">
+                    <div class="track-row-title">${escHtml(td.title || 'Unknown')}</div>
+                    <div class="track-row-artist">${escHtml(td.artists?.display_name || artist.display_name || 'Unknown')}</div>
+                  </div>
+                  <span class="track-row-plays">${fmtNum(td.play_count)} plays</span>
+                  <button onclick="event.stopPropagation();openAddToPlaylist({id:'${td.id}',title:${JSON.stringify(td.title||'')},cover_url:${JSON.stringify(td.cover_url||'')},ia_url:${JSON.stringify(td.ia_url||'')},artist_name:${JSON.stringify(td.artists?.display_name||artist.display_name||'')}})"
+                    style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;" title="Save to playlist">＋</button>
+                  <a href="/track.html?id=${td.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-3);padding:4px 8px;white-space:nowrap;">Open</a>
+                </div>`;
+            }).join('')}
         </div>
       </div>`;
   }
@@ -122,7 +133,7 @@
     });
     // Highlight active row
     document.querySelectorAll('#tracklist .track-row').forEach((row, i) => {
-      row.style.background = i === index ? 'var(--purple-bg)' : '';
+      row.classList.toggle('playing', i === index);
     });
   }
 

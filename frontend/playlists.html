@@ -10,10 +10,10 @@
 
 <div id="view">
 
-  <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap;">
-    <h1 class="page-title" style="margin:0;">My Playlists</h1>
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap;">
+    <h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-0.04em;color:var(--text);">My Playlists</h1>
     <button class="btn btn-primary" onclick="toggleNewForm()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
       New Playlist
     </button>
   </div>
@@ -47,7 +47,6 @@
     <div class="loading"><div class="spinner"></div></div>
   </div>
 
-</div>
 </div><!-- /view -->
 
 <script src="/js/api.js"></script>
@@ -93,18 +92,18 @@
       return;
     }
 
-    el.innerHTML = '<div class="wv-grid-2">' +
+    el.innerHTML = '<div class="wv-pl-grid">' +
       playlists.map(function(p, i) {
         var cnt = p.track_count || 0;
-        var sub = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
-        return '<div class="wv-playlist-card" onclick="navigate(\'/playlist.html?id=' + p.id + '\')" style="cursor:pointer;">' +
-          '<div class="track-row-cover" style="display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--purple-bg);">🎵</div>' +
-          '<div class="track-row-info">' +
-            '<div class="track-row-title">' + escHtml(p.title) + '</div>' +
-            '<div class="track-row-artist">' + escHtml(sub) + '</div>' +
+        var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
+        return '<div class="wv-playlist-card" onclick="navigate(\'/playlist.html?id=' + p.id + '\')">' +
+          '<div class="wv-playlist-cover">🎵</div>' +
+          '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
+          '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
+          '<div class="wv-pl-card-actions" onclick="event.stopPropagation()">' +
+            '<a href="/playlist.html?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigate(\'/playlist.html?id=' + p.id + '\');return false;">Open</a>' +
+            '<button onclick="deletePlaylist(\'' + p.id + '\',' + i + ')" class="btn btn-danger btn-sm">Delete</button>' +
           '</div>' +
-          '<a href="/playlist.html?id=' + p.id + '" onclick="event.stopPropagation()" class="wv-pill">Open</a>' +
-          '<button onclick="event.stopPropagation();deletePlaylist(\'' + p.id + '\',' + i + ')" class="btn btn-danger btn-sm">Delete</button>' +
         '</div>';
       }).join('') +
     '</div>';
