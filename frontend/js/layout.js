@@ -89,7 +89,7 @@
     html += '<div style="flex:1;min-height:16px;"></div>';
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('about', 'About', '/about.html', 'info');
-    html += '<a href="https://discord.gg/wavernrs" target="_blank" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
+    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
     html += '</nav>';
 
     return html;
