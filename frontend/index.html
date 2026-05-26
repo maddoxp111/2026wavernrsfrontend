@@ -3,42 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs — home</title>
+  <title>wavernrs</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
 <div id="view">
-<div style="padding-bottom:32px;">
-
-  <!-- Quick access grid -->
-  <div id="quick-grid-label"></div>
-  <div class="quick-grid" id="quick-grid"></div>
-
-  <!-- New Releases section -->
-  <div class="scroll-section">
-    <div class="scroll-section-header">
-      <span class="scroll-section-title">New Releases</span>
-      <a href="/discover.html" class="scroll-section-link">Show all</a>
-    </div>
-    <div class="scroll-row" id="new-releases-row">
-      <div class="loading"><div class="spinner"></div></div>
-    </div>
-  </div>
-
-  <!-- Trending section -->
-  <div class="scroll-section">
-    <div class="scroll-section-header">
-      <span class="scroll-section-title">Trending</span>
-      <a href="/discover.html?tab=trending" class="scroll-section-link">Show all</a>
-    </div>
-    <div class="scroll-row" id="trending-row">
-      <div class="loading"><div class="spinner"></div></div>
-    </div>
-  </div>
-
+  <div class="loading"><div class="spinner"></div></div>
 </div>
-</div><!-- /view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/layout.js"></script>
@@ -46,106 +17,250 @@
 <script src="/js/router.js"></script>
 <script src="/js/playlists.js"></script>
 <script>
-  initPlayer();
+initPlayer();
 
-  async function loadHome() {
-    try {
-      const data = await api('/discover');
-      const recent = data.recent || [];
-      const trending = data.trending || [];
+var _heroItems = [];
+var _heroIdx = 0;
+var _trendingGlobal = [];
+var _newReleasesGlobal = [];
+var _chartsTab = 'songs';
+var _chartsDataCache = null;
 
-      renderQuickGrid(recent, trending);
-      renderScrollRow('new-releases-row', recent);
-      renderScrollRow('trending-row', trending);
-    } catch (err) {
-      document.getElementById('new-releases-row').innerHTML =
-        `<div style="color:var(--text-3);font-size:14px;padding:12px 0;">Failed to load.</div>`;
-      document.getElementById('trending-row').innerHTML =
-        `<div style="color:var(--text-3);font-size:14px;padding:12px 0;">Failed to load.</div>`;
-    }
+async function loadHome() {
+  try {
+    var results = await Promise.all([
+      api('/discover'),
+      api('/discover/trending').catch(function() { return []; }),
+      api('/charts').catch(function() { return { alltime: [], weekly: [] }; }),
+    ]);
+    var discoverData = results[0];
+    var trendingData = results[1];
+    var chartsData = results[2];
+
+    var recent = discoverData.recent || [];
+    _heroItems = recent.filter(function(i) { return i._type === 'album'; });
+    if (!_heroItems.length) _heroItems = recent.slice(0, 6);
+    _heroIdx = 0;
+    _trendingGlobal = Array.isArray(trendingData) ? trendingData : [];
+    _newReleasesGlobal = recent;
+    _chartsDataCache = chartsData;
+
+    var view = document.getElementById('view');
+    view.innerHTML =
+      '<div class="wv-home-layout">' +
+        '<div class="wv-home-left" id="home-left"></div>' +
+        '<div class="wv-home-right">' +
+          '<div class="wv-card wv-charts-rail" id="charts-rail" style="position:sticky;top:0;"></div>' +
+        '</div>' +
+      '</div>';
+
+    renderHero();
+    renderHomeSections();
+    renderChartsRail();
+  } catch(err) {
+    document.getElementById('view').innerHTML = '<div class="wv-empty">Failed to load: ' + escHtml(String(err.message)) + '</div>';
+  }
+}
+
+function renderHero() {
+  var left = document.getElementById('home-left');
+  if (!left || !_heroItems.length) return;
+
+  var item = _heroItems[_heroIdx];
+  var isAlbum = item._type === 'album';
+  var seed = item.title || '';
+  var artistName = item.artists ? item.artists.display_name : 'Unknown';
+  var eraName = item.era_tag ? item.era_tag.name : (item.genre || '');
+  var trackCount = item.track_count || '';
+
+  var tags = [];
+  if (artistName) tags.push(escHtml(artistName));
+  if (eraName) tags.push(escHtml(eraName));
+  if (trackCount) tags.push(trackCount + ' edits');
+  var tagsHtml = tags.map(function(t) { return '<span class="wv-tag-chip">' + t + '</span>'; }).join('');
+
+  var navHtml = _heroItems.length > 1
+    ? '<div style="display:flex;gap:6px;">' +
+      '<button class="wv-icon-circle" onclick="heroNav(-1)" style="font-size:20px;padding-bottom:2px;">‹</button>' +
+      '<button class="wv-icon-circle" onclick="heroNav(1)" style="font-size:20px;padding-bottom:2px;">›</button>' +
+      '</div>'
+    : '';
+
+  var clickAction = isAlbum
+    ? "navigate('/album.html?id=" + item.id + "')"
+    : "navigate('/track.html?id=" + item.id + "')";
+
+  var coverBg = coverGradient(seed);
+  var heroHtml =
+    '<div class="wv-card lg-highlight" id="hero-card" style="padding:24px;display:flex;gap:28px;align-items:center;">' +
+      '<div onclick="' + clickAction + '" style="cursor:pointer;width:220px;height:220px;border-radius:18px;background:' + coverBg + ';position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 6px 24px rgba(0,0,0,0.22),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);"></div>' +
+        (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
+        '<div style="position:absolute;inset:0;display:flex;align-items:flex-end;padding:14px;background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.5) 100%);text-transform:uppercase;pointer-events:none;">' +
+          '<span style="color:rgba(255,255,255,0.96);font-size:28px;font-weight:800;line-height:1.05;letter-spacing:-0.02em;text-shadow:0 2px 8px rgba(0,0,0,0.6);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">' + escHtml(item.title) + '</span>' +
+        '</div>' +
+        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;" onerror="this.remove()">' : '') +
+      '</div>' +
+      '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;align-self:center;">' +
+        '<div>' +
+          '<div style="font-size:40px;font-weight:800;letter-spacing:-0.035em;line-height:1.02;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escHtml(item.title) + '</div>' +
+          '<div style="font-size:20px;font-weight:500;color:var(--text-2);letter-spacing:-0.01em;margin-top:4px;">' + escHtml(artistName) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + tagsHtml + '</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">' +
+          '<div style="display:flex;gap:8px;align-items:center;">' +
+            '<button onclick="heroPlay()" class="wv-pill" style="background:var(--avatar-bg);color:var(--page-bg-base);border-color:var(--avatar-bg);padding:8px 18px;font-weight:600;">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg> Play' +
+            '</button>' +
+            '<button class="wv-pill" style="padding:8px 14px;">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg> Like' +
+            '</button>' +
+            '<button class="wv-icon-circle" onclick="heroMore(event)">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>' +
+            '</button>' +
+          '</div>' +
+          navHtml +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // Replace hero in left column (keep sections below)
+  var existing = document.getElementById('hero-card');
+  if (existing) {
+    existing.outerHTML = heroHtml;
+  } else {
+    left.insertAdjacentHTML('afterbegin', heroHtml);
+  }
+}
+
+function heroNav(dir) {
+  _heroIdx = (_heroIdx + dir + _heroItems.length) % _heroItems.length;
+  renderHero();
+}
+
+function heroPlay() {
+  var item = _heroItems[_heroIdx];
+  if (!item) return;
+  if (item._type === 'album') navigate('/album.html?id=' + item.id);
+  else playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
+}
+
+function heroMore(e) {
+  var item = _heroItems[_heroIdx];
+  if (!item || item._type === 'album') return;
+  if (typeof openAddToPlaylist === 'function') {
+    openAddToPlaylist({ id: item.id, title: item.title, ia_url: item.ia_url, cover_url: item.cover_url, artist_name: item.artists ? item.artists.display_name : '' });
+  }
+}
+
+function renderHomeSections() {
+  var left = document.getElementById('home-left');
+  if (!left) return;
+
+  // Remove old sections
+  left.querySelectorAll('.home-section').forEach(function(el) { el.remove(); });
+
+  if (_trendingGlobal.length) {
+    var tEl = document.createElement('div');
+    tEl.className = 'home-section';
+    tEl.innerHTML = '<h2 class="wv-section-title">Trending</h2><div class="wv-comp-grid wv-comp-grid-4">' +
+      _trendingGlobal.slice(0, 4).map(compCardHTML).join('') + '</div>';
+    left.appendChild(tEl);
   }
 
-  function renderQuickGrid(recent, trending) {
-    const el = document.getElementById('quick-grid');
-    const label = document.getElementById('quick-grid-label');
-
-    let historyItems = [];
-    try { historyItems = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch {}
-
-    const combined = historyItems.length >= 4 ? historyItems : [...recent, ...trending];
-    const seen = new Set();
-    const unique = combined.filter(t => {
-      if (!t || !t.id || seen.has(t.id)) return false;
-      seen.add(t.id);
-      return true;
-    });
-    const items = unique.slice(0, 8);
-
-    if (!items.length) { el.style.display = 'none'; return; }
-
-    const labelText = historyItems.length >= 4 ? 'Recently Played' : 'Popular Right Now';
-    if (label) label.innerHTML = `<div class="scroll-section-title" style="margin-bottom:12px;">${labelText}</div>`;
-
-    el.innerHTML = items.map(t => {
-      const isAlbum = t._type === 'album';
-      const coverHtml = t.cover_url
-        ? `<img src="${t.cover_url}" alt="" onerror="this.style.display='none'">`
-        : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;">🎵</div>`;
-      const clickAction = isAlbum
-        ? `navigate('/album.html?id=${t.id}')`
-        : `playThis(${JSON.stringify(t).replace(/"/g,'&quot;')})`;
-      return `
-        <div class="quick-item" onclick="${clickAction}">
-          <div class="quick-item-cover">${coverHtml}</div>
-          <div class="quick-item-title">${escHtml(t.title)}</div>
-        </div>`;
-    }).join('');
+  if (_newReleasesGlobal.length) {
+    var nEl = document.createElement('div');
+    nEl.className = 'home-section';
+    nEl.innerHTML = '<h2 class="wv-section-title">New Releases</h2><div class="wv-comp-grid wv-comp-grid-4">' +
+      _newReleasesGlobal.slice(0, 4).map(compCardHTML).join('') + '</div>';
+    left.appendChild(nEl);
   }
+}
 
-  function renderScrollRow(rowId, tracks) {
-    const el = document.getElementById(rowId);
-    if (!tracks.length) {
-      el.innerHTML = `<div style="color:var(--text-3);font-size:14px;padding:12px 0;">Nothing here yet.</div>`;
-      return;
-    }
-    el.innerHTML = tracks.map(t => scrollCard(t)).join('');
+function compCardHTML(item) {
+  var seed = item.title || '';
+  var isAlbum = item._type === 'album';
+  var artist = item.artists ? item.artists.display_name : 'Unknown';
+  var action = isAlbum
+    ? "navigate('/album.html?id=" + item.id + "')"
+    : "navigate('/track.html?id=" + item.id + "')";
+  var coverBg = coverGradient(seed);
+
+  return '<div class="wv-comp-card" onclick="' + action + '">' +
+    '<div class="wv-comp-card-cover">' +
+      '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+        (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
+        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;border-radius:14px;" onerror="this.remove()">' : '') +
+        '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playItem(\'' + item.id + '\',\'' + (item._type||'track') + '\')">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
+    '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
+  '</div>';
+}
+
+function playItem(id, type) {
+  if (type === 'album') { navigate('/album.html?id=' + id); return; }
+  var all = _heroItems.concat(_trendingGlobal, _newReleasesGlobal);
+  var item = all.find(function(i) { return i.id === id; });
+  if (item) playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
+  else navigate('/track.html?id=' + id);
+}
+
+function renderChartsRail() {
+  var rail = document.getElementById('charts-rail');
+  var chartsData = _chartsDataCache || { alltime: [], weekly: [], liked: [] };
+  var alltime = chartsData.alltime || [];
+  if (!rail) return;
+
+  rail.innerHTML =
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;">' +
+      '<div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;">Top Charts</div>' +
+      '<a href="/charts.html" onclick="navigate(\'/charts.html\');return false;" style="color:var(--text-3);font-size:10.5px;font-weight:600;letter-spacing:0.06em;text-decoration:none;">SHOW ALL</a>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;margin-bottom:14px;">' +
+      ['songs','artists','comps'].map(function(t) {
+        return '<button class="wv-pill ' + (_chartsTab===t?'is-active':'') + '" style="flex:1;justify-content:center;padding:6px 10px;font-size:12px;" onclick="switchChartsTab(\'' + t + '\')">' + t.charAt(0).toUpperCase() + t.slice(1) + '</button>';
+      }).join('') +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;" id="charts-list"></div>';
+
+  renderChartsListItems(alltime);
+}
+
+function switchChartsTab(tab) {
+  _chartsTab = tab;
+  renderChartsRail();
+}
+
+function renderChartsListItems(items) {
+  var list = document.getElementById('charts-list');
+  if (!list) return;
+  if (!items || !items.length) {
+    list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:10px 6px;">No data yet</div>';
+    return;
   }
+  list.innerHTML = items.slice(0, 10).map(function(t, i) {
+    var seed = t.title || '';
+    var artist = t.artists ? t.artists.display_name : 'Unknown';
+    return '<div class="wv-charts-rail-row" onclick="' + (t._type==='album' ? "navigate('/album.html?id=" + t.id + "')" : "navigate('/track.html?id=" + t.id + "')") + '">' +
+      '<span style="font-size:14px;color:var(--text-3);width:18px;text-align:center;flex-shrink:0;">' + (i+1) + '</span>' +
+      '<div style="width:36px;height:36px;border-radius:6px;background:' + coverGradient(seed) + ';position:relative;overflow:hidden;flex-shrink:0;">' +
+        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.2) 0%,transparent 45%);"></div>' +
+        (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;" onerror="this.remove()">' : '') +
+      '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(t.title) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
 
-  function scrollCard(item) {
-    const isAlbum = item._type === 'album';
-    const coverHtml = item.cover_url ? `<img src="${item.cover_url}" alt="" onerror="this.style.display='none'">` : '';
-    const clickAction = isAlbum
-      ? `navigate('/album.html?id=${item.id}')`
-      : `openTrack('${item.id}')`;
-    return `
-      <div class="scroll-card" onclick="${clickAction}" style="cursor:pointer;flex-shrink:0;width:160px;">
-        <div class="scroll-card-cover">
-          ${coverHtml || `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;">🎵</div>`}
-          ${isAlbum ? `<div class="wv-card-badge">COMP</div>` : `
-          <div class="scroll-card-overlay">
-            <button class="play-btn-overlay" onclick="event.stopPropagation();playThis(${JSON.stringify(item).replace(/"/g,'&quot;')})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-          </div>`}
-        </div>
-        <div class="scroll-card-title">${escHtml(item.title)}</div>
-        <div class="scroll-card-sub">${escHtml(item.artists?.display_name || 'Unknown')}</div>
-      </div>`;
-  }
-
-  function playThis(track) {
-    playTrack({ ...track, artist_name: track.artists?.display_name });
-  }
-
-  function openTrack(id) {
-    navigate(`/track.html?id=${id}`);
-  }
-
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  loadHome();
+loadHome();
 </script>
 </body>
 </html>

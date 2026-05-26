@@ -1,30 +1,31 @@
 // WAVERNRS — App Shell (Liquid Glass layout)
+// Translates the claude.ai/design prototype exactly into vanilla HTML/CSS/JS
 (function () {
   'use strict';
 
-  // SVG icons used in navigation
+  // ── SVG icon paths (Heroicons outline 24×24) ─────────────────
   var ICONS = {
-    home: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
-    discover: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/></svg>',
-    charts: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>',
-    playlists: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm13-1v8l6-4z"/></svg>',
-    profile: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
-    upload: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>',
-    settings: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.68.07-1.08 0-.4-.03-.74-.07-1.08l2.3-1.8c.21-.16.27-.47.12-.7l-2.18-3.78c-.15-.23-.45-.3-.68-.22l-2.7 1.08c-.57-.43-1.18-.8-1.87-1.07l-.41-2.88A.544.544 0 0 0 14 2h-4c-.27 0-.5.19-.54.44L9.05 5.32C8.36 5.59 7.75 5.96 7.18 6.39L4.48 5.31a.5.5 0 0 0-.68.22L1.62 9.31c-.15.23-.09.54.12.7l2.3 1.8c-.04.34-.07.68-.07 1.08 0 .4.03.74.07 1.08l-2.3 1.8c-.21.16-.27.47-.12.7l2.18 3.78c.15.23.45.3.68.22l2.7-1.08c.57.43 1.18.8 1.87 1.07l.41 2.88c.04.25.27.44.54.44h4c.27 0 .5-.19.54-.44l.41-2.88c.69-.27 1.3-.64 1.87-1.07l2.7 1.08c.24.09.53 0 .68-.22l2.18-3.78c.15-.23.09-.54-.12-.7l-2.3-1.8z"/></svg>',
-    about: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>',
-    discord: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>',
-    menu: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>',
-    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
-    sun: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0zM7.05 18.36l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0z"/></svg>',
-    moon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>',
-    music: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>',
-    chart2: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zM16.2 13h2.8v6h-2.8v-6z"/></svg>',
-    list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+    home:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>',
+    discover: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z"/></svg>',
+    chart:    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>',
+    list:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 17.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>',
+    profile:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>',
+    upload:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 7.5m0 0L7.5 12m4.5-4.5v12"/></svg>',
+    settings: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>',
+    info:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>',
+    discord:  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>',
+    sun:      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>',
+    moon:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>',
+    bell:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>',
+    more:     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/></svg>',
+    search:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>',
+    menu:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>',
+    x:        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 18 6M6 6l12 12"/></svg>',
   };
 
   function icon(name) { return ICONS[name] || ''; }
 
-  // Detect current page from path
+  // ── Which page are we on? ─────────────────────────────────────
   function pageId() {
     var p = location.pathname;
     if (p === '/' || p.endsWith('/index.html')) return 'home';
@@ -44,133 +45,137 @@
     return '';
   }
 
-  function buildNavItem(id, label, href) {
+  // ── Nav item — pill-style button rendered as <a> ─────────────
+  function navItem(id, label, href, iconName) {
     var cur = pageId();
-    var active = (cur === id) ? ' active' : '';
+    var active = (cur === id || (id === 'profile' && cur === 'profile')) ? ' is-active' : '';
     return '<a href="' + href + '" class="wv-nav-item' + active + '" data-page="' + id + '">' +
-           icon(id === 'profile' ? 'profile' : id === 'upload' ? 'upload' : id === 'settings' ? 'settings' : id === 'about' ? 'about' : id === 'discord' ? 'discord' : id === 'playlists' ? 'playlists' : id === 'discover' ? 'discover' : id === 'charts' ? 'charts' : 'home') +
-           '<span>' + label + '</span>' +
-           '</a>';
+           icon(iconName || id) + '<span>' + label + '</span></a>';
   }
 
+  // ── Sidebar HTML ─────────────────────────────────────────────
   function buildSidebarHTML() {
-    var user = null;
-    try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
     var isLoggedIn = !!localStorage.getItem('token');
+    var html = '';
 
-    var html = '<div class="wv-sidebar-logo">wavernrs</div>';
+    // Logo
+    html += '<div class="wv-sidebar-logo">wavernrs</div>';
 
     // Main section
-    html += '<div class="wv-sidebar-section">';
     html += '<div class="wv-sidebar-label">Main</div>';
     html += '<nav class="wv-sidebar-nav">';
-    html += buildNavItem('home', 'Home', '/index.html');
-    html += buildNavItem('discover', 'Discover', '/discover.html');
-    html += buildNavItem('charts', 'Charts', '/charts.html');
-    html += '</nav></div>';
+    html += navItem('home', 'Home', '/index.html', 'home');
+    html += navItem('discover', 'Discover', '/discover.html', 'discover');
+    html += navItem('charts', 'Charts', '/charts.html', 'chart');
+    html += '</nav>';
 
     // Personal section
-    html += '<div class="wv-sidebar-section">';
-    html += '<div class="wv-sidebar-label">Personal</div>';
+    html += '<div class="wv-sidebar-label" style="margin-top:12px;">Personal</div>';
     html += '<nav class="wv-sidebar-nav">';
-    html += buildNavItem('playlists', 'Playlists', '/playlists.html');
-    html += buildNavItem('profile', 'Profile', '/dashboard.html');
-    html += '</nav></div>';
+    html += navItem('playlists', 'Playlists', '/playlists.html', 'list');
+    html += navItem('profile', 'Profile', '/dashboard.html', 'profile');
+    html += '</nav>';
 
-    // Manage section (only show if logged in)
+    // Manage section (logged in only)
     if (isLoggedIn) {
-      html += '<div class="wv-sidebar-section">';
-      html += '<div class="wv-sidebar-label">Manage</div>';
+      html += '<div class="wv-sidebar-label" style="margin-top:12px;">Manage</div>';
       html += '<nav class="wv-sidebar-nav">';
-      html += buildNavItem('upload', 'Upload', '/upload.html');
-      html += buildNavItem('settings', 'Settings', '/settings.html');
-      html += '</nav></div>';
+      html += navItem('upload', 'Upload', '/upload.html', 'upload');
+      html += navItem('settings', 'Settings', '/settings.html', 'settings');
+      html += '</nav>';
     }
 
-    // Footer
-    html += '<div class="wv-sidebar-footer">';
-    html += buildNavItem('about', 'About', '/about.html');
+    // Footer spacer + About + Discord
+    html += '<div style="flex:1;min-height:16px;"></div>';
+    html += '<nav class="wv-sidebar-nav">';
+    html += navItem('about', 'About', '/about.html', 'info');
     html += '<a href="https://discord.gg/wavernrs" target="_blank" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
-    html += '</div>';
+    html += '</nav>';
 
     return html;
   }
 
+  // ── Topbar HTML ───────────────────────────────────────────────
   function buildTopbarHTML() {
     var theme = localStorage.getItem('wv-theme') || 'light';
     var user = null;
     try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
     var isLoggedIn = !!localStorage.getItem('token');
 
-    var html = '';
+    // Mobile hamburger (hidden on desktop via CSS, shown on mobile)
+    var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
 
-    // Mobile: hamburger button
-    html += '<button class="wv-icon-btn" id="wv-menu-btn" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
+    // Left: logo (hidden on mobile, shown by mobile CSS with flex-1 center)
+    html += '<a href="/index.html" class="wv-topbar-logo">wavernrs</a>';
 
-    // Logo
-    html += '<a href="/index.html" class="wv-logo">wavernrs</a>';
+    // Mobile center logo (shown only on mobile)
+    html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
 
-    // Centered search
+    // Center: search
     html += '<div class="wv-topbar-search">' +
-            '<div class="wv-input" style="display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:text;" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
-            icon('search') +
-            '<input id="wv-search-inp" placeholder="Search edits, artists…" style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;" onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q)navSearch(q);}">' +
-            '</div></div>';
+      '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
+      icon('search') +
+      '<input id="wv-search-inp" placeholder="Search" style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;" ' +
+      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q)navSearch(q);}">' +
+      '</div></div>';
 
-    // Right side
+    // Right
     html += '<div class="wv-topbar-right">';
 
-    // Theme toggle
-    html += '<button class="wv-icon-btn" id="wv-theme-btn" onclick="window.toggleTheme()" aria-label="Toggle theme">' +
-            (theme === 'light' ? icon('sun') : icon('moon')) + '</button>';
+    // Theme toggle (circle)
+    html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.toggleTheme()" title="Toggle theme">' +
+            (theme === 'dark' ? icon('moon') : icon('sun')) + '</button>';
 
-    // Auth area
     if (isLoggedIn && user) {
+      // Bell
+      html += '<button class="wv-icon-circle" title="Notifications" style="position:relative;">' +
+              icon('bell') +
+              '<span style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--pink);"></span>' +
+              '</button>';
+      // More (opens dropdown)
+      html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
+      // Avatar
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
-      html += '<div class="wv-avatar" onclick="navigate(\'/dashboard.html\')" title="' + (user.display_name || user.username || '') + '">' + initials + '</div>';
-      html += '<button class="wv-pill" onclick="logout()" style="padding:6px 14px;font-size:12px;">Log out</button>';
+      html += '<div class="wv-avatar" onclick="navigate(\'/dashboard.html\')" title="Profile">' + initials + '</div>';
     } else {
-      html += '<a href="/login.html" class="wv-pill" style="padding:6px 14px;font-size:12px;">Log in</a>';
-      html += '<a href="/register.html" class="wv-pill brand" style="padding:6px 14px;font-size:12px;">Sign up</a>';
+      html += '<a href="/login.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;">Log in</a>';
+      html += '<a href="/register.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;background:var(--avatar-bg);color:var(--page-bg-base);border-color:var(--avatar-bg);">Sign up</a>';
     }
 
     html += '</div>'; // topbar-right
     return html;
   }
 
+  // ── Mobile tabs ───────────────────────────────────────────────
   function buildMobileTabsHTML() {
     var cur = pageId();
     var tabs = [
-      { id: 'home', label: 'Home', href: '/index.html', iconSvg: ICONS.home },
-      { id: 'discover', label: 'Discover', href: '/discover.html', iconSvg: ICONS.discover },
-      { id: 'charts', label: 'Charts', href: '/charts.html', iconSvg: ICONS.charts },
-      { id: 'playlists', label: 'Playlists', href: '/playlists.html', iconSvg: ICONS.playlists },
-      { id: 'profile', label: 'You', href: '/dashboard.html', iconSvg: ICONS.profile },
+      { id: 'home', label: 'Home', href: '/index.html', ic: 'home' },
+      { id: 'discover', label: 'Discover', href: '/discover.html', ic: 'discover' },
+      { id: 'charts', label: 'Charts', href: '/charts.html', ic: 'chart' },
+      { id: 'playlists', label: 'Playlists', href: '/playlists.html', ic: 'list' },
+      { id: 'profile', label: 'You', href: '/dashboard.html', ic: 'profile' },
     ];
     return tabs.map(function(t) {
-      var active = (cur === t.id) ? ' active' : '';
+      var active = cur === t.id ? ' active' : '';
       return '<a href="' + t.href + '" class="wv-tab-btn' + active + '" data-page="' + t.id + '">' +
-             t.iconSvg + '<span>' + t.label + '</span></a>';
+             icon(t.ic) + '<span>' + t.label + '</span></a>';
     }).join('');
   }
 
-  // Update active states after SPA navigation
+  // ── Update active nav after SPA navigation ────────────────────
   function updateActive() {
     var cur = pageId();
-    // Sidebar links
     document.querySelectorAll('.wv-nav-item[data-page]').forEach(function(el) {
-      el.classList.toggle('active', el.dataset.page === cur);
+      el.classList.toggle('is-active', el.dataset.page === cur);
     });
-    // Mobile tabs
     document.querySelectorAll('.wv-tab-btn[data-page]').forEach(function(el) {
       el.classList.toggle('active', el.dataset.page === cur);
     });
   }
-
-  // Expose for router.js to call
   window._updateNavActive = updateActive;
 
-  // Theme toggle
+  // ── Theme toggle ──────────────────────────────────────────────
   window.toggleTheme = function() {
     var root = document.getElementById('wv-root');
     if (!root) return;
@@ -179,12 +184,49 @@
     root.classList.toggle('theme-dark', !isDark);
     root.classList.toggle('theme-light', isDark);
     localStorage.setItem('wv-theme', next);
-    // Update theme button icon
     var btn = document.getElementById('wv-theme-btn');
-    if (btn) btn.innerHTML = next === 'dark' ? ICONS.moon : ICONS.sun;
+    if (btn) btn.innerHTML = next === 'dark' ? icon('moon') : icon('sun');
   };
 
-  // Mobile drawer
+  // ── More menu (profile dropdown) ─────────────────────────────
+  window._toggleMoreMenu = function(e) {
+    e.stopPropagation();
+    var existing = document.getElementById('wv-more-menu');
+    if (existing) { existing.remove(); return; }
+
+    var btn = document.getElementById('wv-more-btn');
+    var r = btn ? btn.getBoundingClientRect() : { bottom: 60, right: 200 };
+
+    var menu = document.createElement('div');
+    menu.id = 'wv-more-menu';
+    menu.className = 'lg-medium';
+    menu.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:14px;padding:6px 0;min-width:170px;z-index:9999;font-size:13px;';
+
+    var items = [
+      ['Profile', function() { navigate('/dashboard.html'); }],
+      ['Settings', function() { navigate('/settings.html'); }],
+      ['Sign out', function() { logout(); }],
+    ];
+    items.forEach(function(item) {
+      var el = document.createElement('button');
+      el.textContent = item[0];
+      el.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 18px;background:transparent;border:none;cursor:pointer;color:var(--text);font-size:13px;font-family:inherit;';
+      el.onmouseenter = function() { el.style.background = 'var(--hair)'; };
+      el.onmouseleave = function() { el.style.background = 'transparent'; };
+      el.onclick = function() { menu.remove(); item[1](); };
+      menu.appendChild(el);
+    });
+
+    document.body.appendChild(menu);
+    setTimeout(function() {
+      document.addEventListener('click', function handler() {
+        menu.remove();
+        document.removeEventListener('click', handler);
+      });
+    }, 0);
+  };
+
+  // ── Mobile drawer ─────────────────────────────────────────────
   window.openMobileDrawer = function() {
     var drawer = document.getElementById('wv-drawer');
     var overlay = document.getElementById('wv-drawer-overlay');
@@ -192,7 +234,6 @@
     if (overlay) overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
   };
-
   window.closeMobileDrawer = function() {
     var drawer = document.getElementById('wv-drawer');
     var overlay = document.getElementById('wv-drawer-overlay');
@@ -201,99 +242,82 @@
     document.body.style.overflow = '';
   };
 
-  // Build and inject the shell
+  // ── Build and inject the shell ────────────────────────────────
   function initShell() {
     var theme = localStorage.getItem('wv-theme') || 'light';
 
-    // Get existing view content
+    var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
+
     var viewEl = document.getElementById('view');
     var viewContent = viewEl ? viewEl.innerHTML : '';
 
-    // Remove old nav and mobile bottom nav
-    var oldNav = document.querySelector('nav');
-    if (oldNav) oldNav.remove();
-    var oldMobileNav = document.querySelector('.mobile-bottom-nav');
-    if (oldMobileNav) oldMobileNav.remove();
+    // Remove old nav / mobile-bottom-nav if present
+    var oldNav = document.querySelector('nav:not(#wv-sidebar nav):not(#wv-drawer nav):not(#wv-mobile-tabs)');
+    if (oldNav && !oldNav.closest('#wv-root')) oldNav.remove();
+    var oldMobile = document.querySelector('.mobile-bottom-nav');
+    if (oldMobile) oldMobile.remove();
 
-    // Detect if this is an auth page (login/register) — no shell needed
-    var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
     if (isAuthPage) {
-      document.body.classList.add('wv-app', 'theme-' + theme);
+      document.body.classList.add('wv-auth-body', 'theme-' + theme);
       return;
     }
 
-    // Create the root shell element
     var root = document.createElement('div');
     root.id = 'wv-root';
     root.className = 'wv-app theme-' + theme;
 
     root.innerHTML =
-      // Background layer
+      // Animated page background
       '<div id="wv-page-bg" aria-hidden></div>' +
-      // Top bar
+      // Topbar
       '<header id="wv-topbar" class="wv-topbar lg-large lg-highlight">' + buildTopbarHTML() + '</header>' +
-      // Sidebar (desktop)
+      // Sidebar
       '<aside id="wv-sidebar" class="wv-sidebar lg-large">' + buildSidebarHTML() + '</aside>' +
-      // Content area
+      // Main content
       '<div id="wv-content"><div id="view">' + viewContent + '</div></div>' +
       // Player slot
       '<div id="wv-player-slot"></div>' +
-      // Mobile tab bar (hidden on desktop via CSS)
+      // Mobile-only elements (hidden on desktop via CSS)
       '<nav id="wv-mobile-tabs" class="wv-mobile-tabs">' + buildMobileTabsHTML() + '</nav>' +
-      // Drawer overlay (hidden on desktop via CSS)
       '<div id="wv-drawer-overlay" class="wv-drawer-overlay" onclick="window.closeMobileDrawer()"></div>' +
-      // Mobile drawer (hidden on desktop via CSS)
       '<aside id="wv-drawer" class="wv-drawer lg-large">' +
         buildSidebarHTML() +
-        '<button onclick="window.closeMobileDrawer()" style="position:absolute;top:14px;right:-14px;width:30px;height:30px;border-radius:50%;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;">×</button>' +
+        '<button onclick="window.closeMobileDrawer()" class="wv-icon-circle" style="position:absolute;top:14px;right:-18px;">×</button>' +
       '</aside>';
 
-    // Show mobile menu button on mobile
-    var mediaQ = window.matchMedia('(max-width: 768px)');
-    function checkMobile() {
-      var menuBtn = root.querySelector('#wv-menu-btn');
-      if (menuBtn) menuBtn.style.display = mediaQ.matches ? 'flex' : 'none';
-    }
-
-    // Clear body and append shell
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflow = 'hidden';
     document.body.insertBefore(root, document.body.firstChild);
 
+    // Mobile: show hamburger button in topbar
+    var mq = window.matchMedia('(max-width: 768px)');
+    function checkMobile() {
+      var menuBtn = root.querySelector('#wv-menu-btn');
+      if (menuBtn) menuBtn.style.display = mq.matches ? 'flex' : 'none';
+    }
     checkMobile();
-    mediaQ.addListener(checkMobile);
+    mq.addListener(checkMobile);
 
-    // Close drawer when clicking nav links inside it
+    // Close drawer when clicking links inside it
     root.querySelectorAll('#wv-drawer .wv-nav-item, #wv-mobile-tabs .wv-tab-btn').forEach(function(el) {
-      el.addEventListener('click', function() {
-        window.closeMobileDrawer();
-      });
+      el.addEventListener('click', function() { window.closeMobileDrawer(); });
     });
   }
 
-  // Re-expose updateNav as a no-op (layout.js handles nav state)
+  // ── updateNav — called after auth state changes ───────────────
   window.updateNav = function() {
-    // Update sidebar and topbar auth state when auth changes
     var topbar = document.getElementById('wv-topbar');
-    if (topbar) {
-      topbar.innerHTML = buildTopbarHTML();
-      // Re-check mobile button visibility
-      var btn = document.getElementById('wv-menu-btn');
-      if (btn && window.matchMedia('(max-width:768px)').matches) btn.style.display = 'flex';
-    }
+    if (topbar) topbar.innerHTML = buildTopbarHTML();
     var sidebar = document.getElementById('wv-sidebar');
     if (sidebar) sidebar.innerHTML = buildSidebarHTML();
     var drawer = document.getElementById('wv-drawer');
     if (drawer) drawer.innerHTML = buildSidebarHTML();
+    var tabs = document.getElementById('wv-mobile-tabs');
+    if (tabs) tabs.innerHTML = buildMobileTabsHTML();
   };
 
-  // Also expose renderSiteBanners as a no-op (banners are shown inside #view now)
-  if (!window.renderSiteBanners) {
-    window.renderSiteBanners = function() {};
-  }
+  window.renderSiteBanners = function() {};
 
-  // Run shell init immediately (scripts are at end of body, DOM is ready)
   initShell();
-
 })();

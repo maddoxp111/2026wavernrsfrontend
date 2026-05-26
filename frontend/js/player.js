@@ -342,9 +342,14 @@ function _renderAll(track) {
   const title = track.title || '—';
   const artist = track.artist_name || track.artists?.display_name || '—';
   const cover = track.cover_url;
+  const seed = track.title || '';
 
-  const coverHtml = cover ? `<img src="${cover}" alt="cover" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">` : `<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
-  const largeCoverHtml = cover ? `<img src="${cover}" alt="cover" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">` : `<svg width="80" height="80" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
+  // Gradient cover (design uses color gradients seeded by track title)
+  const bg = (typeof coverGradient === 'function') ? coverGradient(seed) : '#333';
+  const gloss = '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:inherit;"></div>';
+  const imgOver = cover ? `<img src="${cover}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;border-radius:inherit;" onerror="this.remove()">` : '';
+  const coverHtml = `<div style="position:absolute;inset:0;background:${bg};border-radius:inherit;overflow:hidden;">${gloss}${imgOver}</div>`;
+  const largeCoverHtml = coverHtml;
 
   // Desktop bar
   const titleEl = document.getElementById('player-title');
@@ -352,7 +357,7 @@ function _renderAll(track) {
   const coverEl = document.getElementById('player-cover');
   if (titleEl) titleEl.textContent = title;
   if (artistEl) artistEl.textContent = artist;
-  if (coverEl) coverEl.innerHTML = coverHtml;
+  if (coverEl) { coverEl.style.background = bg; coverEl.style.position = 'relative'; coverEl.innerHTML = coverHtml; }
 
   // Mobile mini
   const miniTitle = document.getElementById('player-mini-title');
@@ -360,7 +365,7 @@ function _renderAll(track) {
   const miniCover = document.getElementById('player-mini-cover');
   if (miniTitle) miniTitle.textContent = title;
   if (miniArtist) miniArtist.textContent = artist;
-  if (miniCover) miniCover.innerHTML = coverHtml;
+  if (miniCover) { miniCover.style.background = bg; miniCover.style.position = 'relative'; miniCover.innerHTML = coverHtml; }
 
   // Full screen
   const pfsTitle = document.getElementById('pfs-title');
@@ -368,7 +373,7 @@ function _renderAll(track) {
   const pfsCover = document.getElementById('pfs-cover');
   if (pfsTitle) pfsTitle.textContent = title;
   if (pfsArtist) pfsArtist.textContent = artist;
-  if (pfsCover) pfsCover.innerHTML = largeCoverHtml;
+  if (pfsCover) { pfsCover.style.background = bg; pfsCover.style.position = 'relative'; pfsCover.innerHTML = largeCoverHtml; }
 }
 
 function togglePlay() {

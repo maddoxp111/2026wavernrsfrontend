@@ -7,64 +7,99 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
 <div id="view">
-  <div class="scroll-section-title" style="margin-bottom:4px;">Charts</div>
-  <div style="color:var(--text-2);font-size:13px;margin-bottom:20px;">Top tracks on Wavernrs</div>
-
-  <div class="wv-tabs">
-    <button class="wv-tab active" id="tab-alltime" onclick="setTab('alltime')">All Time</button>
-    <button class="wv-tab" id="tab-weekly" onclick="setTab('weekly')">This Week</button>
-    <button class="wv-tab" id="tab-liked" onclick="setTab('liked')">Most Liked</button>
-  </div>
-
-  <div id="charts-container">
-    <div class="loading"><div class="spinner"></div></div>
-  </div>
+  <div class="loading"><div class="spinner"></div></div>
 </div>
-
 <script src="/js/api.js"></script>
 <script src="/js/layout.js"></script>
 <script src="/js/player.js"></script>
 <script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
 <script>
-  initPlayer();
-  var activeTab = 'alltime';
-  var chartData = null;
-  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function setTab(tab) {
-    activeTab = tab;
-    ['alltime','weekly','liked'].forEach(t => document.getElementById('tab-'+t).classList.toggle('active', t===tab));
-    if (chartData) renderChart();
-  }
-  async function loadCharts() {
-    const el = document.getElementById('charts-container');
-    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      chartData = await api('/charts');
-      renderChart();
-    } catch (err) {
-      el.innerHTML = '<div class="wv-empty">Failed to load: '+escHtml(err.message)+'</div>';
-    }
-  }
-  function renderChart() {
-    const el = document.getElementById('charts-container');
-    const tracks = chartData[activeTab] || [];
-    if (!tracks.length) { el.innerHTML = '<div class="wv-empty">&#x1F4CA;<br><br>No chart data yet</div>'; return; }
-    const statLabel = activeTab === 'liked' ? t => fmtNum(t.like_count||0)+' likes' : t => fmtNum(t.play_count||0)+' plays';
-    el.innerHTML = tracks.map((t,i) => {
-      const cover = t.cover_url ? '<img src="'+t.cover_url+'" alt="" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:18px;">&#x1F3B5;</span>';
-      return '<div class="wv-track-row" onclick="navigate(\'/track.html?id='+t.id+'\')">'+
-        '<div class="wv-rank-num'+(i<3?' top3':'')+'">'+( i+1)+'</div>'+
-        '<div class="wv-track-cover" style="display:flex;align-items:center;justify-content:center;">'+cover+'</div>'+
-        '<div class="wv-track-info"><div class="wv-track-title">'+escHtml(t.title)+'</div><div class="wv-track-artist">'+escHtml(t.artists?.display_name||'Unknown')+'</div></div>'+
-        '<div class="wv-track-stat">'+statLabel(t)+'</div>'+
-        '<button class="wv-pill" style="padding:6px 12px;font-size:12px;" onclick="event.stopPropagation();playThis('+JSON.stringify(t).replace(/"/g,'&quot;')+')">&#x25B6; Play</button>'+
-        '</div>';
-    }).join('');
-  }
-  function playThis(track) { playTrack({...track, artist_name: track.artists?.display_name}); }
+var activeTime = 'alltime';
+var activeSort = 'plays';
+var _chartsData = null;
+initPlayer();
+
+async function initCharts() {
+  var view = document.getElementById('view');
+  view.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:18px;">' +
+    '<div><h1 style="margin:0;font-size:40px;font-weight:800;letter-spacing:-0.035em;">Charts</h1>' +
+    '<div style="font-size:15px;font-weight:600;color:var(--text-2);margin-top:4px;">Discover what\'s trending now.</div></div>' +
+    '<div class="wv-utabs">' +
+    '<button class="wv-utab active" onclick="setTime(\'alltime\')">All Time</button>' +
+    '<button class="wv-utab" onclick="setTime(\'weekly\')">This Week</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'plays\')">Most Plays</button>' +
+    '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'liked\')">Most Liked</button>' +
+    '</div>' +
+    '<div id="charts-body"><div class="loading"><div class="spinner"></div></div></div>' +
+    '</div>';
   loadCharts();
+}
+
+function setTime(t) {
+  activeTime = t;
+  document.querySelectorAll('.wv-utab').forEach(function(btn,i) { btn.classList.toggle('active', ['alltime','weekly'][i]===t); });
+  renderCharts();
+}
+function setSort(s) {
+  activeSort = s;
+  document.querySelectorAll('.wv-pill[onclick*="setSort"]').forEach(function(btn) {
+    btn.classList.toggle('is-active', btn.getAttribute('onclick').includes("'"+s+"'"));
+  });
+  renderCharts();
+}
+
+async function loadCharts() {
+  try {
+    _chartsData = await api('/charts');
+    renderCharts();
+  } catch(err) {
+    document.getElementById('charts-body').innerHTML = '<div class="wv-empty">Failed: ' + escHtml(err.message) + '</div>';
+  }
+}
+
+function renderCharts() {
+  if (!_chartsData) return;
+  var body = document.getElementById('charts-body');
+  if (!body) return;
+  var list = activeSort === 'liked' ? (_chartsData.liked || []) : (activeTime === 'weekly' ? (_chartsData.weekly || []) : (_chartsData.alltime || []));
+  if (!list.length) { body.innerHTML = '<div class="wv-empty">No tracks yet</div>'; return; }
+
+  var header = '<div style="display:grid;grid-template-columns:30px 1fr 160px 80px;gap:16px;padding:10px 16px;font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0.04em;">' +
+    '<div>#</div><div>Title</div><div style="text-align:right;">' + (activeSort==='liked'?'Likes':'Plays') + '</div>' +
+    '<div style="text-align:right;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="display:inline-block;vertical-align:-2px;"><path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></div>' +
+    '</div>';
+
+  var rows = list.map(function(t, i) {
+    var seed = t.title||'', artist = t.artists ? t.artists.display_name : 'Unknown';
+    var plays = activeSort==='liked' ? (t.like_count||0).toLocaleString() : (t.play_count||0).toLocaleString();
+    var dur = t.duration ? fmtTime(t.duration) : '--:--';
+    var bg = coverGradient(seed);
+    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 160px 80px;" onclick="navigate(\'/track.html?id='+t.id+'\')">' +
+      '<div style="font-size:14px;color:var(--text-3);">'+(i+1)+'</div>' +
+      '<div style="display:flex;align-items:center;gap:14px;min-width:0;">' +
+        '<div style="width:44px;height:44px;border-radius:8px;background:'+bg+';position:relative;overflow:hidden;flex-shrink:0;">' +
+          '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,transparent 45%);"></div>' +
+          (t.cover_url?'<img src="'+escHtml(t.cover_url)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;" onerror="this.remove()">':'') +
+        '</div>' +
+        '<div style="min-width:0;">' +
+          '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">'+escHtml(t.title)+'</div>' +
+          '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(artist)+'</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:13.5px;color:var(--text-2);text-align:right;">'+plays+'</div>' +
+      '<div style="font-size:13.5px;color:var(--text-3);text-align:right;">'+dur+'</div>' +
+    '</div>';
+  }).join('');
+
+  body.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">' + header + rows + '</div>';
+}
+
+initCharts();
 </script>
 </body>
 </html>
