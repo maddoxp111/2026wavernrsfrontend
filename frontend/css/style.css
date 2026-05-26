@@ -730,7 +730,8 @@ img { display: block; }
 
 /* Mobile-only elements — hidden on desktop */
 .wv-status-bar { display: none; }
-#wv-mobile-tabs { display: none; }
+/* NOTE: use class selector (not #id) so the mobile media query can override it */
+.wv-mobile-tabs { display: none; }
 .wv-drawer { display: none; }
 .wv-drawer-overlay { display: none; }
 /* Mobile logo: hidden on desktop, shown on mobile via media query */
@@ -802,24 +803,24 @@ img { display: block; }
 
   #wv-content {
     position: absolute;
-    top: 116px; left: 0; right: 0; bottom: 148px;
+    top: 116px; left: 0; right: 0; bottom: 158px;
     overflow-y: auto; overflow-x: hidden;
     padding: 0 12px;
   }
 
   #wv-player-slot {
     position: absolute;
-    bottom: 80px; left: 12px; right: 12px;
+    bottom: 88px; left: 12px; right: 12px;
     height: 62px;
     display: flex; align-items: stretch;
   }
 
-  /* Mobile tabs */
+  /* Mobile tab bar */
   .wv-mobile-tabs {
     position: absolute;
     bottom: 10px; left: 10px; right: 10px;
-    height: 62px;
-    border-radius: 24px;
+    height: 68px;
+    border-radius: 26px;
     display: flex;
     align-items: stretch;
     padding: 0 4px;
@@ -832,14 +833,17 @@ img { display: block; }
   }
   .wv-tab-btn {
     flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 2px;
+    align-items: center; justify-content: center; gap: 3px;
     background: transparent; border: none; cursor: pointer;
-    color: var(--text-3); padding: 8px 4px;
+    color: var(--text-3); padding: 10px 4px;
     font-size: 10px; font-weight: 500; font-family: inherit;
     transition: color 120ms var(--ease);
     text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  .wv-tab-btn.active { color: var(--brand); font-weight: 600; }
+  .wv-tab-btn svg { transition: transform 120ms var(--ease); }
+  .wv-tab-btn.active { color: var(--brand); font-weight: 700; }
+  .wv-tab-btn.active svg { transform: scale(1.12); }
 
   /* Mobile layout adjustments */
   .wv-home-layout { grid-template-columns: 1fr; gap: 16px; }
@@ -879,8 +883,21 @@ img { display: block; }
   /* View padding adjustment */
   #view { padding: 16px 4px 40px; }
 
-  /* Mobile player mini */
-  .player-bar { display: none; }
+  /* Mobile player — keep player-bar as transparent wrapper, show only mini */
+  /* DO NOT set .player-bar { display:none } — that hides .player-mini too (it's a child) */
+  .player-bar {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    width: 100%;
+    gap: 0;
+  }
+  /* Hide desktop-only parts of the player bar */
+  .player-track, .player-center, .player-volume { display: none !important; }
+
+  /* Show mini player */
   .player-mini {
     display: flex !important;
     align-items: center;
@@ -895,8 +912,12 @@ img { display: block; }
     border-radius: 22px;
     height: 62px;
     width: 100%;
+    position: relative;
+    overflow: hidden;
   }
   .player-mini.hidden { display: none !important; }
+  /* player-bar.hidden should still hide the whole thing */
+  .player-bar.hidden { display: none !important; }
 
   .player-mini-cover {
     width: 38px; height: 38px;
