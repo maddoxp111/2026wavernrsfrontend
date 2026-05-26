@@ -3,156 +3,219 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — admin</title>
+  <title>wavernrs — admin</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
-<!-- Password gate -->
-<div id="auth-gate" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">
-  <div class="auth-card">
-    <div class="auth-logo">wavernrs stream</div>
-    <h1 class="auth-title">Admin Panel</h1>
-    <p class="auth-subtitle">Enter the admin password to continue</p>
-    <div id="gate-alert"></div>
-    <div class="form-group">
-      <label>Admin password</label>
-      <input type="password" id="admin-pw" placeholder="••••••••"
+<div id="view">
+
+<!-- ── Auth gate ─────────────────────────────────────────── -->
+<div id="auth-gate" style="display:flex;align-items:center;justify-content:center;min-height:70vh;padding:24px;">
+  <div style="background:var(--glass-large-bg);backdrop-filter:blur(var(--lg-frost-large));-webkit-backdrop-filter:blur(var(--lg-frost-large));border:1px solid var(--glass-large-border);border-radius:24px;padding:36px 32px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+    <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">wavernrs</div>
+    <h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">Admin Panel</h1>
+    <p style="font-size:14px;color:var(--text-2);margin:0 0 24px;">Enter the admin password to continue</p>
+    <div id="gate-alert" style="margin-bottom:12px;"></div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <input type="password" id="admin-pw" placeholder="Admin password" class="wv-input"
+        style="width:100%;padding:11px 14px;font-size:14px;"
         onkeydown="if(event.key==='Enter') verifyAdmin()">
     </div>
-    <button class="btn btn-primary btn-lg" style="width:100%" onclick="verifyAdmin()">Enter</button>
+    <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;" onclick="verifyAdmin()">Enter</button>
   </div>
 </div>
 
-<!-- Admin content -->
-<div id="admin-content" style="display:none;">
+<!-- ── Admin content ──────────────────────────────────────── -->
+<div id="admin-content" style="display:none;padding:28px 0 80px;max-width:1040px;">
 
-  <div class="container" style="padding-top:32px;max-width:1000px;padding-bottom:60px;">
-    <div id="admin-alert" style="margin-bottom:16px;"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
+    <h1 style="font-size:26px;font-weight:800;margin:0;">Admin Panel</h1>
+    <button class="btn btn-secondary btn-sm" onclick="adminSignOut()">Sign out</button>
+  </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" onclick="showAdminTab('banners')">Banners</button>
-      <button class="tab" onclick="showAdminTab('eratags')">Era Tags</button>
-      <button class="tab" onclick="showAdminTab('users')">Users</button>
-      <button class="tab" onclick="showAdminTab('content')">Content</button>
-    </div>
+  <div id="admin-alert" style="margin-bottom:16px;"></div>
 
-    <!-- Banners tab -->
-    <div id="tab-banners">
-      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
-          <label>Message</label>
-          <input type="text" id="banner-msg" placeholder="Banner message...">
-        </div>
-        <div class="form-group" style="width:120px;margin-bottom:0;">
-          <label>Type</label>
-          <select id="banner-type">
-            <option value="info">Info</option>
-            <option value="warning">Warning</option>
-            <option value="success">Success</option>
-            <option value="error">Error</option>
-          </select>
-        </div>
-        <button class="btn btn-primary" onclick="createBanner()">Add Banner</button>
+  <!-- Tab bar -->
+  <div style="display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--hair-strong);">
+    <button class="wv-admin-tab active" id="atab-banners"  onclick="showAdminTab('banners')">Banners</button>
+    <button class="wv-admin-tab"        id="atab-eratags"  onclick="showAdminTab('eratags')">Era Tags</button>
+    <button class="wv-admin-tab"        id="atab-users"    onclick="showAdminTab('users')">Users</button>
+    <button class="wv-admin-tab"        id="atab-content"  onclick="showAdminTab('content')">Content</button>
+    <button class="wv-admin-tab"        id="atab-lockdown" onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
+  </div>
+
+  <!-- ── Banners tab ─────────────────────────────────────── -->
+  <div id="tab-banners">
+    <div style="display:flex;gap:12px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+        <label>Message</label>
+        <input type="text" id="banner-msg" class="wv-input" placeholder="Banner message...">
       </div>
-      <div id="banners-list"><div class="loading"><div class="spinner"></div></div></div>
+      <div class="form-group" style="width:130px;margin-bottom:0;">
+        <label>Type</label>
+        <select id="banner-type" class="wv-input" style="padding:10px 12px;">
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="success">Success</option>
+          <option value="error">Error</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="createBanner()">Add Banner</button>
     </div>
+    <div id="banners-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
 
-    <!-- Era Tags tab -->
-    <div id="tab-eratags" style="display:none;">
-      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
-          <label>Era Tag Name</label>
-          <input type="text" id="eratag-name" placeholder="e.g. 2000s, Drill..." onkeydown="if(event.key==='Enter') createEraTag()">
+  <!-- ── Era Tags tab ───────────────────────────────────── -->
+  <div id="tab-eratags" style="display:none;">
+    <div style="display:flex;gap:12px;margin-bottom:20px;align-items:flex-end;flex-wrap:wrap;">
+      <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+        <label>Era Tag Name</label>
+        <input type="text" id="eratag-name" class="wv-input" placeholder="e.g. 2000s, Drill..."
+          onkeydown="if(event.key==='Enter') createEraTag()">
+      </div>
+      <button class="btn btn-primary" onclick="createEraTag()">Add Era Tag</button>
+    </div>
+    <div id="eratags-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ── Users tab ──────────────────────────────────────── -->
+  <div id="tab-users" style="display:none;">
+    <div id="users-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ── Content tab ────────────────────────────────────── -->
+  <div id="tab-content" style="display:none;">
+    <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--hair);">
+      <button class="wv-admin-tab active" id="content-tab-edits" onclick="showContentTab('edits')">Edits</button>
+      <button class="wv-admin-tab"        id="content-tab-comps" onclick="showContentTab('comps')">Comps</button>
+    </div>
+    <div id="content-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- ── Lockdown tab ────────────────────────────────────── -->
+  <div id="tab-lockdown" style="display:none;">
+    <div style="max-width:500px;">
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:28px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Site Lockdown</h2>
+        <p style="font-size:14px;color:var(--text-2);margin:0 0 24px;line-height:1.6;">
+          When locked, visitors must enter a password to access any page on the site. The admin panel is always accessible.
+        </p>
+
+        <!-- Status row -->
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:var(--glass-small-bg);border:1px solid var(--glass-small-border);border-radius:14px;">
+          <div id="lock-status-dot" style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+          <div>
+            <div id="lock-status-label" style="font-weight:600;font-size:14px;">Site is open</div>
+            <div style="font-size:12px;color:var(--text-3);" id="lock-status-sub">All visitors can browse freely</div>
+          </div>
+          <div id="lock-toggle-btn" style="margin-left:auto;">
+            <button id="btn-lock-toggle" class="btn btn-secondary" onclick="toggleSiteLock()">Enable Lockdown</button>
+          </div>
         </div>
-        <button class="btn btn-primary" onclick="createEraTag()">Add Era Tag</button>
-      </div>
-      <div id="eratags-list"><div class="loading"><div class="spinner"></div></div></div>
-    </div>
 
-    <!-- Users tab -->
-    <div id="tab-users" style="display:none;">
-      <div id="users-list"><div class="loading"><div class="spinner"></div></div></div>
-    </div>
+        <!-- Password section -->
+        <div style="margin-bottom:20px;">
+          <label class="form-group" style="display:block;font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:6px;">Site Access Password</label>
+          <div style="display:flex;gap:8px;">
+            <input type="password" id="lock-password" class="wv-input" placeholder="Set access password..." style="flex:1;padding:10px 14px;">
+            <button class="btn btn-primary" onclick="saveLockPassword()">Save</button>
+          </div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:6px;">Visitors enter this password to unlock the site. Leave empty to disable the password gate (not recommended when locked).</div>
+        </div>
 
-    <!-- Content tab -->
-    <div id="tab-content" style="display:none;">
-      <div class="tabs" style="border-bottom:none;margin-bottom:16px;">
-        <button class="tab active" id="content-tab-edits" onclick="showContentTab('edits')">Edits</button>
-        <button class="tab" id="content-tab-comps" onclick="showContentTab('comps')">Comps</button>
+        <div id="lockdown-status" style="font-size:13px;"></div>
       </div>
-      <div id="content-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
-</div>
+
+</div><!-- /admin-content -->
+</div><!-- /view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/layout.js"></script>
 <script>
-  let adminPw = null;
-  let activeAdminTab = 'banners';
-  let activeContentTab = 'edits';
+  var adminPw = null;
+  var activeAdminTab = 'banners';
+  var activeContentTab = 'edits';
+  var eraTagsCache = [];
 
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  // ── Helpers ──────────────────────────────────────────────────
 
-  function adminApi(path, options = {}) {
-    const headers = {
+  function adminApi(path, options) {
+    options = options || {};
+    var headers = Object.assign({
       'Content-Type': 'application/json',
       'X-Admin-Password': adminPw,
-      ...(options.headers || {}),
-    };
-    return fetch(`${API_BASE}${path}`, { ...options, headers })
-      .then(async res => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-        return data;
+    }, options.headers || {});
+    return fetch(API_BASE + path, Object.assign({}, options, { headers: headers }))
+      .then(function(res) {
+        return res.json().catch(function() { return {}; }).then(function(data) {
+          if (!res.ok) throw new Error(data.error || 'Request failed (' + res.status + ')');
+          return data;
+        });
       });
   }
 
+  function showMsg(elId, msg, type) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = '<div class="alert alert-' + (type || 'error') + '" style="padding:10px 14px;border-radius:10px;font-size:13px;">' + escHtml(msg) + '</div>';
+  }
+  function clearMsg(elId) {
+    var el = document.getElementById(elId);
+    if (el) el.innerHTML = '';
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────
+
   async function verifyAdmin() {
-    const pw = document.getElementById('admin-pw').value;
-    if (!pw) return showAlert('gate-alert', 'Enter the admin password');
-    clearAlert('gate-alert');
+    var pw = document.getElementById('admin-pw').value;
+    if (!pw) { showMsg('gate-alert', 'Enter the admin password'); return; }
+    clearMsg('gate-alert');
 
     try {
-      await fetch(`${API_BASE}/admin/verify`, {
+      var r = await fetch(API_BASE + '/admin/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw },
-      }).then(async r => {
-        if (!r.ok) {
-          const d = await r.json().catch(() => ({}));
-          throw new Error(d.error || 'Invalid password');
-        }
       });
-
+      if (!r.ok) {
+        var d = await r.json().catch(function() { return {}; });
+        throw new Error(d.error || 'Invalid password');
+      }
       adminPw = pw;
       sessionStorage.setItem('admin_pw', pw);
       document.getElementById('auth-gate').style.display = 'none';
       document.getElementById('admin-content').style.display = '';
       loadAll();
     } catch (err) {
-      showAlert('gate-alert', err.message || 'Invalid password');
+      showMsg('gate-alert', err.message || 'Invalid password');
     }
   }
 
+  function adminSignOut() {
+    adminPw = null;
+    sessionStorage.removeItem('admin_pw');
+    document.getElementById('admin-content').style.display = 'none';
+    document.getElementById('auth-gate').style.display = 'flex';
+    document.getElementById('admin-pw').value = '';
+  }
+
+  // ── Tab navigation ────────────────────────────────────────────
+
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners', 'eratags', 'users', 'content'].forEach(t => {
-      const el = document.getElementById(`tab-${t}`);
-      if (el) el.style.display = t === tab ? '' : 'none';
+    ['banners','eratags','users','content','lockdown'].forEach(function(t) {
+      var panel = document.getElementById('tab-' + t);
+      var btn   = document.getElementById('atab-' + t);
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+      if (btn)   btn.classList.toggle('active', t === tab);
     });
-    document.querySelectorAll('.tabs .tab').forEach((btn, i) => {
-      const tabs = ['banners', 'eratags', 'users', 'content'];
-      btn.classList.toggle('active', tabs[i] === tab);
-    });
-    // Load data for the tab
-    if (tab === 'banners') loadBanners();
-    else if (tab === 'eratags') loadEraTags();
-    else if (tab === 'users') loadUsers();
-    else if (tab === 'content') loadContent();
+    if (tab === 'banners')  loadBanners();
+    if (tab === 'eratags')  loadEraTags();
+    if (tab === 'users')    loadUsers();
+    if (tab === 'content')  loadContent();
+    if (tab === 'lockdown') loadLockdown();
   }
 
   function showContentTab(tab) {
@@ -166,297 +229,297 @@
     loadBanners();
   }
 
+  // ── Banners ───────────────────────────────────────────────────
+
   async function loadBanners() {
-    const el = document.getElementById('banners-list');
+    var el = document.getElementById('banners-list');
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      const banners = await adminApi('/admin/banners');
+      var banners = await adminApi('/admin/banners');
       if (!banners.length) {
-        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No banners.</div>`;
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No banners yet.</div>';
         return;
       }
-      el.innerHTML = `<table class="admin-table">
-        <thead><tr><th>Message</th><th>Type</th><th>Active</th><th>Actions</th></tr></thead>
-        <tbody>${banners.map(b => `
-          <tr>
-            <td>${escHtml(b.message)}</td>
-            <td><span class="site-banner ${b.type || 'info'}" style="padding:2px 8px;display:inline-block;border-radius:4px;">${escHtml(b.type || 'info')}</span></td>
-            <td>
-              <button class="btn btn-sm ${b.active ? 'btn-primary' : 'btn-secondary'}" onclick="toggleBanner('${b.id}',${b.active})">
-                ${b.active ? 'Active' : 'Inactive'}
-              </button>
-            </td>
-            <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteBanner('${b.id}')">Delete</button>
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
+      el.innerHTML = '<table class="admin-table">' +
+        '<thead><tr><th>Message</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + banners.map(function(b) {
+          return '<tr>' +
+            '<td>' + escHtml(b.message) + '</td>' +
+            '<td><span class="badge">' + escHtml(b.type || 'info') + '</span></td>' +
+            '<td><button class="btn btn-sm ' + (b.active ? 'btn-primary' : 'btn-secondary') + '" onclick="toggleBanner(\'' + b.id + '\',' + b.active + ')">' + (b.active ? 'Active' : 'Inactive') + '</button></td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="deleteBanner(\'' + b.id + '\')">Delete</button></td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
     } catch (err) {
-      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
 
   async function createBanner() {
-    const message = document.getElementById('banner-msg').value.trim();
-    const type = document.getElementById('banner-type').value;
-    if (!message) return showAlert('admin-alert', 'Enter a banner message');
+    var message = document.getElementById('banner-msg').value.trim();
+    var type    = document.getElementById('banner-type').value;
+    if (!message) { showMsg('admin-alert', 'Enter a banner message'); return; }
     try {
-      await adminApi('/admin/banners', {
-        method: 'POST',
-        body: JSON.stringify({ message, type }),
-      });
+      await adminApi('/admin/banners', { method: 'POST', body: JSON.stringify({ message: message, type: type }) });
       document.getElementById('banner-msg').value = '';
-      clearAlert('admin-alert');
+      clearMsg('admin-alert');
       loadBanners();
-    } catch (err) {
-      showAlert('admin-alert', err.message);
-    }
+    } catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteBanner(id) {
     if (!confirm('Delete this banner?')) return;
     try {
-      await adminApi(`/admin/banners/${id}`, { method: 'DELETE' });
+      await adminApi('/admin/banners/' + id, { method: 'DELETE' });
       loadBanners();
-    } catch (err) {
-      showAlert('admin-alert', err.message);
-    }
+    } catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function toggleBanner(id, active) {
     try {
-      await adminApi(`/admin/banners/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ active: !active }),
-      });
+      await adminApi('/admin/banners/' + id, { method: 'PATCH', body: JSON.stringify({ active: !active }) });
       loadBanners();
-    } catch (err) {
-      showAlert('admin-alert', err.message);
-    }
+    } catch (err) { showMsg('admin-alert', err.message); }
   }
+
+  // ── Era Tags ──────────────────────────────────────────────────
 
   async function loadEraTags() {
-    const el = document.getElementById('eratags-list');
+    var el = document.getElementById('eratags-list');
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      const tags = await fetch(`${API_BASE}/eratags`).then(r => r.json());
+      var tags = await fetch(API_BASE + '/eratags').then(function(r) { return r.json(); });
       if (!tags.length) {
-        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No era tags.</div>`;
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No era tags yet.</div>';
         return;
       }
-      el.innerHTML = `<table class="admin-table">
-        <thead><tr><th>Order</th><th>Name</th><th>ID</th><th>Actions</th></tr></thead>
-        <tbody>${tags.map((t, i) => `
-          <tr>
-            <td>
-              <button class="btn btn-ghost btn-sm" onclick="moveEraTag('${t.id}', ${i}, -1, eraTagsCache)" ${i === 0 ? 'disabled' : ''}>↑</button>
-              <button class="btn btn-ghost btn-sm" onclick="moveEraTag('${t.id}', ${i}, 1, eraTagsCache)" ${i === tags.length - 1 ? 'disabled' : ''}>↓</button>
-            </td>
-            <td><span class="era-pill" style="cursor:default;">${escHtml(t.name)}</span></td>
-            <td style="color:var(--text-tertiary);">${t.id}</td>
-            <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteEraTag('${t.id}')">Delete</button>
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
+      el.innerHTML = '<table class="admin-table">' +
+        '<thead><tr><th>Order</th><th>Name</th><th>ID</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + tags.map(function(t, i) {
+          return '<tr>' +
+            '<td style="display:flex;gap:4px;">' +
+              '<button class="btn btn-ghost btn-sm" onclick="moveEraTag(\'' + t.id + '\',' + i + ',-1)" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
+              '<button class="btn btn-ghost btn-sm" onclick="moveEraTag(\'' + t.id + '\',' + i + ',1)" ' + (i === tags.length - 1 ? 'disabled' : '') + '>↓</button>' +
+            '</td>' +
+            '<td><span class="badge">' + escHtml(t.name) + '</span></td>' +
+            '<td style="color:var(--text-3);font-size:12px;">' + t.id + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="deleteEraTag(\'' + t.id + '\')">Delete</button></td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
       eraTagsCache = tags;
     } catch (err) {
-      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
 
-  let eraTagsCache = [];
-
-  async function moveEraTag(id, currentIndex, direction, tags) {
-    const newIndex = currentIndex + direction;
+  async function moveEraTag(id, currentIndex, direction) {
+    var tags = eraTagsCache;
+    var newIndex = currentIndex + direction;
     if (newIndex < 0 || newIndex >= tags.length) return;
-    const pw = sessionStorage.getItem('admin_pw');
-    const a = tags[currentIndex], b = tags[newIndex];
+    var a = tags[currentIndex], b = tags[newIndex];
+    var pw = adminPw;
     try {
       await Promise.all([
-        fetch(`${API_BASE}/eratags/${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: newIndex }) }),
-        fetch(`${API_BASE}/eratags/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: currentIndex }) }),
+        fetch(API_BASE + '/eratags/' + a.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: newIndex }) }),
+        fetch(API_BASE + '/eratags/' + b.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: currentIndex }) }),
       ]);
       loadEraTags();
-    } catch (err) {
-      showAlert('admin-alert', 'Reorder failed: ' + err.message);
-    }
+    } catch (err) { showMsg('admin-alert', 'Reorder failed: ' + err.message); }
   }
 
   async function createEraTag() {
-    const name = document.getElementById('eratag-name').value.trim();
-    if (!name) return showAlert('admin-alert', 'Enter a tag name');
-    const pw = sessionStorage.getItem('admin_pw');
+    var name = document.getElementById('eratag-name').value.trim();
+    if (!name) { showMsg('admin-alert', 'Enter a tag name'); return; }
     try {
-      await fetch(`${API_BASE}/eratags`, {
+      var r = await fetch(API_BASE + '/eratags', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw },
-        body: JSON.stringify({ name }),
-      }).then(async r => {
-        if (!r.ok) {
-          const d = await r.json().catch(() => ({}));
-          throw new Error(d.error || 'Failed');
-        }
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPw },
+        body: JSON.stringify({ name: name }),
       });
+      if (!r.ok) { var d = await r.json().catch(function() { return {}; }); throw new Error(d.error || 'Failed'); }
       document.getElementById('eratag-name').value = '';
-      clearAlert('admin-alert');
+      clearMsg('admin-alert');
       loadEraTags();
-    } catch (err) {
-      showAlert('admin-alert', err.message);
-    }
+    } catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteEraTag(id) {
     if (!confirm('Delete this era tag?')) return;
-    const pw = sessionStorage.getItem('admin_pw');
     try {
-      await fetch(`${API_BASE}/eratags/${id}`, {
-        method: 'DELETE',
-        headers: { 'X-Admin-Password': pw },
-      }).then(async r => {
-        if (!r.ok) {
-          const d = await r.json().catch(() => ({}));
-          throw new Error(d.error || 'Failed');
-        }
-      });
+      var r = await fetch(API_BASE + '/eratags/' + id, { method: 'DELETE', headers: { 'X-Admin-Password': adminPw } });
+      if (!r.ok) { var d = await r.json().catch(function() { return {}; }); throw new Error(d.error || 'Failed'); }
       loadEraTags();
-    } catch (err) {
-      showAlert('admin-alert', 'Delete failed: ' + err.message);
-    }
+    } catch (err) { showMsg('admin-alert', 'Delete failed: ' + err.message); }
   }
 
+  // ── Users ─────────────────────────────────────────────────────
+
   async function loadUsers() {
-    const el = document.getElementById('users-list');
+    var el = document.getElementById('users-list');
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      const users = await adminApi('/admin/users');
+      var users = await adminApi('/admin/users');
       if (!users.length) {
-        el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No users.</div>`;
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No users.</div>';
         return;
       }
-      el.innerHTML = `<table class="admin-table">
-        <thead><tr><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>${users.map(u => {
-          const status = u.banned_until ? `<span style="color:var(--red);">Banned</span>` :
-                         u.timeout_until ? `<span style="color:#FCD34D;">Timeout</span>` :
-                         `<span style="color:var(--green);">Active</span>`;
-          const actions = u.banned_until
-            ? `<button class="btn btn-secondary btn-sm" onclick="unbanUser('${u.id}')">Unban</button>`
-            : `<button class="btn btn-secondary btn-sm" onclick="timeoutUser('${u.id}')">Timeout</button>
-               <button class="btn btn-danger btn-sm" onclick="banUser('${u.id}')">Ban</button>`;
-          return `
-            <tr>
-              <td style="font-weight:500;">${escHtml(u.username)}</td>
-              <td style="color:var(--text-secondary);">${new Date(u.created_at).toLocaleDateString()}</td>
-              <td>${status}</td>
-              <td style="display:flex;gap:6px;">${actions}</td>
-            </tr>`;
-        }).join('')}
-        </tbody>
-      </table>`;
+      el.innerHTML = '<table class="admin-table">' +
+        '<thead><tr><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + users.map(function(u) {
+          var status = u.banned
+            ? '<span style="color:#f87171;font-weight:600;font-size:13px;">Banned</span>'
+            : '<span style="color:#4ade80;font-weight:600;font-size:13px;">Active</span>';
+          var actions = u.banned
+            ? '<button class="btn btn-secondary btn-sm" onclick="unbanUser(\'' + u.id + '\')">Unban</button>'
+            : '<button class="btn btn-secondary btn-sm" onclick="timeoutUser(\'' + u.id + '\')" style="margin-right:6px;">Timeout</button>' +
+              '<button class="btn btn-danger btn-sm" onclick="banUser(\'' + u.id + '\')">Ban</button>';
+          return '<tr>' +
+            '<td style="font-weight:600;">' + escHtml(u.username) + '</td>' +
+            '<td style="color:var(--text-2);">' + new Date(u.created_at).toLocaleDateString() + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td>' + actions + '</td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
     } catch (err) {
-      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
 
   async function banUser(id) {
     if (!confirm('Ban this user permanently?')) return;
-    try {
-      await adminApi(`/admin/users/${id}/ban`, { method: 'POST' });
-      loadUsers();
-    } catch (err) { showAlert('admin-alert', err.message); }
+    try { await adminApi('/admin/users/' + id + '/ban', { method: 'POST' }); loadUsers(); }
+    catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function unbanUser(id) {
-    try {
-      await adminApi(`/admin/users/${id}/ban`, { method: 'DELETE' });
-      loadUsers();
-    } catch (err) { showAlert('admin-alert', err.message); }
+    try { await adminApi('/admin/users/' + id + '/ban', { method: 'DELETE' }); loadUsers(); }
+    catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function timeoutUser(id) {
-    const hours = prompt('Timeout duration in hours:');
+    var hours = prompt('Timeout duration in hours:');
     if (!hours || isNaN(hours)) return;
     try {
-      await adminApi(`/admin/users/${id}/timeout`, {
-        method: 'POST',
-        body: JSON.stringify({ hours: parseInt(hours) }),
-      });
+      await adminApi('/admin/users/' + id + '/timeout', { method: 'POST', body: JSON.stringify({ hours: parseInt(hours) }) });
       loadUsers();
-    } catch (err) { showAlert('admin-alert', err.message); }
+    } catch (err) { showMsg('admin-alert', err.message); }
   }
 
+  // ── Content ───────────────────────────────────────────────────
+
   async function loadContent() {
-    const el = document.getElementById('content-list');
+    var el = document.getElementById('content-list');
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       if (activeContentTab === 'edits') {
-        const data = await adminApi('/discover').catch(() => api('/discover'));
-        const tracks = (data.recent || []).concat(data.trending || []);
-        const seen = new Set();
-        const unique = tracks.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true; });
-        if (!unique.length) {
-          el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No edits.</div>`;
-          return;
-        }
-        el.innerHTML = `<table class="admin-table">
-          <thead><tr><th>Title</th><th>Artist</th><th>Plays</th><th>Actions</th></tr></thead>
-          <tbody>${unique.map(t => `
-            <tr>
-              <td><a href="/track.html?id=${t.id}" style="color:var(--purple-light);">${escHtml(t.title)}</a></td>
-              <td style="color:var(--text-secondary);">${escHtml(t.artists?.display_name || '')}</td>
-              <td style="color:var(--text-tertiary);">${fmtNum(t.play_count)}</td>
-              <td><button class="btn btn-danger btn-sm" onclick="deleteTrack('${t.id}')">Remove</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`;
+        var tracks = await adminApi('/admin/tracks');
+        if (!tracks.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No edits.</div>'; return; }
+        el.innerHTML = '<table class="admin-table">' +
+          '<thead><tr><th>Title</th><th>Artist</th><th>Plays</th><th>Actions</th></tr></thead>' +
+          '<tbody>' + tracks.map(function(t) {
+            return '<tr>' +
+              '<td><a href="/track.html?id=' + t.id + '" style="color:var(--brand);">' + escHtml(t.title) + '</a></td>' +
+              '<td style="color:var(--text-2);">' + escHtml((t.artists && t.artists.display_name) || '') + '</td>' +
+              '<td style="color:var(--text-3);">' + fmtNum(t.play_count) + '</td>' +
+              '<td><button class="btn btn-danger btn-sm" onclick="deleteTrack(\'' + t.id + '\')">Remove</button></td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
       } else {
-        // Comps — no public listing endpoint, try admin route
-        try {
-          const comps = await adminApi('/admin/albums');
-          if (!comps.length) {
-            el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">No comps.</div>`;
-            return;
-          }
-          el.innerHTML = `<table class="admin-table">
-            <thead><tr><th>Title</th><th>Artist</th><th>Actions</th></tr></thead>
-            <tbody>${comps.map(c => `
-              <tr>
-                <td><a href="/album.html?id=${c.id}" style="color:var(--purple-light);">${escHtml(c.title)}</a></td>
-                <td style="color:var(--text-secondary);">${escHtml(c.artists?.display_name || '')}</td>
-                <td><button class="btn btn-danger btn-sm" onclick="deleteComp('${c.id}')">Remove</button></td>
-              </tr>`).join('')}
-            </tbody>
-          </table>`;
-        } catch (_) {
-          el.innerHTML = `<div style="color:var(--text-tertiary);font-size:14px;padding:16px 0;">Comp listing not available.</div>`;
-        }
+        var comps = await adminApi('/admin/albums');
+        if (!comps.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No comps.</div>'; return; }
+        el.innerHTML = '<table class="admin-table">' +
+          '<thead><tr><th>Title</th><th>Artist</th><th>Actions</th></tr></thead>' +
+          '<tbody>' + comps.map(function(c) {
+            return '<tr>' +
+              '<td><a href="/album.html?id=' + c.id + '" style="color:var(--brand);">' + escHtml(c.title) + '</a></td>' +
+              '<td style="color:var(--text-2);">' + escHtml((c.artists && c.artists.display_name) || '') + '</td>' +
+              '<td><button class="btn btn-danger btn-sm" onclick="deleteComp(\'' + c.id + '\')">Remove</button></td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
       }
     } catch (err) {
-      el.innerHTML = `<div style="color:var(--red);">Failed: ${escHtml(err.message)}</div>`;
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
 
   async function deleteTrack(id) {
     if (!confirm('Remove this edit?')) return;
-    try {
-      await adminApi(`/admin/tracks/${id}`, { method: 'DELETE' });
-      loadContent();
-    } catch (err) { showAlert('admin-alert', err.message); }
+    try { await adminApi('/admin/tracks/' + id, { method: 'DELETE' }); loadContent(); }
+    catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteComp(id) {
     if (!confirm('Remove this comp?')) return;
-    try {
-      await adminApi(`/admin/albums/${id}`, { method: 'DELETE' });
-      loadContent();
-    } catch (err) { showAlert('admin-alert', err.message); }
+    try { await adminApi('/admin/albums/' + id, { method: 'DELETE' }); loadContent(); }
+    catch (err) { showMsg('admin-alert', err.message); }
   }
 
-  // Auto-login from session storage
-  const savedPw = sessionStorage.getItem('admin_pw');
+  // ── Lockdown ──────────────────────────────────────────────────
+
+  async function loadLockdown() {
+    try {
+      var data = await adminApi('/admin/site-lock');
+      _updateLockUI(data.locked, data.passwordSet);
+    } catch (err) {
+      document.getElementById('lockdown-status').innerHTML =
+        '<span style="color:var(--red);">Failed to load lockdown state: ' + escHtml(err.message) + '</span>';
+    }
+  }
+
+  function _updateLockUI(locked, passwordSet) {
+    var dot = document.getElementById('lock-status-dot');
+    var label = document.getElementById('lock-status-label');
+    var sub = document.getElementById('lock-status-sub');
+    var btn = document.getElementById('btn-lock-toggle');
+    if (locked) {
+      dot.style.background = '#f87171';
+      label.textContent = 'Site is LOCKED';
+      sub.textContent = 'Visitors must enter the access password';
+      btn.textContent = 'Disable Lockdown';
+      btn.className = 'btn btn-danger';
+    } else {
+      dot.style.background = '#4ade80';
+      label.textContent = 'Site is open';
+      sub.textContent = 'All visitors can browse freely';
+      btn.textContent = 'Enable Lockdown';
+      btn.className = 'btn btn-secondary';
+    }
+    document.getElementById('lockdown-status').innerHTML =
+      passwordSet
+        ? '<span style="color:#4ade80;">✓ Access password is set</span>'
+        : '<span style="color:#fcd34d;">⚠ No access password set — set one before enabling lockdown</span>';
+  }
+
+  async function toggleSiteLock() {
+    try {
+      var current = await adminApi('/admin/site-lock');
+      var data = await adminApi('/admin/site-lock', {
+        method: 'POST',
+        body: JSON.stringify({ locked: !current.locked }),
+      });
+      _updateLockUI(data.locked, data.passwordSet);
+      showMsg('admin-alert', data.locked ? 'Site locked.' : 'Site unlocked.', 'success');
+      setTimeout(function() { clearMsg('admin-alert'); }, 3000);
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
+
+  async function saveLockPassword() {
+    var password = document.getElementById('lock-password').value;
+    if (!password) { showMsg('admin-alert', 'Enter a password'); return; }
+    try {
+      var data = await adminApi('/admin/site-lock', {
+        method: 'POST',
+        body: JSON.stringify({ password: password }),
+      });
+      document.getElementById('lock-password').value = '';
+      _updateLockUI(data.locked, data.passwordSet);
+      showMsg('admin-alert', 'Access password saved.', 'success');
+      setTimeout(function() { clearMsg('admin-alert'); }, 3000);
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
+
+  // ── Auto-login ────────────────────────────────────────────────
+  var savedPw = sessionStorage.getItem('admin_pw');
   if (savedPw) {
     document.getElementById('admin-pw').value = savedPw;
     verifyAdmin();

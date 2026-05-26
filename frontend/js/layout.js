@@ -310,7 +310,81 @@
     root.querySelectorAll('#wv-drawer .wv-nav-item, #wv-mobile-tabs .wv-tab-btn').forEach(function(el) {
       el.addEventListener('click', function() { window.closeMobileDrawer(); });
     });
+
+    // ── Site lockdown check ───────────────────────────────────────
+    // Admin panel is always accessible regardless of lockdown
+    var isAdminPage = location.pathname.endsWith('/adminpanel.html');
+    if (!isAdminPage) {
+      _checkSiteLock(theme);
+    }
   }
+
+  function _checkSiteLock(theme) {
+    // Already verified this session?
+    if (sessionStorage.getItem('site_lock_verified')) return;
+
+    // Show a minimal lockscreen immediately to avoid flash of content
+    var ls = document.createElement('div');
+    ls.id = 'wv-lockscreen';
+    ls.className = 'theme-' + (theme || 'dark');
+    ls.innerHTML =
+      '<div class="wv-lock-card">' +
+        '<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;">wavernrs</div>' +
+        '<div id="wv-lock-icon" style="font-size:32px;margin-bottom:12px;">🔒</div>' +
+        '<h2 style="font-size:22px;font-weight:800;margin:0 0 6px;">Site is locked</h2>' +
+        '<p style="font-size:14px;color:var(--text-2);margin:0 0 22px;line-height:1.5;">Enter the access password to continue.</p>' +
+        '<div id="wv-lock-alert" style="margin-bottom:10px;"></div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<input type="password" id="wv-lock-pw" class="wv-input" placeholder="Password..." style="flex:1;padding:10px 14px;" ' +
+            'onkeydown="if(event.key===\'Enter\') window._submitSiteLock()">' +
+          '<button class="btn btn-primary" onclick="window._submitSiteLock()">Enter</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(ls);
+
+    // Fetch lock status
+    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-status' : '/api/site/lock-status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.locked) {
+          // Not locked — remove screen immediately
+          var el = document.getElementById('wv-lockscreen');
+          if (el) el.remove();
+        }
+        // else: keep lockscreen visible, user must enter password
+      })
+      .catch(function() {
+        // API error — don't block the user
+        var el = document.getElementById('wv-lockscreen');
+        if (el) el.remove();
+      });
+  }
+
+  window._submitSiteLock = function() {
+    var pw = document.getElementById('wv-lock-pw');
+    var alertEl = document.getElementById('wv-lock-alert');
+    if (!pw || !pw.value) return;
+
+    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-verify' : '/api/site/lock-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw.value }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          sessionStorage.setItem('site_lock_verified', '1');
+          var ls = document.getElementById('wv-lockscreen');
+          if (ls) ls.remove();
+        } else {
+          if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">Incorrect password. Try again.</div>';
+          if (pw) { pw.value = ''; pw.focus(); }
+        }
+      })
+      .catch(function() {
+        if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">Connection error. Try again.</div>';
+      });
+  };
 
   // ── updateNav — called after auth state changes ───────────────
   window.updateNav = function() {
