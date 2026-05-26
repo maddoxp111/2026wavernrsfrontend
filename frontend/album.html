@@ -57,6 +57,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/player.js"></script>
 <script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
 <script>
   updateNav();
   initPlayer();
@@ -133,6 +134,8 @@
                       <div class="track-row-artist">${escHtml(trackData.artists?.display_name || artist.display_name || 'Unknown')}</div>
                     </div>
                     <span class="track-row-plays">${fmtNum(trackData.play_count)} plays</span>
+                    <button onclick="event.stopPropagation();openAddToPlaylist({id:'${trackData.id}',title:${JSON.stringify(trackData.title || '')},cover_url:${JSON.stringify(trackData.cover_url || '')},ia_url:${JSON.stringify(trackData.ia_url || '')},artist_name:${JSON.stringify(trackData.artists?.display_name || artist.display_name || '')}})"
+                      style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:16px;color:var(--text-secondary);flex-shrink:0;" title="Save to playlist">＋</button>
                     <a href="/track.html?id=${trackData.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-tertiary);padding:4px 8px;">Open</a>
                   </div>`;
               }).join('')}

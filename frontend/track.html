@@ -57,6 +57,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/player.js"></script>
 <script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
 <script>
   updateNav();
   initPlayer();
@@ -80,6 +81,7 @@
       document.title = `${track.title} — wavernrs stream`;
       renderTrack();
       playTrack({ ...track, artist_name: track.artists?.display_name });
+      renderTracklist();
       loadComments();
     } catch (err) {
       document.getElementById('track-container').innerHTML =
@@ -123,6 +125,11 @@
           </div>
         </div>
 
+        <div style="margin-top:32px;">
+          <h2 class="section-title">Tracklist</h2>
+          <div class="track-list" id="track-tracklist"></div>
+        </div>
+
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
           <div id="comment-form" style="margin-bottom:20px;">
@@ -138,6 +145,33 @@
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>`;
+  }
+
+  function renderTracklist() {
+    var el = document.getElementById('track-tracklist');
+    if (!el || !track) return;
+    var cover = track.cover_url
+      ? '<img src="' + escHtml(track.cover_url) + '" alt="">'
+      : '🎵';
+    var trackObjStr = JSON.stringify({
+      id: track.id,
+      title: track.title,
+      cover_url: track.cover_url || '',
+      ia_url: track.ia_url || '',
+      artist_name: track.artists ? track.artists.display_name : '',
+    }).replace(/"/g, '&quot;');
+    el.innerHTML =
+      '<div class="track-row playing" onclick="playTrack({...track, artist_name: track.artists && track.artists.display_name})">' +
+        '<div class="track-row-num">1</div>' +
+        '<div class="track-row-cover">' + cover + '</div>' +
+        '<div class="track-row-info">' +
+          '<div class="track-row-title">' + escHtml(track.title) + '</div>' +
+          '<div class="track-row-artist">' + escHtml(track.artists ? track.artists.display_name : 'Unknown') + '</div>' +
+        '</div>' +
+        '<span class="track-row-plays">' + fmtNum(track.play_count) + ' plays</span>' +
+        '<button onclick="event.stopPropagation();openAddToPlaylist(' + trackObjStr + ')" ' +
+          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-secondary);flex-shrink:0;" title="Save to playlist">＋</button>' +
+      '</div>';
   }
 
   async function toggleLike() {
