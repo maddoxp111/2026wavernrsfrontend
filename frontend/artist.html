@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — artist</title>
+  <title>wavernrs — artist</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <div id="view">
-<div id="page-container">
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
-</div><!-- /view -->
 
 <script src="/js/api.js"></script>
 <script src="/js/layout.js"></script>
 <script src="/js/player.js"></script>
 <script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
 <script>
   initPlayer();
 
@@ -29,142 +28,171 @@
   var isFollowing = false;
   var followerCount = 0;
 
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
   async function loadPage() {
     try {
-      const [artistData, allTracks, allAlbums] = await Promise.all([
-        api(`/artists/${artistId}`),
-        api(`/artists/${artistId}/tracks`),
-        api(`/albums/by-artist/${artistId}`).catch(() => []),
+      var results = await Promise.all([
+        api('/artists/' + artistId),
+        api('/artists/' + artistId + '/tracks'),
+        api('/albums/by-artist/' + artistId).catch(function() { return []; }),
       ]);
-      artist = artistData;
-      uploads = [
-        ...allTracks.map(t => ({ ...t, _type: 'track' })),
-        ...allAlbums.map(a => ({ ...a, _type: 'album' })),
-      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      // Load follow status (fails silently if table doesn't exist)
+      artist = results[0];
+      var allTracks = results[1];
+      var allAlbums = results[2];
+
+      uploads = allTracks.map(function(t) { return Object.assign({}, t, { _type: 'track' }); })
+        .concat(allAlbums.map(function(a) { return Object.assign({}, a, { _type: 'album' }); }))
+        .sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+
       try {
-        const followData = await api(`/artists/${artistId}/follow`);
+        var followData = await api('/artists/' + artistId + '/follow');
         isFollowing = followData.following || false;
         followerCount = followData.follower_count || 0;
-      } catch {}
-      document.title = `${artist.display_name} — wavernrs stream`;
+      } catch (_) {}
+
+      document.title = (artist.display_name || 'Artist') + ' — wavernrs';
+
+      // Update page background from artist image or name seed
+      var pageBgEl = document.getElementById('wv-page-bg');
+      if (pageBgEl) {
+        extractCoverHues(artist.profile_image_url || artist.banner_url, artist.display_name || '', function(c) {
+          var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+          pageBgEl.style.background =
+            'radial-gradient(ellipse 130% 90% at -5% 0%, hsla(' + c.h1 + ',85%,' + (isDark ? 36 : 54) + '%,0.85) 0%, transparent 52%),' +
+            'radial-gradient(ellipse 110% 130% at 105% 100%, hsla(' + c.h2 + ',80%,' + (isDark ? 30 : 48) + '%,0.75) 0%, transparent 58%),' +
+            'var(--page-bg)';
+        });
+      }
+
       render();
-    } catch (_) {
-      const el = document.getElementById('page-container');
-      if (el) el.innerHTML =
-        `<div class="empty-state"><div class="empty-title">Artist not found</div></div>`;
+    } catch (err) {
+      document.getElementById('view').innerHTML =
+        '<div class="empty-state"><div class="empty-title">Artist not found</div></div>';
     }
   }
 
   async function toggleFollow() {
-    if (!isLoggedIn()) return location.href = '/login.html';
+    if (!isLoggedIn()) { location.href = '/login.html'; return; }
     try {
-      const res = await api(`/artists/${artistId}/follow`, { method: 'POST' });
+      var res = await api('/artists/' + artistId + '/follow', { method: 'POST' });
       isFollowing = res.following;
       followerCount = res.follower_count;
-      const btn = document.getElementById('follow-btn');
+      var btn = document.getElementById('follow-btn');
       if (btn) {
         btn.textContent = isFollowing ? 'Following' : 'Follow';
-        btn.className = `btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} btn-sm`;
+        btn.className = 'btn ' + (isFollowing ? 'btn-secondary' : 'btn-primary') + ' btn-sm';
       }
-      const countEl = document.getElementById('follower-count');
+      var countEl = document.getElementById('follower-count');
       if (countEl) countEl.textContent = fmtNum(followerCount);
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   }
 
   function render() {
-    const me = JSON.parse(localStorage.getItem('user') || 'null');
-    const isOwner = me && artist.user_id === me.id;
-    const avatarContent = artist.profile_image_url
-      ? `<img src="${artist.profile_image_url}" alt="avatar">`
-      : `<span>${escHtml(artist.display_name?.[0]?.toUpperCase() || '?')}</span>`;
+    var me = null;
+    try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
+    var isOwner = me && artist.user_id === me.id;
+    var totalPlays = uploads.filter(function(u) { return u._type === 'track'; })
+      .reduce(function(sum, t) { return sum + (t.play_count || 0); }, 0);
 
-    const totalPlays = uploads.filter(u => u._type === 'track').reduce((sum, t) => sum + (t.play_count || 0), 0);
+    var avatarBg = coverGradient(artist.display_name || '');
+    var avatarInner = artist.profile_image_url
+      ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.remove()">'
+      : '<span style="font-size:48px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
 
-    document.getElementById('page-container').innerHTML = `
-      <!-- Banner -->
-      <div class="artist-banner">
-        ${artist.banner_url ? `<img src="${artist.banner_url}" alt="banner">` : ''}
-      </div>
+    var html =
+      // ── Header ──────────────────────────────────────────────────
+      '<div style="padding:28px 0 0;">' +
+        // Banner (if exists)
+        (artist.banner_url
+          ? '<div style="width:100%;height:180px;border-radius:20px;overflow:hidden;margin-bottom:-60px;position:relative;">' +
+              '<img src="' + escHtml(artist.banner_url) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.closest(\'div\').remove()">' +
+              '<div aria-hidden style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.5));"></div>' +
+            '</div>'
+          : '') +
 
-      <!-- Avatar -->
-      <div class="artist-avatar-wrap">
-        <div class="artist-avatar">${avatarContent}</div>
-      </div>
+        // Avatar + meta row
+        '<div style="display:flex;align-items:flex-end;gap:24px;padding:0 4px;margin-bottom:20px;flex-wrap:wrap;">' +
+          // Avatar circle
+          '<div style="width:110px;height:110px;border-radius:50%;background:' + avatarBg + ';border:3px solid var(--glass-large-border);flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
+            avatarInner +
+          '</div>' +
+          // Name & actions
+          '<div style="flex:1;min-width:0;padding-bottom:4px;">' +
+            '<div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;">' + escHtml(artist.display_name || 'Unknown') + '</div>' +
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+              (isOwner
+                ? '<a href="/dashboard.html" class="btn btn-secondary btn-sm">Edit profile</a>'
+                : '<button class="btn ' + (isFollowing ? 'btn-secondary' : 'btn-primary') + ' btn-sm" id="follow-btn" onclick="toggleFollow()">' + (isFollowing ? 'Following' : 'Follow') + '</button>') +
+            '</div>' +
+          '</div>' +
+        '</div>' +
 
-      <!-- Meta -->
-      <div class="artist-meta">
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <div class="artist-name">${escHtml(artist.display_name)}</div>
-          ${isOwner ? `<a href="/dashboard.html" class="btn btn-secondary btn-sm">Edit profile</a>` : ''}
-          ${!isOwner ? `<button class="btn ${isFollowing ? 'btn-secondary' : 'btn-primary'} btn-sm" id="follow-btn" onclick="toggleFollow()">${isFollowing ? 'Following' : 'Follow'}</button>` : ''}
-        </div>
-        ${artist.bio ? `<div class="artist-bio">${escHtml(artist.bio)}</div>` : ''}
-        <div class="artist-stats">
-          <div class="artist-stat"><strong>${uploads.length}</strong> uploads</div>
-          <div class="artist-stat"><strong>${fmtNum(totalPlays)}</strong> total plays</div>
-          <div class="artist-stat"><strong id="follower-count">${fmtNum(followerCount)}</strong> followers</div>
-          ${artist.location ? `<div class="artist-stat">📍 ${escHtml(artist.location)}</div>` : ''}
-          ${artist.website ? `<div class="artist-stat"><a href="${escHtml(artist.website)}" target="_blank" rel="noopener" style="color:var(--purple-light);">Website ↗</a></div>` : ''}
-        </div>
-      </div>
+        // Bio
+        (artist.bio ? '<p style="font-size:14px;color:var(--text-2);line-height:1.65;margin:0 0 16px;max-width:560px;">' + escHtml(artist.bio) + '</p>' : '') +
 
-      <div class="container" style="padding-top:8px;padding-bottom:40px;">
-        <h2 class="section-title">Uploads</h2>
-        <div id="uploads-list"></div>
-      </div>`;
+        // Stats row
+        '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;font-size:13.5px;color:var(--text-2);">' +
+          '<span><strong style="color:var(--text);">' + uploads.length + '</strong> uploads</span>' +
+          '<span><strong style="color:var(--text);">' + fmtNum(totalPlays) + '</strong> total plays</span>' +
+          '<span><strong style="color:var(--text);" id="follower-count">' + fmtNum(followerCount) + '</strong> followers</span>' +
+          (artist.location ? '<span>📍 ' + escHtml(artist.location) + '</span>' : '') +
+          (artist.website ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener" style="color:var(--brand);">Website ↗</a></span>' : '') +
+        '</div>' +
 
+        // Uploads section
+        '<h2 class="wv-section-title">Uploads</h2>' +
+        '<div id="uploads-list"></div>' +
+      '</div>';
+
+    document.getElementById('view').innerHTML = html;
     renderUploads();
   }
 
   function renderUploads() {
-    const el = document.getElementById('uploads-list');
+    var el = document.getElementById('uploads-list');
+    if (!el) return;
     if (!uploads.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No uploads yet</div></div>`;
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No uploads yet</div></div>';
       return;
     }
 
-    el.innerHTML = `<div class="track-grid">` + uploads.map((item, i) => {
-      const isAlbum = item._type === 'album';
-      const cover = item.cover_url ? `<img src="${item.cover_url}" alt="" onerror="this.style.display='none'">` : `<span class="track-cover-placeholder">🎵</span>`;
-      const eraName = item.era_tag?.name || item.genre || '';
-      const clickAction = isAlbum
-        ? `location.href='/album.html?id=${item.id}'`
-        : `playFromList(${i})`;
-      return `
-        <div class="track-card" onclick="${clickAction}" style="cursor:pointer;">
-          <div class="track-cover">
-            ${cover}
-            ${isAlbum
-              ? `<div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;">COMP</div>`
-              : `<div class="track-play-overlay">
-                  <button class="play-btn-overlay" onclick="event.stopPropagation();playFromList(${i})">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--purple)"><path d="M8 5v14l11-7z"/></svg>
-                  </button>
-                </div>`}
-          </div>
-          <div class="track-info">
-            <div class="track-title">${escHtml(item.title)}</div>
-            <div class="track-artist">${escHtml(artist.display_name)}</div>
-            <div class="track-meta">
-              ${!isAlbum && item.play_count !== undefined ? `<span>${fmtNum(item.play_count)} plays</span>` : ''}
-              ${eraName ? `<span class="badge">${escHtml(eraName)}</span>` : ''}
-            </div>
-          </div>
-        </div>`;
-    }).join('') + `</div>`;
+    el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:40px;">' +
+      uploads.map(function(item, i) {
+        var isAlbum = item._type === 'album';
+        var seed = item.title || '';
+        var coverBg = coverGradient(seed);
+        var coverImg = item.cover_url
+          ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">'
+          : '';
+        var clickAction = isAlbum
+          ? "navigate('/album.html?id=" + item.id + "')"
+          : "playItem(" + i + ")";
+        var eraName = (item.era_tag && item.era_tag.name) || item.genre || '';
+
+        return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
+          '<div class="wv-comp-card-cover">' +
+            '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+              '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+              (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
+              coverImg +
+              (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playItem(' + i + ')">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+              '</button>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
+          '<div class="wv-comp-card-artist" style="display:flex;align-items:center;gap:6px;">' +
+            escHtml(artist.display_name || '') +
+            (eraName ? ' · <span class="badge" style="font-size:10px;">' + escHtml(eraName) + '</span>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
   }
 
-  function playFromList(index) {
-    const item = uploads[index];
+  function playItem(index) {
+    var item = uploads[index];
     if (!item || item._type !== 'track') return;
-    playTrack({ ...item, artist_name: artist.display_name });
+    playTrack(Object.assign({}, item, { artist_name: artist ? artist.display_name : '' }));
   }
 
   loadPage();
