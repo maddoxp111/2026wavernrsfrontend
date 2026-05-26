@@ -809,15 +809,17 @@ img { display: block; }
   }
 
   #wv-player-slot {
-    position: absolute;
+    position: fixed;
     bottom: 88px; left: 12px; right: 12px;
     height: 62px;
     display: flex; align-items: stretch;
+    z-index: 6;
   }
 
-  /* Mobile tab bar */
+  /* Mobile tab bar — fixed so it's never clipped by overflow:hidden */
   .wv-mobile-tabs {
-    position: absolute;
+    display: flex !important;
+    position: fixed;
     bottom: 10px; left: 10px; right: 10px;
     height: 68px;
     border-radius: 26px;
@@ -1367,6 +1369,10 @@ img { display: block; }
 /* Animations */
 @keyframes wv-fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes wv-slide-in { from { transform: translateX(-110%) } to { transform: translateX(0) } }
+@keyframes wv-hero-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Hero card entrance animation — fires every time the card is replaced */
+#hero-card { animation: wv-hero-in 350ms var(--ease); }
 
 /* Charts rank */
 .wv-rank-row {
@@ -1501,6 +1507,28 @@ img { display: block; }
 .alert { padding:10px 14px; border-radius:var(--r-md); font-size:13px; margin-bottom:12px; }
 .alert-error { background:rgba(255,59,48,0.12); color:var(--red); }
 .alert-success { background:rgba(52,199,89,0.12); color:var(--green); }
+
+/* Search page */
+.search-results-section { margin-bottom:32px; }
+.search-results-title { font-size:18px; font-weight:700; letter-spacing:-0.3px; color:var(--text); margin-bottom:14px; }
+.search-results-list { display:flex; flex-direction:column; gap:4px; }
+.search-result-row {
+  display:flex; align-items:center; gap:14px;
+  padding:10px 14px; border-radius:var(--r-md);
+  cursor:pointer; transition:background 120ms var(--ease);
+  color:var(--text);
+}
+.search-result-row:hover { background:var(--glass-pill-bg); }
+.search-result-cover {
+  width:52px; height:52px; flex-shrink:0; border-radius:10px; overflow:hidden;
+  background:var(--glass-medium-bg); display:flex; align-items:center; justify-content:center; font-size:22px;
+}
+.search-result-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+.search-result-type {
+  flex-shrink:0; background:var(--brand-bg); color:var(--brand-text);
+  font-size:11px; font-weight:600; padding:3px 10px; border-radius:var(--r-pill);
+  letter-spacing:0.04em; text-transform:uppercase;
+}
 .scroll-card { cursor:pointer; border-radius:var(--r-lg); }
 .scroll-card-cover { position:relative; aspect-ratio:1; border-radius:var(--r-md); overflow:hidden; background:var(--glass-medium-bg); margin-bottom:8px; }
 .scroll-card-cover img { width:100%; height:100%; object-fit:cover; }
