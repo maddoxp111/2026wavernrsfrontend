@@ -238,20 +238,11 @@
       '<div id="wv-content"><div id="view">' + viewContent + '</div></div>' +
       // Player slot
       '<div id="wv-player-slot"></div>' +
-      // Mobile status bar
-      '<div class="wv-status-bar" aria-hidden>' +
-        '<span>9:41</span>' +
-        '<span style="display:flex;gap:5px;align-items:center;">' +
-          '<svg width="16" height="10" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="3" width="3" height="8" rx="0.5"/><rect x="4.5" y="2" width="3" height="9" rx="0.5"/><rect x="9" y="1" width="3" height="10" rx="0.5"/><rect x="13.5" y="0" width="3" height="11" rx="0.5"/></svg>' +
-          '<svg width="15" height="10" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 4a10 10 0 0 1 14 0M3 6.5a7 7 0 0 1 10 0M5.5 9a3.5 3.5 0 0 1 5 0"/></svg>' +
-          '<svg width="23" height="11" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="currentColor" stroke-opacity="0.4"/><rect x="22.5" y="4" width="1.5" height="4" rx="0.5" fill="currentColor" fill-opacity="0.4"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="currentColor"/></svg>' +
-        '</span>' +
-      '</div>' +
-      // Mobile tab bar
+      // Mobile tab bar (hidden on desktop via CSS)
       '<nav id="wv-mobile-tabs" class="wv-mobile-tabs">' + buildMobileTabsHTML() + '</nav>' +
-      // Drawer overlay
+      // Drawer overlay (hidden on desktop via CSS)
       '<div id="wv-drawer-overlay" class="wv-drawer-overlay" onclick="window.closeMobileDrawer()"></div>' +
-      // Mobile drawer
+      // Mobile drawer (hidden on desktop via CSS)
       '<aside id="wv-drawer" class="wv-drawer lg-large">' +
         buildSidebarHTML() +
         '<button onclick="window.closeMobileDrawer()" style="position:absolute;top:14px;right:-14px;width:30px;height:30px;border-radius:50%;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;">×</button>' +
