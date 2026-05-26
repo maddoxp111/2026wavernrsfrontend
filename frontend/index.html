@@ -39,19 +39,27 @@ async function loadHome() {
     var chartsData = results[2];
 
     var recent = discoverData.recent || [];
-    _heroItems = recent.filter(function(i) { return i._type === 'album'; });
-    if (!_heroItems.length) _heroItems = recent.slice(0, 6);
-    _heroIdx = 0;
     _trendingGlobal = Array.isArray(trendingData) ? trendingData : [];
     _newReleasesGlobal = recent;
     _chartsDataCache = chartsData;
 
-    // Start auto-rotate every 15s
-    if (_heroTimer) clearInterval(_heroTimer);
-    if (_heroItems.length > 1) {
-      _heroTimer = setInterval(function() { heroNav(1); }, 15000);
-      window._pageCleanup.push(function() { clearInterval(_heroTimer); _heroTimer = null; });
+    // Hero items: albums first, then supplement with trending to get a good pool
+    var heroAlbums = recent.filter(function(i) { return i._type === 'album'; });
+    var heroPool = heroAlbums.slice(0, 8);
+    if (heroPool.length < 4) {
+      var extra = _trendingGlobal.filter(function(i) {
+        return !heroPool.find(function(h) { return h.id === i.id; });
+      });
+      heroPool = heroPool.concat(extra).slice(0, 8);
     }
+    if (!heroPool.length) heroPool = recent.slice(0, 8);
+    _heroItems = heroPool;
+    _heroIdx = 0;
+
+    // Start auto-rotate every 15s (always, even if only 1 item — wraps around)
+    if (_heroTimer) clearInterval(_heroTimer);
+    _heroTimer = setInterval(function() { heroNav(1); }, 15000);
+    window._pageCleanup.push(function() { clearInterval(_heroTimer); _heroTimer = null; });
 
     var view = document.getElementById('view');
     view.innerHTML =
@@ -87,12 +95,11 @@ function renderHero() {
   if (trackCount) tags.push(trackCount + ' edits');
   var tagsHtml = tags.map(function(t) { return '<span class="wv-tag-chip">' + t + '</span>'; }).join('');
 
-  var navHtml = _heroItems.length > 1
-    ? '<div style="display:flex;gap:6px;">' +
-      '<button class="wv-icon-circle" onclick="heroNav(-1)" style="font-size:20px;padding-bottom:2px;">‹</button>' +
-      '<button class="wv-icon-circle" onclick="heroNav(1)" style="font-size:20px;padding-bottom:2px;">›</button>' +
-      '</div>'
-    : '';
+  // Always show nav arrows
+  var navHtml = '<div style="display:flex;gap:6px;">' +
+    '<button class="wv-icon-circle" onclick="heroNav(-1)" aria-label="Previous" style="font-size:20px;padding-bottom:1px;">‹</button>' +
+    '<button class="wv-icon-circle" onclick="heroNav(1)" aria-label="Next" style="font-size:20px;padding-bottom:1px;">›</button>' +
+    '</div>';
 
   var clickAction = isAlbum
     ? "navigate('/album.html?id=" + item.id + "')"
@@ -100,13 +107,17 @@ function renderHero() {
 
   var coverBg = coverGradient(seed);
 
-  // Update the page background gradient to reflect hero cover colors
+  // Update the full page background to be a vivid gradient derived from the hero's cover colors
   var c = coverHues(seed);
   var pageBgEl = document.getElementById('wv-page-bg');
   if (pageBgEl) {
+    // Use cover hues at high saturation/lightness as prominent background washes
+    var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+    var opacity1 = isDark ? '0.60' : '0.50';
+    var opacity2 = isDark ? '0.50' : '0.40';
     pageBgEl.style.background =
-      'radial-gradient(ellipse 90% 70% at 10% 20%, hsla(' + c.h1 + ',' + c.s1 + '%,' + (c.l1 + 22) + '%,0.55) 0%, transparent 55%),' +
-      'radial-gradient(ellipse 70% 80% at 85% 60%, hsla(' + c.h2 + ',' + c.s2 + '%,' + (c.l2 + 22) + '%,0.45) 0%, transparent 60%),' +
+      'radial-gradient(ellipse 100% 80% at 0% 0%, hsla(' + c.h1 + ',' + (c.s1 + 15) + '%,' + (isDark ? 45 : 65) + '%,' + opacity1 + ') 0%, transparent 60%),' +
+      'radial-gradient(ellipse 80% 100% at 100% 100%, hsla(' + c.h2 + ',' + (c.s2 + 10) + '%,' + (isDark ? 40 : 60) + '%,' + opacity2 + ') 0%, transparent 65%),' +
       'var(--page-bg)';
   }
 
@@ -116,7 +127,7 @@ function renderHero() {
       '<div class="wv-hero-cover" onclick="' + clickAction + '" style="cursor:pointer;width:220px;height:220px;border-radius:18px;background:' + coverBg + ';position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 6px 24px rgba(0,0,0,0.22),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
         '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);"></div>' +
         (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:overlay;opacity:0.45;" onerror="this.remove()">' : '') +
+        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') +
       '</div>' +
       // Info
       '<div class="wv-hero-info" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;">' +

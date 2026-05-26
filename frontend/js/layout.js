@@ -183,6 +183,9 @@
     var next = isDark ? 'light' : 'dark';
     root.classList.toggle('theme-dark', !isDark);
     root.classList.toggle('theme-light', isDark);
+    // Sync theme on body so modals/dropdowns outside #wv-root also update
+    document.body.classList.remove('theme-light', 'theme-dark');
+    document.body.classList.add('theme-' + next);
     localStorage.setItem('wv-theme', next);
     var btn = document.getElementById('wv-theme-btn');
     if (btn) btn.innerHTML = next === 'dark' ? icon('moon') : icon('sun');
@@ -244,7 +247,7 @@
 
   // ── Build and inject the shell ────────────────────────────────
   function initShell() {
-    var theme = localStorage.getItem('wv-theme') || 'light';
+    var theme = localStorage.getItem('wv-theme') || 'dark';
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
 
@@ -285,6 +288,10 @@
         '<button onclick="window.closeMobileDrawer()" class="wv-icon-circle" style="position:absolute;top:14px;right:-18px;">×</button>' +
       '</aside>';
 
+    // Also apply theme class to body so anything appended outside #wv-root
+    // (modals, dropdown menus) also inherits the CSS custom properties
+    document.body.classList.remove('theme-light', 'theme-dark');
+    document.body.classList.add('theme-' + theme);
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflow = 'hidden';
