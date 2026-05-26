@@ -457,12 +457,21 @@
   // ── Lockdown ──────────────────────────────────────────────────
 
   async function loadLockdown() {
+    var statusEl = document.getElementById('lockdown-status');
     try {
       var data = await adminApi('/admin/site-lock');
       _updateLockUI(data.locked, data.passwordSet);
     } catch (err) {
-      document.getElementById('lockdown-status').innerHTML =
-        '<span style="color:var(--red);">Failed to load lockdown state: ' + escHtml(err.message) + '</span>';
+      // 404 = backend not yet deployed with lockdown support — show graceful message
+      if (err.message && err.message.includes('404')) {
+        if (statusEl) statusEl.innerHTML =
+          '<span style="color:var(--text-3);font-size:13px;">⏳ Lockdown feature requires the latest backend deployment. Push the backend changes and wait for Railway to redeploy.</span>';
+        // Still show the UI in default unlocked state
+        _updateLockUI(false, false);
+      } else {
+        if (statusEl) statusEl.innerHTML =
+          '<span style="color:var(--red);">Failed to load lockdown state: ' + escHtml(err.message) + '</span>';
+      }
     }
   }
 

@@ -277,7 +277,7 @@
       // Sidebar
       '<aside id="wv-sidebar" class="wv-sidebar lg-large">' + buildSidebarHTML() + '</aside>' +
       // Main content
-      '<div id="wv-content"><div id="view">' + viewContent + '</div></div>' +
+      '<div id="wv-content"><div id="wv-banners"></div><div id="view">' + viewContent + '</div></div>' +
       // Player slot
       '<div id="wv-player-slot"></div>' +
       // Mobile-only elements (hidden on desktop via CSS)
@@ -398,7 +398,25 @@
     if (tabs) tabs.innerHTML = buildMobileTabsHTML();
   };
 
-  window.renderSiteBanners = function() {};
+  // ── Site banners ──────────────────────────────────────────────
+  window.renderSiteBanners = async function() {
+    var container = document.getElementById('wv-banners');
+    if (!container) return;
+    try {
+      var res = await fetch(API_BASE + '/site/banners');
+      var banners = await res.json();
+      if (!banners || !banners.length) { container.innerHTML = ''; return; }
+      container.innerHTML = banners.map(function(b) {
+        return '<div class="site-banner ' + (b.type || 'info') + '">' +
+          (b.message || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+          '</div>';
+      }).join('');
+    } catch (e) {
+      container.innerHTML = '';
+    }
+  };
 
   initShell();
+  // Load banners after shell exists
+  window.renderSiteBanners();
 })();
