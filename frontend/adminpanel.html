@@ -10,6 +10,18 @@
 
 <div id="view">
 
+<!-- ── Confirm modal ──────────────────────────────────────── -->
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+  <div style="background:var(--glass-large-bg);backdrop-filter:blur(var(--lg-frost-large));-webkit-backdrop-filter:blur(var(--lg-frost-large));border:1px solid var(--glass-large-border);border-radius:20px;padding:32px 28px 24px;max-width:380px;width:calc(100% - 40px);box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <div id="confirm-title" style="font-size:17px;font-weight:700;margin-bottom:10px;"></div>
+    <div id="confirm-msg"   style="font-size:14px;color:var(--text-2);line-height:1.55;margin-bottom:24px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button id="confirm-cancel" class="btn btn-secondary" onclick="_confirmResolve(false)">Cancel</button>
+      <button id="confirm-ok"     class="btn btn-danger"    onclick="_confirmResolve(true)">Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Auth gate ─────────────────────────────────────────── -->
 <div id="auth-gate" style="display:flex;align-items:center;justify-content:center;min-height:70vh;padding:24px;">
   <div style="background:var(--glass-large-bg);backdrop-filter:blur(var(--lg-frost-large));-webkit-backdrop-filter:blur(var(--lg-frost-large));border:1px solid var(--glass-large-border);border-radius:24px;padding:36px 32px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
@@ -157,6 +169,32 @@
       });
   }
 
+  // ── Custom confirm modal ──────────────────────────────────────
+  var _confirmResolve = null;
+
+  function adminConfirm(title, msg, okLabel) {
+    return new Promise(function(resolve) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-msg').textContent   = msg;
+      document.getElementById('confirm-ok').textContent    = okLabel || 'Delete';
+      var modal = document.getElementById('confirm-modal');
+      modal.style.display = 'flex';
+      _confirmResolve = function(result) {
+        modal.style.display = 'none';
+        _confirmResolve = null;
+        resolve(result);
+      };
+    });
+  }
+  // Close on backdrop click
+  document.getElementById('confirm-modal').addEventListener('click', function(e) {
+    if (e.target === this && _confirmResolve) _confirmResolve(false);
+  });
+  // Close on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && _confirmResolve) _confirmResolve(false);
+  });
+
   function showMsg(elId, msg, type) {
     var el = document.getElementById(elId);
     if (!el) return;
@@ -268,7 +306,7 @@
   }
 
   async function deleteBanner(id) {
-    if (!confirm('Delete this banner?')) return;
+    if (!await adminConfirm('Delete banner?', 'This banner will be permanently removed from the site.')) return;
     try {
       await adminApi('/admin/banners/' + id, { method: 'DELETE' });
       loadBanners();
@@ -344,7 +382,7 @@
   }
 
   async function deleteEraTag(id) {
-    if (!confirm('Delete this era tag?')) return;
+    if (!await adminConfirm('Delete era tag?', 'Tracks tagged with this era will lose their tag. This cannot be undone.')) return;
     try {
       var r = await fetch(API_BASE + '/eratags/' + id, { method: 'DELETE', headers: { 'X-Admin-Password': adminPw } });
       if (!r.ok) { var d = await r.json().catch(function() { return {}; }); throw new Error(d.error || 'Failed'); }
@@ -386,7 +424,7 @@
   }
 
   async function banUser(id) {
-    if (!confirm('Ban this user permanently?')) return;
+    if (!await adminConfirm('Ban user?', 'This user will be permanently banned and unable to log in.', 'Ban')) return;
     try { await adminApi('/admin/users/' + id + '/ban', { method: 'POST' }); loadUsers(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
@@ -450,7 +488,10 @@
     var ids = Array.from(_selectedIds);
     if (!ids.length) return;
     var type = activeContentTab === 'edits' ? 'edit' : 'comp';
-    if (!confirm('Permanently delete ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : '') + '? This cannot be undone.')) return;
+    if (!await adminConfirm(
+      'Delete ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : '') + '?',
+      'These items will be permanently deleted. This cannot be undone.'
+    )) return;
     var endpoint = activeContentTab === 'edits' ? '/admin/tracks' : '/admin/albums';
     try {
       await adminApi(endpoint, { method: 'DELETE', body: JSON.stringify({ ids: ids }) });
@@ -522,13 +563,13 @@
   }
 
   async function deleteTrack(id) {
-    if (!confirm('Remove this edit?')) return;
+    if (!await adminConfirm('Delete edit?', 'This edit will be permanently removed.')) return;
     try { await adminApi('/admin/tracks/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteComp(id) {
-    if (!confirm('Remove this comp?')) return;
+    if (!await adminConfirm('Delete comp?', 'This comp and its tracklist will be permanently removed.')) return;
     try { await adminApi('/admin/albums/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
