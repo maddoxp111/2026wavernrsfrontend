@@ -84,22 +84,66 @@ function updateNav() {
 
 // ── Cover image auto-retry for IA CDN propagation delay ──────────────────────
 // Internet Archive's CDN takes 1-3 min to make newly uploaded images available.
-// Cover <img> tags should use onerror="this.style.display='none'" (not remove())
-// so they stay in the DOM for this retry logic to work.
+// Cover <img> tags should use onerror="this.style.opacity=0" so they stay in
+// the DOM for this retry logic to work.
 // Call wireIACoverRetry(imgEl) after injecting covers to wire up auto-reload.
 function wireIACoverRetry(imgEl) {
   if (!imgEl || imgEl.dataset.iaRetry) return;
   imgEl.dataset.iaRetry = '0';
+
+  function _showProcessing() {
+    var parent = imgEl.parentElement;
+    if (!parent || parent.querySelector('.ia-processing-label')) return;
+    var lbl = document.createElement('div');
+    lbl.className = 'ia-processing-label';
+    lbl.style.cssText = [
+      'position:absolute', 'inset:0', 'display:flex', 'flex-direction:column',
+      'align-items:center', 'justify-content:center', 'gap:6px',
+      'background:rgba(0,0,0,0.38)', 'backdrop-filter:blur(2px)',
+      '-webkit-backdrop-filter:blur(2px)', 'z-index:3', 'pointer-events:none',
+      'border-radius:inherit',
+    ].join(';');
+    lbl.innerHTML =
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="1.8" style="animation:ia-spin 1.4s linear infinite">' +
+        '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>' +
+      '</svg>' +
+      '<span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.82);text-align:center;line-height:1.2;padding:0 6px;">Image<br>Processing</span>';
+    parent.appendChild(lbl);
+    // Inject the spin keyframes once
+    if (!document.getElementById('ia-spin-style')) {
+      var s = document.createElement('style');
+      s.id = 'ia-spin-style';
+      s.textContent = '@keyframes ia-spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+  }
+
+  function _hideProcessing() {
+    var parent = imgEl.parentElement;
+    if (!parent) return;
+    var lbl = parent.querySelector('.ia-processing-label');
+    if (lbl) lbl.remove();
+  }
+
   imgEl.addEventListener('error', function() {
     var attempts = +(imgEl.dataset.iaRetry || 0);
     if (attempts >= 10) return; // give up after 5 min
     imgEl.dataset.iaRetry = String(attempts + 1);
+    _showProcessing();
     setTimeout(function() {
       if (!document.contains(imgEl)) return;
-      imgEl.onload = function() { imgEl.style.opacity = '1'; }; // restore when loaded
+      imgEl.onload = function() {
+        imgEl.style.opacity = '1';
+        _hideProcessing();
+      };
       imgEl.src = imgEl.src.split('?')[0] + '?r=' + (attempts + 1);
     }, 30000); // retry every 30 s
   });
+
+  // If the image is already broken on wire-up (e.g. loaded before script ran)
+  if (imgEl.complete && imgEl.naturalWidth === 0 && imgEl.src) {
+    imgEl.dispatchEvent(new Event('error'));
+  }
 }
 
 // ── Cover gradient art (seeded by title string) ──────────────────────
