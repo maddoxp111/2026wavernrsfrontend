@@ -161,7 +161,7 @@
       ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       try { statsData = await api('/artists/' + artist.id + '/stats'); } catch(_) {}
       render();
-      renderStatsCharts();
+      try { renderStatsCharts(); } catch(_) {}
     } catch (err) {
       if (err.message.includes('401')) return navigate('/login.html');
       showAlert('alert-container', 'Failed to load dashboard: ' + err.message);
@@ -367,13 +367,31 @@
           <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your Uploads <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${uploads.length})</span></div>
           <div id="my-uploads"></div>
         </div>
+
+        <!-- My Playlists -->
+        <div style="margin-top:32px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-size:16px;font-weight:600;">My Playlists</div>
+            <button class="btn btn-secondary btn-sm" onclick="toggleNewPlaylistForm()">＋ New Playlist</button>
+          </div>
+          <div id="new-playlist-form" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="new-playlist-title" placeholder="Playlist name…" style="flex:1;" onkeydown="if(event.key==='Enter')createDashboardPlaylist()">
+              <button class="btn btn-primary btn-sm" onclick="createDashboardPlaylist()">Create</button>
+              <button class="btn btn-secondary btn-sm" onclick="toggleNewPlaylistForm()">Cancel</button>
+            </div>
+          </div>
+          <div id="my-playlists"></div>
+        </div>
       </div>`;
 
     renderUploads();
+    renderDashboardPlaylists();
   }
 
   function renderUploads() {
     const el = document.getElementById('my-uploads');
+    if (!el) return; // guard: element might not exist if render() hasn't run yet
     if (!uploads.length) {
       el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-title">No uploads yet</div><div class="empty-desc">Upload something above.</div></div>`;
       return;
@@ -400,6 +418,77 @@
         </div>`;
     }).join('') + `</div>`;
   }
+
+  // ── Dashboard Playlists ──────────────────────────────────────────────────────
+  var _myPlaylists = null; // cached after first fetch
+
+  async function renderDashboardPlaylists() {
+    var el = document.getElementById('my-playlists');
+    if (!el) return;
+    if (!isLoggedIn()) return;
+    try {
+      var data = await api('/playlists/mine');
+      _myPlaylists = data || [];
+    } catch (_) {
+      _myPlaylists = _myPlaylists || [];
+    }
+    if (!_myPlaylists.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No playlists yet — create one above.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="track-list">' + _myPlaylists.map(function(p) {
+      return '<div class="track-row" style="cursor:pointer;" onclick="navigate(\'/playlist.html?id=' + p.id + '\')">' +
+        '<div class="track-row-cover" style="font-size:20px;display:flex;align-items:center;justify-content:center;">🎶</div>' +
+        '<div class="track-row-info">' +
+          '<div class="track-row-title">' + escHtml(p.title) + '</div>' +
+          '<div class="track-row-artist">' + (p.track_count || 0) + ' track' + ((p.track_count || 0) !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-left:auto;">' +
+          '<a href="/playlist.html?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Open</a>' +
+          '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteDashboardPlaylist(\'' + p.id + '\')">Delete</button>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  function toggleNewPlaylistForm() {
+    var form = document.getElementById('new-playlist-form');
+    if (!form) return;
+    var visible = form.style.display !== 'none';
+    form.style.display = visible ? 'none' : '';
+    if (!visible) {
+      var inp = document.getElementById('new-playlist-title');
+      if (inp) setTimeout(function() { inp.focus(); }, 50);
+    }
+  }
+
+  async function createDashboardPlaylist() {
+    var inp = document.getElementById('new-playlist-title');
+    var title = inp ? inp.value.trim() : '';
+    if (!title) { if (inp) inp.focus(); return; }
+    try {
+      var pl = await api('/playlists', { method: 'POST', body: JSON.stringify({ title: title, is_public: true }) });
+      if (inp) inp.value = '';
+      toggleNewPlaylistForm();
+      if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
+      navigate('/playlist.html?id=' + pl.id);
+    } catch (err) {
+      alert('Could not create playlist: ' + err.message);
+    }
+  }
+
+  async function deleteDashboardPlaylist(id) {
+    if (!confirm('Delete this playlist? This cannot be undone.')) return;
+    try {
+      await api('/playlists/' + id, { method: 'DELETE' });
+      if (_myPlaylists) _myPlaylists = _myPlaylists.filter(function(p) { return p.id !== id; });
+      if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
+      renderDashboardPlaylists();
+    } catch (err) {
+      alert('Could not delete playlist: ' + err.message);
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────────
 
   function cleanTitle(filename) {
     return filename.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').trim();
@@ -893,6 +982,16 @@
 
   function renderStatsCharts() {
     if (!statsData) return;
+
+    // Chart.js may not be loaded when arriving via SPA navigation (the <script src> in <head>
+    // is not re-executed by the SPA router). Dynamically load it and retry if missing.
+    if (typeof Chart === 'undefined') {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      s.onload = function() { renderStatsCharts(); };
+      document.head.appendChild(s);
+      return;
+    }
 
     var isDark = document.getElementById('wv-root')?.classList.contains('theme-dark');
     var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
