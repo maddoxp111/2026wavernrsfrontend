@@ -377,6 +377,10 @@ function togglePlay() {
   else audio.pause();
 }
 
+function pausePlayer() {
+  if (audio && !audio.paused) audio.pause();
+}
+
 function _setPlayBtns(playing) {
   const icon = playing
     ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`
