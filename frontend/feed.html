@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Following — wavernrs</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
+<script>
+var _feedItems = [];
+var _feedHasMore = false;
+var _feedPage = 1;
+initPlayer();
+
+async function initFeed() {
+  if (!isLoggedIn()) { navigate('/login.html'); return; }
+  var view = document.getElementById('view');
+  view.innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:22px;">' +
+    '<h1 style="margin:0;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Following</h1>' +
+    '<div id="feed-grid" class="wv-comp-grid wv-comp-grid-4"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div id="feed-loadmore" style="display:none;text-align:center;padding:8px 0;"></div>' +
+    '</div>';
+  loadFeed(false);
+}
+
+async function loadFeed(append) {
+  var grid = document.getElementById('feed-grid');
+  var loadMoreEl = document.getElementById('feed-loadmore');
+  if (!grid) return;
+  if (!append) {
+    grid.innerHTML = '<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div>';
+    _feedItems = [];
+    _feedPage = 1;
+  } else {
+    _feedPage += 1;
+  }
+  try {
+    var url = '/api/feed?page=' + _feedPage;
+    var data = await api(url);
+    var items = data.items || [];
+    _feedHasMore = !!data.has_more;
+
+    if (!append) {
+      _feedItems = items;
+    } else {
+      _feedItems = _feedItems.concat(items);
+    }
+
+    if (!_feedItems.length) {
+      grid.innerHTML =
+        '<div class="wv-empty" style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px 0;">' +
+        '<div style="font-size:48px;">&#x1F465;</div>' +
+        '<div style="font-size:16px;font-weight:600;color:var(--text);">Follow artists to see their latest releases here</div>' +
+        '<button class="btn btn-primary" onclick="navigate(\'/discover.html\')">Discover artists</button>' +
+        '</div>';
+      if (loadMoreEl) loadMoreEl.style.display = 'none';
+      return;
+    }
+
+    if (!append) {
+      grid.innerHTML = _feedItems.map(feedCardHTML).join('');
+    } else {
+      // Remove load-more spinner if present, append new cards
+      var newCards = items.map(feedCardHTML).join('');
+      grid.insertAdjacentHTML('beforeend', newCards);
+    }
+
+    if (loadMoreEl) {
+      if (_feedHasMore) {
+        loadMoreEl.style.display = 'block';
+        loadMoreEl.innerHTML = '<button class="btn btn-secondary" onclick="loadFeed(true)">Load more</button>';
+      } else {
+        loadMoreEl.style.display = 'none';
+        loadMoreEl.innerHTML = '';
+      }
+    }
+  } catch (err) {
+    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed to load feed: ' + escHtml(err.message) + '</div>';
+  }
+}
+
+function feedCardHTML(item) {
+  var isAlbum = item._type === 'album';
+  var artist = item.artists ? item.artists.display_name : 'Unknown';
+  var bg = coverGradient(item.title || '');
+  var action = isAlbum
+    ? "navigate('/album.html?id=" + item.id + "')"
+    : "navigate('/track.html?id=" + item.id + "')";
+  var coverImg = item.cover_url
+    ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">'
+    : '';
+  var compBadge = isAlbum
+    ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>'
+    : '';
+  var playBtn = !isAlbum
+    ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playFeedItem(\'' + item.id + '\')">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+      '</button>'
+    : '';
+  return '<div class="wv-comp-card" onclick="' + action + '">' +
+    '<div class="wv-comp-card-cover">' +
+      '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+        compBadge +
+        coverImg +
+        playBtn +
+      '</div>' +
+    '</div>' +
+    '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
+    '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
+  '</div>';
+}
+
+function playFeedItem(id) {
+  var item = _feedItems.find(function(i) { return i.id === id; });
+  if (!item) return;
+  if (item._type === 'album') { navigate('/album.html?id=' + id); return; }
+  playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
+}
+
+initFeed();
+</script>
+</body>
+</html>

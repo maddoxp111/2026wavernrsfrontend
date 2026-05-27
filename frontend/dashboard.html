@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — dashboard</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -103,6 +104,13 @@
       <label>Description</label>
       <textarea id="edit-album-desc" rows="2"></textarea>
     </div>
+    <div class="form-group" id="edit-album-tracklist-section" style="display:none;">
+      <label style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Tracklist</span>
+        <span id="edit-album-tracklist-saved" style="font-size:12px;color:#4ade80;opacity:0;transition:opacity 0.4s;">Saved</span>
+      </label>
+      <div id="edit-album-tracklist" class="tracklist" style="margin-top:4px;"></div>
+    </div>
     <div id="edit-album-alert" style="margin-top:8px;"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('edit-album-modal').classList.remove('open');editingAlbumId=null;">Cancel</button>
@@ -127,6 +135,7 @@
   var artist = null;
   var uploads = []; // mixed tracks (_type:'track') and albums (_type:'album'), sorted by created_at desc
   var eraTags = [];
+  var statsData = null;
   var pendingDeleteId = null;
   var pendingDeleteCompId = null;
 
@@ -150,7 +159,9 @@
         ...allTracks.map(t => ({ ...t, _type: 'track' })),
         ...allComps.map(a => ({ ...a, _type: 'album' })),
       ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      try { statsData = await api('/artists/' + artist.id + '/stats'); } catch(_) {}
       render();
+      renderStatsCharts();
     } catch (err) {
       if (err.message.includes('401')) return navigate('/login.html');
       showAlert('alert-container', 'Failed to load dashboard: ' + err.message);
@@ -171,6 +182,60 @@
     const avatarContent = artist.profile_image_url
       ? `<img src="${artist.profile_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : escHtml(artist.display_name?.[0]?.toUpperCase() || '?');
+
+    // Stats card — shown at top of main content when stats are available
+    var statsHtml = '';
+    if (statsData) {
+      var d = statsData;
+      statsHtml = `
+  <div class="card" style="padding:24px;margin-bottom:24px;">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:15px;font-weight:700;">Your Stats</div>
+      <div style="font-size:12px;color:var(--text-3);">Last 7 days</div>
+    </div>
+
+    <!-- Stat tiles -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+      <div style="background:var(--glass-medium-bg);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🎵 Plays</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_plays)}</div>
+      </div>
+      <div style="background:var(--glass-medium-bg);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">❤️ Likes</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_likes)}</div>
+        ${d.likes_this_week > 0 ? `<div style="font-size:11px;color:#4ade80;margin-top:2px;">+${d.likes_this_week} this week</div>` : ''}
+      </div>
+      <div style="background:var(--glass-medium-bg);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">👥 Followers</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_followers)}</div>
+        ${d.followers_this_week > 0 ? `<div style="font-size:11px;color:#4ade80;margin-top:2px;">+${d.followers_this_week} this week</div>` : ''}
+      </div>
+      <div style="background:var(--glass-medium-bg);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;">
+        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📤 Uploads</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${uploads.length}</div>
+      </div>
+    </div>
+
+    <!-- Two bar charts side by side -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">Likes (7 days)</div>
+        <div style="height:120px;"><canvas id="chart-likes"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">New Followers (7 days)</div>
+        <div style="height:120px;"><canvas id="chart-followers"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Top tracks chart -->
+    ${statsData.top_tracks && statsData.top_tracks.length ? `
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">Top Tracks by Plays</div>
+      <div style="height:${Math.max(80, statsData.top_tracks.length * 36)}px;"><canvas id="chart-top-tracks"></canvas></div>
+    </div>` : ''}
+  </div>`;
+    }
 
     document.getElementById('dashboard').innerHTML = `
       <!-- Sidebar -->
@@ -236,6 +301,7 @@
 
       <!-- Main content -->
       <div>
+        ${statsHtml}
         <!-- Single upload form -->
         <div class="card" style="padding:24px;margin-bottom:24px;">
           <div style="font-size:15px;font-weight:600;margin-bottom:16px;">Upload</div>
@@ -640,6 +706,8 @@
 
   // ── Edit Album Modal ──
   var editingAlbumId = null;
+  var _albumTracks = []; // mutable ordered array for the drag UI
+  var _dragSrcIdx = null;
 
   function openEditAlbumModal(album) {
     editingAlbumId = album.id;
@@ -651,7 +719,96 @@
         '<option value="">No era tag</option>' +
         tags.map(t => `<option value="${t.id}" ${album.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
     }).catch(() => {});
+    // Fetch album tracks for the tracklist reorder UI
+    _albumTracks = [];
+    document.getElementById('edit-album-tracklist-section').style.display = 'none';
     document.getElementById('edit-album-modal').classList.add('open');
+    api(`/albums/${album.id}`).then(function(fullAlbum) {
+      var tracks = (fullAlbum.tracks || []).slice().sort(function(a, b) {
+        return (a.position || 0) - (b.position || 0);
+      });
+      _albumTracks = tracks;
+      if (tracks.length > 0) {
+        document.getElementById('edit-album-tracklist-section').style.display = '';
+        renderAlbumTracklist();
+      }
+    }).catch(function() {});
+  }
+
+  function renderAlbumTracklist() {
+    var el = document.getElementById('edit-album-tracklist');
+    if (!el) return;
+    el.innerHTML = _albumTracks.map(function(track, i) {
+      return '<div class="tracklist-item" draggable="true" id="ati-' + i + '"' +
+        ' ondragstart="albumDragStart(event,' + i + ')"' +
+        ' ondragover="albumDragOver(event,' + i + ')"' +
+        ' ondrop="albumDragDrop(event,' + i + ')"' +
+        ' ondragend="albumDragEnd()">' +
+        '<div style="cursor:grab;padding:0 8px 0 0;font-size:16px;color:var(--text-secondary);user-select:none;flex-shrink:0;" title="Drag to reorder">⠿</div>' +
+        '<div class="tracklist-num" style="min-width:20px;flex-shrink:0;">' + (i + 1) + '</div>' +
+        '<div class="tracklist-info" style="flex:1;min-width:0;">' +
+          '<div class="tracklist-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(track.title || track.track_title || '') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function albumDragStart(e, i) {
+    _dragSrcIdx = i;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(i));
+    setTimeout(function() {
+      var el = document.getElementById('ati-' + i);
+      if (el) el.style.opacity = '0.4';
+    }, 0);
+  }
+
+  function albumDragOver(e, i) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('[id^="ati-"]').forEach(function(el) { el.style.borderTop = ''; });
+    if (i !== _dragSrcIdx) {
+      var el = document.getElementById('ati-' + i);
+      if (el) el.style.borderTop = '2px solid var(--purple)';
+    }
+  }
+
+  function albumDragDrop(e, i) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (_dragSrcIdx === null || _dragSrcIdx === i) return;
+    var moved = _albumTracks.splice(_dragSrcIdx, 1)[0];
+    _albumTracks.splice(i, 0, moved);
+    renderAlbumTracklist();
+    saveAlbumTracklist();
+  }
+
+  function albumDragEnd() {
+    _dragSrcIdx = null;
+    document.querySelectorAll('[id^="ati-"]').forEach(function(el) {
+      el.style.opacity = '';
+      el.style.borderTop = '';
+    });
+  }
+
+  async function saveAlbumTracklist() {
+    if (!editingAlbumId) return;
+    var trackPayload = _albumTracks.map(function(t, i) {
+      return { track_id: t.track_id || t.id, position: i + 1 };
+    });
+    try {
+      await api('/albums/' + editingAlbumId + '/tracklist', {
+        method: 'PUT',
+        body: JSON.stringify({ tracks: trackPayload }),
+      });
+      var savedEl = document.getElementById('edit-album-tracklist-saved');
+      if (savedEl) {
+        savedEl.style.opacity = '1';
+        setTimeout(function() { savedEl.style.opacity = '0'; }, 1500);
+      }
+    } catch (err) {
+      showAlert('edit-album-alert', 'Failed to save order: ' + (err.message || 'error'));
+    }
   }
 
   async function saveEditAlbum() {
@@ -731,6 +888,78 @@
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Upload failed';
       alert('Image upload failed: ' + err.message);
+    }
+  }
+
+  function renderStatsCharts() {
+    if (!statsData) return;
+
+    var isDark = document.getElementById('wv-root')?.classList.contains('theme-dark');
+    var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+    var labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+    var brandColor = '#8b5cf6'; // purple brand
+    var brand2Color = '#06b6d4'; // teal for followers
+
+    var chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: isDark ? '#1e1e2e' : '#fff', titleColor: isDark ? '#fff' : '#000', bodyColor: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1 },
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } }, beginAtZero: true, precision: 0 },
+      },
+    };
+
+    // Likes chart
+    var likesCtx = document.getElementById('chart-likes');
+    if (likesCtx && statsData.likes_by_day) {
+      new Chart(likesCtx, {
+        type: 'bar',
+        data: {
+          labels: statsData.likes_by_day.map(d => {
+            var dt = new Date(d.date + 'T12:00:00');
+            return dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+          }),
+          datasets: [{ data: statsData.likes_by_day.map(d => d.count), backgroundColor: brandColor + 'cc', borderRadius: 6, borderSkipped: false }],
+        },
+        options: chartDefaults,
+      });
+    }
+
+    // Followers chart
+    var followersCtx = document.getElementById('chart-followers');
+    if (followersCtx && statsData.followers_by_day) {
+      new Chart(followersCtx, {
+        type: 'bar',
+        data: {
+          labels: statsData.followers_by_day.map(d => {
+            var dt = new Date(d.date + 'T12:00:00');
+            return dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+          }),
+          datasets: [{ data: statsData.followers_by_day.map(d => d.count), backgroundColor: brand2Color + 'cc', borderRadius: 6, borderSkipped: false }],
+        },
+        options: chartDefaults,
+      });
+    }
+
+    // Top tracks horizontal bar chart
+    var topCtx = document.getElementById('chart-top-tracks');
+    if (topCtx && statsData.top_tracks && statsData.top_tracks.length) {
+      var topOptions = JSON.parse(JSON.stringify(chartDefaults));
+      topOptions.indexAxis = 'y';
+      topOptions.scales.x.ticks.font = { size: 11 };
+      topOptions.scales.y.ticks.font = { size: 11 };
+      new Chart(topCtx, {
+        type: 'bar',
+        data: {
+          labels: statsData.top_tracks.map(t => t.title.length > 22 ? t.title.slice(0, 22) + '…' : t.title),
+          datasets: [{ data: statsData.top_tracks.map(t => t.play_count), backgroundColor: brandColor + 'cc', borderRadius: 6, borderSkipped: false }],
+        },
+        options: topOptions,
+      });
     }
   }
 
