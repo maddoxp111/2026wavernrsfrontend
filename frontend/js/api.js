@@ -96,7 +96,7 @@ function wireIACoverRetry(imgEl) {
     imgEl.dataset.iaRetry = String(attempts + 1);
     setTimeout(function() {
       if (!document.contains(imgEl)) return;
-      imgEl.onload = function() { imgEl.style.display = ''; }; // restore when loaded
+      imgEl.onload = function() { imgEl.style.opacity = '1'; }; // restore when loaded
       imgEl.src = imgEl.src.split('?')[0] + '?r=' + (attempts + 1);
     }, 30000); // retry every 30 s
   });
