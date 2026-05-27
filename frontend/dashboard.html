@@ -714,7 +714,20 @@
       } else if (field === 'banner_url') {
         document.getElementById('edit-banner').value = url;
       }
-      if (statusEl) statusEl.textContent = '&#x2713; Uploaded';
+      if (statusEl) statusEl.textContent = 'Saving…';
+
+      // Auto-save immediately — don't force the user to also click "Save Profile"
+      if (artist && artist.id) {
+        await api(`/artists/${artist.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ [field]: url }),
+        });
+        // Keep local artist object in sync
+        artist[field] = url;
+      }
+
+      if (statusEl) statusEl.textContent = '✓ Saved';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Upload failed';
       alert('Image upload failed: ' + err.message);
