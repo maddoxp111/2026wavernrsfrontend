@@ -342,7 +342,7 @@ function _renderAll(track) {
   // Gradient cover (design uses color gradients seeded by track title)
   const bg = (typeof coverGradient === 'function') ? coverGradient(seed) : '#333';
   const gloss = '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:inherit;"></div>';
-  const imgOver = cover ? `<img src="${cover}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.remove()">` : '';
+  const imgOver = cover ? `<img src="${cover}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.style.display='none'">` : '';
   const coverHtml = `<div style="position:absolute;inset:0;background:${bg};border-radius:inherit;overflow:hidden;">${gloss}${imgOver}</div>`;
   const largeCoverHtml = coverHtml;
 

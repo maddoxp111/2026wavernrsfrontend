@@ -95,7 +95,7 @@
 
     var avatarBg = coverGradient(artist.display_name || '');
     var avatarInner = artist.profile_image_url
-      ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.remove()">'
+      ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.style.display='none'">'
       : '<span style="font-size:48px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
 
     var html =
@@ -161,7 +161,7 @@
         var seed = item.title || '';
         var coverBg = coverGradient(seed);
         var coverImg = item.cover_url
-          ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">'
+          ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.display='none'">'
           : '';
         var clickAction = isAlbum
           ? "navigate('/album.html?id=" + item.id + "')"
@@ -187,6 +187,11 @@
         '</div>';
       }).join('') +
     '</div>';
+
+    // Wire IA CDN retry on cover images
+    if (typeof wireIACoverRetry === 'function') {
+      document.querySelectorAll('#uploads-list img').forEach(wireIACoverRetry);
+    }
   }
 
   function playItem(index) {

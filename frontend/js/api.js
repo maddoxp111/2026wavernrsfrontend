@@ -82,6 +82,26 @@ function updateNav() {
   }
 }
 
+// ── Cover image auto-retry for IA CDN propagation delay ──────────────────────
+// Internet Archive's CDN takes 1-3 min to make newly uploaded images available.
+// Cover <img> tags should use onerror="this.style.display='none'" (not remove())
+// so they stay in the DOM for this retry logic to work.
+// Call wireIACoverRetry(imgEl) after injecting covers to wire up auto-reload.
+function wireIACoverRetry(imgEl) {
+  if (!imgEl || imgEl.dataset.iaRetry) return;
+  imgEl.dataset.iaRetry = '0';
+  imgEl.addEventListener('error', function() {
+    var attempts = +(imgEl.dataset.iaRetry || 0);
+    if (attempts >= 10) return; // give up after 5 min
+    imgEl.dataset.iaRetry = String(attempts + 1);
+    setTimeout(function() {
+      if (!document.contains(imgEl)) return;
+      imgEl.onload = function() { imgEl.style.display = ''; }; // restore when loaded
+      imgEl.src = imgEl.src.split('?')[0] + '?r=' + (attempts + 1);
+    }, 30000); // retry every 30 s
+  });
+}
+
 // ── Cover gradient art (seeded by title string) ──────────────────────
 function coverHues(seed) {
   let h = 0;

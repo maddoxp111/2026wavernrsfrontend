@@ -417,6 +417,11 @@
           </div>
         </div>`;
     }).join('') + `</div>`;
+
+    // Wire IA CDN retry on cover images (new uploads appear after 1-3 min propagation)
+    if (typeof wireIACoverRetry === 'function') {
+      document.querySelectorAll('#my-uploads img').forEach(wireIACoverRetry);
+    }
   }
 
   // ── Dashboard Playlists ──────────────────────────────────────────────────────
@@ -639,7 +644,7 @@
       document.getElementById('cover-zone-text').textContent = 'Drop image or click to browse';
       renderUploadQueue();
       renderUploads();
-      showAlert('upload-alert', '&#x2713; Uploaded!', 'success');
+      showAlert('upload-alert', '&#x2713; Uploaded! Cover art may take 1–2 min to appear.', 'success');
     } catch (err) {
       showAlert('upload-alert', err.message || 'Upload failed');
     } finally {
