@@ -207,32 +207,27 @@ function initPlayer() {
     }
   });
 
-  // Restore saved track and resume playback if it was playing
+  // Restore saved track UI on page load (always paused — never auto-play)
   const saved = localStorage.getItem(PLAYER_KEY);
   if (saved) {
     try {
       const t = JSON.parse(saved);
+      // Clear the wasPlaying flag so it never auto-resumes
+      delete t._wasPlaying;
       currentTrack = t;
       _renderAll(t);
       document.getElementById('player')?.classList.remove('hidden');
       if (t.ia_url) {
-        const resumeTime = t._savedTime || 0;
-        const wasPlaying = t._wasPlaying;
         audio.src = t.ia_url;
-        if (wasPlaying) {
-          // Mute while seeking to avoid hearing audio from position 0
-          audio.muted = true;
+        if (t._savedTime && t._savedTime > 1) {
           audio.addEventListener('canplay', () => {
-            if (resumeTime > 1) audio.currentTime = resumeTime;
-            audio.muted = false;
-            audio.play().catch(() => {});
+            audio.currentTime = t._savedTime;
           }, { once: true });
-          audio.load();
         }
-        // Clear the flag so a future restore doesn't auto-play a paused track
-        delete t._wasPlaying;
-        localStorage.setItem(PLAYER_KEY, JSON.stringify(t));
+        audio.load();
+        // Stay paused — user must press play
       }
+      localStorage.setItem(PLAYER_KEY, JSON.stringify(t));
     } catch (_) {}
   }
 
