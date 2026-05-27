@@ -58,19 +58,22 @@
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;">🎵</div>`;
 
     const eraName = track.era_tag?.name || track.genre || '';
+    const coverBg = (typeof coverGradient === 'function') ? coverGradient(track.title || '') : 'linear-gradient(135deg,#1a0a2e,#2d1b6e)';
+    const gloss = '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.20) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.25) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:16px;"></div>';
 
     document.getElementById('track-container').innerHTML = `
       <div style="padding:32px 0;">
         <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
-          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,#1a0a2e,#2d1b6e);flex-shrink:0;">
+          <div style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:${coverBg};flex-shrink:0;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.22);">
+            ${gloss}
             ${cover}
           </div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px;">${escHtml(track.title)}</div>
-            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-secondary);font-weight:500;">${escHtml(artist.display_name || 'Unknown')}</a>
+            <div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;margin-bottom:6px;line-height:1.15;color:var(--text);">${escHtml(track.title)}</div>
+            <a href="/artist.html?id=${artist.id}" style="font-size:15px;color:var(--text-2);font-weight:500;text-decoration:none;">${escHtml(artist.display_name || 'Unknown')}</a>
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
-            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-secondary);line-height:1.6;">${escHtml(track.description)}</p>` : ''}
-            <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
+            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-2);line-height:1.65;">${escHtml(track.description)}</p>` : ''}
+            <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="togglePlay()" id="main-play-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 Play
@@ -82,7 +85,7 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
                 Download
               </a>
-              <span style="font-size:13px;color:var(--text-tertiary);">${fmtNum(track.play_count)} plays</span>
+              <span style="font-size:13px;color:var(--text-3);">${fmtNum(track.play_count)} plays</span>
             </div>
           </div>
         </div>
@@ -94,14 +97,18 @@
 
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
-          <div id="comment-form" style="margin-bottom:20px;">
+          <div id="comment-form" style="margin-bottom:24px;">
             ${isLoggedIn() ? `
-              <div style="display:flex;gap:10px;align-items:flex-start;">
-                <textarea id="comment-input" placeholder="Add a comment…" style="flex:1;min-height:60px;"></textarea>
-                <button class="btn btn-primary" onclick="postComment()">Post</button>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <textarea id="comment-input" class="wv-input" placeholder="Add a comment…"
+                  style="min-height:72px;resize:vertical;line-height:1.5;"
+                  onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment()"></textarea>
+                <div style="display:flex;justify-content:flex-end;">
+                  <button class="btn btn-primary btn-sm" onclick="postComment()">Post</button>
+                </div>
               </div>
-            ` : `<p style="font-size:14px;color:var(--text-secondary);">
-              <a href="/login.html" style="color:var(--purple-light);font-weight:500;">Log in</a> to leave a comment.
+            ` : `<p style="font-size:14px;color:var(--text-2);">
+              <a href="/login.html" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
             </p>`}
           </div>
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -132,7 +139,7 @@
         '</div>' +
         '<span class="track-row-plays">' + fmtNum(track.play_count) + ' plays</span>' +
         '<button onclick="event.stopPropagation();openAddToPlaylist(' + trackObjStr + ')" ' +
-          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-secondary);flex-shrink:0;" title="Save to playlist">＋</button>' +
+          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-2);flex-shrink:0;" title="Save to playlist">＋</button>' +
       '</div>';
   }
 
@@ -147,37 +154,72 @@
     } catch (_) {}
   }
 
+  function _avatarGrad(name) {
+    // simple deterministic gradient from coverGradient if available, else fallback
+    return (typeof coverGradient === 'function') ? coverGradient(name) : 'linear-gradient(135deg,#6c47ff,#a78bfa)';
+  }
+
   async function loadComments() {
     try {
       const comments = await api(`/tracks/${trackId}/comments`);
       const el = document.getElementById('comments-list');
       if (!el) return;
       if (!comments.length) {
-        el.innerHTML = `<p style="color:var(--text-tertiary);font-size:14px;">No comments yet.</p>`;
+        el.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">No comments yet. Be the first!</div></div>`;
         return;
       }
-      el.innerHTML = comments.map(c => {
-        const net = (c.upvotes || 0) - (c.downvotes || 0);
-        const myVote = myVotes[c.id] || 0;
-        return `
-          <div class="comment-item" id="comment-${c.id}">
-            <div class="comment-avatar">${escHtml((c.users?.username || '?')[0].toUpperCase())}</div>
+      el.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;">' +
+        comments.map(c => {
+          const upvotes = c.upvotes || 0;
+          const downvotes = c.downvotes || 0;
+          const myVote = myVotes[c.id] || 0;
+          const username = c.users?.username || 'unknown';
+          const initial = username[0].toUpperCase();
+          const avatarBg = _avatarGrad(username);
+
+          const upActive = myVote === 1;
+          const downActive = myVote === -1;
+
+          return `<div id="comment-${escHtml(c.id)}" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background='var(--hair)'" onmouseleave="this.style.background='transparent'">
+            <div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);">${escHtml(initial)}</div>
             <div style="flex:1;min-width:0;">
-              <span class="comment-username">${escHtml(c.users?.username || 'unknown')}</span>
-              <span class="comment-time">${timeAgo(c.created_at)}</span>
-              <div class="comment-content">${escHtml(c.content)}</div>
-              <div class="comment-votes">
-                <button class="vote-btn ${myVote === 1 ? 'active-up' : ''}" onclick="voteComment('${c.id}', 1)">
-                  ▲ <span id="vote-up-${c.id}">${c.upvotes || 0}</span>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                <span style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(username)}</span>
+                <span style="font-size:11.5px;color:var(--text-3);">${timeAgo(c.created_at)}</span>
+              </div>
+              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${escHtml(c.content)}</div>
+              <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
+                <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)"
+                  style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${upActive ? 'var(--brand)' : 'var(--hair-strong)'};background:${upActive ? 'var(--brand-bg)' : 'transparent'};color:${upActive ? 'var(--brand)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
+                  ▲ <span id="vote-up-${escHtml(c.id)}">${upvotes}</span>
                 </button>
-                <button class="vote-btn ${myVote === -1 ? 'active-down' : ''}" onclick="voteComment('${c.id}', -1)">
-                  ▼ <span id="vote-down-${c.id}">${c.downvotes || 0}</span>
+                <button id="vote-down-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', -1)"
+                  style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${downActive ? 'var(--red,#f87171)' : 'var(--hair-strong)'};background:${downActive ? 'rgba(248,113,113,0.12)' : 'transparent'};color:${downActive ? 'var(--red,#f87171)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
+                  ▼ <span id="vote-down-${escHtml(c.id)}">${downvotes}</span>
                 </button>
               </div>
             </div>
           </div>`;
-      }).join('');
+        }).join('') +
+      '</div>';
     } catch (_) {}
+  }
+
+  function _applyVoteStyle(btn, active, isUp) {
+    if (!btn) return;
+    if (active && isUp) {
+      btn.style.border = '1px solid var(--brand)';
+      btn.style.background = 'var(--brand-bg)';
+      btn.style.color = 'var(--brand)';
+    } else if (active && !isUp) {
+      btn.style.border = '1px solid var(--red,#f87171)';
+      btn.style.background = 'rgba(248,113,113,0.12)';
+      btn.style.color = 'var(--red,#f87171)';
+    } else {
+      btn.style.border = '1px solid var(--hair-strong)';
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-3)';
+    }
   }
 
   async function voteComment(commentId, vote) {
@@ -188,11 +230,8 @@
         body: JSON.stringify({ vote }),
       });
       // Toggle: if same vote, remove it
-      if (myVotes[commentId] === vote) {
-        myVotes[commentId] = 0;
-      } else {
-        myVotes[commentId] = vote;
-      }
+      myVotes[commentId] = myVotes[commentId] === vote ? 0 : vote;
+
       // Update displayed counts
       if (res.upvotes !== undefined) {
         const upEl = document.getElementById(`vote-up-${commentId}`);
@@ -200,15 +239,11 @@
         if (upEl) upEl.textContent = res.upvotes || 0;
         if (downEl) downEl.textContent = res.downvotes || 0;
       }
-      // Update button active state
-      const commentEl = document.getElementById(`comment-${commentId}`);
-      if (commentEl) {
-        commentEl.querySelectorAll('.vote-btn').forEach((btn, i) => {
-          const v = i === 0 ? 1 : -1;
-          btn.classList.toggle('active-up', myVotes[commentId] === 1 && v === 1);
-          btn.classList.toggle('active-down', myVotes[commentId] === -1 && v === -1);
-        });
-      }
+      // Update button visual state
+      const upBtn = document.getElementById(`vote-up-btn-${commentId}`);
+      const downBtn = document.getElementById(`vote-down-btn-${commentId}`);
+      _applyVoteStyle(upBtn, myVotes[commentId] === 1, true);
+      _applyVoteStyle(downBtn, myVotes[commentId] === -1, false);
     } catch (_) {}
   }
 
