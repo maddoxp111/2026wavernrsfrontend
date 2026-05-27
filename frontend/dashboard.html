@@ -593,10 +593,9 @@
 
     try {
       if (selectedFiles.length > 1) {
-        // Multi-file: create album first, then upload each track with album_id
-        // so album_tracks rows are inserted one-at-a-time (more reliable than a batch)
+        // Step 1: create the album shell (with cover)
         statusEl.textContent = 'Creating comp…';
-        bar.style.width = '10%';
+        bar.style.width = '8%';
         var albumForm = new FormData();
         albumForm.append('title', effectiveTitle);
         if (era_tag_id) albumForm.append('era_tag_id', era_tag_id);
@@ -604,25 +603,31 @@
         if (editCoverFile) albumForm.append('cover_file', editCoverFile);
         var album = await apiUpload('/albums', albumForm);
 
-        // Upload each track and link it to the album in the same request
+        // Step 2: upload each audio file (plain track upload, no album link yet)
+        var uploadedTrackIds = [];
         for (var i = 0; i < selectedFiles.length; i++) {
           var item = selectedFiles[i];
           statusEl.textContent = 'Uploading ' + (i+1) + '/' + selectedFiles.length + ': ' + item.title + '…';
-          bar.style.width = Math.round(10 + ((i + 1) / selectedFiles.length) * 85) + '%';
+          bar.style.width = Math.round(8 + ((i + 1) / selectedFiles.length) * 82) + '%';
           var form = new FormData();
           form.append('file', item.file);
           form.append('title', item.title);
-          form.append('album_id', album.id);   // ← links track to album server-side
           if (era_tag_id) form.append('era_tag_id', era_tag_id);
           var t = await apiUpload('/tracks', form);
-          if (t._link_error) {
-            // Track was uploaded but couldn't be added to album — surface the error
-            throw new Error('Track uploaded but could not be added to comp: ' + t._link_error);
-          }
+          uploadedTrackIds.push(t.id);
         }
 
-        // Re-fetch album so it includes the full tracklist
-        bar.style.width = '98%';
+        // Step 3: link all tracks to the album in one JSON call
+        statusEl.textContent = 'Linking tracks to comp…';
+        bar.style.width = '94%';
+        await api('/albums/' + album.id + '/tracklist', {
+          method: 'PUT',
+          body: JSON.stringify({
+            tracks: uploadedTrackIds.map(function(id, i) { return { track_id: id, position: i + 1 }; })
+          })
+        });
+
+        // Re-fetch album with its full tracklist
         album = await api('/albums/' + album.id);
         uploads.unshift({ ...album, _type: 'album' });
       } else {
