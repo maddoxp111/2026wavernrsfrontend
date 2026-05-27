@@ -24,7 +24,7 @@ var _heroIdx = 0;
 var _heroTimer = null;
 var _trendingGlobal = [];
 var _newReleasesGlobal = [];
-var _chartsTab = 'songs';
+var _chartsTab = 'alltime';
 var _chartsDataCache = null;
 
 async function loadHome() {
@@ -240,8 +240,13 @@ function playItem(id, type) {
 function renderChartsRail() {
   var rail = document.getElementById('charts-rail');
   var chartsData = _chartsDataCache || { alltime: [], weekly: [], liked: [] };
-  var alltime = chartsData.alltime || [];
   if (!rail) return;
+
+  var chartTabs = [
+    { key: 'alltime', label: 'All Time' },
+    { key: 'weekly',  label: 'This Week' },
+    { key: 'liked',   label: 'Liked' },
+  ];
 
   rail.innerHTML =
     '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;">' +
@@ -249,13 +254,14 @@ function renderChartsRail() {
       '<a href="/charts.html" onclick="navigate(\'/charts.html\');return false;" style="color:var(--text-3);font-size:10.5px;font-weight:600;letter-spacing:0.06em;text-decoration:none;">SHOW ALL</a>' +
     '</div>' +
     '<div style="display:flex;gap:6px;margin-bottom:14px;">' +
-      ['songs','artists','comps'].map(function(t) {
-        return '<button class="wv-pill ' + (_chartsTab===t?'is-active':'') + '" style="flex:1;justify-content:center;padding:6px 10px;font-size:12px;" onclick="switchChartsTab(\'' + t + '\')">' + t.charAt(0).toUpperCase() + t.slice(1) + '</button>';
+      chartTabs.map(function(t) {
+        return '<button class="wv-pill ' + (_chartsTab===t.key?'is-active':'') + '" style="flex:1;justify-content:center;padding:6px 10px;font-size:12px;" onclick="switchChartsTab(\'' + t.key + '\')">' + t.label + '</button>';
       }).join('') +
     '</div>' +
     '<div style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;" id="charts-list"></div>';
 
-  renderChartsListItems(alltime);
+  var items = chartsData[_chartsTab] || chartsData.alltime || [];
+  renderChartsListItems(items);
 }
 
 function switchChartsTab(tab) {

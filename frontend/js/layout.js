@@ -128,9 +128,9 @@
 
     if (isLoggedIn && user) {
       // Bell
-      html += '<button class="wv-icon-circle" title="Notifications" style="position:relative;">' +
+      html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
-              '<span style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--pink);"></span>' +
+              '<span id="wv-notif-dot" style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--pink);display:none;"></span>' +
               '</button>';
       // More (opens dropdown)
       html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
@@ -228,6 +228,160 @@
       });
     }, 0);
   };
+
+  // ── Notification panel ────────────────────────────────────────
+  var _notifCache = null;
+
+  function _notifIcon(type) {
+    var icons = {
+      like:              '❤️',
+      like_milestone:    '🏆',
+      stream_milestone:  '🎵',
+      follower:          '👤',
+      follower_milestone:'🌟',
+      comment:           '💬',
+    };
+    return icons[type] || '🔔';
+  }
+
+  function _notifTimeAgo(iso) {
+    var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function _renderNotifPanel(notifs) {
+    var panel = document.getElementById('wv-notif-panel');
+    if (!panel) return;
+    if (!notifs || !notifs.length) {
+      panel.querySelector('.wv-notif-list').innerHTML =
+        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px;">No notifications yet</div>';
+      return;
+    }
+    panel.querySelector('.wv-notif-list').innerHTML = notifs.map(function(n) {
+      return '<div class="wv-notif-item' + (n.read ? '' : ' unread') + '" onclick="window._markNotifRead(\'' + n.id + '\',this)">' +
+        '<div class="wv-notif-icon">' + _notifIcon(n.type) + '</div>' +
+        '<div class="wv-notif-body">' +
+          '<div class="wv-notif-title">' + (n.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>' +
+          (n.body ? '<div class="wv-notif-desc">' + n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>' : '') +
+          '<div class="wv-notif-time">' + _notifTimeAgo(n.created_at) + '</div>' +
+        '</div>' +
+        (!n.read ? '<div class="wv-notif-unread-dot"></div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  window._markNotifRead = function(id, el) {
+    var token = localStorage.getItem('token');
+    if (!token) return;
+    if (el) el.classList.remove('unread');
+    var dot = el ? el.querySelector('.wv-notif-unread-dot') : null;
+    if (dot) dot.remove();
+    fetch(API_BASE + '/notifications/' + id + '/read', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token },
+    }).catch(function(){});
+    // Update cache
+    if (_notifCache) {
+      _notifCache.forEach(function(n) { if (n.id === id) n.read = true; });
+    }
+    _updateNotifDot();
+  };
+
+  window._markAllNotifsRead = function() {
+    var token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(API_BASE + '/notifications/read-all', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+    }).catch(function(){});
+    if (_notifCache) _notifCache.forEach(function(n) { n.read = true; });
+    _updateNotifDot();
+    var panel = document.getElementById('wv-notif-panel');
+    if (panel) {
+      panel.querySelectorAll('.wv-notif-item').forEach(function(el) {
+        el.classList.remove('unread');
+        var d = el.querySelector('.wv-notif-unread-dot');
+        if (d) d.remove();
+      });
+    }
+  };
+
+  function _updateNotifDot() {
+    var dot = document.getElementById('wv-notif-dot');
+    if (!dot) return;
+    var hasUnread = _notifCache && _notifCache.some(function(n) { return !n.read; });
+    dot.style.display = hasUnread ? 'block' : 'none';
+  }
+
+  function _loadNotifications() {
+    var token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(API_BASE + '/notifications', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) {
+          _notifCache = data;
+          _updateNotifDot();
+          var panel = document.getElementById('wv-notif-panel');
+          if (panel) _renderNotifPanel(data);
+        }
+      })
+      .catch(function(){});
+  }
+
+  window._toggleNotifPanel = function(e) {
+    e.stopPropagation();
+    var existing = document.getElementById('wv-notif-panel');
+    if (existing) { existing.remove(); return; }
+
+    var btn = document.getElementById('wv-notif-btn');
+    var r = btn ? btn.getBoundingClientRect() : { bottom: 60, right: 260 };
+
+    var panel = document.createElement('div');
+    panel.id = 'wv-notif-panel';
+    panel.className = 'lg-medium';
+    panel.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:16px;width:340px;max-height:480px;z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
+
+    panel.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--hair);">' +
+        '<div style="font-size:14px;font-weight:700;letter-spacing:-0.01em;">Notifications</div>' +
+        '<button onclick="window._markAllNotifsRead()" style="font-size:11.5px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 0;">Mark all read</button>' +
+      '</div>' +
+      '<div class="wv-notif-list" style="overflow-y:auto;flex:1;padding:6px 0;">' +
+        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px);">Loading…</div>' +
+      '</div>';
+
+    document.body.appendChild(panel);
+
+    // Load / show cached
+    if (_notifCache) {
+      _renderNotifPanel(_notifCache);
+    }
+    _loadNotifications();
+
+    setTimeout(function() {
+      document.addEventListener('click', function handler(ev) {
+        if (!panel.contains(ev.target)) {
+          panel.remove();
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 0);
+  };
+
+  // Poll for new notifications every 60s while logged in
+  (function _startNotifPolling() {
+    if (!localStorage.getItem('token')) return;
+    _loadNotifications();
+    setInterval(function() {
+      if (localStorage.getItem('token')) _loadNotifications();
+    }, 60000);
+  })();
 
   // ── Mobile drawer ─────────────────────────────────────────────
   window.openMobileDrawer = function() {
