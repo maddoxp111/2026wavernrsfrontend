@@ -56,6 +56,7 @@
   // ── Sidebar HTML ─────────────────────────────────────────────
   function buildSidebarHTML() {
     var isLoggedIn = !!localStorage.getItem('token');
+    var profileHref = getProfileHref();
     var html = '';
 
     // Logo
@@ -73,7 +74,7 @@
     html += '<div class="wv-sidebar-label" style="margin-top:12px;">Personal</div>';
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('playlists', 'Playlists', '/playlists.html', 'list');
-    html += navItem('profile', 'Profile', '/dashboard.html', 'profile');
+    html += navItem('profile', 'Profile', profileHref, 'profile');
     html += '</nav>';
 
     // Manage section (logged in only)
@@ -136,7 +137,7 @@
       html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
       // Avatar
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
-      html += '<div class="wv-avatar" onclick="navigate(\'/dashboard.html\')" title="Profile">' + initials + '</div>';
+      html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
       html += '<a href="/login.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;">Log in</a>';
       html += '<a href="/register.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;background:var(--avatar-bg);color:var(--page-bg-base);border-color:var(--avatar-bg);">Sign up</a>';
@@ -146,6 +147,15 @@
     return html;
   }
 
+  // ── Shared helper: resolve the current user's public profile URL ──
+  function getProfileHref() {
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e) {}
+    var artistId = user && user.artist && user.artist.id ? user.artist.id : null;
+    return artistId ? '/artist.html?id=' + artistId : '/dashboard.html';
+  }
+  window.getProfileHref = getProfileHref;
+
   // ── Mobile tabs ───────────────────────────────────────────────
   function buildMobileTabsHTML() {
     var cur = pageId();
@@ -154,7 +164,7 @@
       { id: 'discover', label: 'Discover', href: '/discover.html', ic: 'discover' },
       { id: 'charts', label: 'Charts', href: '/charts.html', ic: 'chart' },
       { id: 'playlists', label: 'Playlists', href: '/playlists.html', ic: 'list' },
-      { id: 'profile', label: 'You', href: '/dashboard.html', ic: 'profile' },
+      { id: 'profile', label: 'You', href: getProfileHref(), ic: 'profile' },
     ];
     return tabs.map(function(t) {
       var active = cur === t.id ? ' active' : '';
