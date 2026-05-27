@@ -607,14 +607,27 @@
           uploadedTrackIds.push(t.id);
         }
         statusEl.textContent = 'Creating comp…';
-        bar.style.width = '90%';
+        bar.style.width = '88%';
+        // Step 1: create the album (multipart for cover image upload)
         var albumForm = new FormData();
         albumForm.append('title', effectiveTitle);
         if (era_tag_id) albumForm.append('era_tag_id', era_tag_id);
         if (description) albumForm.append('description', description);
         if (editCoverFile) albumForm.append('cover_file', editCoverFile);
-        albumForm.append('tracks', JSON.stringify(uploadedTrackIds.map(function(id, i) { return { track_id: id, position: i + 1 }; })));
         var album = await apiUpload('/albums', albumForm);
+
+        // Step 2: link the uploaded tracks via a plain JSON PUT
+        // (keeps track-linking out of multipart to avoid silent swallowing of errors)
+        statusEl.textContent = 'Linking tracks…';
+        bar.style.width = '95%';
+        await api('/albums/' + album.id + '/tracklist', {
+          method: 'PUT',
+          body: JSON.stringify({
+            tracks: uploadedTrackIds.map(function(id, i) { return { track_id: id, position: i + 1 }; })
+          })
+        });
+        // Re-fetch album so it includes the full tracklist for the uploads list
+        album = await api('/albums/' + album.id);
         uploads.unshift({ ...album, _type: 'album' });
       } else {
         // Single file or drive link: create a track
