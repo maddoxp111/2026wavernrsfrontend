@@ -407,36 +407,115 @@
 
   // ── Content ───────────────────────────────────────────────────
 
+  var _selectedIds = new Set();
+
+  function _updateBulkBar() {
+    var bar = document.getElementById('bulk-bar');
+    var countEl = document.getElementById('bulk-count');
+    if (!bar) return;
+    var n = _selectedIds.size;
+    bar.style.display = n > 0 ? 'flex' : 'none';
+    if (countEl) countEl.textContent = n + ' selected';
+  }
+
+  function _toggleRow(id, cb) {
+    if (cb.checked) _selectedIds.add(id); else _selectedIds.delete(id);
+    // Sync row highlight
+    var row = document.getElementById('crow-' + id);
+    if (row) row.classList.toggle('selected', cb.checked);
+    // Sync "select all" checkbox
+    var allCb = document.getElementById('select-all-cb');
+    if (allCb) {
+      var allBoxes = document.querySelectorAll('.content-row-cb');
+      allCb.checked = allBoxes.length > 0 && Array.from(allBoxes).every(function(b) { return b.checked; });
+      allCb.indeterminate = !allCb.checked && Array.from(allBoxes).some(function(b) { return b.checked; });
+    }
+    _updateBulkBar();
+  }
+
+  function _toggleAll(masterCb) {
+    _selectedIds.clear();
+    document.querySelectorAll('.content-row-cb').forEach(function(cb) {
+      cb.checked = masterCb.checked;
+      var id = cb.dataset.id;
+      if (masterCb.checked && id) _selectedIds.add(id);
+      var row = document.getElementById('crow-' + id);
+      if (row) row.classList.toggle('selected', masterCb.checked);
+    });
+    masterCb.indeterminate = false;
+    _updateBulkBar();
+  }
+
+  async function bulkDelete() {
+    var ids = Array.from(_selectedIds);
+    if (!ids.length) return;
+    var type = activeContentTab === 'edits' ? 'edit' : 'comp';
+    if (!confirm('Permanently delete ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : '') + '? This cannot be undone.')) return;
+    var endpoint = activeContentTab === 'edits' ? '/admin/tracks' : '/admin/albums';
+    try {
+      await adminApi(endpoint, { method: 'DELETE', body: JSON.stringify({ ids: ids }) });
+      _selectedIds.clear();
+      showMsg('admin-alert', '&#x2713; Deleted ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : ''), 'success');
+      setTimeout(function() { clearMsg('admin-alert'); }, 3000);
+      loadContent();
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
+
   async function loadContent() {
     var el = document.getElementById('content-list');
+    _selectedIds.clear();
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      if (activeContentTab === 'edits') {
-        var tracks = await adminApi('/admin/tracks');
-        if (!tracks.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No edits.</div>'; return; }
-        el.innerHTML = '<table class="admin-table">' +
-          '<thead><tr><th>Title</th><th>Artist</th><th>Plays</th><th>Actions</th></tr></thead>' +
-          '<tbody>' + tracks.map(function(t) {
-            return '<tr>' +
-              '<td><a href="/track.html?id=' + t.id + '" style="color:var(--brand);">' + escHtml(t.title) + '</a></td>' +
-              '<td style="color:var(--text-2);">' + escHtml((t.artists && t.artists.display_name) || '') + '</td>' +
-              '<td style="color:var(--text-3);">' + fmtNum(t.play_count) + '</td>' +
-              '<td><button class="btn btn-danger btn-sm" onclick="deleteTrack(\'' + t.id + '\')">Remove</button></td>' +
-            '</tr>';
-          }).join('') + '</tbody></table>';
+      var items, isEdits = activeContentTab === 'edits';
+
+      if (isEdits) {
+        items = await adminApi('/admin/tracks');
       } else {
-        var comps = await adminApi('/admin/albums');
-        if (!comps.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No comps.</div>'; return; }
-        el.innerHTML = '<table class="admin-table">' +
-          '<thead><tr><th>Title</th><th>Artist</th><th>Actions</th></tr></thead>' +
-          '<tbody>' + comps.map(function(c) {
-            return '<tr>' +
-              '<td><a href="/album.html?id=' + c.id + '" style="color:var(--brand);">' + escHtml(c.title) + '</a></td>' +
-              '<td style="color:var(--text-2);">' + escHtml((c.artists && c.artists.display_name) || '') + '</td>' +
-              '<td><button class="btn btn-danger btn-sm" onclick="deleteComp(\'' + c.id + '\')">Remove</button></td>' +
-            '</tr>';
-          }).join('') + '</tbody></table>';
+        items = await adminApi('/admin/albums');
       }
+
+      if (!items.length) {
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No ' + (isEdits ? 'edits' : 'comps') + '.</div>';
+        return;
+      }
+
+      var html =
+        // Bulk action toolbar (hidden until selection)
+        '<div id="bulk-bar" style="display:none;align-items:center;gap:12px;padding:10px 14px;margin-bottom:12px;' +
+          'background:var(--glass-medium-bg);border:1px solid var(--hair-strong);border-radius:12px;">' +
+          '<span id="bulk-count" style="font-size:13px;font-weight:600;color:var(--text-2);">0 selected</span>' +
+          '<button class="btn btn-danger btn-sm" onclick="bulkDelete()">Delete Selected</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="_toggleAll({checked:false,indeterminate:false});document.getElementById(\'select-all-cb\').checked=false;document.getElementById(\'select-all-cb\').indeterminate=false;">Clear</button>' +
+        '</div>' +
+        '<table class="admin-table">' +
+        '<thead><tr>' +
+          '<th style="width:36px;"><input type="checkbox" id="select-all-cb" onchange="_toggleAll(this)" title="Select all"></th>' +
+          (isEdits
+            ? '<th>Title</th><th>Artist</th><th>Plays</th><th>Action</th>'
+            : '<th>Title</th><th>Artist</th><th>Action</th>') +
+        '</tr></thead>' +
+        '<tbody>';
+
+      items.forEach(function(item) {
+        var link = isEdits
+          ? '<a href="/track.html?id=' + item.id + '" style="color:var(--brand);">' + escHtml(item.title) + '</a>'
+          : '<a href="/album.html?id=' + item.id + '" style="color:var(--brand);">' + escHtml(item.title) + '</a>';
+        var artistName = escHtml((item.artists && item.artists.display_name) || '');
+        var deleteBtn = isEdits
+          ? '<button class="btn btn-danger btn-sm" onclick="deleteTrack(\'' + item.id + '\')">Remove</button>'
+          : '<button class="btn btn-danger btn-sm" onclick="deleteComp(\'' + item.id + '\')">Remove</button>';
+
+        html += '<tr id="crow-' + item.id + '">' +
+          '<td><input type="checkbox" class="content-row-cb" data-id="' + item.id + '" onchange="_toggleRow(\'' + item.id + '\',this)"></td>' +
+          '<td>' + link + '</td>' +
+          '<td style="color:var(--text-2);">' + artistName + '</td>' +
+          (isEdits ? '<td style="color:var(--text-3);">' + fmtNum(item.play_count) + '</td>' : '') +
+          '<td>' + deleteBtn + '</td>' +
+        '</tr>';
+      });
+
+      html += '</tbody></table>';
+      el.innerHTML = html;
     } catch (err) {
       el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
@@ -444,13 +523,13 @@
 
   async function deleteTrack(id) {
     if (!confirm('Remove this edit?')) return;
-    try { await adminApi('/admin/tracks/' + id, { method: 'DELETE' }); loadContent(); }
+    try { await adminApi('/admin/tracks/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteComp(id) {
     if (!confirm('Remove this comp?')) return;
-    try { await adminApi('/admin/albums/' + id, { method: 'DELETE' }); loadContent(); }
+    try { await adminApi('/admin/albums/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
 
