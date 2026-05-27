@@ -603,8 +603,8 @@
         if (editCoverFile) albumForm.append('cover_file', editCoverFile);
         var album = await apiUpload('/albums', albumForm);
 
-        // Step 2: upload each audio file (plain track upload, no album link yet)
-        var uploadedTrackIds = [];
+        // Step 2: upload each track WITH album_id so it links immediately
+        var linkErrors = [];
         for (var i = 0; i < selectedFiles.length; i++) {
           var item = selectedFiles[i];
           statusEl.textContent = 'Uploading ' + (i+1) + '/' + selectedFiles.length + ': ' + item.title + '…';
@@ -612,20 +612,18 @@
           var form = new FormData();
           form.append('file', item.file);
           form.append('title', item.title);
+          form.append('album_id', album.id);
+          form.append('track_position', String(i));
           if (era_tag_id) form.append('era_tag_id', era_tag_id);
           var t = await apiUpload('/tracks', form);
-          uploadedTrackIds.push(t.id);
+          if (t._link_error) {
+            linkErrors.push('Track ' + (i+1) + ' (' + item.title + '): ' + t._link_error);
+          }
         }
 
-        // Step 3: link all tracks to the album in one JSON call
-        statusEl.textContent = 'Linking tracks to comp…';
-        bar.style.width = '94%';
-        await api('/albums/' + album.id + '/tracklist', {
-          method: 'PUT',
-          body: JSON.stringify({
-            tracks: uploadedTrackIds.map(function(id, i) { return { track_id: id, position: i + 1 }; })
-          })
-        });
+        if (linkErrors.length > 0) {
+          throw new Error('Some tracks failed to link to the comp:\n' + linkErrors.join('\n'));
+        }
 
         // Re-fetch album with its full tracklist
         album = await api('/albums/' + album.id);
