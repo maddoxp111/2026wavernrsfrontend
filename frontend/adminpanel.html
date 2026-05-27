@@ -492,9 +492,9 @@
       'Delete ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : '') + '?',
       'These items will be permanently deleted. This cannot be undone.'
     )) return;
-    var endpoint = activeContentTab === 'edits' ? '/admin/tracks' : '/admin/albums';
+    var endpoint = activeContentTab === 'edits' ? '/admin/tracks/bulk-delete' : '/admin/albums/bulk-delete';
     try {
-      await adminApi(endpoint, { method: 'DELETE', body: JSON.stringify({ ids: ids }) });
+      await adminApi(endpoint, { method: 'POST', body: JSON.stringify({ ids: ids }) });
       _selectedIds.clear();
       showMsg('admin-alert', '&#x2713; Deleted ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : ''), 'success');
       setTimeout(function() { clearMsg('admin-alert'); }, 3000);
