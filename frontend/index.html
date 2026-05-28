@@ -22,6 +22,7 @@ initPlayer();
 var _heroItems = [];
 var _heroIdx = 0;
 var _heroTimer = null;
+var _heroGen = 0; // incremented each render to discard stale extractCoverHues callbacks
 var _trendingGlobal = [];
 var _newReleasesGlobal = [];
 var _chartsTab = 'alltime';
@@ -107,17 +108,29 @@ function renderHero() {
     : "navigate('/track.html?id=" + item.id + "')";
 
   var coverBg = coverGradient(seed);
+  var myGen = ++_heroGen;
 
-  // Update the full page background — extract real colors from the cover image
+  // Preload image then fade it in — eliminates the gradient→image flash
+  if (item.cover_url) {
+    var _preload = new Image();
+    _preload.src = item.cover_url;
+    _preload.onload = function() {
+      var imgEl = document.getElementById('hero-cover-img-' + myGen);
+      if (imgEl) imgEl.style.opacity = '1';
+    };
+  }
+
+  // Extract real colors and apply to page background, but only if this render is still current
   var pageBgEl = document.getElementById('wv-page-bg');
   if (typeof extractCoverHues === 'function') {
     extractCoverHues(item.cover_url, seed, function(c) {
+      if (myGen !== _heroGen) return; // stale — a newer hero has already rendered
       if (!pageBgEl) return;
       var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
       pageBgEl.style.background =
-        'radial-gradient(ellipse 130% 90% at -5% 0%, hsla(' + c.h1 + ',85%,' + (isDark ? 36 : 54) + '%,0.90) 0%, transparent 52%),' +
-        'radial-gradient(ellipse 110% 130% at 105% 100%, hsla(' + c.h2 + ',80%,' + (isDark ? 30 : 48) + '%,0.80) 0%, transparent 58%),' +
-        'radial-gradient(ellipse 70% 60% at 50% 50%, hsla(' + c.h1 + ',70%,' + (isDark ? 25 : 60) + '%,0.35) 0%, transparent 70%),' +
+        'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
+        'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
+        'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
         'var(--page-bg)';
     });
   }
@@ -128,7 +141,7 @@ function renderHero() {
       '<div class="wv-hero-cover" onclick="' + clickAction + '" style="cursor:pointer;width:220px;height:220px;border-radius:18px;background:' + coverBg + ';position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 6px 24px rgba(0,0,0,0.22),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
         '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);"></div>' +
         (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
+        (item.cover_url ? '<img id="hero-cover-img-' + myGen + '" src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.25s;" onerror="this.style.opacity=0">' : '') +
       '</div>' +
       // Info
       '<div class="wv-hero-info" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;">' +
