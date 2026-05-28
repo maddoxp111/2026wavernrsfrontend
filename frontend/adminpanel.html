@@ -54,7 +54,8 @@
     <button class="wv-admin-tab"        id="atab-eratags"  onclick="showAdminTab('eratags')">Era Tags</button>
     <button class="wv-admin-tab"        id="atab-users"    onclick="showAdminTab('users')">Users</button>
     <button class="wv-admin-tab"        id="atab-content"  onclick="showAdminTab('content')">Content</button>
-    <button class="wv-admin-tab"        id="atab-lockdown" onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
+    <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
+    <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
   </div>
 
   <!-- ── Banners tab ─────────────────────────────────────── -->
@@ -138,6 +139,26 @@
 
         <div id="lockdown-status" style="font-size:13px;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Moderators tab ────────────────────────────────────── -->
+  <div id="tab-moderators" style="display:none;">
+    <div style="max-width:640px;">
+      <h2 style="font-size:18px;font-weight:700;margin:0 0 20px;">Manage Moderators</h2>
+
+      <!-- Add moderator form -->
+      <div style="margin-bottom:24px;padding:18px 20px;background:var(--glass-small-bg);border:1px solid var(--hair);border-radius:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Add moderator by username</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="mod-username-input" class="wv-input" placeholder="Username..." style="flex:1;min-width:180px;padding:9px 14px;">
+          <button class="btn btn-primary" onclick="lookupAndAddMod()">Add Moderator</button>
+        </div>
+        <div id="mod-lookup-result" style="margin-top:8px;font-size:13px;"></div>
+      </div>
+
+      <!-- Current moderators list -->
+      <div id="moderators-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -243,17 +264,18 @@
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
       if (btn)   btn.classList.toggle('active', t === tab);
     });
-    if (tab === 'banners')  loadBanners();
-    if (tab === 'eratags')  loadEraTags();
-    if (tab === 'users')    loadUsers();
-    if (tab === 'content')  loadContent();
-    if (tab === 'lockdown') loadLockdown();
+    if (tab === 'banners')    loadBanners();
+    if (tab === 'eratags')    loadEraTags();
+    if (tab === 'users')      loadUsers();
+    if (tab === 'content')    loadContent();
+    if (tab === 'lockdown')   loadLockdown();
+    if (tab === 'moderators') loadModerators();
   }
 
   function showContentTab(tab) {
@@ -644,6 +666,83 @@
       _updateLockUI(data.locked, data.passwordSet);
       showMsg('admin-alert', 'Access password saved.', 'success');
       setTimeout(function() { clearMsg('admin-alert'); }, 3000);
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
+
+  // ── Moderators ────────────────────────────────────────────────
+
+  var _allAdminUsers = [];
+
+  async function loadModerators() {
+    var el = document.getElementById('moderators-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var mods = await adminApi('/admin/moderators');
+      // Also preload users list for lookup
+      if (!_allAdminUsers.length) {
+        var users = await adminApi('/admin/users').catch(function() { return []; });
+        _allAdminUsers = users || [];
+      }
+      if (!mods.length) {
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No moderators yet.</div>';
+        return;
+      }
+      el.innerHTML = '<table class="admin-table">' +
+        '<thead><tr><th>Username</th><th>Granted</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + mods.map(function(m) {
+          var username = (m.users && m.users.username) ? escHtml(m.users.username) : '<em style="color:var(--text-3);">unknown</em>';
+          var granted = m.granted_at ? new Date(m.granted_at).toLocaleDateString() : '—';
+          return '<tr>' +
+            '<td style="font-weight:600;">' + username + '</td>' +
+            '<td style="color:var(--text-2);">' + granted + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="removeMod(\'' + (m.users && m.users.id ? m.users.id : m.user_id) + '\')">Remove</button></td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
+    } catch (err) {
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  async function lookupAndAddMod() {
+    var inputEl = document.getElementById('mod-username-input');
+    var resultEl = document.getElementById('mod-lookup-result');
+    var username = inputEl ? inputEl.value.trim() : '';
+    if (!username) { resultEl.innerHTML = '<span style="color:var(--red);">Enter a username</span>'; return; }
+
+    // Preload users list if needed
+    if (!_allAdminUsers.length) {
+      try {
+        _allAdminUsers = await adminApi('/admin/users');
+      } catch (err) {
+        resultEl.innerHTML = '<span style="color:var(--red);">Could not load users: ' + escHtml(err.message) + '</span>';
+        return;
+      }
+    }
+
+    var match = _allAdminUsers.find(function(u) { return u.username && u.username.toLowerCase() === username.toLowerCase(); });
+    if (!match) {
+      resultEl.innerHTML = '<span style="color:var(--red);">User "' + escHtml(username) + '" not found.</span>';
+      return;
+    }
+
+    resultEl.innerHTML = '<span style="color:var(--text-2);">Found: <strong>' + escHtml(match.username) + '</strong> — adding…</span>';
+
+    try {
+      await adminApi('/admin/moderators', { method: 'POST', body: JSON.stringify({ user_id: match.id }) });
+      if (inputEl) inputEl.value = '';
+      resultEl.innerHTML = '<span style="color:#4ade80;">&#x2713; ' + escHtml(match.username) + ' added as moderator.</span>';
+      setTimeout(function() { resultEl.innerHTML = ''; }, 3000);
+      loadModerators();
+    } catch (err) {
+      resultEl.innerHTML = '<span style="color:var(--red);">Failed: ' + escHtml(err.message) + '</span>';
+    }
+  }
+
+  async function removeMod(userId) {
+    if (!await adminConfirm('Remove moderator?', 'This user will lose moderator permissions immediately.', 'Remove')) return;
+    try {
+      await adminApi('/admin/moderators/' + userId, { method: 'DELETE' });
+      loadModerators();
     } catch (err) { showMsg('admin-alert', err.message); }
   }
 

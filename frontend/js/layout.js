@@ -23,6 +23,7 @@
     search:   '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>',
     menu:     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>',
     x:        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18 18 6M6 6l12 12"/></svg>',
+    shield:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
   };
 
   function icon(name) { return ICONS[name] || ''; }
@@ -46,6 +47,7 @@
     if (p.endsWith('/search.html')) return 'search';
     if (p.endsWith('/community.html')) return 'community';
     if (p.endsWith('/adminpanel.html')) return 'admin';
+    if (p.endsWith('/modpanel.html')) return 'modpanel';
     return '';
   }
 
@@ -89,6 +91,9 @@
       html += '<nav class="wv-sidebar-nav">';
       html += navItem('upload', 'Upload', '/upload.html', 'upload');
       html += navItem('settings', 'Settings', '/settings.html', 'settings');
+      if (isLoggedIn && sessionStorage.getItem('wv_is_mod') === 'true') {
+        html += navItem('modpanel', 'Mod Panel', '/modpanel.html', 'shield');
+      }
       html += '</nav>';
     }
 
@@ -581,6 +586,31 @@
       container.innerHTML = '';
     }
   };
+
+  // Check and cache moderator status
+  (function _checkModStatus() {
+    if (!localStorage.getItem('token')) return;
+    if (sessionStorage.getItem('wv_is_mod') !== null) {
+      // Already checked this session — rebuild nav if we are a mod (sidebar may not have updated yet)
+      return;
+    }
+    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/mod/check' : '/api/mod/check', {
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var isMod = !!(d && d.is_mod);
+        sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
+        if (isMod) {
+          // Rebuild sidebar/drawer to show Mod Panel link
+          var sidebar = document.getElementById('wv-sidebar');
+          if (sidebar) sidebar.innerHTML = buildSidebarHTML();
+          var drawer = document.getElementById('wv-drawer');
+          if (drawer) drawer.innerHTML = buildSidebarHTML();
+        }
+      })
+      .catch(function() { sessionStorage.setItem('wv_is_mod', 'false'); });
+  })();
 
   initShell();
   // Load banners after shell exists

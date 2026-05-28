@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — mod panel</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+  var _allUsers = [];
+
+  // ── Auth + mod check ──────────────────────────────────────────────────────
+  (function init() {
+    var token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login.html'; return; }
+
+    fetch(API_BASE + '/mod/check', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d || !d.is_mod) {
+          document.getElementById('view').innerHTML =
+            '<div style="padding:48px 24px;text-align:center;">' +
+            '<div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px;">Access denied</div>' +
+            '<div style="font-size:14px;color:var(--text-2);">You do not have moderator permissions.</div>' +
+            '</div>';
+          setTimeout(function() { window.location.href = '/index.html'; }, 2500);
+          return;
+        }
+        renderShell();
+        loadUsers();
+      })
+      .catch(function() {
+        document.getElementById('view').innerHTML =
+          '<div style="padding:48px 24px;text-align:center;color:var(--red);">Failed to verify moderator status.</div>';
+      });
+  })();
+
+  // ── Shell ─────────────────────────────────────────────────────────────────
+  function renderShell() {
+    document.getElementById('view').innerHTML =
+      '<div style="padding:28px 0 80px;max-width:1040px;">' +
+        '<h1 style="font-size:26px;font-weight:800;margin:0 0 24px;">Mod Panel</h1>' +
+
+        // Tab bar
+        '<div style="display:flex;gap:0;margin-bottom:28px;border-bottom:1px solid var(--hair-strong);">' +
+          '<button class="wv-admin-tab active" id="mtab-users"   onclick="showModTab(\'users\')">Users</button>' +
+          '<button class="wv-admin-tab"        id="mtab-uploads" onclick="showModTab(\'uploads\')">Recent Uploads</button>' +
+        '</div>' +
+
+        '<div id="mod-alert" style="margin-bottom:12px;"></div>' +
+
+        // Users tab
+        '<div id="mod-tab-users">' +
+          '<div style="margin-bottom:16px;">' +
+            '<input type="text" id="user-search" class="wv-input" placeholder="Search by username..." ' +
+              'style="max-width:320px;padding:9px 14px;" oninput="filterUsers()">' +
+          '</div>' +
+          '<div id="users-list"><div class="loading"><div class="spinner"></div></div></div>' +
+        '</div>' +
+
+        // Uploads tab
+        '<div id="mod-tab-uploads" style="display:none;">' +
+          '<div id="uploads-list"><div class="loading"><div class="spinner"></div></div></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function showModTab(tab) {
+    ['users', 'uploads'].forEach(function(t) {
+      var panel = document.getElementById('mod-tab-' + t);
+      var btn   = document.getElementById('mtab-' + t);
+      if (panel) panel.style.display = t === tab ? '' : 'none';
+      if (btn)   btn.classList.toggle('active', t === tab);
+    });
+    if (tab === 'uploads') loadUploads();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showAlert(msg, type) {
+    var el = document.getElementById('mod-alert');
+    if (!el) return;
+    el.innerHTML = '<div style="padding:10px 14px;border-radius:10px;font-size:13px;background:var(--glass-small-bg);border:1px solid var(--hair);color:' + (type === 'error' ? 'var(--red)' : '#4ade80') + ';">' + escHtml(msg) + '</div>';
+    setTimeout(function() { if (el) el.innerHTML = ''; }, 4000);
+  }
+
+  function authHeaders() {
+    return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' };
+  }
+
+  // ── Users ─────────────────────────────────────────────────────────────────
+  async function loadUsers() {
+    var el = document.getElementById('users-list');
+    if (!el) return;
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var r = await fetch(API_BASE + '/mod/users', { headers: authHeaders() });
+      var data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed');
+      _allUsers = data;
+      renderUsers(data);
+    } catch (err) {
+      if (el) el.innerHTML = '<div style="color:var(--red);">' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  function filterUsers() {
+    var q = (document.getElementById('user-search') || {}).value || '';
+    q = q.toLowerCase().trim();
+    var filtered = q ? _allUsers.filter(function(u) { return u.username.toLowerCase().includes(q); }) : _allUsers;
+    renderUsers(filtered);
+  }
+
+  function renderUsers(users) {
+    var el = document.getElementById('users-list');
+    if (!el) return;
+    if (!users || !users.length) {
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No users found.</div>';
+      return;
+    }
+
+    var html = users.map(function(u) {
+      var ctBadge = u.community_timeout
+        ? '<span class="wv-pill" style="background:var(--red);color:#fff;font-size:11px;padding:2px 8px;">Community TO</span>'
+        : '<span class="wv-pill" style="font-size:11px;padding:2px 8px;">No community TO</span>';
+      var utBadge = u.upload_timeout
+        ? '<span class="wv-pill" style="background:var(--red);color:#fff;font-size:11px;padding:2px 8px;">Upload TO</span>'
+        : '<span class="wv-pill" style="font-size:11px;padding:2px 8px;">No upload TO</span>';
+
+      var ctActions = u.community_timeout
+        ? '<button class="btn btn-secondary btn-sm" onclick="removeTimeout(\'' + u.id + '\',\'community\')">Remove community timeout</button>'
+        : timeoutForm(u.id, 'community');
+      var utActions = u.upload_timeout
+        ? '<button class="btn btn-secondary btn-sm" onclick="removeTimeout(\'' + u.id + '\',\'upload\')">Remove upload timeout</button>'
+        : timeoutForm(u.id, 'upload');
+
+      return '<div class="wv-card" style="margin-bottom:12px;padding:16px 18px;" id="user-row-' + u.id + '">' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
+          '<span style="font-size:15px;font-weight:700;">' + escHtml(u.username) + '</span>' +
+          ctBadge + utBadge +
+        '</div>' +
+        '<div style="display:flex;gap:24px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Community</div>' +
+            ctActions +
+          '</div>' +
+          '<div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Upload</div>' +
+            utActions +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    el.innerHTML = html;
+  }
+
+  function timeoutForm(userId, type) {
+    var prefix = 'to_' + type + '_' + userId.replace(/-/g, '');
+    return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+      '<select id="' + prefix + '_dur" class="wv-input" style="padding:7px 10px;font-size:13px;width:130px;">' +
+        '<option value="1">1 hour</option>' +
+        '<option value="24">24 hours</option>' +
+        '<option value="168">7 days</option>' +
+        '<option value="720">30 days</option>' +
+        '<option value="">Permanent</option>' +
+      '</select>' +
+      '<input type="text" id="' + prefix + '_reason" class="wv-input" placeholder="Reason (optional)" style="padding:7px 10px;font-size:13px;width:180px;">' +
+      '<button class="btn btn-danger btn-sm" onclick="applyTimeout(\'' + userId + '\',\'' + type + '\',\'' + prefix + '\')">Timeout</button>' +
+    '</div>';
+  }
+
+  async function applyTimeout(userId, type, prefix) {
+    var durEl = document.getElementById(prefix + '_dur');
+    var reasonEl = document.getElementById(prefix + '_reason');
+    var durVal = durEl ? durEl.value : '';
+    var reason = reasonEl ? reasonEl.value.trim() : '';
+    var duration_hours = durVal !== '' ? parseInt(durVal, 10) : null;
+
+    try {
+      var r = await fetch(API_BASE + '/mod/timeout', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ user_id: userId, type: type, duration_hours: duration_hours, reason: reason || null }),
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      showAlert('Timeout applied.', 'success');
+      loadUsers();
+    } catch (err) {
+      showAlert(err.message, 'error');
+    }
+  }
+
+  async function removeTimeout(userId, type) {
+    try {
+      var r = await fetch(API_BASE + '/mod/timeout/' + userId + '/' + type, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      showAlert('Timeout removed.', 'success');
+      loadUsers();
+    } catch (err) {
+      showAlert(err.message, 'error');
+    }
+  }
+
+  // ── Uploads ───────────────────────────────────────────────────────────────
+  async function loadUploads() {
+    var el = document.getElementById('uploads-list');
+    if (!el) return;
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var r = await fetch(API_BASE + '/mod/uploads', { headers: authHeaders() });
+      var data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed');
+      renderUploads(data);
+    } catch (err) {
+      if (el) el.innerHTML = '<div style="color:var(--red);">' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  function renderUploads(items) {
+    var el = document.getElementById('uploads-list');
+    if (!el) return;
+    if (!items || !items.length) {
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No recent uploads.</div>';
+      return;
+    }
+
+    var html = '<div class="wv-comp-grid wv-comp-grid-4">' +
+      items.map(function(item) {
+        var cover = item.cover_url
+          ? '<img src="' + escHtml(item.cover_url) + '" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px 10px 0 0;" loading="lazy">'
+          : '<div style="width:100%;aspect-ratio:1;background:var(--hair);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;color:var(--text-3);font-size:28px;">' + (item._type === 'album' ? '💿' : '🎵') + '</div>';
+        var typeBadge = item._type === 'album'
+          ? '<span class="wv-pill brand" style="font-size:11px;padding:2px 7px;">Comp</span>'
+          : '<span class="wv-pill" style="font-size:11px;padding:2px 7px;">Edit</span>';
+
+        return '<div class="wv-comp-card" id="upload-card-' + item._type + '-' + item.id + '" style="border-radius:12px;overflow:hidden;">' +
+          cover +
+          '<div style="padding:10px 12px 12px;">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
+              '<span style="font-size:13px;font-weight:600;line-height:1.3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(item.title) + '</span>' +
+              typeBadge +
+            '</div>' +
+            '<div style="font-size:12px;color:var(--text-2);margin-bottom:10px;">' + escHtml(item.artist_name || '') + '</div>' +
+            '<button class="btn btn-danger btn-sm" style="width:100%;" onclick="takeDown(\'' + item._type + '\',\'' + item.id + '\')">Take down</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+
+    el.innerHTML = html;
+  }
+
+  async function takeDown(type, id) {
+    if (!confirm('Take down this ' + type + '? This cannot be undone.')) return;
+    try {
+      var endpoint = type === 'album' ? '/mod/albums/' + id : '/mod/tracks/' + id;
+      var r = await fetch(API_BASE + endpoint, { method: 'DELETE', headers: authHeaders() });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      var card = document.getElementById('upload-card-' + type + '-' + id);
+      if (card) card.remove();
+      showAlert('Removed.', 'success');
+    } catch (err) {
+      showAlert(err.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>
