@@ -179,52 +179,20 @@ function renderHero() {
     }
   }
 
-  // Load a separate proxy image (not in DOM) for canvas color extraction.
-  // Proxy strips CORS restrictions so canvas.getImageData works.
-  if (_proxyCoverUrl) {
-    var _proxyImg = new Image();
-    _proxyImg.crossOrigin = 'anonymous';
-    _proxyImg.onload = function() {
-      if (myGen !== _heroGen || !pageBgEl) return;
-      try {
-        var SIZE = 48;
-        var cv = document.createElement('canvas');
-        cv.width = cv.height = SIZE;
-        var ctx = cv.getContext('2d');
-        ctx.drawImage(_proxyImg, 0, 0, SIZE, SIZE);
-        var data = ctx.getImageData(0, 0, SIZE, SIZE).data;
-        var colorful = [];
-        for (var i = 0; i < data.length; i += 4) {
-          var r = data[i], g = data[i+1], b = data[i+2];
-          var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
-          var lum = (mx+mn)/2;
-          if (lum < 20 || lum > 235) continue;
-          var ch = mx - mn;
-          if (ch < 28) continue;
-          var hh;
-          if (mx===r)      hh = 60*(((g-b)/ch+6)%6);
-          else if (mx===g) hh = 60*((b-r)/ch+2);
-          else             hh = 60*((r-g)/ch+4);
-          colorful.push({h: Math.round(hh), sat: ch/mx});
-        }
-        if (colorful.length >= 5 && myGen === _heroGen) {
-          colorful.sort(function(a,b){return b.sat-a.sat;});
-          var top = colorful.slice(0, Math.max(6, Math.floor(colorful.length*0.3)));
-          var h1 = _circularMeanHue(top.slice(0,Math.ceil(top.length/2)).map(function(x){return x.h;}));
-          var distant = top.filter(function(x){var d=Math.abs(x.h-h1);return Math.min(d,360-d)>40;});
-          var h2 = distant.length>=3
-            ? _circularMeanHue(distant.slice(0,Math.ceil(distant.length/2)).map(function(x){return x.h;}))
-            : (h1+80)%360;
-          var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-          pageBgEl.style.background =
-            'radial-gradient(ellipse 160% 110% at -5% 0%, hsla('+h1+',90%,'+(isDark?38:52)+'%,0.98) 0%, transparent 55%),' +
-            'radial-gradient(ellipse 140% 160% at 105% 100%, hsla('+h2+',85%,'+(isDark?32:46)+'%,0.95) 0%, transparent 60%),' +
-            'radial-gradient(ellipse 90% 70% at 50% 50%, hsla('+h1+',75%,'+(isDark?28:58)+'%,0.55) 0%, transparent 70%),' +
-            'var(--page-bg)';
-        }
-      } catch(e) { /* SecurityError — seed gradient stays */ }
-    };
-    _proxyImg.src = _proxyCoverUrl;
+  // Fetch dominant colors from backend (does pixel analysis server-side, no CORS issues).
+  if (item.cover_url) {
+    fetch(_apiBase + '/imagecolors?url=' + encodeURIComponent(item.cover_url))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(c) {
+        if (!c || myGen !== _heroGen || !pageBgEl) return;
+        var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+        pageBgEl.style.background =
+          'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
+          'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
+          'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
+          'var(--page-bg)';
+      })
+      .catch(function() {});
   }
 }
 
