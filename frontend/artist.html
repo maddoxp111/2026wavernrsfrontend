@@ -27,17 +27,36 @@
   var uploads = [];
   var isFollowing = false;
   var followerCount = 0;
+  var eraTags = [];
+  var isOwner = false;
+
+  // Upload state
+  var selectedFiles = [];
+  var editCoverFile = null;
+  var pendingDeleteId = null;
+  var pendingDeleteCompId = null;
+  var editingTrackId = null;
+  var editingAlbumId = null;
+
+  function eraTagOptions(selectedId) {
+    return '<option value="">No era tag</option>' + eraTags.map(function(t) {
+      return '<option value="'+t.id+'" '+(selectedId==t.id?'selected':'')+'>'+escHtml(t.name)+'</option>';
+    }).join('');
+  }
 
   async function loadPage() {
     try {
-      var results = await Promise.all([
+      var fetches = [
         api('/artists/' + artistId),
         api('/artists/' + artistId + '/tracks'),
         api('/albums/by-artist/' + artistId).catch(function() { return []; }),
-      ]);
+        api('/eratags').catch(function() { return []; }),
+      ];
+      var results = await Promise.all(fetches);
       artist = results[0];
       var allTracks = results[1];
       var allAlbums = results[2];
+      eraTags = results[3];
 
       uploads = allTracks.map(function(t) { return Object.assign({}, t, { _type: 'track' }); })
         .concat(allAlbums.map(function(a) { return Object.assign({}, a, { _type: 'album' }); }))
@@ -51,7 +70,6 @@
 
       document.title = (artist.display_name || 'Artist') + ' — wavernrs';
 
-      // Update page background from artist image or name seed
       var pageBgEl = document.getElementById('wv-page-bg');
       if (pageBgEl) {
         if (typeof extractCoverHues === 'function') extractCoverHues(artist.profile_image_url || artist.banner_url, artist.display_name || '', function(c) {
@@ -89,7 +107,7 @@
   function render() {
     var me = null;
     try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
-    var isOwner = me && artist.user_id === me.id;
+    isOwner = !!(me && artist.user_id === me.id);
     var totalPlays = uploads.filter(function(u) { return u._type === 'track'; })
       .reduce(function(sum, t) { return sum + (t.play_count || 0); }, 0);
 
@@ -99,9 +117,7 @@
       : '<span style="font-size:48px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
 
     var html =
-      // ── Header ──────────────────────────────────────────────────
       '<div style="padding:28px 0 0;">' +
-        // Banner (if exists)
         (artist.banner_url
           ? '<div style="width:100%;height:180px;border-radius:20px;overflow:hidden;margin-bottom:-60px;position:relative;">' +
               '<img src="' + escHtml(artist.banner_url) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.closest(\'div\').remove()">' +
@@ -109,13 +125,10 @@
             '</div>'
           : '') +
 
-        // Avatar + meta row
         '<div style="display:flex;align-items:flex-end;gap:24px;padding:0 4px;margin-bottom:20px;flex-wrap:wrap;">' +
-          // Avatar circle
           '<div style="width:110px;height:110px;border-radius:50%;background:' + avatarBg + ';border:3px solid var(--glass-large-border);flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
             avatarInner +
           '</div>' +
-          // Name & actions
           '<div style="flex:1;min-width:0;padding-bottom:4px;">' +
             '<div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;">' + escHtml(artist.display_name || 'Unknown') + '</div>' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
@@ -126,10 +139,8 @@
           '</div>' +
         '</div>' +
 
-        // Bio
         (artist.bio ? '<p style="font-size:14px;color:var(--text-2);line-height:1.65;margin:0 0 16px;max-width:560px;">' + escHtml(artist.bio) + '</p>' : '') +
 
-        // Stats row
         '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;font-size:13.5px;color:var(--text-2);">' +
           '<span><strong style="color:var(--text);">' + uploads.length + '</strong> uploads</span>' +
           '<span><strong style="color:var(--text);">' + fmtNum(totalPlays) + '</strong> total plays</span>' +
@@ -138,10 +149,126 @@
           (artist.website ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener" style="color:var(--brand);">Website ↗</a></span>' : '') +
         '</div>' +
 
-        // Uploads section
-        '<h2 class="wv-section-title">Uploads</h2>' +
+        // Upload form — owner only
+        (isOwner
+          ? '<div id="alert-container" style="margin-bottom:12px;"></div>' +
+            '<div class="wv-card" style="padding:24px;margin-bottom:32px;">' +
+              '<div style="font-size:16px;font-weight:700;margin-bottom:16px;">Upload</div>' +
+
+              '<div class="form-group">' +
+                '<label class="wv-form-label">Cover Image</label>' +
+                '<div class="wv-drop-zone" id="cover-zone" style="padding:20px;text-align:center;" onclick="document.getElementById(\'cover-input\').click()" ondragover="onCoverDragOver(event)" ondragleave="onCoverDragLeave(event)" ondrop="onCoverDrop(event)">' +
+                  '<div style="font-size:24px;margin-bottom:4px;">🖼️</div>' +
+                  '<div id="cover-zone-text" style="font-size:13px;color:var(--text-2);">Drop image or click to browse</div>' +
+                '</div>' +
+                '<input type="file" id="cover-input" accept="image/*" style="display:none" onchange="onCoverSelect(event)">' +
+              '</div>' +
+
+              '<div class="form-group">' +
+                '<label class="wv-form-label">Title <span style="color:var(--text-3);font-size:11px;">(comp name for multi-file, track name for single)</span></label>' +
+                '<input class="wv-input" type="text" id="upload-title" placeholder="Name">' +
+              '</div>' +
+
+              '<div class="form-group">' +
+                '<label class="wv-form-label">Era Tag</label>' +
+                '<select class="wv-input" id="upload-era-tag" style="appearance:auto;-webkit-appearance:auto;">' +
+                  eraTagOptions(null) +
+                '</select>' +
+              '</div>' +
+
+              '<div class="form-group">' +
+                '<label class="wv-form-label">Description</label>' +
+                '<textarea class="wv-input" id="upload-desc" rows="2" placeholder="Optional…" style="border-radius:var(--r-md);resize:vertical;min-height:56px;"></textarea>' +
+              '</div>' +
+
+              '<div class="wv-drop-zone" id="upload-zone" style="text-align:center;padding:28px;" onclick="document.getElementById(\'file-input\').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">' +
+                '<div style="font-size:28px;margin-bottom:6px;">🎵</div>' +
+                '<div id="upload-zone-text" style="font-size:14px;font-weight:500;margin-bottom:4px;">Drop audio files here or click to add</div>' +
+                '<div style="font-size:12px;color:var(--text-3);">MP3, WAV, FLAC — keep adding songs to the queue</div>' +
+              '</div>' +
+              '<input type="file" id="file-input" accept="audio/*" multiple style="display:none" onchange="onFileSelect(event)">' +
+
+              '<div id="upload-queue" style="margin-top:12px;"></div>' +
+
+              '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);">' +
+                '<label class="wv-form-label">Or paste a Google Drive link (single track only)</label>' +
+                '<input class="wv-input" type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">' +
+              '</div>' +
+
+              '<div id="upload-alert" style="margin-top:12px;"></div>' +
+              '<div id="upload-progress" style="display:none;margin-top:12px;">' +
+                '<div style="font-size:13px;color:var(--text-2);margin-bottom:6px;" id="upload-status">Uploading…</div>' +
+                '<div style="height:4px;background:var(--hair-strong);border-radius:2px;overflow:hidden;">' +
+                  '<div style="height:100%;background:var(--brand);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>' +
+                '</div>' +
+              '</div>' +
+              '<button class="wv-pill brand" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:16px;" id="upload-btn" onclick="doUpload()">Upload</button>' +
+            '</div>'
+          : '') +
+
+        '<h2 class="wv-section-title" id="uploads-header">Uploads</h2>' +
         '<div id="uploads-list"></div>' +
       '</div>';
+
+    // Modals — only needed for owner
+    if (isOwner) {
+      html +=
+        '<div class="modal-overlay" id="delete-modal"><div class="modal-box">' +
+          '<div class="modal-title">Delete edit?</div>' +
+          '<p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">This will permanently remove the edit.</p>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+            '<button class="wv-pill" onclick="closeDeleteModal()">Cancel</button>' +
+            '<button class="wv-pill" style="background:var(--red);color:white;border-color:transparent;" id="confirm-delete-btn">Delete</button>' +
+          '</div>' +
+        '</div></div>' +
+
+        '<div class="modal-overlay" id="delete-comp-modal"><div class="modal-box">' +
+          '<div class="modal-title">Delete comp?</div>' +
+          '<p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">This will permanently remove the comp and all its tracks.</p>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+            '<button class="wv-pill" onclick="closeDeleteCompModal()">Cancel</button>' +
+            '<button class="wv-pill" style="background:var(--red);color:white;border-color:transparent;" id="confirm-delete-comp-btn">Delete</button>' +
+          '</div>' +
+        '</div></div>' +
+
+        '<div class="modal-overlay" id="edit-track-modal"><div class="modal-box" style="max-width:520px;">' +
+          '<div class="modal-title">Edit Track</div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Title *</label><input class="wv-input" type="text" id="edit-track-title" placeholder="Track name"></div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Era Tag</label><select class="wv-input" id="edit-track-era" style="appearance:auto;"></select></div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Cover image URL</label>' +
+            '<div style="display:flex;gap:8px;align-items:center;">' +
+              '<input class="wv-input" type="url" id="edit-track-cover" placeholder="https://…" style="flex:1;">' +
+              '<label class="wv-pill" style="cursor:pointer;white-space:nowrap;">Upload<input type="file" id="edit-track-cover-file" accept="image/*" style="display:none" onchange="uploadModalCover(\'edit-track-cover-file\',\'edit-track-cover\',\'edit-track-cover-status\')"></label>' +
+            '</div>' +
+            '<span id="edit-track-cover-status" style="font-size:12px;color:var(--text-2);"></span>' +
+          '</div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Description</label><textarea class="wv-input" id="edit-track-desc" rows="2" style="border-radius:var(--r-md);"></textarea></div>' +
+          '<div id="edit-track-alert"></div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">' +
+            '<button class="wv-pill" onclick="closeEditTrackModal()">Cancel</button>' +
+            '<button class="wv-pill brand" onclick="saveEditTrack()">Save</button>' +
+          '</div>' +
+        '</div></div>' +
+
+        '<div class="modal-overlay" id="edit-album-modal"><div class="modal-box" style="max-width:520px;">' +
+          '<div class="modal-title">Edit Comp</div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Title *</label><input class="wv-input" type="text" id="edit-album-title" placeholder="Comp name"></div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Era Tag</label><select class="wv-input" id="edit-album-era" style="appearance:auto;"></select></div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Cover image URL</label>' +
+            '<div style="display:flex;gap:8px;align-items:center;">' +
+              '<input class="wv-input" type="url" id="edit-album-cover" placeholder="https://…" style="flex:1;">' +
+              '<label class="wv-pill" style="cursor:pointer;white-space:nowrap;">Upload<input type="file" id="edit-album-cover-file" accept="image/*" style="display:none" onchange="uploadModalCover(\'edit-album-cover-file\',\'edit-album-cover\',\'edit-album-cover-status\')"></label>' +
+            '</div>' +
+            '<span id="edit-album-cover-status" style="font-size:12px;color:var(--text-2);"></span>' +
+          '</div>' +
+          '<div class="wv-form-field"><label class="wv-form-label">Description</label><textarea class="wv-input" id="edit-album-desc" rows="2" style="border-radius:var(--r-md);"></textarea></div>' +
+          '<div id="edit-album-alert"></div>' +
+          '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">' +
+            '<button class="wv-pill" onclick="document.getElementById(\'edit-album-modal\').classList.remove(\'open\');editingAlbumId=null;">Cancel</button>' +
+            '<button class="wv-pill brand" onclick="saveEditAlbum()">Save</button>' +
+          '</div>' +
+        '</div></div>';
+    }
 
     document.getElementById('view').innerHTML = html;
     renderUploads();
@@ -150,47 +277,76 @@
   function renderUploads() {
     var el = document.getElementById('uploads-list');
     if (!el) return;
+    var header = document.getElementById('uploads-header');
+    if (header) header.textContent = 'Uploads' + (isOwner ? ' (' + uploads.length + ')' : '');
+
     if (!uploads.length) {
       el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No uploads yet</div></div>';
       return;
     }
 
-    el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:40px;">' +
-      uploads.map(function(item, i) {
-        var isAlbum = item._type === 'album';
-        var seed = item.title || '';
-        var coverBg = coverGradient(seed);
-        var coverImg = item.cover_url
-          ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
-          : '';
-        var clickAction = isAlbum
-          ? "navigate('/album.html?id=" + item.id + "')"
-          : "playItem(" + i + ")";
-        var eraName = (item.era_tag && item.era_tag.name) || item.genre || '';
-
-        return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
-          '<div class="wv-comp-card-cover">' +
-            '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-              '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
-              (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-              coverImg +
-              (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playItem(' + i + ')">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-              '</button>' : '') +
+    if (isOwner) {
+      // List view with edit/delete for owner
+      el.innerHTML = '<div style="display:flex;flex-direction:column;gap:4px;padding-bottom:40px;">' +
+        uploads.map(function(item) {
+          var cover = item.cover_url
+            ? '<img src="'+escHtml(item.cover_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;">'
+            : '<span style="font-size:20px;">🎵</span>';
+          var isAlbum = item._type === 'album';
+          var sub = isAlbum ? 'Comp · ' + timeAgo(item.created_at) : fmtNum(item.play_count||0) + ' plays · ' + timeAgo(item.created_at);
+          var openHref = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
+          var editClick = isAlbum
+            ? 'openEditAlbumModal(' + JSON.stringify(item).replace(/"/g,'&quot;') + ')'
+            : 'openEditTrackModal(' + JSON.stringify(item).replace(/"/g,'&quot;') + ')';
+          var delClick = isAlbum ? 'confirmDeleteComp(\'' + item.id + '\')' : 'confirmDelete(\'' + item.id + '\')';
+          return '<div class="wv-track-row">' +
+            '<div class="wv-track-cover" style="display:flex;align-items:center;justify-content:center;">' + cover + '</div>' +
+            '<div class="wv-track-info"><div class="wv-track-title">' + escHtml(item.title) + '</div><div class="wv-track-artist">' + sub + '</div></div>' +
+            '<div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;">' +
+              '<a href="' + openHref + '" class="wv-pill" style="padding:5px 10px;font-size:12px;">Open</a>' +
+              '<button class="wv-pill" style="padding:5px 10px;font-size:12px;" onclick="' + editClick + '">Edit</button>' +
+              '<button class="wv-pill" style="padding:5px 10px;font-size:12px;background:var(--red);color:white;border-color:transparent;" onclick="' + delClick + '">Delete</button>' +
             '</div>' +
-          '</div>' +
-          '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
-          '<div class="wv-comp-card-artist" style="display:flex;align-items:center;gap:6px;">' +
-            escHtml(artist.display_name || '') +
-            (eraName ? ' · <span class="badge" style="font-size:10px;">' + escHtml(eraName) + '</span>' : '') +
-          '</div>' +
-        '</div>';
-      }).join('') +
-    '</div>';
+          '</div>';
+        }).join('') +
+      '</div>';
+    } else {
+      // Card grid for non-owner visitors
+      el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:40px;">' +
+        uploads.map(function(item, i) {
+          var isAlbum = item._type === 'album';
+          var coverBg = coverGradient(item.title || '');
+          var coverImg = item.cover_url
+            ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
+            : '';
+          var clickAction = isAlbum
+            ? "navigate('/album.html?id=" + item.id + "')"
+            : "playItem(" + i + ")";
+          var eraName = (item.era_tag && item.era_tag.name) || item.genre || '';
 
-    // Wire IA CDN retry on cover images
-    if (typeof wireIACoverRetry === 'function') {
-      document.querySelectorAll('#uploads-list img').forEach(wireIACoverRetry);
+          return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
+            '<div class="wv-comp-card-cover">' +
+              '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+                '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+                (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
+                coverImg +
+                (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playItem(' + i + ')">' +
+                  '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+                '</button>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
+            '<div class="wv-comp-card-artist">' +
+              escHtml(artist.display_name || '') +
+              (eraName ? ' · <span class="badge" style="font-size:10px;">' + escHtml(eraName) + '</span>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+
+      if (typeof wireIACoverRetry === 'function') {
+        document.querySelectorAll('#uploads-list img').forEach(wireIACoverRetry);
+      }
     }
   }
 
@@ -198,6 +354,193 @@
     var item = uploads[index];
     if (!item || item._type !== 'track') return;
     playTrack(Object.assign({}, item, { artist_name: artist ? artist.display_name : '' }));
+  }
+
+  // ── Upload handlers ────────────────────────────────────────────
+
+  function cleanTitle(fn) { return fn.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').trim(); }
+
+  function onFileSelect(e) {
+    selectedFiles = selectedFiles.concat(Array.from(e.target.files).map(function(f) { return { file: f, title: cleanTitle(f.name) }; }));
+    renderUploadQueue(); e.target.value = '';
+  }
+  function onDrop(e) {
+    e.preventDefault(); document.getElementById('upload-zone').classList.remove('drag-over');
+    selectedFiles = selectedFiles.concat(Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('audio/'); }).map(function(f) { return { file: f, title: cleanTitle(f.name) }; }));
+    renderUploadQueue();
+  }
+  function onDragOver(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag-over'); }
+  function onDragLeave() { document.getElementById('upload-zone').classList.remove('drag-over'); }
+  function onCoverDragOver(e) { e.preventDefault(); document.getElementById('cover-zone').classList.add('drag-over'); }
+  function onCoverDragLeave() { document.getElementById('cover-zone').classList.remove('drag-over'); }
+  function onCoverDrop(e) { e.preventDefault(); document.getElementById('cover-zone').classList.remove('drag-over'); var f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) setCoverFile(f); }
+  function onCoverSelect(e) { var f = e.target.files[0]; if (f) setCoverFile(f); }
+  function setCoverFile(f) { editCoverFile = f; document.getElementById('cover-zone-text').textContent = '✓ ' + f.name; }
+
+  function renderUploadQueue() {
+    var el = document.getElementById('upload-queue');
+    var txt = document.getElementById('upload-zone-text');
+    if (!el) return;
+    if (!selectedFiles.length) { el.innerHTML = ''; txt.textContent = 'Drop audio files here or click to add'; return; }
+    txt.textContent = selectedFiles.length === 1 ? '1 song queued — add more or press Upload' : selectedFiles.length + ' songs queued';
+    el.innerHTML = selectedFiles.map(function(item, i) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:var(--r-md);margin-bottom:6px;" draggable="true" id="qi-' + i + '" ondragstart="qDragStart(event,' + i + ')" ondragover="qDragOver(event,' + i + ')" ondrop="qDragDrop(event,' + i + ')" ondragend="qDragEnd()">' +
+        '<span style="cursor:grab;color:var(--text-3);">⠿</span>' +
+        '<span style="min-width:20px;font-size:12px;color:var(--text-3);">' + (i + 1) + '</span>' +
+        '<input type="text" value="' + escHtml(item.title) + '" oninput="selectedFiles[' + i + '].title=this.value" style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--hair-strong);color:var(--text);font-size:13px;padding:2px 0;outline:none;" placeholder="Track title">' +
+        '<span style="font-size:11px;color:var(--text-3);">' + (item.file.size / 1024 / 1024).toFixed(1) + 'MB</span>' +
+        '<button onclick="selectedFiles.splice(' + i + ',1);renderUploadQueue()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;line-height:1;">×</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  var _qDragSrc = null;
+  function qDragStart(e, i) { _qDragSrc = i; e.dataTransfer.effectAllowed = 'move'; setTimeout(function() { var el = document.getElementById('qi-' + i); if (el) el.style.opacity = '0.4'; }, 0); }
+  function qDragOver(e, i) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.borderTop = ''; }); if (i !== _qDragSrc) { var el = document.getElementById('qi-' + i); if (el) el.style.borderTop = '2px solid var(--brand)'; } }
+  function qDragDrop(e, i) { e.stopPropagation(); if (_qDragSrc === null || _qDragSrc === i) return; var moved = selectedFiles.splice(_qDragSrc, 1)[0]; selectedFiles.splice(i, 0, moved); renderUploadQueue(); }
+  function qDragEnd() { _qDragSrc = null; document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.opacity = ''; el.style.borderTop = ''; }); }
+
+  async function doUpload() {
+    var title = document.getElementById('upload-title').value.trim();
+    var era_tag_id = document.getElementById('upload-era-tag').value;
+    var description = document.getElementById('upload-desc').value.trim();
+    var drive_url = document.getElementById('drive-url').value.trim();
+    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'Add at least one audio file or paste a Drive link');
+    if (!title && selectedFiles.length !== 1) return showAlert('upload-alert', 'Title is required for multi-song uploads');
+    var effectiveTitle = title || (selectedFiles[0] && selectedFiles[0].title) || '';
+    var btn = document.getElementById('upload-btn');
+    var progress = document.getElementById('upload-progress');
+    var bar = document.getElementById('upload-bar');
+    var statusEl = document.getElementById('upload-status');
+    btn.disabled = true; btn.textContent = 'Uploading…'; progress.style.display = ''; clearAlert('upload-alert');
+    try {
+      if (selectedFiles.length > 1) {
+        statusEl.textContent = 'Creating comp…'; bar.style.width = '8%';
+        var albumForm = new FormData(); albumForm.append('title', effectiveTitle);
+        if (era_tag_id) albumForm.append('era_tag_id', era_tag_id);
+        if (description) albumForm.append('description', description);
+        if (editCoverFile) albumForm.append('cover_file', editCoverFile);
+        var album = await apiUpload('/albums', albumForm);
+
+        for (var i = 0; i < selectedFiles.length; i++) {
+          var item = selectedFiles[i];
+          statusEl.textContent = 'Uploading ' + (i + 1) + '/' + selectedFiles.length + ': ' + item.title + '…';
+          bar.style.width = Math.round(8 + ((i + 1) / selectedFiles.length) * 82) + '%';
+          var form = new FormData();
+          form.append('file', item.file); form.append('title', item.title);
+          form.append('album_id', album.id); form.append('track_position', String(i));
+          if (era_tag_id) form.append('era_tag_id', era_tag_id);
+          await apiUpload('/tracks', form);
+        }
+        album = await api('/albums/' + album.id);
+        uploads.unshift(Object.assign({}, album, { _type: 'album' }));
+      } else {
+        var form = new FormData();
+        if (selectedFiles[0]) form.append('file', selectedFiles[0].file);
+        if (drive_url) form.append('drive_url', drive_url);
+        form.append('title', effectiveTitle);
+        if (era_tag_id) form.append('era_tag_id', era_tag_id);
+        if (description) form.append('description', description);
+        if (editCoverFile) form.append('cover_file', editCoverFile);
+        bar.style.width = '60%'; statusEl.textContent = 'Uploading to Internet Archive…';
+        var track = await apiUpload('/tracks', form);
+        uploads.unshift(Object.assign({}, track, { _type: 'track' }));
+      }
+      bar.style.width = '100%';
+      selectedFiles = []; editCoverFile = null;
+      ['upload-title', 'drive-url', 'upload-desc'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+      document.getElementById('upload-era-tag').value = '';
+      document.getElementById('cover-zone-text').textContent = 'Drop image or click to browse';
+      renderUploadQueue(); renderUploads();
+      showAlert('upload-alert', '✓ Uploaded!', 'success');
+    } catch (err) {
+      showAlert('upload-alert', err.message || 'Upload failed');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Upload';
+      setTimeout(function() { progress.style.display = 'none'; bar.style.width = '0%'; }, 3000);
+    }
+  }
+
+  // ── Delete handlers ────────────────────────────────────────────
+
+  function confirmDelete(id) { pendingDeleteId = id; document.getElementById('delete-modal').classList.add('open'); document.getElementById('confirm-delete-btn').onclick = doDelete; }
+  function closeDeleteModal() { document.getElementById('delete-modal').classList.remove('open'); pendingDeleteId = null; }
+  async function doDelete() {
+    if (!pendingDeleteId) return;
+    try {
+      await api('/tracks/' + pendingDeleteId, { method: 'DELETE' });
+      uploads = uploads.filter(function(u) { return !(u.id === pendingDeleteId && u._type === 'track'); });
+      closeDeleteModal(); renderUploads();
+    } catch (err) { alert(err.message); }
+  }
+
+  function confirmDeleteComp(id) { pendingDeleteCompId = id; document.getElementById('delete-comp-modal').classList.add('open'); document.getElementById('confirm-delete-comp-btn').onclick = doDeleteComp; }
+  function closeDeleteCompModal() { document.getElementById('delete-comp-modal').classList.remove('open'); pendingDeleteCompId = null; }
+  async function doDeleteComp() {
+    if (!pendingDeleteCompId) return;
+    try {
+      await api('/albums/' + pendingDeleteCompId, { method: 'DELETE' });
+      uploads = uploads.filter(function(u) { return !(u.id === pendingDeleteCompId && u._type === 'album'); });
+      closeDeleteCompModal(); renderUploads();
+    } catch (err) { alert(err.message); }
+  }
+
+  // ── Edit modal handlers ────────────────────────────────────────
+
+  function openEditTrackModal(track) {
+    editingTrackId = track.id;
+    document.getElementById('edit-track-title').value = track.title || '';
+    document.getElementById('edit-track-cover').value = track.cover_url || '';
+    document.getElementById('edit-track-desc').value = track.description || '';
+    document.getElementById('edit-track-era').innerHTML = eraTagOptions(track.era_tag_id);
+    document.getElementById('edit-track-modal').classList.add('open');
+  }
+  function closeEditTrackModal() { document.getElementById('edit-track-modal').classList.remove('open'); editingTrackId = null; }
+  async function saveEditTrack() {
+    var title = document.getElementById('edit-track-title').value.trim();
+    if (!title) return showAlert('edit-track-alert', 'Title is required');
+    clearAlert('edit-track-alert');
+    try {
+      var updated = await api('/tracks/' + editingTrackId, { method: 'PUT', body: JSON.stringify({ title, era_tag_id: document.getElementById('edit-track-era').value || null, cover_url: document.getElementById('edit-track-cover').value.trim() || null, description: document.getElementById('edit-track-desc').value.trim() || null }) });
+      uploads = uploads.map(function(u) { return (u.id === editingTrackId && u._type === 'track') ? Object.assign({}, u, updated, { _type: 'track' }) : u; });
+      closeEditTrackModal(); renderUploads();
+      showAlert('alert-container', '✓ Updated', 'success');
+    } catch (err) { showAlert('edit-track-alert', err.message); }
+  }
+
+  function openEditAlbumModal(album) {
+    editingAlbumId = album.id;
+    document.getElementById('edit-album-title').value = album.title || '';
+    document.getElementById('edit-album-cover').value = album.cover_url || '';
+    document.getElementById('edit-album-desc').value = album.description || '';
+    document.getElementById('edit-album-era').innerHTML = eraTagOptions(album.era_tag_id);
+    document.getElementById('edit-album-modal').classList.add('open');
+  }
+  async function saveEditAlbum() {
+    var title = document.getElementById('edit-album-title').value.trim();
+    if (!title) return showAlert('edit-album-alert', 'Title is required');
+    clearAlert('edit-album-alert');
+    try {
+      var updated = await api('/albums/' + editingAlbumId, { method: 'PUT', body: JSON.stringify({ title, era_tag_id: document.getElementById('edit-album-era').value || null, cover_url: document.getElementById('edit-album-cover').value.trim() || null, description: document.getElementById('edit-album-desc').value.trim() || null }) });
+      uploads = uploads.map(function(u) { return (u.id === editingAlbumId && u._type === 'album') ? Object.assign({}, u, updated, { _type: 'album' }) : u; });
+      document.getElementById('edit-album-modal').classList.remove('open'); editingAlbumId = null;
+      renderUploads(); showAlert('alert-container', '✓ Updated', 'success');
+    } catch (err) { showAlert('edit-album-alert', err.message); }
+  }
+
+  async function uploadModalCover(inputId, urlFieldId, statusId) {
+    var input = document.getElementById(inputId);
+    var file = input && input.files && input.files[0];
+    if (!file) return;
+    var statusEl = document.getElementById(statusId);
+    if (statusEl) statusEl.textContent = 'Uploading…';
+    try {
+      var form = new FormData(); form.append('image', file);
+      var result = await apiUpload('/upload/image', form);
+      var urlEl = document.getElementById(urlFieldId);
+      if (urlEl) urlEl.value = result.url;
+      if (statusEl) statusEl.textContent = '✓ Uploaded';
+    } catch (err) { if (statusEl) statusEl.textContent = 'Upload failed'; }
   }
 
   loadPage();

@@ -77,7 +77,7 @@
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('feed', 'Following', '/feed.html', 'feed');
     html += navItem('playlists', 'Playlists', '/playlists.html', 'list');
-    html += navItem('profile', 'Profile', profileHref, 'profile');
+    html += navItem('profile', 'You', profileHref, 'profile');
     html += '</nav>';
 
     // Manage section (logged in only)
