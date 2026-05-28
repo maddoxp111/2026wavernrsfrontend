@@ -269,22 +269,28 @@
     btn.disabled=true; btn.textContent='Uploading…'; progress.style.display=''; clearAlert('upload-alert');
     try {
       if (selectedFiles.length > 1) {
-        var ids=[];
-        for (var i=0;i<selectedFiles.length;i++) {
-          var item=selectedFiles[i];
-          statusEl.textContent='Uploading '+(i+1)+'/'+selectedFiles.length+': '+item.title+'…';
-          bar.style.width=Math.round((i/selectedFiles.length)*80)+'%';
-          var form=new FormData(); form.append('file',item.file); form.append('title',item.title);
-          if(era_tag_id) form.append('era_tag_id',era_tag_id);
-          var t=await apiUpload('/tracks',form); ids.push(t.id);
-        }
-        statusEl.textContent='Creating comp…'; bar.style.width='90%';
+        // Step 1: create album shell first
+        statusEl.textContent='Creating comp…'; bar.style.width='8%';
         var albumForm=new FormData(); albumForm.append('title',effectiveTitle);
         if(era_tag_id) albumForm.append('era_tag_id',era_tag_id);
         if(description) albumForm.append('description',description);
         if(editCoverFile) albumForm.append('cover_file',editCoverFile);
-        albumForm.append('track_ids',JSON.stringify(ids));
         var album=await apiUpload('/albums',albumForm);
+
+        // Step 2: upload each track with album_id so it links immediately
+        for (var i=0;i<selectedFiles.length;i++) {
+          var item=selectedFiles[i];
+          statusEl.textContent='Uploading '+(i+1)+'/'+selectedFiles.length+': '+item.title+'…';
+          bar.style.width=Math.round(8+((i+1)/selectedFiles.length)*82)+'%';
+          var form=new FormData();
+          form.append('file',item.file);
+          form.append('title',item.title);
+          form.append('album_id',album.id);
+          form.append('track_position',String(i));
+          if(era_tag_id) form.append('era_tag_id',era_tag_id);
+          await apiUpload('/tracks',form);
+        }
+        album=await api('/albums/'+album.id);
         uploads.unshift({...album,_type:'album'});
       } else {
         var form=new FormData();
