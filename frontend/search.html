@@ -21,7 +21,7 @@
 
   // Render the search input + results container
   document.getElementById('view').innerHTML =
-    '<div style="max-width:680px;">' +
+    '<div style="max-width:860px;">' +
       '<div class="wv-input" style="display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:10px 18px;">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--text-3)"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
         '<input id="search-q" placeholder="Search edits, artists, comps…" style="flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text);font-family:inherit;" autocomplete="off">' +
@@ -74,54 +74,66 @@
 
       var html = '';
 
-      // Artists — circular avatar row
+      // Artists — circular avatar scroll row
       if (artists.length) {
         html += '<div class="search-results-section">' +
           '<div class="search-results-title">Artists</div>' +
-          '<div style="display:flex;gap:18px;overflow-x:auto;padding-bottom:8px;" class="no-scrollbar">' +
+          '<div class="scroll-row">' +
           artists.map(function(a) {
             var bg = coverGradient(a.display_name || '');
             var inner = a.profile_image_url
               ? '<img src="' + escHtml(a.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">'
-              : '<span style="font-size:28px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((a.display_name || '?')[0].toUpperCase()) + '</span>';
-            return '<div onclick="navigate(\'/artist.html?id=' + a.id + '\')" style="cursor:pointer;flex-shrink:0;text-align:center;width:80px;">' +
-              '<div style="width:80px;height:80px;border-radius:50%;background:' + bg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:6px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">' + inner + '</div>' +
+              : '<span style="font-size:22px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((a.display_name || '?')[0].toUpperCase()) + '</span>';
+            return '<div onclick="navigate(\'/artist.html?id=' + a.id + '\')" style="cursor:pointer;flex-shrink:0;text-align:center;width:88px;">' +
+              '<div style="width:88px;height:88px;border-radius:50%;background:' + bg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">' + inner + '</div>' +
               '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">' + escHtml(a.display_name) + '</div>' +
+              '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">Artist</div>' +
             '</div>';
           }).join('') +
           '</div></div>';
       }
 
-      // Tracks + Comps — clean rows
-      var allItems = [];
-      albums.forEach(function(a) { allItems.push({ _type: 'album', item: a }); });
-      tracks.forEach(function(t) { allItems.push({ _type: 'track', item: t }); });
-
-      if (allItems.length) {
+      // Comps — horizontal card scroll row
+      if (albums.length) {
         html += '<div class="search-results-section">' +
-          '<div class="search-results-title">' + (albums.length && tracks.length ? 'Results' : albums.length ? 'Comps' : 'Edits') + '</div>' +
-          '<div class="search-results-list">' +
-          allItems.map(function(r) {
-            var item = r.item;
-            var isAlbum = r._type === 'album';
-            var coverBg = coverGradient(item.title || '');
-            var coverImg = item.cover_url
-              ? '<img src="' + escHtml(item.cover_url) + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\'">'
-              : '';
-            var artistName = escHtml((item.artists && item.artists.display_name) || item.artist_name || 'Unknown');
-            var typeLabel = isAlbum ? 'Comp' : 'Edit';
-            var clickAction = isAlbum
-              ? 'navigate(\'/album.html?id=' + item.id + '\')'
-              : 'playThis(' + JSON.stringify({id:item.id,title:item.title,ia_url:item.ia_url||'',cover_url:item.cover_url||'',artist_name:(item.artists&&item.artists.display_name)||''}).replace(/"/g,'&quot;') + ')';
-
-            return '<div class="search-result-row" onclick="' + clickAction + '">' +
-              '<div class="search-result-cover" style="background:' + coverBg + ';">' + coverImg + '</div>' +
-              '<div style="flex:1;min-width:0;">' +
-                '<div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">' + escHtml(item.title) + '</div>' +
-                '<div style="font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + typeLabel + ' · ' + artistName + '</div>' +
+          '<div class="search-results-title">Comps</div>' +
+          '<div class="scroll-row">' +
+          albums.map(function(a) {
+            var bg = coverGradient(a.title || '');
+            var artistName = escHtml((a.artists && a.artists.display_name) || 'Unknown');
+            return '<div class="scroll-card" onclick="navigate(\'/album.html?id=' + a.id + '\')" style="flex-shrink:0;width:140px;">' +
+              '<div class="scroll-card-cover" style="background:' + bg + ';">' +
+                (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
+                '<div class="scroll-card-overlay"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></div>' +
               '</div>' +
-              (!isAlbum ? '<button onclick="event.stopPropagation();playThis(' + JSON.stringify({id:item.id,title:item.title,ia_url:item.ia_url||'',cover_url:item.cover_url||'',artist_name:(item.artists&&item.artists.display_name)||''}).replace(/"/g,'&quot;') + ')" class="wv-icon-circle" title="Play" style="flex-shrink:0;"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>' : '') +
-              '<span class="search-result-type">' + typeLabel + '</span>' +
+              '<div class="scroll-card-title">' + escHtml(a.title) + '</div>' +
+              '<div class="scroll-card-sub">' + artistName + '</div>' +
+            '</div>';
+          }).join('') +
+          '</div></div>';
+      }
+
+      // Edits — track row list
+      if (tracks.length) {
+        html += '<div class="search-results-section">' +
+          '<div class="search-results-title">Edits</div>' +
+          '<div style="display:flex;flex-direction:column;gap:2px;">' +
+          tracks.map(function(t, i) {
+            var bg = coverGradient(t.title || '');
+            var artistName = escHtml((t.artists && t.artists.display_name) || 'Unknown');
+            var td = JSON.stringify({id:t.id,title:t.title,ia_url:t.ia_url||'',cover_url:t.cover_url||'',artist_name:(t.artists&&t.artists.display_name)||''}).replace(/"/g,'&quot;');
+            return '<div class="track-row" onclick="playThis(' + td + ')">' +
+              '<div class="track-row-num">' + (i + 1) + '</div>' +
+              '<div class="track-row-cover" style="background:' + bg + ';">' +
+                (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
+              '</div>' +
+              '<div class="track-row-info">' +
+                '<div class="track-row-title">' + escHtml(t.title) + '</div>' +
+                '<div class="track-row-artist">' + artistName + '</div>' +
+              '</div>' +
+              '<button onclick="event.stopPropagation();playThis(' + td + ')" class="wv-icon-circle" title="Play" style="flex-shrink:0;">' +
+                '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+              '</button>' +
             '</div>';
           }).join('') +
           '</div></div>';
