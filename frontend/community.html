@@ -5,6 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .comm-post-card {
+      background: var(--glass-medium-bg);
+      border: 1px solid var(--glass-medium-border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .comm-post-card:hover { border-color: var(--brand, #8b5cf6); background: var(--glass-large-bg); }
+    .comm-vote-col { display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0; }
+    .comm-vote-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 18px; line-height: 1;
+      padding: 4px 8px; border-radius: 8px; transition: color 0.12s, background 0.12s;
+    }
+    .comm-vote-btn:hover { color: var(--brand, #8b5cf6); background: var(--purple-bg, rgba(139,92,246,0.12)); }
+    .comm-vote-btn.up.active { color: var(--brand, #8b5cf6); }
+    .comm-vote-btn.down.active { color: #f87171; }
+    .comm-vote-score { font-size: 14px; font-weight: 700; color: var(--text-2); min-width: 22px; text-align: center; }
+    .comm-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px; }
+    .comm-meta-item { font-size: 12px; color: var(--text-3); display:flex;align-items:center;gap:4px; }
+    .comm-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--brand, #8b5cf6); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .comm-dot { color: var(--text-3); font-size: 10px; }
+    .comm-tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: var(--glass-pill-bg); border: 1px solid var(--glass-small-border);
+      border-radius: 5px; padding: 1px 7px; font-size: 11px; color: var(--text-2);
+    }
+    .comm-comment-block {
+      border-left: 2px solid var(--glass-medium-border);
+      padding-left: 14px; margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .comm-comment-block:hover { border-color: var(--brand, #8b5cf6); }
+    .comm-reply-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 11.5px; color: var(--text-3); padding: 2px 6px;
+      border-radius: 5px; font-family: inherit; transition: color 0.12s;
+    }
+    .comm-reply-btn:hover { color: var(--brand, #8b5cf6); }
+    .comm-format-bar { display:flex;gap:4px;margin-bottom:6px;align-items:center; }
+    .comm-fmt-btn {
+      background: var(--glass-pill-bg); border: 1px solid var(--glass-small-border);
+      border-radius: 6px; padding: 3px 9px; cursor: pointer;
+      color: var(--text-2); font-size: 12px; font-family: inherit;
+      line-height: 1.4; transition: background 0.12s;
+    }
+    .comm-fmt-btn:hover { background: var(--glass-large-bg); }
+  </style>
 </head>
 <body>
 <div id="view">
@@ -18,43 +73,37 @@
 <script>
   initPlayer();
 
-  // ── Top-level state ───────────────────────────────────────────────────────
   var currentView = 'list';
   var posts = [];
   var currentPost = null;
   var currentComments = [];
   var me = null;
+  var isMod = false;
 
   try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch(_) {}
+  isMod = sessionStorage.getItem('wv_is_mod') === 'true';
 
-  // ── Text formatting ───────────────────────────────────────────────────────
-  function wrapFormat(textareaId, prefix, suffix) {
-    var ta = document.getElementById(textareaId);
+  // ── Formatting ────────────────────────────────────────────────────────────
+  function wrapFormat(tid, pre, suf) {
+    var ta = document.getElementById(tid);
     if (!ta) return;
-    var start = ta.selectionStart, end = ta.selectionEnd;
-    var selected = ta.value.substring(start, end);
-    var word = selected || 'text';
-    ta.value = ta.value.substring(0, start) + prefix + word + suffix + ta.value.substring(end);
+    var s = ta.selectionStart, e = ta.selectionEnd;
+    var word = ta.value.substring(s, e) || 'text';
+    ta.value = ta.value.substring(0, s) + pre + word + suf + ta.value.substring(e);
     ta.focus();
-    ta.setSelectionRange(start + prefix.length, start + prefix.length + word.length);
+    ta.setSelectionRange(s + pre.length, s + pre.length + word.length);
   }
 
-  function clearBody(textareaId) {
-    var ta = document.getElementById(textareaId);
-    if (ta) { ta.value = ''; ta.focus(); }
-  }
-
-  function formatToolbar(textareaId) {
-    var btn = 'type="button" style="background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--text-2);font-size:12px;font-family:inherit;line-height:1.4;"';
-    return '<div style="display:flex;gap:4px;margin-bottom:6px;align-items:center;">' +
-      '<button ' + btn + ' style="background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--text-2);font-size:12px;font-family:inherit;line-height:1.4;font-weight:800;" onclick="wrapFormat(\'' + textareaId + '\',\'**\',\'**\')" title="Bold"><b>B</b></button>' +
-      '<button ' + btn + ' style="background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--text-2);font-size:12px;font-family:inherit;line-height:1.4;text-decoration:line-through;" onclick="wrapFormat(\'' + textareaId + '\',\'~~\',\'~~\')" title="Strikethrough">S</button>' +
-      '<button ' + btn + ' style="background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--text-2);font-size:12px;font-family:inherit;line-height:1.4;text-decoration:underline;" onclick="wrapFormat(\'' + textareaId + '\',\'__\',\'__\')" title="Underline">U</button>' +
-      '<button type="button" style="background:none;border:none;padding:3px 8px;cursor:pointer;color:var(--text-3);font-size:12px;font-family:inherit;margin-left:auto;" onclick="clearBody(\'' + textareaId + '\')" title="Clear body">Delete</button>' +
+  function formatBar(tid) {
+    return '<div class="comm-format-bar">' +
+      '<button class="comm-fmt-btn" type="button" style="font-weight:800;" onclick="wrapFormat(\'' + tid + '\',\'**\',\'**\')" title="Bold">B</button>' +
+      '<button class="comm-fmt-btn" type="button" style="text-decoration:line-through;" onclick="wrapFormat(\'' + tid + '\',\'~~\',\'~~\')" title="Strike">S</button>' +
+      '<button class="comm-fmt-btn" type="button" style="text-decoration:underline;" onclick="wrapFormat(\'' + tid + '\',\'__\',\'__\')" title="Underline">U</button>' +
+      '<button type="button" style="background:none;border:none;padding:2px 8px;cursor:pointer;color:var(--text-3);font-size:12px;font-family:inherit;margin-left:auto;" onclick="var ta=document.getElementById(\'' + tid + '\');if(ta)ta.value=\'\';" title="Clear">Clear</button>' +
     '</div>';
   }
 
-  function renderFormatted(text) {
+  function renderMd(text) {
     if (!text) return '';
     var s = escHtml(text);
     s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
@@ -64,21 +113,26 @@
     return s;
   }
 
-  // ── Utility helpers ───────────────────────────────────────────────────────
-  function score(item) {
-    if (item.net_votes !== undefined) return Math.max(0, item.net_votes);
-    return Math.max(0, (item.upvotes || 0) - (item.downvotes || 0));
+  function netScore(item) {
+    if (item.net_votes !== undefined) return item.net_votes;
+    return (item.upvotes || 0) - (item.downvotes || 0);
   }
 
-  // ── On load: check URL for ?post=<id> ────────────────────────────────────
+  function userInitial(username) {
+    return (username || '?')[0].toUpperCase();
+  }
+
+  function avatarHTML(username) {
+    var colors = ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#3b82f6'];
+    var idx = (username || '').charCodeAt(0) % colors.length;
+    return '<span class="comm-avatar" style="background:' + colors[idx] + ';">' + escHtml(userInitial(username)) + '</span>';
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
   (function init() {
     var params = new URLSearchParams(location.search);
     var postId = params.get('post');
-    if (postId) {
-      loadPost(postId);
-    } else {
-      loadPosts();
-    }
+    if (postId) loadPost(postId); else loadPosts();
   })();
 
   // ── List view ─────────────────────────────────────────────────────────────
@@ -90,17 +144,14 @@
     try {
       var data = await api('/community/posts');
       posts = Array.isArray(data) ? data : [];
-      // Sort by score desc, then created_at desc
       posts.sort(function(a, b) {
-        var sa = (a.upvotes || 0) - (a.downvotes || 0);
-        var sb = (b.upvotes || 0) - (b.downvotes || 0);
-        if (sb !== sa) return sb - sa;
-        return new Date(b.created_at) - new Date(a.created_at);
+        var diff = netScore(b) - netScore(a);
+        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
       });
       renderList();
     } catch (err) {
-      if (!view) return;
-      view.innerHTML = '<div style="padding:40px 20px;color:var(--text-2);">Failed to load posts: ' + escHtml(err.message) + '</div>';
+      document.getElementById('view').innerHTML =
+        '<div style="padding:60px 20px;text-align:center;color:var(--text-2);">Failed to load posts: ' + escHtml(err.message) + '</div>';
     }
   }
 
@@ -108,20 +159,20 @@
     var view = document.getElementById('view');
     if (!view) return;
 
-    var newPostFormHTML =
+    var newPostForm =
       '<div id="new-post-form" style="display:none;margin-bottom:20px;">' +
-        '<div class="wv-card" style="padding:20px;display:flex;flex-direction:column;gap:12px;">' +
-          '<div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;">New Post</div>' +
+        '<div class="wv-card" style="padding:22px;display:flex;flex-direction:column;gap:14px;">' +
+          '<div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;">New Post</div>' +
           '<div>' +
-            '<label class="wv-form-label">Title</label>' +
-            '<input id="np-title" type="text" class="wv-input" placeholder="Post title…" style="width:100%;box-sizing:border-box;" maxlength="300">' +
+            '<label class="wv-form-label">Title *</label>' +
+            '<input id="np-title" type="text" class="wv-input" placeholder="What\'s the topic?" style="width:100%;box-sizing:border-box;" maxlength="300">' +
           '</div>' +
           '<div>' +
             '<label class="wv-form-label">Body</label>' +
-            formatToolbar('np-body') +
-            '<textarea id="np-body" class="wv-input" placeholder="What\'s on your mind?" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:80px;"></textarea>' +
+            formatBar('np-body') +
+            '<textarea id="np-body" class="wv-input" placeholder="Share your thoughts…" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:90px;"></textarea>' +
           '</div>' +
-          '<div id="np-error" style="font-size:13px;color:var(--red,#ef4444);display:none;"></div>' +
+          '<div id="np-error" style="font-size:13px;color:#f87171;display:none;"></div>' +
           '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
             '<button class="wv-pill" onclick="hideNewPostForm()">Cancel</button>' +
             '<button class="wv-pill brand" onclick="submitNewPost()">Post</button>' +
@@ -129,70 +180,73 @@
         '</div>' +
       '</div>';
 
-    var headerHTML =
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px;">' +
+    var header =
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;">' +
         '<div>' +
-          '<h1 class="scroll-section-title" style="margin:0 0 4px;font-size:32px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
-          '<p style="margin:0;font-size:14px;color:var(--text-2);">Share your thoughts with fellow wavernrs</p>' +
+          '<h1 style="margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
+          '<p style="margin:0;font-size:13.5px;color:var(--text-2);">Discuss music, share thoughts, connect with wavernrs</p>' +
         '</div>' +
-        (me ? '<button class="wv-pill brand" onclick="showNewPostForm()" style="flex-shrink:0;margin-top:4px;">+ New Post</button>' : '') +
+        (me ? '<button class="wv-pill brand" onclick="showNewPostForm()" style="flex-shrink:0;gap:6px;">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>' +
+          ' New Post</button>' : '') +
       '</div>';
 
-    var postsHTML;
-    if (!posts.length) {
-      postsHTML =
-        '<div class="empty-state">' +
+    var postsHTML = !posts.length
+      ? '<div class="empty-state" style="padding:60px 0;">' +
+          '<div style="font-size:32px;margin-bottom:12px;">💬</div>' +
           '<div class="empty-title">No posts yet</div>' +
           '<div class="empty-desc">Be the first to start a conversation.</div>' +
+        '</div>'
+      : '<div style="display:flex;flex-direction:column;gap:12px;">' +
+          posts.map(postRowHTML).join('') +
         '</div>';
-    } else {
-      postsHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
-        posts.map(function(p) { return postRowHTML(p); }).join('') +
-      '</div>';
-    }
 
     view.innerHTML =
-      '<div style="max-width:720px;margin:0 auto;padding:28px 16px 60px;">' +
-        headerHTML +
-        newPostFormHTML +
-        '<div id="posts-list" style="margin-top:20px;">' + postsHTML + '</div>' +
+      '<div style="max-width:740px;margin:0 auto;padding:28px 16px 80px;">' +
+        header + newPostForm +
+        '<div id="posts-list">' + postsHTML + '</div>' +
       '</div>';
   }
 
   function postRowHTML(p) {
-    var s = score(p);
+    var s = netScore(p);
     var isOwner = me && me.id === p.user_id;
-    var deleteBtn = isOwner
-      ? '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" ' +
-          'style="font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;flex-shrink:0;" ' +
-          'title="Delete post">Delete</button>'
-      : '';
+    var bodyPreview = p.body ? p.body.replace(/\*\*|~~|__/g, '').slice(0, 140) + (p.body.length > 140 ? '…' : '') : '';
+
+    var actionBtns = '';
+    if (isOwner) {
+      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:#f87171;" title="Delete your post">Delete</button>';
+    }
+    if (isMod && !isOwner) {
+      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:#f87171;" title="Mod: take down post">Take down</button>';
+    }
+
     return (
-      '<div class="wv-card" style="padding:14px 16px;cursor:default;" id="post-row-' + escHtml(p.id) + '">' +
-        '<div style="display:flex;gap:12px;align-items:flex-start;">' +
+      '<div class="comm-post-card" id="post-row-' + escHtml(p.id) + '" onclick="openPost(\'' + escHtml(p.id) + '\')">' +
+        '<div style="display:flex;gap:14px;">' +
           // Vote column
-          '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;padding-top:2px;">' +
-            '<button onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',1)" ' +
-              'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;border-radius:4px;" ' +
-              'title="Upvote">&#x25B2;</button>' +
-            '<span id="post-score-' + escHtml(p.id) + '" style="font-size:13px;font-weight:700;color:var(--text-2);min-width:20px;text-align:center;">' + s + '</span>' +
-            '<button onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',-1)" ' +
-              'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:16px;line-height:1;padding:2px 4px;border-radius:4px;" ' +
-              'title="Downvote">&#x25BC;</button>' +
+          '<div class="comm-vote-col" style="padding-top:2px;">' +
+            '<button class="comm-vote-btn up" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote">▲</button>' +
+            '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '">' + s + '</span>' +
+            '<button class="comm-vote-btn down" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote">▼</button>' +
           '</div>' +
-          // Content column
+          // Content
           '<div style="flex:1;min-width:0;">' +
-            '<div onclick="openPost(\'' + escHtml(p.id) + '\')" ' +
-              'style="font-size:15px;font-weight:600;color:var(--text);cursor:pointer;letter-spacing:-0.01em;margin-bottom:4px;line-height:1.3;">' +
+            '<div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.02em;line-height:1.3;margin-bottom:' + (bodyPreview ? '6px' : '8px') + ';">' +
               escHtml(p.title) +
             '</div>' +
-            '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-              '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.username || 'unknown') + '</span>' +
-              '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
-              '<span style="font-size:12px;color:var(--text-3);">' + (p.comment_count || 0) + ' comment' + ((p.comment_count || 0) !== 1 ? 's' : '') + '</span>' +
-              '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
-              '<span style="font-size:12px;color:var(--text-3);">' + timeAgo(p.created_at) + '</span>' +
-              deleteBtn +
+            (bodyPreview ? '<div style="font-size:13px;color:var(--text-3);line-height:1.55;margin-bottom:10px;">' + escHtml(bodyPreview) + '</div>' : '') +
+            '<div class="comm-meta">' +
+              avatarHTML(p.username) +
+              '<span class="comm-meta-item" style="font-weight:600;color:var(--text-2);">@' + escHtml(p.username || 'unknown') + '</span>' +
+              '<span class="comm-dot">·</span>' +
+              '<span class="comm-meta-item">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/></svg>' +
+                (p.comment_count || 0) + ' ' + ((p.comment_count || 0) === 1 ? 'comment' : 'comments') +
+              '</span>' +
+              '<span class="comm-dot">·</span>' +
+              '<span class="comm-meta-item">' + timeAgo(p.created_at) + '</span>' +
+              (actionBtns ? '<span style="margin-left:auto;">' + actionBtns + '</span>' : '') +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -208,7 +262,6 @@
       if (inp) setTimeout(function() { inp.focus(); }, 50);
     }
   }
-
   function hideNewPostForm() {
     var form = document.getElementById('new-post-form');
     if (form) form.style.display = 'none';
@@ -229,22 +282,14 @@
     }
     if (errEl) errEl.style.display = 'none';
     try {
-      var newPost = await api('/community/posts', {
-        method: 'POST',
-        body: JSON.stringify({ title: title, body: body }),
-      });
-      // Prepend to local array and re-render
+      var newPost = await api('/community/posts', { method: 'POST', body: JSON.stringify({ title, body }) });
       newPost.comment_count = 0;
       posts.unshift(newPost);
       hideNewPostForm();
-      var listEl = document.getElementById('posts-list');
-      if (listEl) {
-        listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
-          posts.map(function(p) { return postRowHTML(p); }).join('') +
-        '</div>';
-      }
       if (titleEl) titleEl.value = '';
       if (bodyEl) bodyEl.value = '';
+      var listEl = document.getElementById('posts-list');
+      if (listEl) listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>';
     } catch (err) {
       if (errEl) { errEl.textContent = err.message; errEl.style.display = ''; }
     }
@@ -259,65 +304,56 @@
         goBackToList();
       } else {
         var listEl = document.getElementById('posts-list');
-        if (listEl) {
-          if (!posts.length) {
-            listEl.innerHTML = '<div class="empty-state"><div class="empty-title">No posts yet</div><div class="empty-desc">Be the first to start a conversation.</div></div>';
-          } else {
-            listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">' +
-              posts.map(function(p) { return postRowHTML(p); }).join('') +
-            '</div>';
-          }
-        }
+        if (listEl) listEl.innerHTML = posts.length
+          ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
+          : '<div class="empty-state"><div class="empty-title">No posts yet</div></div>';
       }
-    } catch (err) {
-      alert('Could not delete post: ' + err.message);
-    }
+    } catch (err) { alert('Could not delete: ' + err.message); }
+  }
+
+  async function modTakeDownPost(id) {
+    if (!confirm('Take down this post? This cannot be undone.')) return;
+    try {
+      await api('/mod/community-posts/' + id, { method: 'DELETE' });
+      posts = posts.filter(function(p) { return p.id !== id; });
+      if (currentView === 'post' && currentPost && currentPost.id === id) {
+        goBackToList();
+      } else {
+        var listEl = document.getElementById('posts-list');
+        if (listEl) listEl.innerHTML = posts.length
+          ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
+          : '<div class="empty-state"><div class="empty-title">No posts</div></div>';
+      }
+    } catch (err) { alert('Could not take down: ' + err.message); }
   }
 
   async function votePost(id, vote) {
     if (!isLoggedIn()) { navigate('/login.html'); return; }
-    // Find post — could be in list or currentPost
-    var post = posts.find(function(p) { return p.id === id; });
-    if (!post && currentPost && currentPost.id === id) post = currentPost;
+    var post = posts.find(function(p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
     if (!post) return;
-
-    var prevNetVotes = post.net_votes !== undefined ? post.net_votes : (post.upvotes || 0) - (post.downvotes || 0);
-
-    // Optimistic: increment net_votes
-    post.net_votes = prevNetVotes + vote;
-    _updatePostScoreEl(id, score(post));
-
+    var prev = netScore(post);
+    post.net_votes = prev + vote;
+    _updatePostScore(id);
     try {
-      var result = await api('/community/posts/' + id + '/vote', {
-        method: 'POST',
-        body: JSON.stringify({ vote: vote }),
-      });
-      // Sync with server response
-      if (result) {
-        post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
-        post.upvotes = result.upvotes;
-        post.downvotes = result.downvotes;
-      }
-      _updatePostScoreEl(id, score(post));
+      var result = await api('/community/posts/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote }) });
+      if (result) post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+      _updatePostScore(id);
     } catch (err) {
-      // Revert
-      post.net_votes = prevNetVotes;
-      _updatePostScoreEl(id, score(post));
+      post.net_votes = prev;
+      _updatePostScore(id);
       if (err.message && err.message.includes('401')) navigate('/login.html');
     }
   }
-
-  function _updatePostScoreEl(id, s) {
+  function _updatePostScore(id) {
     var el = document.getElementById('post-score-' + id);
-    if (el) el.textContent = s;
+    var post = posts.find(function(p) { return p.id === id; }) || currentPost;
+    if (el && post) el.textContent = netScore(post);
   }
 
   function openPost(id) {
-    var url = location.pathname + '?post=' + encodeURIComponent(id);
-    history.pushState(null, '', url);
+    history.pushState(null, '', location.pathname + '?post=' + encodeURIComponent(id));
     loadPost(id);
   }
-
   function goBackToList() {
     history.pushState(null, '', location.pathname);
     loadPosts();
@@ -335,11 +371,10 @@
       currentComments = Array.isArray(data.comments) ? data.comments : [];
       renderPost();
     } catch (err) {
-      if (!view) return;
-      view.innerHTML =
-        '<div style="max-width:720px;margin:0 auto;padding:28px 16px 60px;">' +
-          '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;">&#8592; Community</button>' +
-          '<div style="color:var(--text-2);">Failed to load post: ' + escHtml(err.message) + '</div>' +
+      document.getElementById('view').innerHTML =
+        '<div style="max-width:740px;margin:0 auto;padding:28px 16px;">' +
+          '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;">← Community</button>' +
+          '<div style="color:var(--text-2);">Failed to load post.</div>' +
         '</div>';
     }
   }
@@ -347,166 +382,132 @@
   function renderPost() {
     var view = document.getElementById('view');
     if (!view || !currentPost) return;
-
     var p = currentPost;
-    var s = score(p);
+    var s = netScore(p);
     var isOwner = me && me.id === p.user_id;
 
-    var deletePostBtn = isOwner
-      ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" ' +
-          'style="font-size:12px;color:var(--red,#ef4444);border-color:var(--red,#ef4444);">Delete Post</button>'
+    var modBtn = isMod && !isOwner
+      ? '<button onclick="modTakeDownPost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:#f87171;border-color:#f87171;padding:5px 12px;">Take down</button>'
+      : '';
+    var deleteBtn = isOwner
+      ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:#f87171;border-color:#f87171;padding:5px 12px;">Delete post</button>'
       : '';
 
-    var commentFormHTML = isLoggedIn()
-      ? '<div style="margin-bottom:24px;">' +
-          '<label class="wv-form-label">Leave a comment</label>' +
-          formatToolbar('top-comment-body') +
-          '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="Write something…" ' +
-            'style="width:100%;box-sizing:border-box;resize:vertical;min-height:70px;"></textarea>' +
-          '<div id="top-comment-error" style="font-size:13px;color:var(--red,#ef4444);display:none;margin-top:4px;"></div>' +
+    var commentForm = isLoggedIn()
+      ? '<div style="margin-bottom:28px;">' +
+          '<div style="font-size:14px;font-weight:600;margin-bottom:10px;">Add a comment</div>' +
+          formatBar('top-comment-body') +
+          '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="Write something…" style="width:100%;box-sizing:border-box;resize:vertical;min-height:74px;"></textarea>' +
+          '<div id="top-comment-error" style="font-size:12px;color:#f87171;display:none;margin-top:4px;"></div>' +
           '<div style="display:flex;justify-content:flex-end;margin-top:8px;">' +
             '<button class="wv-pill brand" onclick="submitTopComment()">Comment</button>' +
           '</div>' +
         '</div>'
-      : '<div style="margin-bottom:20px;font-size:13px;color:var(--text-2);">' +
+      : '<div style="margin-bottom:24px;font-size:13px;color:var(--text-2);">' +
           '<a href="/login.html" style="color:var(--brand,#8b5cf6);">Log in</a> to comment.' +
         '</div>';
 
-    var treeHTML = buildCommentTree();
-
     view.innerHTML =
-      '<div style="max-width:720px;margin:0 auto;padding:28px 16px 60px;">' +
-        // Back button
-        '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;">&#8592; Community</button>' +
+      '<div style="max-width:740px;margin:0 auto;padding:28px 16px 80px;">' +
+        // Back
+        '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;gap:6px;">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>' +
+          ' Community' +
+        '</button>' +
+
         // Post card
-        '<div class="wv-card" style="padding:20px 22px;margin-bottom:20px;">' +
-          '<div style="display:flex;gap:14px;align-items:flex-start;">' +
-            // Vote column
-            '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;padding-top:2px;">' +
-              '<button onclick="votePost(\'' + escHtml(p.id) + '\',1)" ' +
-                'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;line-height:1;padding:3px 5px;border-radius:4px;" ' +
-                'title="Upvote">&#x25B2;</button>' +
-              '<span id="post-score-' + escHtml(p.id) + '" style="font-size:14px;font-weight:700;color:var(--text-2);min-width:24px;text-align:center;">' + s + '</span>' +
-              '<button onclick="votePost(\'' + escHtml(p.id) + '\',-1)" ' +
-                'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:18px;line-height:1;padding:3px 5px;border-radius:4px;" ' +
-                'title="Downvote">&#x25BC;</button>' +
+        '<div class="wv-card" style="padding:24px;margin-bottom:20px;">' +
+          '<div style="display:flex;gap:16px;">' +
+            // Vote
+            '<div class="comm-vote-col">' +
+              '<button class="comm-vote-btn up" onclick="votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote">▲</button>' +
+              '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '" style="font-size:16px;">' + s + '</span>' +
+              '<button class="comm-vote-btn down" onclick="votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote">▼</button>' +
             '</div>' +
-            // Post content
+            // Content
             '<div style="flex:1;min-width:0;">' +
-              '<h2 style="margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-0.02em;line-height:1.3;">' + escHtml(p.title) + '</h2>' +
-              (p.body ? '<p style="margin:0 0 12px;font-size:14px;line-height:1.65;color:var(--text-2);">' + renderFormatted(p.body) + '</p>' : '') +
-              '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.username || 'unknown') + '</span>' +
-                '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
-                '<span style="font-size:12px;color:var(--text-3);">' + timeAgo(p.created_at) + '</span>' +
-                (deletePostBtn ? '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' + deletePostBtn : '') +
+              '<h1 style="margin:0 0 10px;font-size:22px;font-weight:800;letter-spacing:-0.025em;line-height:1.25;">' + escHtml(p.title) + '</h1>' +
+              (p.body ? '<div style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:14px;">' + renderMd(p.body) + '</div>' : '') +
+              '<div class="comm-meta">' +
+                avatarHTML(p.username) +
+                '<span style="font-size:12.5px;font-weight:600;color:var(--text-2);">@' + escHtml(p.username || 'unknown') + '</span>' +
+                '<span class="comm-dot">·</span>' +
+                '<span class="comm-meta-item">' + timeAgo(p.created_at) + '</span>' +
+                (deleteBtn || modBtn ? '<div style="margin-left:auto;display:flex;gap:6px;">' + deleteBtn + modBtn + '</div>' : '') +
               '</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
-        // Comments section
+
+        // Comments
         '<div>' +
-          '<div class="scroll-section-title" style="margin-bottom:16px;font-size:16px;">' +
-            'Comments (' + currentComments.length + ')' +
+          '<div style="font-size:15px;font-weight:700;letter-spacing:-0.02em;margin-bottom:16px;" id="comment-heading">' +
+            currentComments.length + (currentComments.length === 1 ? ' Comment' : ' Comments') +
           '</div>' +
-          commentFormHTML +
-          '<div id="comments-tree">' + treeHTML + '</div>' +
+          commentForm +
+          '<div id="comments-tree">' + buildCommentTree() + '</div>' +
         '</div>' +
       '</div>';
   }
 
-  // ── Comment tree ──────────────────────────────────────────────────────────
+  // ── Comments ──────────────────────────────────────────────────────────────
   function buildCommentTree() {
     if (!currentComments.length) {
-      return '<div class="empty-state" style="padding:24px 0;">' +
-        '<div class="empty-title" style="font-size:15px;">No comments yet</div>' +
-        '<div class="empty-desc" style="font-size:13px;">Be the first to comment.</div>' +
-      '</div>';
+      return '<div style="text-align:center;padding:32px 0;color:var(--text-3);font-size:14px;">No comments yet — be the first!</div>';
     }
-
-    // Build parent-to-children map
-    var childrenOf = {};
-    var roots = [];
+    var childrenOf = {}, roots = [];
     currentComments.forEach(function(c) {
       var pid = c.parent_id || null;
-      if (pid) {
-        if (!childrenOf[pid]) childrenOf[pid] = [];
-        childrenOf[pid].push(c);
-      } else {
-        roots.push(c);
-      }
+      if (pid) { (childrenOf[pid] = childrenOf[pid] || []).push(c); }
+      else { roots.push(c); }
     });
-
-    // Sort roots by score desc
-    roots.sort(function(a, b) {
-      return score(b) - score(a);
-    });
-    // Sort children by created_at asc
+    roots.sort(function(a, b) { return netScore(b) - netScore(a); });
     Object.keys(childrenOf).forEach(function(pid) {
-      childrenOf[pid].sort(function(a, b) {
-        return new Date(a.created_at) - new Date(b.created_at);
-      });
+      childrenOf[pid].sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
     });
 
     function renderNode(c, depth) {
-      var indentPx = Math.min(depth, 3) * 22;
-      var s = score(c);
+      var s = netScore(c);
+      var indent = Math.min(depth, 3) * 20;
       var isOwner = me && me.id === c.user_id;
-      var children = childrenOf[c.id] || [];
+      var children = (childrenOf[c.id] || []).map(function(ch) { return renderNode(ch, depth + 1); }).join('');
 
-      var deleteBtn = isOwner
-        ? '<button onclick="deleteComment(\'' + escHtml(c.id) + '\')" ' +
-            'style="font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:1px 5px;border-radius:3px;" ' +
-            'title="Delete">Delete</button>'
-        : '';
-
-      var replyLink = isLoggedIn()
-        ? '<button onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')" ' +
-            'style="font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:1px 5px;border-radius:3px;" ' +
-            'id="reply-toggle-' + escHtml(c.id) + '">Reply</button>'
-        : '';
+      var actionBtns = '';
+      if (isLoggedIn()) actionBtns += '<button class="comm-reply-btn" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Reply</button>';
+      if (isOwner) actionBtns += '<button class="comm-reply-btn" style="color:#f87171;" onclick="deleteComment(\'' + escHtml(c.id) + '\')">Delete</button>';
+      if (isMod && !isOwner) actionBtns += '<button class="comm-reply-btn" style="color:#f87171;" onclick="modDeleteComment(\'' + escHtml(c.id) + '\')">Take down</button>';
 
       var replyForm =
-        '<div id="reply-form-' + escHtml(c.id) + '" style="display:none;margin-top:8px;">' +
-          formatToolbar('reply-body-' + c.id) +
-          '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" ' +
-            'placeholder="Reply…" style="width:100%;box-sizing:border-box;resize:vertical;min-height:54px;font-size:13px;"></textarea>' +
-          '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:var(--red,#ef4444);display:none;margin-top:2px;"></div>' +
-          '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">' +
-            '<button class="wv-pill" style="font-size:12px;padding:4px 12px;" ' +
-              'onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Cancel</button>' +
-            '<button class="wv-pill brand" style="font-size:12px;padding:4px 12px;" ' +
-              'onclick="submitReply(\'' + escHtml(c.id) + '\')">Reply</button>' +
+        '<div id="reply-form-' + escHtml(c.id) + '" style="display:none;margin-top:10px;">' +
+          formatBar('reply-body-' + c.id) +
+          '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" placeholder="Reply…" ' +
+            'style="width:100%;box-sizing:border-box;resize:vertical;min-height:56px;font-size:13px;"></textarea>' +
+          '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:#f87171;display:none;margin-top:3px;"></div>' +
+          '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px;">' +
+            '<button class="wv-pill" style="font-size:12px;padding:4px 12px;" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Cancel</button>' +
+            '<button class="wv-pill brand" style="font-size:12px;padding:4px 12px;" onclick="submitReply(\'' + escHtml(c.id) + '\')">Reply</button>' +
           '</div>' +
         '</div>';
 
-      var childrenHTML = children.map(function(child) {
-        return renderNode(child, depth + 1);
-      }).join('');
-
       return (
-        '<div style="margin-left:' + indentPx + 'px;" id="comment-node-' + escHtml(c.id) + '">' +
-          '<div style="border-left:2px solid var(--hair,rgba(128,128,128,0.15));padding-left:12px;padding-top:2px;padding-bottom:2px;margin-bottom:8px;">' +
-            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">' +
-              '<span style="font-size:12px;font-weight:600;color:var(--text-2);">@' + escHtml(c.username || 'unknown') + '</span>' +
-              '<span style="font-size:11px;color:var(--text-3);">' + timeAgo(c.created_at) + '</span>' +
+        '<div style="margin-left:' + indent + 'px;" id="comment-node-' + escHtml(c.id) + '">' +
+          '<div class="comm-comment-block">' +
+            '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">' +
+              avatarHTML(c.username) +
+              '<span style="font-size:12.5px;font-weight:600;color:var(--text-2);">@' + escHtml(c.username || 'unknown') + '</span>' +
+              '<span class="comm-meta-item">' + timeAgo(c.created_at) + '</span>' +
             '</div>' +
-            '<div style="font-size:13.5px;line-height:1.6;color:var(--text);margin-bottom:6px;">' + renderFormatted(c.body) + '</div>' +
+            '<div style="font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:8px;">' + renderMd(c.body) + '</div>' +
             '<div style="display:flex;align-items:center;gap:2px;">' +
-              '<button onclick="voteComment(\'' + escHtml(c.id) + '\',1)" ' +
-                'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;line-height:1;padding:2px 4px;border-radius:3px;" ' +
-                'title="Upvote">&#x25B2;</button>' +
-              '<span id="comment-score-' + escHtml(c.id) + '" style="font-size:12px;font-weight:600;color:var(--text-3);min-width:18px;text-align:center;">' + s + '</span>' +
-              '<button onclick="voteComment(\'' + escHtml(c.id) + '\',-1)" ' +
-                'style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;line-height:1;padding:2px 4px;border-radius:3px;" ' +
-                'title="Downvote">&#x25BC;</button>' +
-              '<span style="display:inline-block;width:6px;"></span>' +
-              replyLink +
-              deleteBtn +
+              '<button class="comm-vote-btn up" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',1)">▲</button>' +
+              '<span id="comment-score-' + escHtml(c.id) + '" style="font-size:12px;font-weight:600;color:var(--text-3);min-width:18px;text-align:center;">' + Math.max(0, s) + '</span>' +
+              '<button class="comm-vote-btn down" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',-1)">▼</button>' +
+              '<span style="width:8px;"></span>' +
+              actionBtns +
             '</div>' +
             replyForm +
           '</div>' +
-          childrenHTML +
+          children +
         '</div>'
       );
     }
@@ -515,31 +516,24 @@
   }
 
   function rerenderComments() {
-    var treeEl = document.getElementById('comments-tree');
-    if (!treeEl) return;
-    treeEl.innerHTML = buildCommentTree();
-    // Update comment count heading
-    var heading = document.querySelector('#view .scroll-section-title');
-    if (heading) heading.textContent = 'Comments (' + currentComments.length + ')';
+    var el = document.getElementById('comments-tree');
+    if (el) el.innerHTML = buildCommentTree();
+    var h = document.getElementById('comment-heading');
+    if (h) h.textContent = currentComments.length + (currentComments.length === 1 ? ' Comment' : ' Comments');
   }
 
-  // ── Top-level comment submit ───────────────────────────────────────────────
   async function submitTopComment() {
     var bodyEl = document.getElementById('top-comment-body');
     var errEl = document.getElementById('top-comment-error');
     var body = bodyEl ? bodyEl.value.trim() : '';
     if (!body) {
-      if (errEl) { errEl.textContent = 'Comment cannot be empty.'; errEl.style.display = ''; }
-      if (bodyEl) bodyEl.focus();
+      if (errEl) { errEl.textContent = 'Write something first.'; errEl.style.display = ''; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
     try {
-      var newComment = await api('/community/posts/' + currentPost.id + '/comments', {
-        method: 'POST',
-        body: JSON.stringify({ body: body }),
-      });
-      currentComments.push(newComment);
+      var c = await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body }) });
+      currentComments.push(c);
       if (bodyEl) bodyEl.value = '';
       rerenderComments();
     } catch (err) {
@@ -547,16 +541,12 @@
     }
   }
 
-  // ── Inline reply form ─────────────────────────────────────────────────────
   function toggleReplyForm(commentId) {
     var form = document.getElementById('reply-form-' + commentId);
     if (!form) return;
-    var isHidden = form.style.display === 'none' || form.style.display === '';
-    form.style.display = isHidden ? '' : 'none';
-    if (isHidden) {
-      var ta = document.getElementById('reply-body-' + commentId);
-      if (ta) setTimeout(function() { ta.focus(); }, 50);
-    }
+    var hidden = form.style.display === 'none' || !form.style.display;
+    form.style.display = hidden ? '' : 'none';
+    if (hidden) { var ta = document.getElementById('reply-body-' + commentId); if (ta) setTimeout(function() { ta.focus(); }, 50); }
   }
 
   async function submitReply(parentId) {
@@ -564,17 +554,13 @@
     var errEl = document.getElementById('reply-error-' + parentId);
     var body = bodyEl ? bodyEl.value.trim() : '';
     if (!body) {
-      if (errEl) { errEl.textContent = 'Reply cannot be empty.'; errEl.style.display = ''; }
-      if (bodyEl) bodyEl.focus();
+      if (errEl) { errEl.textContent = 'Write something first.'; errEl.style.display = ''; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
     try {
-      var newComment = await api('/community/posts/' + currentPost.id + '/comments', {
-        method: 'POST',
-        body: JSON.stringify({ body: body, parent_id: parentId }),
-      });
-      currentComments.push(newComment);
+      var c = await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body, parent_id: parentId }) });
+      currentComments.push(c);
       if (bodyEl) bodyEl.value = '';
       rerenderComments();
     } catch (err) {
@@ -582,47 +568,40 @@
     }
   }
 
-  // ── Comment voting ────────────────────────────────────────────────────────
   async function voteComment(id, vote) {
     if (!isLoggedIn()) { navigate('/login.html'); return; }
-    var comment = currentComments.find(function(c) { return c.id === id; });
-    if (!comment) return;
-
-    var prevNetVotes = comment.net_votes !== undefined ? comment.net_votes : (comment.upvotes || 0) - (comment.downvotes || 0);
-
-    // Optimistic
-    comment.net_votes = prevNetVotes + vote;
-    var scoreEl = document.getElementById('comment-score-' + id);
-    if (scoreEl) scoreEl.textContent = score(comment);
-
+    var c = currentComments.find(function(x) { return x.id === id; });
+    if (!c) return;
+    var prev = netScore(c);
+    c.net_votes = prev + vote;
+    var el = document.getElementById('comment-score-' + id);
+    if (el) el.textContent = Math.max(0, netScore(c));
     try {
-      var result = await api('/community/comments/' + id + '/vote', {
-        method: 'POST',
-        body: JSON.stringify({ vote: vote }),
-      });
-      if (result) {
-        comment.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
-        comment.upvotes = result.upvotes;
-        comment.downvotes = result.downvotes;
-      }
-      if (scoreEl) scoreEl.textContent = score(comment);
+      var result = await api('/community/comments/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote }) });
+      if (result) c.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+      if (el) el.textContent = Math.max(0, netScore(c));
     } catch (err) {
-      comment.net_votes = prevNetVotes;
-      if (scoreEl) scoreEl.textContent = score(comment);
-      if (err.message && err.message.includes('401')) navigate('/login.html');
+      c.net_votes = prev;
+      if (el) el.textContent = Math.max(0, netScore(c));
     }
   }
 
-  // ── Comment delete ────────────────────────────────────────────────────────
   async function deleteComment(id) {
     if (!confirm('Delete this comment?')) return;
     try {
       await api('/community/comments/' + id, { method: 'DELETE' });
       currentComments = currentComments.filter(function(c) { return c.id !== id; });
       rerenderComments();
-    } catch (err) {
-      alert('Could not delete comment: ' + err.message);
-    }
+    } catch (err) { alert('Could not delete: ' + err.message); }
+  }
+
+  async function modDeleteComment(id) {
+    if (!confirm('Take down this comment?')) return;
+    try {
+      await api('/community/comments/' + id, { method: 'DELETE' });
+      currentComments = currentComments.filter(function(c) { return c.id !== id; });
+      rerenderComments();
+    } catch (err) { alert('Could not take down: ' + err.message); }
   }
 </script>
 </body>
