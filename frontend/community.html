@@ -93,10 +93,23 @@
     return (username || '?')[0].toUpperCase();
   }
 
-  function avatarHTML(username) {
+  function avatarHTML(username, profileImageUrl) {
     var colors = ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#3b82f6'];
     var idx = (username || '').charCodeAt(0) % colors.length;
+    if (profileImageUrl) {
+      return '<span class="comm-avatar" style="background:' + colors[idx] + ';overflow:hidden;padding:0;">' +
+        '<img src="' + escHtml(profileImageUrl) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display=\'none\'">' +
+        '</span>';
+    }
     return '<span class="comm-avatar" style="background:' + colors[idx] + ';">' + escHtml(userInitial(username)) + '</span>';
+  }
+
+  function usernameLink(username, artistId) {
+    var name = '@' + escHtml(username || 'unknown');
+    if (artistId) {
+      return '<a onclick="event.stopPropagation();navigate(\'/artist.html?id=' + escHtml(artistId) + '\')" style="font-weight:600;color:var(--text-2);text-decoration:none;cursor:pointer;" onmouseenter="this.style.textDecoration=\'underline\'" onmouseleave="this.style.textDecoration=\'none\'">' + name + '</a>';
+    }
+    return '<span style="font-weight:600;color:var(--text-2);">' + name + '</span>';
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -208,8 +221,8 @@
             '</div>' +
             (bodyPreview ? '<div style="font-size:13px;color:var(--text-3);line-height:1.55;margin-bottom:10px;">' + escHtml(bodyPreview) + '</div>' : '') +
             '<div class="comm-meta">' +
-              avatarHTML(p.username) +
-              '<span class="comm-meta-item" style="font-weight:600;color:var(--text-2);">@' + escHtml(p.username || 'unknown') + '</span>' +
+              avatarHTML(p.username, p.profile_image_url) +
+              '<span class="comm-meta-item">' + usernameLink(p.username, p.artist_id) + '</span>' +
               '<span class="comm-dot">·</span>' +
               '<span class="comm-meta-item">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/></svg>' +
@@ -400,8 +413,8 @@
               '<h1 style="margin:0 0 10px;font-size:22px;font-weight:800;letter-spacing:-0.025em;line-height:1.25;">' + escHtml(p.title) + '</h1>' +
               (p.body ? '<div style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:14px;">' + renderMd(p.body) + '</div>' : '') +
               '<div class="comm-meta">' +
-                avatarHTML(p.username) +
-                '<span style="font-size:12.5px;font-weight:600;color:var(--text-2);">@' + escHtml(p.username || 'unknown') + '</span>' +
+                avatarHTML(p.username, p.profile_image_url) +
+                '<span style="font-size:12.5px;">' + usernameLink(p.username, p.artist_id) + '</span>' +
                 '<span class="comm-dot">·</span>' +
                 '<span class="comm-meta-item">' + timeAgo(p.created_at) + '</span>' +
                 (deleteBtn || modBtn ? '<div style="margin-left:auto;display:flex;gap:6px;">' + deleteBtn + modBtn + '</div>' : '') +
@@ -464,8 +477,8 @@
         '<div style="margin-left:' + indent + 'px;" id="comment-node-' + escHtml(c.id) + '">' +
           '<div class="comm-comment-block">' +
             '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">' +
-              avatarHTML(c.username) +
-              '<span style="font-size:12.5px;font-weight:600;color:var(--text-2);">@' + escHtml(c.username || 'unknown') + '</span>' +
+              avatarHTML(c.username, c.profile_image_url) +
+              '<span style="font-size:12.5px;">' + usernameLink(c.username, c.artist_id) + '</span>' +
               '<span class="comm-meta-item">' + timeAgo(c.created_at) + '</span>' +
             '</div>' +
             '<div style="font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:8px;">' + renderMd(c.body) + '</div>' +
