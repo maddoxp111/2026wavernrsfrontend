@@ -5,61 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .comm-post-card {
-      background: var(--glass-medium-bg);
-      border: 1px solid var(--glass-medium-border);
-      border-radius: 18px;
-      padding: 18px 20px;
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .comm-post-card:hover { border-color: var(--brand, #8b5cf6); background: var(--glass-large-bg); }
-    .comm-vote-col { display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0; }
-    .comm-vote-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-3); font-size: 18px; line-height: 1;
-      padding: 4px 8px; border-radius: 8px; transition: color 0.12s, background 0.12s;
-    }
-    .comm-vote-btn:hover { color: var(--brand, #8b5cf6); background: var(--purple-bg, rgba(139,92,246,0.12)); }
-    .comm-vote-btn.up.active { color: var(--brand, #8b5cf6); }
-    .comm-vote-btn.down.active { color: #f87171; }
-    .comm-vote-score { font-size: 14px; font-weight: 700; color: var(--text-2); min-width: 22px; text-align: center; }
-    .comm-meta { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px; }
-    .comm-meta-item { font-size: 12px; color: var(--text-3); display:flex;align-items:center;gap:4px; }
-    .comm-avatar {
-      width: 22px; height: 22px; border-radius: 50%;
-      background: var(--brand, #8b5cf6); color: #fff;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; flex-shrink: 0;
-    }
-    .comm-dot { color: var(--text-3); font-size: 10px; }
-    .comm-tag {
-      display: inline-flex; align-items: center; gap: 3px;
-      background: var(--glass-pill-bg); border: 1px solid var(--glass-small-border);
-      border-radius: 5px; padding: 1px 7px; font-size: 11px; color: var(--text-2);
-    }
-    .comm-comment-block {
-      border-left: 2px solid var(--glass-medium-border);
-      padding-left: 14px; margin-bottom: 10px;
-      transition: border-color 0.15s;
-    }
-    .comm-comment-block:hover { border-color: var(--brand, #8b5cf6); }
-    .comm-reply-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: 11.5px; color: var(--text-3); padding: 2px 6px;
-      border-radius: 5px; font-family: inherit; transition: color 0.12s;
-    }
-    .comm-reply-btn:hover { color: var(--brand, #8b5cf6); }
-    .comm-format-bar { display:flex;gap:4px;margin-bottom:6px;align-items:center; }
-    .comm-fmt-btn {
-      background: var(--glass-pill-bg); border: 1px solid var(--glass-small-border);
-      border-radius: 6px; padding: 3px 9px; cursor: pointer;
-      color: var(--text-2); font-size: 12px; font-family: inherit;
-      line-height: 1.4; transition: background 0.12s;
-    }
-    .comm-fmt-btn:hover { background: var(--glass-large-bg); }
-  </style>
 </head>
 <body>
 <div id="view">
@@ -71,6 +16,32 @@
 <script src="/js/player.js"></script>
 <script src="/js/router.js"></script>
 <script>
+  // Inject community styles once (works on both hard refresh and SPA navigation)
+  if (!document.getElementById('comm-styles')) {
+    var _cs = document.createElement('style');
+    _cs.id = 'comm-styles';
+    _cs.textContent = [
+      '.comm-post-card{background:var(--surface-2,#18181b);border:1px solid var(--border,#27272a);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}',
+      '.comm-post-card:hover{border-color:var(--purple-light,#a78bfa);background:var(--surface-3,#1c1c1f);}',
+      '.comm-vote-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:32px;}',
+      '.comm-vote-btn{background:none;border:none;cursor:pointer;padding:3px 6px;font-size:14px;color:var(--text-3,#71717a);border-radius:4px;transition:color 0.12s,background 0.12s;line-height:1;}',
+      '.comm-vote-btn.up:hover{color:#8b5cf6;background:rgba(139,92,246,0.1);}',
+      '.comm-vote-btn.down:hover{color:#f87171;background:rgba(248,113,113,0.1);}',
+      '.comm-vote-score{font-size:13px;font-weight:700;color:var(--text-2,#a1a1aa);min-width:20px;text-align:center;line-height:1.2;}',
+      '.comm-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}',
+      '.comm-meta-item{font-size:12px;color:var(--text-3,#71717a);display:flex;align-items:center;gap:3px;}',
+      '.comm-avatar{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}',
+      '.comm-dot{font-size:12px;color:var(--text-3,#71717a);}',
+      '.comm-comment-block{background:var(--surface-2,#18181b);border:1px solid var(--border,#27272a);border-radius:10px;padding:12px 14px;margin-bottom:8px;}',
+      '.comm-reply-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3,#71717a);padding:2px 6px;border-radius:4px;font-family:inherit;transition:color 0.12s;}',
+      '.comm-reply-btn:hover{color:var(--text,#fafafa);}',
+      '.comm-format-bar{display:flex;gap:4px;margin-bottom:6px;padding:4px 0;}',
+      '.comm-fmt-btn{background:none;border:1px solid var(--border,#27272a);border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;color:var(--text-2,#a1a1aa);font-family:inherit;transition:border-color 0.12s,color 0.12s;}',
+      '.comm-fmt-btn:hover{border-color:var(--purple-light,#a78bfa);color:var(--purple,#8b5cf6);}',
+    ].join('');
+    document.head.appendChild(_cs);
+  }
+
   initPlayer();
 
   var currentView = 'list';
