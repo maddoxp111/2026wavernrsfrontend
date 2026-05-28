@@ -62,7 +62,11 @@ async function loadHome() {
     // Start auto-rotate every 15s (always, even if only 1 item — wraps around)
     if (_heroTimer) clearInterval(_heroTimer);
     _heroTimer = setInterval(function() { heroNav(1); }, 15000);
-    window._pageCleanup.push(function() { clearInterval(_heroTimer); _heroTimer = null; });
+    window._pageCleanup.push(function() {
+      clearInterval(_heroTimer); _heroTimer = null;
+      var bg = document.getElementById('wv-page-bg');
+      if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; }
+    });
 
     var view = document.getElementById('view');
     view.innerHTML =
@@ -109,21 +113,21 @@ function renderHero() {
 
   var coverBg = coverGradient(seed);
   var myGen = ++_heroGen;
-  var _apiBase = typeof API_BASE !== 'undefined' ? API_BASE : '';
-  var _proxyCoverUrl = item.cover_url ? _apiBase + '/imageproxy?url=' + encodeURIComponent(item.cover_url) : '';
 
-  // Apply seed gradient immediately so there's always something showing
+  // Set the page background to the cover image itself, blurred + darkened — like Spotify/Apple Music.
+  // background-image never has CORS restrictions (no canvas read needed), works instantly.
   var pageBgEl = document.getElementById('wv-page-bg');
-  (function() {
-    if (!pageBgEl) return;
-    var sc = coverHues(seed);
-    var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-    pageBgEl.style.background =
-      'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + sc.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
-      'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + sc.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
-      'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + sc.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
-      'var(--page-bg)';
-  })();
+  if (pageBgEl) {
+    if (item.cover_url) {
+      pageBgEl.style.backgroundImage = 'url(' + escHtml(item.cover_url) + ')';
+      pageBgEl.style.backgroundSize = 'cover';
+      pageBgEl.style.backgroundPosition = 'center';
+      pageBgEl.style.filter = 'blur(60px) brightness(0.35) saturate(1.6)';
+    } else {
+      pageBgEl.style.backgroundImage = '';
+      pageBgEl.style.filter = '';
+    }
+  }
 
   var heroHtml =
     '<div class="wv-card lg-highlight" id="hero-card" style="padding:24px;display:flex;gap:28px;align-items:center;">' +
@@ -177,22 +181,6 @@ function renderHero() {
       heroImg.onload = _fadeIn;
       if (heroImg.complete && heroImg.naturalWidth > 0) _fadeIn.call(heroImg);
     }
-  }
-
-  // Fetch dominant colors from backend (does pixel analysis server-side, no CORS issues).
-  if (item.cover_url) {
-    fetch(_apiBase + '/imagecolors?url=' + encodeURIComponent(item.cover_url))
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(c) {
-        if (!c || myGen !== _heroGen || !pageBgEl) return;
-        var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-        pageBgEl.style.background =
-          'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
-          'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
-          'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
-          'var(--page-bg)';
-      })
-      .catch(function() {});
   }
 }
 
