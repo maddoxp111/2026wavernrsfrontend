@@ -302,64 +302,63 @@
       <!-- Main content -->
       <div>
         ${statsHtml}
-        <!-- Single upload form -->
-        <div class="card" style="padding:24px;margin-bottom:24px;">
-          <div style="font-size:15px;font-weight:600;margin-bottom:16px;">Upload</div>
+        <!-- Upload form -->
+        <div class="wv-card" style="padding:24px;margin-bottom:24px;">
 
-          <!-- Cover image -->
+          <!-- Cover image drop zone -->
           <div class="form-group">
-            <label>Cover image</label>
-            <div class="upload-zone" id="cover-zone" style="padding:16px;" onclick="document.getElementById('cover-input').click()"
+            <label class="wv-form-label">Cover Image</label>
+            <div class="wv-drop-zone" id="cover-zone" style="padding:24px;text-align:center;" onclick="document.getElementById('cover-input').click()"
               ondragover="onCoverDragOver(event)" ondragleave="onCoverDragLeave(event)" ondrop="onCoverDrop(event)">
-              <div class="upload-zone-icon" id="cover-zone-icon" style="font-size:20px;">&#x1F5BC;&#xFE0F;</div>
-              <div class="upload-zone-text" id="cover-zone-text" style="font-size:13px;">Drop image or click to browse</div>
+              <div style="font-size:28px;margin-bottom:6px;">🖼️</div>
+              <div id="cover-zone-text" style="font-size:13px;color:var(--text-2);">Drop image or click to browse</div>
             </div>
             <input type="file" id="cover-input" accept="image/*" style="display:none" onchange="onCoverSelect(event)">
           </div>
 
           <!-- Title -->
           <div class="form-group">
-            <label id="upload-title-label">Title <span style="color:var(--text-secondary);font-size:12px;">(comp name for multi-song uploads, track name for single)</span></label>
-            <input type="text" id="upload-title" placeholder="Name">
+            <label class="wv-form-label" id="upload-title-label">Title <span style="color:var(--text-3);font-size:11px;">(comp name for multi-song uploads, track name for single)</span></label>
+            <input class="wv-input" type="text" id="upload-title" placeholder="Name">
           </div>
 
           <!-- Era tag -->
           <div class="form-group">
-            <label>Era Tag</label>
-            <select id="upload-era-tag">${eraTagOptions(null)}</select>
+            <label class="wv-form-label">Era Tag</label>
+            <select class="wv-input" id="upload-era-tag" style="appearance:auto;-webkit-appearance:auto;">${eraTagOptions(null)}</select>
           </div>
 
           <!-- Description -->
           <div class="form-group">
-            <label>Description</label>
-            <textarea id="upload-desc" rows="2" placeholder="Optional…" style="min-height:42px;"></textarea>
+            <label class="wv-form-label">Description</label>
+            <textarea class="wv-input" id="upload-desc" rows="2" placeholder="Optional…" style="border-radius:var(--r-md);resize:vertical;min-height:60px;"></textarea>
           </div>
 
           <!-- Audio files — additive queue -->
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+          <div class="wv-drop-zone" id="upload-zone" style="text-align:center;padding:32px;" onclick="document.getElementById('file-input').click()"
             ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-            <div class="upload-zone-icon">&#x1F3B5;</div>
-            <div class="upload-zone-text" id="upload-zone-text">Drop audio file(s) here or click to add to queue</div>
-            <div class="upload-zone-hint">MP3, WAV, FLAC — click or drop to keep adding songs to the queue below</div>
+            <div style="font-size:32px;margin-bottom:8px;">🎵</div>
+            <div id="upload-zone-text" style="font-size:14px;font-weight:500;margin-bottom:4px;">Drop audio files here or click to add</div>
+            <div style="font-size:12px;color:var(--text-3);">MP3, WAV, FLAC — keep adding songs to the queue</div>
           </div>
           <input type="file" id="file-input" accept="audio/*" multiple style="display:none" onchange="onFileSelect(event)">
 
-          <!-- File queue (shown when files selected) -->
-          <div id="upload-queue" class="tracklist" style="margin-top:8px;"></div>
+          <!-- File queue -->
+          <div id="upload-queue" style="margin-top:12px;"></div>
 
-          <div class="or-divider">or paste a Google Drive link (single track only)</div>
-          <div class="form-group" style="margin-bottom:0;">
-            <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--hair);">
+            <label class="wv-form-label">Or paste a Google Drive link (single track only)</label>
+            <input class="wv-input" type="url" id="drive-url" placeholder="https://drive.google.com/file/d/…">
           </div>
 
           <div id="upload-alert" style="margin-top:12px;"></div>
           <div id="upload-progress" style="display:none;margin-top:12px;">
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;" id="upload-status">Uploading…</div>
-            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;background:var(--purple);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>
+            <div style="font-size:13px;color:var(--text-2);margin-bottom:6px;" id="upload-status">Uploading…</div>
+            <div style="height:4px;background:var(--hair-strong);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;background:var(--brand);border-radius:2px;width:0%;transition:width 0.3s;" id="upload-bar"></div>
             </div>
           </div>
-          <button class="btn btn-primary btn-lg" style="margin-top:16px;width:100%;" id="upload-btn" onclick="doUpload()">Upload</button>
+          <button class="wv-pill brand" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:16px;" id="upload-btn" onclick="doUpload()">Upload</button>
         </div>
 
         <!-- Your Uploads -->
@@ -508,7 +507,7 @@
 
   function onDrop(e) {
     e.preventDefault();
-    document.getElementById('upload-zone').classList.remove('dragover');
+    document.getElementById('upload-zone').classList.remove('drag-over');
     var newItems = Array.from(e.dataTransfer.files)
       .filter(function(f) { return f.type.startsWith('audio/'); })
       .map(function(f) { return { file: f, title: cleanTitle(f.name) }; });
@@ -526,23 +525,20 @@
     }
     txt.textContent = selectedFiles.length === 1
       ? '1 song queued — add more or press Upload'
-      : selectedFiles.length + ' songs queued — add more or press Upload';
+      : selectedFiles.length + ' songs queued';
     el.innerHTML = selectedFiles.map(function(item, i) {
-      return '<div class="tracklist-item" draggable="true" id="qi-' + i + '"' +
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:var(--r-md);margin-bottom:6px;" draggable="true" id="qi-' + i + '"' +
         ' ondragstart="qDragStart(event,' + i + ')"' +
         ' ondragover="qDragOver(event,' + i + ')"' +
         ' ondrop="qDragDrop(event,' + i + ')"' +
         ' ondragend="qDragEnd()">' +
-        '<div style="cursor:grab;padding:0 8px 0 0;font-size:16px;color:var(--text-secondary);user-select:none;" title="Drag to reorder">⠿</div>' +
-        '<div class="tracklist-num" style="min-width:20px;">' + (i+1) + '</div>' +
-        '<div class="tracklist-info" style="flex:1;min-width:0;">' +
-          '<input type="text" value="' + escHtml(item.title) + '"' +
-            ' oninput="selectedFiles[' + i + '].title=this.value"' +
-            ' style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);' +
-            'color:var(--text);font-size:13px;padding:2px 0;outline:none;" placeholder="Track title">' +
-          '<div class="tracklist-artist">' + (item.file.size/1024/1024).toFixed(1) + ' MB</div>' +
-        '</div>' +
-        '<button class="tracklist-remove" style="flex-shrink:0;" onclick="selectedFiles.splice(' + i + ',1);renderUploadQueue()">&#xD7;</button>' +
+        '<span style="cursor:grab;color:var(--text-3);">⠿</span>' +
+        '<span style="min-width:20px;font-size:12px;color:var(--text-3);">' + (i+1) + '</span>' +
+        '<input type="text" value="' + escHtml(item.title) + '"' +
+          ' oninput="selectedFiles[' + i + '].title=this.value"' +
+          ' style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--hair-strong);color:var(--text);font-size:13px;padding:2px 0;outline:none;" placeholder="Track title">' +
+        '<span style="font-size:11px;color:var(--text-3);">' + (item.file.size/1024/1024).toFixed(1) + 'MB</span>' +
+        '<button onclick="selectedFiles.splice(' + i + ',1);renderUploadQueue()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;line-height:1;">×</button>' +
       '</div>';
     }).join('');
   }
@@ -669,14 +665,14 @@
   // Cover image handlers
   function onCoverDragOver(e) {
     e.preventDefault();
-    document.getElementById('cover-zone').classList.add('dragover');
+    document.getElementById('cover-zone').classList.add('drag-over');
   }
   function onCoverDragLeave() {
-    document.getElementById('cover-zone').classList.remove('dragover');
+    document.getElementById('cover-zone').classList.remove('drag-over');
   }
   function onCoverDrop(e) {
     e.preventDefault();
-    document.getElementById('cover-zone').classList.remove('dragover');
+    document.getElementById('cover-zone').classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) setCoverFile(file);
   }
@@ -692,10 +688,10 @@
   // Audio drag handlers
   function onDragOver(e) {
     e.preventDefault();
-    document.getElementById('upload-zone').classList.add('dragover');
+    document.getElementById('upload-zone').classList.add('drag-over');
   }
   function onDragLeave() {
-    document.getElementById('upload-zone').classList.remove('dragover');
+    document.getElementById('upload-zone').classList.remove('drag-over');
   }
 
   async function saveProfile() {
