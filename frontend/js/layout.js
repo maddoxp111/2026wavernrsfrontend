@@ -587,32 +587,32 @@
     }
   };
 
-  // Check and cache moderator status
+  initShell();
+  // Load banners after shell exists
+  window.renderSiteBanners();
+
+  // Check moderator status and inject Mod Panel link if applicable.
+  // Runs AFTER initShell so the sidebar elements exist.
+  // No sessionStorage caching — always re-checks so role changes take effect immediately.
   (function _checkModStatus() {
     if (!localStorage.getItem('token')) return;
-    if (sessionStorage.getItem('wv_is_mod') !== null) {
-      // Already checked this session — rebuild nav if we are a mod (sidebar may not have updated yet)
-      return;
-    }
-    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/mod/check' : '/api/mod/check', {
+    var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+    fetch(base + '/mod/check', {
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
     })
-      .then(function(r) { return r.json(); })
+      .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(d) {
         var isMod = !!(d && d.is_mod);
+        var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
         sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
-        if (isMod) {
-          // Rebuild sidebar/drawer to show Mod Panel link
+        // Rebuild sidebar whenever mod status is true or just changed
+        if (isMod || wasMod !== isMod) {
           var sidebar = document.getElementById('wv-sidebar');
           if (sidebar) sidebar.innerHTML = buildSidebarHTML();
           var drawer = document.getElementById('wv-drawer');
           if (drawer) drawer.innerHTML = buildSidebarHTML();
         }
       })
-      .catch(function() { sessionStorage.setItem('wv_is_mod', 'false'); });
+      .catch(function() {});
   })();
-
-  initShell();
-  // Load banners after shell exists
-  window.renderSiteBanners();
 })();
