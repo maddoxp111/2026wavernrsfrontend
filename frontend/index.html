@@ -110,6 +110,10 @@ function renderHero() {
   var coverBg = coverGradient(seed);
   var myGen = ++_heroGen;
 
+  // Immediately clear any stale gradient from the previous hero item
+  var pageBgEl = document.getElementById('wv-page-bg');
+  if (pageBgEl) pageBgEl.style.background = 'var(--page-bg)';
+
   // Preload image then fade it in — eliminates the gradient→image flash
   if (item.cover_url) {
     var _preload = new Image();
@@ -120,17 +124,22 @@ function renderHero() {
     };
   }
 
-  // Extract real colors and apply to page background, but only if this render is still current
-  var pageBgEl = document.getElementById('wv-page-bg');
+  // Extract real colors from the cover image and apply to page background.
+  // fromImage=true means canvas read succeeded and colors match the actual art.
+  // fromImage=false means CORS blocked the canvas — seed hue may be unrelated, so keep gradient subtle.
   if (typeof extractCoverHues === 'function') {
-    extractCoverHues(item.cover_url, seed, function(c) {
+    extractCoverHues(item.cover_url, seed, function(c, fromImage) {
       if (myGen !== _heroGen) return; // stale — a newer hero has already rendered
       if (!pageBgEl) return;
       var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+      // Only use strong saturation/opacity when we know the colors are real
+      var op1 = fromImage ? 0.98 : 0.55;
+      var op2 = fromImage ? 0.95 : 0.45;
+      var op3 = fromImage ? 0.55 : 0.25;
       pageBgEl.style.background =
-        'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
-        'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
-        'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
+        'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,' + op1 + ') 0%, transparent 55%),' +
+        'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,' + op2 + ') 0%, transparent 60%),' +
+        'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,' + op3 + ') 0%, transparent 70%),' +
         'var(--page-bg)';
     });
   }

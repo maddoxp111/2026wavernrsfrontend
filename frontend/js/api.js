@@ -164,10 +164,10 @@ function coverGradient(seed) {
 }
 
 // ── Extract dominant hues from an actual cover image via canvas ────────────
-// Falls back to coverHues(seed) on CORS failure or missing URL.
-// callback({ h1, s1, l1, h2, s2, l2 })
+// callback(colors, fromImage) — fromImage=true when colors came from actual pixels,
+// false when falling back to the seed hash (CORS blocked, load error, etc.)
 function extractCoverHues(coverUrl, seed, callback) {
-  if (!coverUrl) { callback(coverHues(seed)); return; }
+  if (!coverUrl) { callback(coverHues(seed), false); return; }
 
   var img = new Image();
   img.crossOrigin = 'anonymous';
@@ -195,7 +195,7 @@ function extractCoverHues(coverUrl, seed, callback) {
         colorful.push({ h: Math.round(h), sat: chroma / max });
       }
 
-      if (colorful.length < 5) { callback(coverHues(seed)); return; }
+      if (colorful.length < 5) { callback(coverHues(seed), false); return; }
 
       colorful.sort(function(a, b) { return b.sat - a.sat; });
       var top = colorful.slice(0, Math.max(6, Math.floor(colorful.length * 0.3)));
@@ -211,14 +211,13 @@ function extractCoverHues(coverUrl, seed, callback) {
         ? _circularMeanHue(distant.slice(0, Math.ceil(distant.length / 2)).map(function(c) { return c.h; }))
         : (h1 + 80) % 360;
 
-      callback({ h1: h1, s1: 80, l1: 52, h2: h2, s2: 75, l2: 46 });
+      callback({ h1: h1, s1: 80, l1: 52, h2: h2, s2: 75, l2: 46 }, true);
     } catch (e) {
-      // SecurityError from CORS-blocked canvas or other error — fall back
-      callback(coverHues(seed));
+      // SecurityError from CORS-blocked canvas — fall back to seed, flag as not from image
+      callback(coverHues(seed), false);
     }
   };
-  img.onerror = function() { callback(coverHues(seed)); };
-  // Append cache-bust only if same origin to avoid CORS issues; for external URLs use as-is
+  img.onerror = function() { callback(coverHues(seed), false); };
   img.src = coverUrl;
 }
 
