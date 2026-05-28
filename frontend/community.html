@@ -29,6 +29,7 @@
 
   // ── Utility helpers ───────────────────────────────────────────────────────
   function score(item) {
+    if (item.net_votes !== undefined) return Math.max(0, item.net_votes);
     return Math.max(0, (item.upvotes || 0) - (item.downvotes || 0));
   }
 
@@ -122,7 +123,7 @@
 
   function postRowHTML(p) {
     var s = score(p);
-    var isOwner = me && p.user && me.id === p.user.id;
+    var isOwner = me && me.id === p.user_id;
     var deleteBtn = isOwner
       ? '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" ' +
           'style="font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;flex-shrink:0;" ' +
@@ -148,7 +149,7 @@
               escHtml(p.title) +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-              '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.user ? p.user.username : 'unknown') + '</span>' +
+              '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.username || 'unknown') + '</span>' +
               '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
               '<span style="font-size:12px;color:var(--text-3);">' + (p.comment_count || 0) + ' comment' + ((p.comment_count || 0) !== 1 ? 's' : '') + '</span>' +
               '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
@@ -242,11 +243,10 @@
     if (!post && currentPost && currentPost.id === id) post = currentPost;
     if (!post) return;
 
-    var prevUp = post.upvotes || 0;
-    var prevDown = post.downvotes || 0;
+    var prevNetVotes = post.net_votes !== undefined ? post.net_votes : (post.upvotes || 0) - (post.downvotes || 0);
 
-    // Optimistic: apply vote
-    if (vote === 1) { post.upvotes = prevUp + 1; } else { post.downvotes = prevDown + 1; }
+    // Optimistic: increment net_votes
+    post.net_votes = prevNetVotes + vote;
     _updatePostScoreEl(id, score(post));
 
     try {
@@ -255,15 +255,15 @@
         body: JSON.stringify({ vote: vote }),
       });
       // Sync with server response
-      if (result && result.upvotes !== undefined) {
+      if (result) {
+        post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
         post.upvotes = result.upvotes;
         post.downvotes = result.downvotes;
       }
       _updatePostScoreEl(id, score(post));
     } catch (err) {
       // Revert
-      post.upvotes = prevUp;
-      post.downvotes = prevDown;
+      post.net_votes = prevNetVotes;
       _updatePostScoreEl(id, score(post));
       if (err.message && err.message.includes('401')) navigate('/login.html');
     }
@@ -293,7 +293,7 @@
     view.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       var data = await api('/community/posts/' + id);
-      currentPost = data;
+      currentPost = data.post || data;
       currentComments = Array.isArray(data.comments) ? data.comments : [];
       renderPost();
     } catch (err) {
@@ -312,7 +312,7 @@
 
     var p = currentPost;
     var s = score(p);
-    var isOwner = me && p.user && me.id === p.user.id;
+    var isOwner = me && me.id === p.user_id;
 
     var deletePostBtn = isOwner
       ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" ' +
@@ -357,7 +357,7 @@
               '<h2 style="margin:0 0 8px;font-size:20px;font-weight:800;letter-spacing:-0.02em;line-height:1.3;">' + escHtml(p.title) + '</h2>' +
               (p.body ? '<p style="margin:0 0 12px;font-size:14px;line-height:1.65;color:var(--text-2);white-space:pre-wrap;">' + escHtml(p.body) + '</p>' : '') +
               '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-                '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.user ? p.user.username : 'unknown') + '</span>' +
+                '<span style="font-size:12px;color:var(--text-3);">by @' + escHtml(p.username || 'unknown') + '</span>' +
                 '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' +
                 '<span style="font-size:12px;color:var(--text-3);">' + timeAgo(p.created_at) + '</span>' +
                 (deletePostBtn ? '<span style="font-size:12px;color:var(--text-3);">&middot;</span>' + deletePostBtn : '') +
@@ -412,7 +412,7 @@
     function renderNode(c, depth) {
       var indentPx = Math.min(depth, 3) * 22;
       var s = score(c);
-      var isOwner = me && c.user && me.id === c.user.id;
+      var isOwner = me && me.id === c.user_id;
       var children = childrenOf[c.id] || [];
 
       var deleteBtn = isOwner
@@ -448,7 +448,7 @@
         '<div style="margin-left:' + indentPx + 'px;" id="comment-node-' + escHtml(c.id) + '">' +
           '<div style="border-left:2px solid var(--hair,rgba(128,128,128,0.15));padding-left:12px;padding-top:2px;padding-bottom:2px;margin-bottom:8px;">' +
             '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap;">' +
-              '<span style="font-size:12px;font-weight:600;color:var(--text-2);">@' + escHtml(c.user ? c.user.username : 'unknown') + '</span>' +
+              '<span style="font-size:12px;font-weight:600;color:var(--text-2);">@' + escHtml(c.username || 'unknown') + '</span>' +
               '<span style="font-size:11px;color:var(--text-3);">' + timeAgo(c.created_at) + '</span>' +
             '</div>' +
             '<div style="font-size:13.5px;line-height:1.6;color:var(--text);margin-bottom:6px;white-space:pre-wrap;">' + escHtml(c.body) + '</div>' +
@@ -548,11 +548,10 @@
     var comment = currentComments.find(function(c) { return c.id === id; });
     if (!comment) return;
 
-    var prevUp = comment.upvotes || 0;
-    var prevDown = comment.downvotes || 0;
+    var prevNetVotes = comment.net_votes !== undefined ? comment.net_votes : (comment.upvotes || 0) - (comment.downvotes || 0);
 
     // Optimistic
-    if (vote === 1) { comment.upvotes = prevUp + 1; } else { comment.downvotes = prevDown + 1; }
+    comment.net_votes = prevNetVotes + vote;
     var scoreEl = document.getElementById('comment-score-' + id);
     if (scoreEl) scoreEl.textContent = score(comment);
 
@@ -561,14 +560,14 @@
         method: 'POST',
         body: JSON.stringify({ vote: vote }),
       });
-      if (result && result.upvotes !== undefined) {
+      if (result) {
+        comment.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
         comment.upvotes = result.upvotes;
         comment.downvotes = result.downvotes;
       }
       if (scoreEl) scoreEl.textContent = score(comment);
     } catch (err) {
-      comment.upvotes = prevUp;
-      comment.downvotes = prevDown;
+      comment.net_votes = prevNetVotes;
       if (scoreEl) scoreEl.textContent = score(comment);
       if (err.message && err.message.includes('401')) navigate('/login.html');
     }
