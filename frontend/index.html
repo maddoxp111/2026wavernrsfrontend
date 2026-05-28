@@ -110,10 +110,10 @@ function renderHero() {
   var coverBg = coverGradient(seed);
   var myGen = ++_heroGen;
 
-  // Apply the cover's own gradient to the page background immediately (always available, no CORS)
+  // Apply seed gradient immediately so there's always something showing
   var pageBgEl = document.getElementById('wv-page-bg');
-  var _applySeedGradient = function() {
-    if (!pageBgEl || myGen !== _heroGen) return;
+  (function() {
+    if (!pageBgEl) return;
     var sc = coverHues(seed);
     var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
     pageBgEl.style.background =
@@ -121,39 +121,15 @@ function renderHero() {
       'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + sc.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
       'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + sc.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
       'var(--page-bg)';
-  };
-  _applySeedGradient();
-
-  // Preload image then fade it in — eliminates the gradient→image flash.
-  // When image loads, also try to upgrade the background to real extracted colors.
-  if (item.cover_url) {
-    var _preload = new Image();
-    _preload.src = item.cover_url;
-    _preload.onload = function() {
-      var imgEl = document.getElementById('hero-cover-img-' + myGen);
-      if (imgEl) imgEl.style.opacity = '1';
-      // Try canvas extraction now that image is in memory — upgrade background if successful
-      if (typeof extractCoverHues === 'function') {
-        extractCoverHues(item.cover_url, seed, function(c, fromImage) {
-          if (myGen !== _heroGen || !pageBgEl || !fromImage) return;
-          var isDark2 = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-          pageBgEl.style.background =
-            'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark2 ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
-            'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark2 ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
-            'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark2 ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
-            'var(--page-bg)';
-        });
-      }
-    };
-  }
+  })();
 
   var heroHtml =
     '<div class="wv-card lg-highlight" id="hero-card" style="padding:24px;display:flex;gap:28px;align-items:center;">' +
-      // Cover art
+      // Cover art — crossorigin="anonymous" so the canvas can read this same element after load
       '<div class="wv-hero-cover" onclick="' + clickAction + '" style="cursor:pointer;width:220px;height:220px;border-radius:18px;background:' + coverBg + ';position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 6px 24px rgba(0,0,0,0.22),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
         '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);"></div>' +
         (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-        (item.cover_url ? '<img id="hero-cover-img-' + myGen + '" src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.25s;" onerror="this.style.opacity=0">' : '') +
+        (item.cover_url ? '<img id="hero-cover-img-' + myGen + '" crossorigin="anonymous" src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.25s;" onerror="this.style.opacity=0">' : '') +
       '</div>' +
       // Info
       '<div class="wv-hero-info" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;">' +
@@ -189,6 +165,56 @@ function renderHero() {
     existing.outerHTML = heroHtml;
   } else {
     left.insertAdjacentHTML('afterbegin', heroHtml);
+  }
+
+  // Canvas-read the img element directly after it loads — same element, same CORS fetch, no cache conflict
+  if (item.cover_url) {
+    var heroImg = document.getElementById('hero-cover-img-' + myGen);
+    if (heroImg) {
+      var _onHeroImgLoad = function() {
+        if (myGen !== _heroGen) return;
+        this.style.opacity = '1';
+        try {
+          var SIZE = 48;
+          var cv = document.createElement('canvas');
+          cv.width = cv.height = SIZE;
+          var ctx = cv.getContext('2d');
+          ctx.drawImage(this, 0, 0, SIZE, SIZE);
+          var data = ctx.getImageData(0, 0, SIZE, SIZE).data;
+          var colorful = [];
+          for (var i = 0; i < data.length; i += 4) {
+            var r = data[i], g = data[i+1], b = data[i+2];
+            var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+            var lum = (mx+mn)/2;
+            if (lum < 20 || lum > 235) continue;
+            var ch = mx - mn;
+            if (ch < 28) continue;
+            var hh;
+            if (mx===r)      hh = 60*(((g-b)/ch+6)%6);
+            else if (mx===g) hh = 60*((b-r)/ch+2);
+            else             hh = 60*((r-g)/ch+4);
+            colorful.push({h: Math.round(hh), sat: ch/mx});
+          }
+          if (colorful.length >= 5 && pageBgEl && myGen === _heroGen) {
+            colorful.sort(function(a,b){return b.sat-a.sat;});
+            var top = colorful.slice(0, Math.max(6, Math.floor(colorful.length*0.3)));
+            var h1 = _circularMeanHue(top.slice(0,Math.ceil(top.length/2)).map(function(x){return x.h;}));
+            var distant = top.filter(function(x){var d=Math.abs(x.h-h1);return Math.min(d,360-d)>40;});
+            var h2 = distant.length>=3
+              ? _circularMeanHue(distant.slice(0,Math.ceil(distant.length/2)).map(function(x){return x.h;}))
+              : (h1+80)%360;
+            var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+            pageBgEl.style.background =
+              'radial-gradient(ellipse 160% 110% at -5% 0%, hsla('+h1+',90%,'+(isDark?38:52)+'%,0.98) 0%, transparent 55%),' +
+              'radial-gradient(ellipse 140% 160% at 105% 100%, hsla('+h2+',85%,'+(isDark?32:46)+'%,0.95) 0%, transparent 60%),' +
+              'radial-gradient(ellipse 90% 70% at 50% 50%, hsla('+h1+',75%,'+(isDark?28:58)+'%,0.55) 0%, transparent 70%),' +
+              'var(--page-bg)';
+          }
+        } catch(e) { /* SecurityError — seed gradient stays */ }
+      };
+      heroImg.onload = _onHeroImgLoad;
+      if (heroImg.complete && heroImg.naturalWidth > 0) _onHeroImgLoad.call(heroImg);
+    }
   }
 }
 
