@@ -110,34 +110,41 @@ function renderHero() {
   var coverBg = coverGradient(seed);
   var myGen = ++_heroGen;
 
-  // Immediately clear any stale gradient from the previous hero item
+  // Apply the cover's own gradient to the page background immediately (always available, no CORS)
   var pageBgEl = document.getElementById('wv-page-bg');
-  if (pageBgEl) pageBgEl.style.background = 'var(--page-bg)';
+  var _applySeedGradient = function() {
+    if (!pageBgEl || myGen !== _heroGen) return;
+    var sc = coverHues(seed);
+    var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+    pageBgEl.style.background =
+      'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + sc.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
+      'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + sc.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
+      'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + sc.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
+      'var(--page-bg)';
+  };
+  _applySeedGradient();
 
-  // Preload image then fade it in — eliminates the gradient→image flash
+  // Preload image then fade it in — eliminates the gradient→image flash.
+  // When image loads, also try to upgrade the background to real extracted colors.
   if (item.cover_url) {
     var _preload = new Image();
     _preload.src = item.cover_url;
     _preload.onload = function() {
       var imgEl = document.getElementById('hero-cover-img-' + myGen);
       if (imgEl) imgEl.style.opacity = '1';
+      // Try canvas extraction now that image is in memory — upgrade background if successful
+      if (typeof extractCoverHues === 'function') {
+        extractCoverHues(item.cover_url, seed, function(c, fromImage) {
+          if (myGen !== _heroGen || !pageBgEl || !fromImage) return;
+          var isDark2 = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
+          pageBgEl.style.background =
+            'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark2 ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
+            'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark2 ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
+            'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark2 ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
+            'var(--page-bg)';
+        });
+      }
     };
-  }
-
-  // Extract real colors from the cover image and apply to page background.
-  // Only apply a gradient when fromImage=true (canvas actually read the pixels).
-  // When CORS blocks the canvas, fromImage=false and the seed hue is arbitrary — leave background neutral.
-  if (typeof extractCoverHues === 'function') {
-    extractCoverHues(item.cover_url, seed, function(c, fromImage) {
-      if (myGen !== _heroGen) return; // stale — a newer hero has already rendered
-      if (!pageBgEl || !fromImage) return; // no real colors — keep neutral background
-      var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-      pageBgEl.style.background =
-        'radial-gradient(ellipse 160% 110% at -5% 0%, hsla(' + c.h1 + ',90%,' + (isDark ? 38 : 52) + '%,0.98) 0%, transparent 55%),' +
-        'radial-gradient(ellipse 140% 160% at 105% 100%, hsla(' + c.h2 + ',85%,' + (isDark ? 32 : 46) + '%,0.95) 0%, transparent 60%),' +
-        'radial-gradient(ellipse 90% 70% at 50% 50%, hsla(' + c.h1 + ',75%,' + (isDark ? 28 : 58) + '%,0.55) 0%, transparent 70%),' +
-        'var(--page-bg)';
-    });
   }
 
   var heroHtml =
