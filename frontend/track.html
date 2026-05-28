@@ -42,7 +42,6 @@
       liked = track.user_liked;
       document.title = `${track.title} — wavernrs stream`;
       renderTrack();
-      playTrack({ ...track, artist_name: track.artists?.display_name });
       renderTracklist();
       loadComments();
       loadMoreLikeThis();
@@ -50,6 +49,11 @@
       document.getElementById('track-container').innerHTML =
         `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
     }
+  }
+
+  function playThisTrack() {
+    if (!track) return;
+    playTrack(Object.assign({}, track, { artist_name: track.artists ? track.artists.display_name : '' }));
   }
 
   function renderTrack() {
@@ -75,7 +79,7 @@
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
             ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-2);line-height:1.65;">${escHtml(track.description)}</p>` : ''}
             <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="togglePlay()" id="main-play-btn">
+              <button class="btn btn-primary" onclick="playThisTrack()" id="main-play-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 Play
               </button>
