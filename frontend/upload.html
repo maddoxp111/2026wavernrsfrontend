@@ -15,6 +15,17 @@
 
     <div id="alert-container" style="margin-bottom:16px;"></div>
 
+    <!-- Import from URL -->
+    <div class="wv-card" style="padding:18px 20px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Import from untitled.stream</div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public project URL — we'll pull in every track and the cover art.</div>
+      <div style="display:flex;gap:8px;">
+        <input id="import-url" class="wv-input" placeholder="https://untitled.stream/library/project/…" style="flex:1;min-width:0;">
+        <button id="import-btn" class="wv-pill brand" onclick="startUntitledImport()">Import</button>
+      </div>
+      <div id="import-status" style="margin-top:10px;font-size:12.5px;color:var(--text-2);display:none;"></div>
+    </div>
+
     <!-- Upload form -->
     <div class="wv-card" style="padding:24px;margin-bottom:24px;">
 
@@ -161,6 +172,83 @@
 <script>
   if (!isLoggedIn()) navigate('/login.html');
   initPlayer();
+
+  // ── Import from untitled.stream ──────────────────────────────────────────
+  function _setImportStatus(msg, color) {
+    var el = document.getElementById('import-status');
+    if (!el) return;
+    el.style.display = '';
+    el.style.color = color || 'var(--text-2)';
+    el.textContent = msg;
+  }
+  async function startUntitledImport() {
+    var input = document.getElementById('import-url');
+    var btn = document.getElementById('import-btn');
+    var url = (input.value || '').trim();
+    if (!/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) {
+      _setImportStatus('That doesn\'t look like an untitled.stream project URL.', '#f87171');
+      return;
+    }
+    btn.disabled = true;
+    _setImportStatus('Starting import…');
+    var jobId;
+    try {
+      var resp = await api('/import/untitled', { method: 'POST', body: JSON.stringify({ url }) });
+      jobId = resp.jobId;
+    } catch (err) {
+      _setImportStatus('Could not start import: ' + err.message, '#f87171');
+      btn.disabled = false;
+      return;
+    }
+
+    // SSE doesn't support custom headers in EventSource, so we use fetch with a streaming reader.
+    try {
+      var token = localStorage.getItem('token');
+      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+      var resp2 = await fetch(base + '/import/jobs/' + jobId + '/events', {
+        headers: { 'Authorization': 'Bearer ' + token },
+      });
+      if (!resp2.ok || !resp2.body) throw new Error('stream failed');
+      var reader = resp2.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        buf += decoder.decode(chunk.value, { stream: true });
+        var parts = buf.split('\n\n');
+        buf = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i].trim();
+          if (!line.startsWith('data:')) continue;
+          var json = line.slice(5).trim();
+          if (!json) continue;
+          var evt;
+          try { evt = JSON.parse(json); } catch (e) { continue; }
+          if (evt.type === 'status') {
+            _setImportStatus(evt.message);
+          } else if (evt.type === 'track') {
+            _setImportStatus('Importing track ' + evt.i + ' of ' + evt.n + ': ' + evt.title);
+          } else if (evt.type === 'done') {
+            var msg = 'Imported ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
+            if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
+            _setImportStatus(msg + ' Redirecting…', '#4ade80');
+            setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
+            return;
+          } else if (evt.type === 'error') {
+            _setImportStatus('Error: ' + evt.message, '#f87171');
+            btn.disabled = false;
+            return;
+          }
+        }
+      }
+      _setImportStatus('Connection closed.', '#f87171');
+      btn.disabled = false;
+    } catch (err) {
+      _setImportStatus('Lost connection to import: ' + err.message, '#f87171');
+      btn.disabled = false;
+    }
+  }
 
   var me = null;
   var artist = null;
