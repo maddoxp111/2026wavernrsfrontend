@@ -418,6 +418,13 @@
 
   // ── Build and inject the shell ────────────────────────────────
   function initShell() {
+    // Inject favicon once
+    if (!document.querySelector('link[rel="icon"]')) {
+      var fav = document.createElement('link');
+      fav.rel = 'icon'; fav.type = 'image/x-icon'; fav.href = '/icon.ico';
+      document.head.appendChild(fav);
+    }
+
     var theme = localStorage.getItem('wv-theme') || 'dark';
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
