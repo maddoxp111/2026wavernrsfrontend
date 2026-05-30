@@ -90,6 +90,12 @@
       <button class="btn btn-primary" onclick="createEraTag()">Add Era Tag</button>
     </div>
     <div id="eratags-list"><div class="loading"><div class="spinner"></div></div></div>
+
+    <div style="margin-top:32px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Untagged Content</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;">Comps and edits with no era tag assigned.</div>
+      <div id="untagged-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
   </div>
 
   <!-- ── Users tab ──────────────────────────────────────── -->
@@ -271,7 +277,7 @@
       if (btn)   btn.classList.toggle('active', t === tab);
     });
     if (tab === 'banners')    loadBanners();
-    if (tab === 'eratags')    loadEraTags();
+    if (tab === 'eratags')    { loadEraTags(); loadUntagged(); }
     if (tab === 'users')      loadUsers();
     if (tab === 'content')    loadContent();
     if (tab === 'lockdown')   loadLockdown();
@@ -343,6 +349,56 @@
   }
 
   // ── Era Tags ──────────────────────────────────────────────────
+
+  async function loadUntagged() {
+    var el = document.getElementById('untagged-list');
+    if (!el) return;
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var tags = eraTagsCache.length ? eraTagsCache : await fetch(API_BASE + '/eratags').then(function(r){return r.json();});
+      var [tracks, albums] = await Promise.all([
+        fetch(API_BASE + '/admin/tracks?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
+        fetch(API_BASE + '/admin/albums?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
+      ]);
+      var untaggedTracks = (Array.isArray(tracks) ? tracks : []).filter(function(t){ return !t.era_tag_id; });
+      var untaggedAlbums = (Array.isArray(albums) ? albums : []).filter(function(a){ return !a.era_tag_id; });
+      if (!untaggedTracks.length && !untaggedAlbums.length) {
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">All content has an era tag.</div>';
+        return;
+      }
+      var tagOpts = tags.map(function(t){ return '<option value="'+t.id+'">'+escHtml(t.name)+'</option>'; }).join('');
+      function row(item, type) {
+        var id = 'ut-'+type+'-'+item.id;
+        return '<tr>' +
+          '<td style="font-size:13px;">'+escHtml(item.title)+'</td>' +
+          '<td style="font-size:12px;color:var(--text-3);">'+type+'</td>' +
+          '<td><select id="'+id+'" class="wv-input" style="padding:6px 8px;font-size:12px;appearance:auto;-webkit-appearance:auto;"><option value="">Pick tag…</option>'+tagOpts+'</select></td>' +
+          '<td><button class="btn btn-primary btn-sm" onclick="assignEraTag(\''+item.id+'\',\''+type+'\',\''+id+'\')">Save</button></td>' +
+        '</tr>';
+      }
+      el.innerHTML = '<table class="admin-table"><thead><tr><th>Title</th><th>Type</th><th>Era Tag</th><th></th></tr></thead><tbody>' +
+        untaggedAlbums.map(function(a){ return row(a,'comp'); }).join('') +
+        untaggedTracks.map(function(t){ return row(t,'edit'); }).join('') +
+        '</tbody></table>';
+    } catch (err) {
+      el.innerHTML = '<div style="color:var(--red);">Failed to load: '+escHtml(err.message)+'</div>';
+    }
+  }
+
+  async function assignEraTag(id, type, selectId) {
+    var tagId = document.getElementById(selectId).value;
+    if (!tagId) { showMsg('admin-alert', 'Pick an era tag first'); return; }
+    try {
+      var endpoint = type === 'comp' ? '/albums/' : '/tracks/';
+      var r = await fetch(API_BASE + endpoint + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ era_tag_id: tagId }),
+      });
+      if (!r.ok) { var d = await r.json().catch(function(){return{};}); throw new Error(d.error || 'Save failed'); }
+      loadUntagged();
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
 
   async function loadEraTags() {
     var el = document.getElementById('eratags-list');
