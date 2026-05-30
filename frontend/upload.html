@@ -17,10 +17,10 @@
 
     <!-- Import from URL -->
     <div class="wv-card" style="padding:18px 20px;margin-bottom:16px;">
-      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Import from untitled.stream</div>
-      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public project URL — we'll pull in every track and the cover art.</div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Import from a link</div>
+      <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public <b>untitled.stream</b> or <b>Samply</b> link — we'll pull in every track and the cover art.</div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <input id="import-url" class="wv-input" placeholder="https://untitled.stream/library/project/…" style="flex:1;min-width:0;">
+        <input id="import-url" class="wv-input" placeholder="untitled.stream/library/project/… or samply.app/p/…" style="flex:1;min-width:0;">
       </div>
       <div class="form-group" style="margin-bottom:8px;">
         <label class="wv-form-label" style="font-size:12px;">Era Tag <span style="color:var(--red);">*</span></label>
@@ -28,7 +28,7 @@
           <option value="">Select an era tag…</option>
         </select>
       </div>
-      <button id="import-btn" class="wv-pill brand" style="width:100%;justify-content:center;" onclick="startUntitledImport()">Import</button>
+      <button id="import-btn" class="wv-pill brand" style="width:100%;justify-content:center;" onclick="startImport()">Import</button>
       <div id="import-status" style="margin-top:10px;font-size:12.5px;color:var(--text-2);display:none;"></div>
     </div>
 
@@ -179,7 +179,7 @@
   if (!isLoggedIn()) navigate('/login.html');
   initPlayer();
 
-  // ── Import from untitled.stream ──────────────────────────────────────────
+  // ── Import from a link (untitled.stream or Samply) ───────────────────────
   function _setImportStatus(msg, color) {
     var el = document.getElementById('import-status');
     if (!el) return;
@@ -187,13 +187,23 @@
     el.style.color = color || 'var(--text-2)';
     el.textContent = msg;
   }
-  async function startUntitledImport() {
+
+  // Detect which platform a pasted URL belongs to. Returns the API endpoint, or
+  // null if it matches neither.
+  function _detectImportSource(url) {
+    if (/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) return '/import/untitled';
+    if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) return '/import/samply';
+    return null;
+  }
+
+  async function startImport() {
     var input = document.getElementById('import-url');
     var btn = document.getElementById('import-btn');
     var url = (input.value || '').trim();
     var eraTagId = document.getElementById('import-era-tag').value;
-    if (!/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) {
-      _setImportStatus('That doesn\'t look like an untitled.stream project URL.', '#f87171');
+    var endpoint = _detectImportSource(url);
+    if (!endpoint) {
+      _setImportStatus('That doesn\'t look like an untitled.stream or Samply link.', '#f87171');
       return;
     }
     if (!eraTagId) {
@@ -204,7 +214,7 @@
     _setImportStatus('Starting import…');
     var jobId;
     try {
-      var resp = await api('/import/untitled', { method: 'POST', body: JSON.stringify({ url, era_tag_id: eraTagId }) });
+      var resp = await api(endpoint, { method: 'POST', body: JSON.stringify({ url, era_tag_id: eraTagId }) });
       jobId = resp.jobId;
     } catch (err) {
       _setImportStatus('Could not start import: ' + err.message, '#f87171');
