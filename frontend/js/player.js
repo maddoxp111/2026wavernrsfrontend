@@ -279,6 +279,11 @@ function _onTimeUpdate() {
   if (tot) tot.textContent = fmtTime(audio.duration);
   if (pfsEl) pfsEl.textContent = fmtTime(audio.currentTime);
   if (pfsTot) pfsTot.textContent = fmtTime(audio.duration);
+  // Update thumb position — CSS uses --pct on .progress-bar::after
+  const pb = document.getElementById('progress-bar');
+  const pfsPb = document.getElementById('pfs-progress-bar');
+  if (pb) pb.style.setProperty('--pct', pct);
+  if (pfsPb) pfsPb.style.setProperty('--pct', pct);
   if (currentTrack) {
     currentTrack._savedTime = audio.currentTime;
     localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
