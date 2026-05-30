@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — signing in…</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wv-auth-page theme-light" id="auth-root">
+  <div class="wv-auth-card wv-card" style="text-align:center;">
+    <div style="font-size:22px;font-weight:800;letter-spacing:-0.04em;color:var(--brand);margin-bottom:24px;">wavernrs</div>
+    <div id="cb-status" style="color:var(--text-2);font-size:15px;">Finishing sign-in…</div>
+    <div id="cb-error" style="display:none;margin-top:16px;">
+      <div class="wv-form-error" id="cb-error-msg"></div>
+      <a href="/login.html" style="display:inline-block;margin-top:12px;color:var(--brand);font-size:13px;">Back to login</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  var _t = localStorage.getItem('wv-theme') || 'light';
+  document.getElementById('auth-root').className = 'wv-auth-page theme-' + _t;
+
+  var params = new URLSearchParams(location.search);
+  var token   = params.get('token');
+  var linked  = params.get('linked');
+  var errCode = params.get('error');
+
+  var errorMessages = {
+    invalid_state:   'Login session expired. Please try again.',
+    oauth_failed:    'OAuth sign-in failed. Please try again.',
+    create_failed:   'Could not create account. Please try again.',
+    already_linked:  'That account is already connected to a different user.',
+  };
+
+  (async function () {
+    if (errCode) {
+      document.getElementById('cb-status').style.display = 'none';
+      document.getElementById('cb-error').style.display = '';
+      document.getElementById('cb-error-msg').textContent = errorMessages[errCode] || 'Something went wrong.';
+      return;
+    }
+
+    if (linked) {
+      // Came back from a link flow — just close/redirect to settings
+      document.getElementById('cb-status').textContent = (linked === 'discord' ? 'Discord' : 'Google') + ' account linked!';
+      setTimeout(function () { location.href = '/settings.html'; }, 1200);
+      return;
+    }
+
+    if (token) {
+      localStorage.setItem('token', token);
+      try {
+        var me = await api('/auth/me');
+        localStorage.setItem('user', JSON.stringify({ id: me.id, username: me.username }));
+      } catch (_) {}
+      document.getElementById('cb-status').textContent = 'Signed in! Redirecting…';
+      setTimeout(function () { location.href = '/index.html'; }, 600);
+      return;
+    }
+
+    // No token and no error — shouldn't happen
+    document.getElementById('cb-status').style.display = 'none';
+    document.getElementById('cb-error').style.display = '';
+    document.getElementById('cb-error-msg').textContent = 'No token received. Please try again.';
+  })();
+</script>
+</body>
+</html>
