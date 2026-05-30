@@ -233,7 +233,13 @@
             var msg = 'Imported ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
             if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
             _setImportStatus(msg + ' Redirecting…', '#4ade80');
-            setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
+            setTimeout(function() {
+              if (evt.trackId) {
+                navigate('/track.html?id=' + evt.trackId);
+              } else {
+                navigate('/album.html?id=' + evt.albumId);
+              }
+            }, 900);
             return;
           } else if (evt.type === 'error') {
             _setImportStatus('Error: ' + evt.message, '#f87171');
@@ -298,8 +304,8 @@
       const isAlbum = item._type==='album';
       const sub = isAlbum ? 'Comp · '+timeAgo(item.created_at) : fmtNum(item.play_count||0)+' plays · '+timeAgo(item.created_at);
       const openHref = isAlbum ? '/album.html?id='+item.id : '/track.html?id='+item.id;
-      const editClick = isAlbum ? 'openEditAlbumModal('+JSON.stringify(item).replace(/"/g,'&quot;')+')' : 'openEditTrackModal('+JSON.stringify(item).replace(/"/g,'&quot;')+')';
-      const delClick = isAlbum ? 'confirmDeleteComp(\''+item.id+'\')' : 'confirmDelete(\''+item.id+'\')';
+      const editClick = isAlbum ? 'openEditAlbumModal('+JSON.stringify(item).replace(/"/g,'&quot;')+')' : 'openEditTrackModal('+JSON.stringify(item).replace(/"/g,'&quot;')+')' ;
+      const delClick = isAlbum ? 'confirmDeleteComp(\''+item.id+'\')' : 'confirmDelete(\''+item.id+'\')' ;
       return '<div class="wv-track-row">'+
         '<div class="wv-track-cover" style="display:flex;align-items:center;justify-content:center;">'+cover+'</div>'+
         '<div class="wv-track-info"><div class="wv-track-title">'+escHtml(item.title)+'</div><div class="wv-track-artist">'+sub+'</div></div>'+
