@@ -360,7 +360,7 @@
         fetch(API_BASE + '/admin/tracks?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
         fetch(API_BASE + '/admin/albums?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
       ]);
-      var untaggedTracks = (Array.isArray(tracks) ? tracks : []).filter(function(t){ return !t.era_tag_id; });
+      var untaggedTracks = (Array.isArray(tracks) ? tracks : []).filter(function(t){ return !t.era_tag_id && !t.album_id; });
       var untaggedAlbums = (Array.isArray(albums) ? albums : []).filter(function(a){ return !a.era_tag_id; });
       if (!untaggedTracks.length && !untaggedAlbums.length) {
         el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">All content has an era tag.</div>';
