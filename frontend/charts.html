@@ -18,14 +18,21 @@
 <script>
 var _chartsData = null;
 var _minRatings = 5;
-// Independent sort state per section.
+// Independent state per section.
 var _sortAllTime = 'plays';   // plays | liked | ratings | score
 var _sortWeekly  = 'plays';   // plays | liked
+var _typeAllTime = 'edits';   // edits | comps
+var _typeWeekly  = 'edits';   // edits | comps
 initPlayer();
 
 async function initCharts() {
   var view = document.getElementById('view');
+  var seg =
+    '.wv-seg{background:none;border:none;cursor:pointer;padding:5px 14px;border-radius:999px;' +
+    'font-size:12.5px;font-weight:600;color:var(--text-2);transition:background 0.15s,color 0.15s;}' +
+    '.wv-seg.is-active{background:var(--purple,#7c3aed);color:#fff;}';
   view.innerHTML =
+    '<style>' + seg + '</style>' +
     '<div style="display:flex;flex-direction:column;gap:34px;">' +
       '<div>' +
         '<h1 style="margin:0;font-size:40px;font-weight:800;letter-spacing:-0.035em;">Charts</h1>' +
@@ -35,7 +42,13 @@ async function initCharts() {
       // ── All Time ──
       '<div>' +
         '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
-          '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">All Time</h2>' +
+          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+            '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">All Time</h2>' +
+            '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="alltime-types">' +
+              '<button class="wv-seg is-active" onclick="setType(\'alltime\',\'edits\')">Edits</button>' +
+              '<button class="wv-seg" onclick="setType(\'alltime\',\'comps\')">Comps</button>' +
+            '</div>' +
+          '</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="alltime-sorts">' +
             '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'plays\')">Most Streams</button>' +
             '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'liked\')">Most Liked</button>' +
@@ -49,7 +62,13 @@ async function initCharts() {
       // ── This Week ──
       '<div>' +
         '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
-          '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">This Week</h2>' +
+          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
+            '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">This Week</h2>' +
+            '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="weekly-types">' +
+              '<button class="wv-seg is-active" onclick="setType(\'weekly\',\'edits\')">Edits</button>' +
+              '<button class="wv-seg" onclick="setType(\'weekly\',\'comps\')">Comps</button>' +
+            '</div>' +
+          '</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="weekly-sorts">' +
             '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'plays\')">Most Streams</button>' +
             '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'liked\')">Most Liked</button>' +
@@ -59,6 +78,17 @@ async function initCharts() {
       '</div>' +
     '</div>';
   loadCharts();
+}
+
+function setType(section, type) {
+  if (section === 'alltime') _typeAllTime = type; else _typeWeekly = type;
+  var container = document.getElementById(section + '-types');
+  if (container) {
+    container.querySelectorAll('.wv-seg').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('onclick').indexOf("'" + type + "'") !== -1);
+    });
+  }
+  renderSection(section);
 }
 
 function setSort(section, sort) {
@@ -130,14 +160,18 @@ function renderSection(section) {
   if (!body) return;
 
   var sort = section === 'alltime' ? _sortAllTime : _sortWeekly;
-  var src  = section === 'alltime' ? _chartsData.alltime : _chartsData.weekly;
+  var type = section === 'alltime' ? _typeAllTime : _typeWeekly;
+  var universe = _chartsData[type] || { alltime: [], weekly: [] };
+  var src  = section === 'alltime' ? universe.alltime : universe.weekly;
   var list = _rankList(src, sort);
+  var noun = type === 'comps' ? 'comps' : 'edits';
+  var destPage = type === 'comps' ? '/album.html?id=' : '/track.html?id=';
 
   if (!list.length) {
     if (sort === 'ratings') {
-      body.innerHTML = '<div class="wv-empty">No edits with at least ' + _minRatings + ' ratings yet.</div>';
+      body.innerHTML = '<div class="wv-empty">No ' + noun + ' with at least ' + _minRatings + ' ratings yet.</div>';
     } else {
-      body.innerHTML = '<div class="wv-empty">No tracks yet</div>';
+      body.innerHTML = '<div class="wv-empty">No ' + noun + ' yet</div>';
     }
     return;
   }
@@ -149,7 +183,7 @@ function renderSection(section) {
   var rows = list.map(function(t, i) {
     var seed = t.title || '', artist = t.artists ? t.artists.display_name : 'Unknown';
     var bg = coverGradient(seed);
-    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 150px;" onclick="navigate(\'/track.html?id=' + t.id + '\')">' +
+    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 150px;" onclick="navigate(\'' + destPage + t.id + '\')">' +
       '<div style="font-size:14px;color:var(--text-3);">' + (i+1) + '</div>' +
       '<div style="display:flex;align-items:center;gap:14px;min-width:0;">' +
         '<div style="width:44px;height:44px;border-radius:8px;background:' + bg + ';position:relative;overflow:hidden;flex-shrink:0;">' +
