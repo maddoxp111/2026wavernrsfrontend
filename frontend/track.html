@@ -38,18 +38,25 @@
   }
 
   async function loadTrack() {
+    // Only a failed fetch should show "not found". Everything after is
+    // best-effort so a hiccup in a secondary call can't blank the page.
     try {
       track = await api(`/tracks/${trackId}`);
+    } catch (err) {
+      document.getElementById('track-container').innerHTML =
+        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+      return;
+    }
+    try {
       liked = track.user_liked;
       document.title = `${track.title} — wavernrs stream`;
       renderTrack();
       renderTracklist();
       loadComments();
       loadMoreLikeThis();
-      loadRatings('track', track.id);
+      if (typeof loadRatings === 'function') loadRatings('track', track.id);
     } catch (err) {
-      document.getElementById('track-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+      console.error('track render error', err);
     }
   }
 
