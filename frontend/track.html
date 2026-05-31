@@ -98,12 +98,15 @@
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
             ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-2);line-height:1.65;">${escHtml(track.description)}</p>` : ''}
             <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
+                ${liked ? '♥' : '♡'} ${fmtNum(track.like_count)}
+              </button>
+            </div>
+            <div id="rating-widget" style="margin-top:10px;"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="playThisTrack()" id="main-play-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 Play
-              </button>
-              <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
-                ${liked ? '♥' : '♡'} ${fmtNum(track.like_count)}
               </button>
               <a href="${API_BASE}/tracks/${track.id}/download" class="btn btn-secondary" download>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
@@ -115,7 +118,6 @@
               </button>
               <span style="font-size:13px;color:var(--text-3);">${fmtNum(track.play_count)} plays</span>
             </div>
-            <div id="rating-widget" style="margin-top:14px;"></div>
           </div>
         </div>
 
