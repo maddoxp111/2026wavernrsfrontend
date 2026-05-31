@@ -73,7 +73,7 @@ async function loadHome() {
       '<div class="wv-home-layout">' +
         '<div class="wv-home-left" id="home-left"></div>' +
         '<div class="wv-home-right">' +
-          '<div class="wv-card wv-charts-rail" id="charts-rail" style="position:sticky;top:0;"></div>' +
+          '<div class="wv-card wv-charts-rail" id="charts-rail"></div>' +
         '</div>' +
       '</div>';
 
@@ -315,13 +315,14 @@ function playItem(id, type) {
 
 function renderChartsRail() {
   var rail = document.getElementById('charts-rail');
-  var chartsData = _chartsDataCache || { alltime: [], weekly: [] };
   if (!rail) return;
+  var chartsData = _chartsDataCache || {};
+  // API now returns { edits:{alltime,weekly}, comps:{...} } — use edits universe.
+  var edits = chartsData.edits || chartsData; // fall back to old shape gracefully
 
   var chartTabs = [
     { key: 'alltime', label: 'All Time' },
     { key: 'weekly',  label: 'This Week' },
-    { key: 'liked',   label: 'Liked' },
   ];
 
   rail.innerHTML =
@@ -334,17 +335,10 @@ function renderChartsRail() {
         return '<button class="wv-pill ' + (_chartsTab===t.key?'is-active':'') + '" style="flex:1;justify-content:center;padding:6px 10px;font-size:12px;" onclick="switchChartsTab(\'' + t.key + '\')">' + t.label + '</button>';
       }).join('') +
     '</div>' +
-    '<div style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;" id="charts-list"></div>';
+    '<div style="display:flex;flex-direction:column;gap:2px;flex:1;" id="charts-list"></div>';
 
-  // Backend returns unsorted enriched lists; sort here per active tab.
-  var items;
-  if (_chartsTab === 'liked') {
-    items = (chartsData.alltime || []).slice().sort(function(a, b) { return (b.like_count||0) - (a.like_count||0); });
-  } else if (_chartsTab === 'weekly') {
-    items = (chartsData.weekly || []).slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
-  } else {
-    items = (chartsData.alltime || []).slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
-  }
+  var src = _chartsTab === 'weekly' ? (edits.weekly || []) : (edits.alltime || []);
+  var items = src.slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
   renderChartsListItems(items);
 }
 
@@ -363,7 +357,9 @@ function renderChartsListItems(items) {
   list.innerHTML = items.slice(0, 10).map(function(t, i) {
     var seed = t.title || '';
     var artist = t.artists ? t.artists.display_name : 'Unknown';
-    return '<div class="wv-charts-rail-row" onclick="' + (t._type==='album' ? "navigate('/album.html?id=" + t.id + "')" : "navigate('/track.html?id=" + t.id + "')") + '">' +
+    var dest = t.album_id ? "navigate('/track.html?id=" + t.id + "')" : (t._type === 'album' ? "navigate('/album.html?id=" + t.id + "')" : "navigate('/track.html?id=" + t.id + "')");
+    var streams = (t.play_count || 0).toLocaleString();
+    return '<div class="wv-charts-rail-row" onclick="' + dest + '">' +
       '<span style="font-size:14px;color:var(--text-3);width:18px;text-align:center;flex-shrink:0;">' + (i+1) + '</span>' +
       '<div style="width:36px;height:36px;border-radius:6px;background:' + coverGradient(seed) + ';position:relative;overflow:hidden;flex-shrink:0;">' +
         '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.2) 0%,transparent 45%);"></div>' +
@@ -373,6 +369,7 @@ function renderChartsListItems(items) {
         '<div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(t.title) + '</div>' +
         '<div style="font-size:11.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist) + '</div>' +
       '</div>' +
+      '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;flex-shrink:0;text-align:right;">' + streams + '<br><span style="font-size:10px;letter-spacing:0.03em;">streams</span></div>' +
     '</div>';
   }).join('');
 }
