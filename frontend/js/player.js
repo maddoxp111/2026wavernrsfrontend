@@ -306,12 +306,32 @@ function playTrack(track) {
   currentTrack = { ...track, _savedTime: 0 };
   localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
 
-  // recently_played
+  // recently_played — store the comp when a track comes from one, not the individual track
   const HISTORY_KEY = 'recently_played';
   let history = [];
   try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { history = []; }
-  history = history.filter(h => h.id !== track.id);
-  history.unshift({ ...track, _savedTime: undefined });
+  let historyEntry;
+  if (track._album_id) {
+    historyEntry = {
+      _type: 'album',
+      id: track._album_id,
+      title: track._album_title || track.title,
+      cover_url: track._album_cover || track.cover_url || '',
+      artist_name: track.artist_name || '',
+    };
+    history = history.filter(h => h.id !== track._album_id);
+  } else {
+    historyEntry = {
+      _type: 'track',
+      id: track.id,
+      title: track.title,
+      cover_url: track.cover_url || '',
+      ia_url: track.ia_url,
+      artist_name: track.artist_name || '',
+    };
+    history = history.filter(h => h.id !== track.id);
+  }
+  history.unshift(historyEntry);
   if (history.length > 8) history = history.slice(0, 8);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 

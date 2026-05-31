@@ -209,7 +209,11 @@ var _recentPlayed = [];
 function playRecent(idx) {
   var t = _recentPlayed[idx];
   if (!t) return;
-  playTrack({ id: t.id, title: t.title, artist_name: t.artist_name || '', ia_url: t.ia_url, cover_url: t.cover_url || '' });
+  if (t._type === 'album') {
+    navigate('/album.html?id=' + t.id);
+  } else {
+    playTrack({ id: t.id, title: t.title, artist_name: t.artist_name || '', ia_url: t.ia_url, cover_url: t.cover_url || '' });
+  }
 }
 
 function renderRecentlyPlayed() {
@@ -227,10 +231,12 @@ function renderRecentlyPlayed() {
   el.innerHTML = '<h2 class="wv-section-title">Continue Listening</h2><div class="wv-comp-grid wv-comp-grid-4">' +
     _recentPlayed.slice(0, 4).map(function(t, i) {
       var coverBg = (typeof coverGradient === 'function') ? coverGradient(t.title || '') : '#1a1a2e';
+      var isAlbum = t._type === 'album';
       return '<div class="wv-comp-card" onclick="playRecent(' + i + ')">' +
         '<div class="wv-comp-card-cover">' +
           '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
             '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+            (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
             (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
             '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playRecent(' + i + ')">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
