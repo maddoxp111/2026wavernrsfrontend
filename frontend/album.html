@@ -58,6 +58,14 @@
     const artist = album.artists || {};
     const eraName = album.era_tag?.name || album.genre || '';
 
+    // Pre-render 5 empty stars so the widget is immediately visible.
+    // loadRatings() will overwrite this with real data once the API responds.
+    const starEmpty = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+    const starPlaceholder = [1,2,3,4,5].map(i =>
+      `<button type="button" data-s="${i}" style="background:none;border:none;cursor:pointer;padding:2px;line-height:0;">${starEmpty}</button>`
+    ).join('');
+    const ratingPlaceholder = `<div style="display:flex;align-items:center;gap:6px;"><div id="wv-stars" style="display:flex;align-items:center;">${starPlaceholder}</div><span style="font-size:13px;color:var(--text-3);">No ratings yet</span></div>`;
+
     // Freshly created comps (e.g. just imported) live on Internet Archive,
     // which takes a few minutes to process the item before tracks will play.
     // Show a heads-up banner for the first ~15 minutes after creation.
@@ -115,7 +123,7 @@
               <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
                 ${album.user_liked ? '♥' : '♡'} ${fmtNum(album.like_count)}
               </button>
-              <div id="rating-widget"></div>
+              <div id="rating-widget">${ratingPlaceholder}</div>
             </div>
             <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="playAll()">
