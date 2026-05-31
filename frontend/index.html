@@ -315,7 +315,7 @@ function playItem(id, type) {
 
 function renderChartsRail() {
   var rail = document.getElementById('charts-rail');
-  var chartsData = _chartsDataCache || { alltime: [], weekly: [], liked: [] };
+  var chartsData = _chartsDataCache || { alltime: [], weekly: [] };
   if (!rail) return;
 
   var chartTabs = [
@@ -336,7 +336,15 @@ function renderChartsRail() {
     '</div>' +
     '<div style="display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;" id="charts-list"></div>';
 
-  var items = chartsData[_chartsTab] || chartsData.alltime || [];
+  // Backend returns unsorted enriched lists; sort here per active tab.
+  var items;
+  if (_chartsTab === 'liked') {
+    items = (chartsData.alltime || []).slice().sort(function(a, b) { return (b.like_count||0) - (a.like_count||0); });
+  } else if (_chartsTab === 'weekly') {
+    items = (chartsData.weekly || []).slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
+  } else {
+    items = (chartsData.alltime || []).slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
+  }
   renderChartsListItems(items);
 }
 

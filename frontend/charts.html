@@ -16,83 +16,152 @@
 <script src="/js/router.js"></script>
 <script src="/js/playlists.js"></script>
 <script>
-var activeTime = 'alltime';
-var activeSort = 'plays';
 var _chartsData = null;
+var _minRatings = 5;
+// Independent sort state per section.
+var _sortAllTime = 'plays';   // plays | liked | ratings | score
+var _sortWeekly  = 'plays';   // plays | liked
 initPlayer();
 
 async function initCharts() {
   var view = document.getElementById('view');
   view.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:18px;">' +
-    '<div><h1 style="margin:0;font-size:40px;font-weight:800;letter-spacing:-0.035em;">Charts</h1>' +
-    '<div style="font-size:15px;font-weight:600;color:var(--text-2);margin-top:4px;">Discover what\'s trending now.</div></div>' +
-    '<div class="wv-utabs">' +
-    '<button class="wv-utab active" onclick="setTime(\'alltime\')">All Time</button>' +
-    '<button class="wv-utab" onclick="setTime(\'weekly\')">This Week</button>' +
-    '</div>' +
-    '<div style="display:flex;gap:6px;">' +
-    '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'plays\')">Most Plays</button>' +
-    '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'liked\')">Most Liked</button>' +
-    '</div>' +
-    '<div id="charts-body"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div style="display:flex;flex-direction:column;gap:34px;">' +
+      '<div>' +
+        '<h1 style="margin:0;font-size:40px;font-weight:800;letter-spacing:-0.035em;">Charts</h1>' +
+        '<div style="font-size:15px;font-weight:600;color:var(--text-2);margin-top:4px;">The best of Wavernrs, ranked.</div>' +
+      '</div>' +
+
+      // ── All Time ──
+      '<div>' +
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
+          '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">All Time</h2>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="alltime-sorts">' +
+            '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'plays\')">Most Streams</button>' +
+            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'liked\')">Most Liked</button>' +
+            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'ratings\')">Top Rated</button>' +
+            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'score\')">Wavernrs Score</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="alltime-body"><div class="loading"><div class="spinner"></div></div></div>' +
+      '</div>' +
+
+      // ── This Week ──
+      '<div>' +
+        '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
+          '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">This Week</h2>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="weekly-sorts">' +
+            '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'plays\')">Most Streams</button>' +
+            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'liked\')">Most Liked</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="weekly-body"><div class="loading"><div class="spinner"></div></div></div>' +
+      '</div>' +
     '</div>';
   loadCharts();
 }
 
-function setTime(t) {
-  activeTime = t;
-  document.querySelectorAll('.wv-utab').forEach(function(btn,i) { btn.classList.toggle('active', ['alltime','weekly'][i]===t); });
-  renderCharts();
-}
-function setSort(s) {
-  activeSort = s;
-  document.querySelectorAll('.wv-pill[onclick*="setSort"]').forEach(function(btn) {
-    btn.classList.toggle('is-active', btn.getAttribute('onclick').includes("'"+s+"'"));
-  });
-  renderCharts();
+function setSort(section, sort) {
+  if (section === 'alltime') _sortAllTime = sort; else _sortWeekly = sort;
+  var container = document.getElementById(section + '-sorts');
+  if (container) {
+    container.querySelectorAll('.wv-pill').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('onclick').indexOf("'" + sort + "'") !== -1);
+    });
+  }
+  renderSection(section);
 }
 
 async function loadCharts() {
   try {
     _chartsData = await api('/charts');
-    renderCharts();
-  } catch(err) {
-    document.getElementById('charts-body').innerHTML = '<div class="wv-empty">Failed: ' + escHtml(err.message) + '</div>';
+    if (typeof _chartsData.min_ratings === 'number') _minRatings = _chartsData.min_ratings;
+    renderSection('alltime');
+    renderSection('weekly');
+  } catch (err) {
+    document.getElementById('alltime-body').innerHTML = '<div class="wv-empty">Failed: ' + escHtml(err.message) + '</div>';
+    document.getElementById('weekly-body').innerHTML = '';
   }
 }
 
-function renderCharts() {
-  if (!_chartsData) return;
-  var body = document.getElementById('charts-body');
-  if (!body) return;
-  var list = activeSort === 'liked' ? (_chartsData.liked || []) : (activeTime === 'weekly' ? (_chartsData.weekly || []) : (_chartsData.alltime || []));
-  if (!list.length) { body.innerHTML = '<div class="wv-empty">No tracks yet</div>'; return; }
+// Sort + filter a list per section/sort, returning the top 20.
+function _rankList(list, sort) {
+  var arr = (list || []).slice();
+  if (sort === 'liked') {
+    arr.sort(function(a, b) { return (b.like_count||0) - (a.like_count||0); });
+  } else if (sort === 'ratings') {
+    // Only tracks with at least the minimum number of ratings qualify.
+    arr = arr.filter(function(t) { return (t.rating_count||0) >= _minRatings; });
+    arr.sort(function(a, b) {
+      if ((b.rating_avg||0) !== (a.rating_avg||0)) return (b.rating_avg||0) - (a.rating_avg||0);
+      return (b.rating_count||0) - (a.rating_count||0);
+    });
+  } else if (sort === 'score') {
+    arr.sort(function(a, b) { return (b.wavernrs_score||0) - (a.wavernrs_score||0); });
+  } else {
+    arr.sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
+  }
+  return arr.slice(0, 20);
+}
 
-  var header = '<div style="display:grid;grid-template-columns:30px 1fr 160px 80px;gap:16px;padding:10px 16px;font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0.04em;">' +
-    '<div>#</div><div>Title</div><div style="text-align:right;">' + (activeSort==='liked'?'Likes':'Plays') + '</div>' +
-    '<div style="text-align:right;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="display:inline-block;vertical-align:-2px;"><path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></div>' +
+function _metricCell(t, sort) {
+  if (sort === 'liked') return (t.like_count||0).toLocaleString();
+  if (sort === 'ratings') {
+    return '<span style="color:#f59e0b;">★</span> ' + (t.rating_avg!=null ? t.rating_avg : '–') +
+      ' <span style="color:var(--text-3);font-size:12px;">(' + (t.rating_count||0) + ')</span>';
+  }
+  if (sort === 'score') {
+    return '<span style="font-weight:700;color:var(--text);">' + (t.wavernrs_score||0) + '</span>' +
+      '<span style="color:var(--text-3);font-size:11px;"> /100</span>';
+  }
+  return (t.play_count||0).toLocaleString();
+}
+
+function _metricLabel(sort) {
+  if (sort === 'liked') return 'Likes';
+  if (sort === 'ratings') return 'Rating';
+  if (sort === 'score') return 'Score';
+  return 'Streams';
+}
+
+function renderSection(section) {
+  if (!_chartsData) return;
+  var body = document.getElementById(section + '-body');
+  if (!body) return;
+
+  var sort = section === 'alltime' ? _sortAllTime : _sortWeekly;
+  var src  = section === 'alltime' ? _chartsData.alltime : _chartsData.weekly;
+  var list = _rankList(src, sort);
+
+  if (!list.length) {
+    if (sort === 'ratings') {
+      body.innerHTML = '<div class="wv-empty">No edits with at least ' + _minRatings + ' ratings yet.</div>';
+    } else {
+      body.innerHTML = '<div class="wv-empty">No tracks yet</div>';
+    }
+    return;
+  }
+
+  var header = '<div style="display:grid;grid-template-columns:30px 1fr 150px;gap:16px;padding:10px 16px;font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0.04em;">' +
+    '<div>#</div><div>Title</div><div style="text-align:right;">' + _metricLabel(sort) + '</div>' +
     '</div>';
 
   var rows = list.map(function(t, i) {
-    var seed = t.title||'', artist = t.artists ? t.artists.display_name : 'Unknown';
-    var plays = activeSort==='liked' ? (t.like_count||0).toLocaleString() : (t.play_count||0).toLocaleString();
-    var dur = t.duration ? fmtTime(t.duration) : '--:--';
+    var seed = t.title || '', artist = t.artists ? t.artists.display_name : 'Unknown';
     var bg = coverGradient(seed);
-    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 160px 80px;" onclick="navigate(\'/track.html?id='+t.id+'\')">' +
-      '<div style="font-size:14px;color:var(--text-3);">'+(i+1)+'</div>' +
+    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 150px;" onclick="navigate(\'/track.html?id=' + t.id + '\')">' +
+      '<div style="font-size:14px;color:var(--text-3);">' + (i+1) + '</div>' +
       '<div style="display:flex;align-items:center;gap:14px;min-width:0;">' +
-        '<div style="width:44px;height:44px;border-radius:8px;background:'+bg+';position:relative;overflow:hidden;flex-shrink:0;">' +
+        '<div style="width:44px;height:44px;border-radius:8px;background:' + bg + ';position:relative;overflow:hidden;flex-shrink:0;">' +
           '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,transparent 45%);"></div>' +
-          (t.cover_url?'<img src="'+escHtml(t.cover_url)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">':'') +
+          (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
         '</div>' +
         '<div style="min-width:0;">' +
-          '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">'+escHtml(t.title)+'</div>' +
-          '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(artist)+'</div>' +
+          '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">' + escHtml(t.title) + '</div>' +
+          '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist) + '</div>' +
         '</div>' +
       '</div>' +
-      '<div style="font-size:13.5px;color:var(--text-2);text-align:right;">'+plays+'</div>' +
-      '<div style="font-size:13.5px;color:var(--text-3);text-align:right;">'+dur+'</div>' +
+      '<div style="font-size:13.5px;color:var(--text-2);text-align:right;">' + _metricCell(t, sort) + '</div>' +
     '</div>';
   }).join('');
 
