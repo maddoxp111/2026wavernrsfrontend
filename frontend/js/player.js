@@ -299,6 +299,18 @@ function _onTimeUpdate() {
   }
 }
 
+// Register a stream, debounced per track so re-renders / quick replays of the
+// same track don't double-count. Fire-and-forget; failures are silent.
+var _lastPlayRegistered = { id: null, ts: 0 };
+function registerPlay(trackId) {
+  var now = Date.now();
+  if (_lastPlayRegistered.id === trackId && now - _lastPlayRegistered.ts < 30000) return;
+  _lastPlayRegistered = { id: trackId, ts: now };
+  if (typeof api === 'function') {
+    api('/tracks/' + trackId + '/play', { method: 'POST' }).catch(function() {});
+  }
+}
+
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
@@ -339,6 +351,11 @@ function playTrack(track) {
   audio.currentTime = 0;
   const p = audio.play();
   if (p) p.catch(() => {});
+
+  // Register the stream. This is what actually counts a play — opening a
+  // detail page no longer inflates the count, so comps and album tracks
+  // accumulate real streams when listened to (here, not on page view).
+  if (track.id) registerPlay(track.id);
 
   _renderAll(track);
   playerEl.classList.remove('hidden');
