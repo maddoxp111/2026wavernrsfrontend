@@ -425,6 +425,13 @@
       document.head.appendChild(fav);
     }
 
+    // Inject PWA manifest once
+    if (!document.querySelector('link[rel="manifest"]')) {
+      var man = document.createElement('link');
+      man.rel = 'manifest'; man.href = '/manifest.json';
+      document.head.appendChild(man);
+    }
+
     var theme = localStorage.getItem('wv-theme') || 'dark';
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');

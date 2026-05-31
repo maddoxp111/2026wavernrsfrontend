@@ -204,12 +204,51 @@ function heroMore(e) {
   }
 }
 
+function renderRecentlyPlayed() {
+  var left = document.getElementById('home-left');
+  if (!left) return;
+  var existing = document.getElementById('home-recent');
+  if (existing) existing.remove();
+
+  var history = [];
+  try { history = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch(e) {}
+  if (!history.length) return;
+
+  var el = document.createElement('div');
+  el.id = 'home-recent';
+  el.className = 'home-section';
+  el.innerHTML = '<h2 class="wv-section-title">Continue Listening</h2><div class="wv-comp-grid wv-comp-grid-4">' +
+    history.slice(0, 4).map(function(t) {
+      var coverBg = (typeof coverGradient === 'function') ? coverGradient(t.title || '') : '#1a1a2e';
+      return '<div class="wv-comp-card" onclick="playTrack(' + JSON.stringify({id:t.id,title:t.title,artist_name:t.artist_name||'',ia_url:t.ia_url,cover_url:t.cover_url||''}).replace(/</g,'\\u003c').replace(/>/g,'\\u003e') + ')">' +
+        '<div class="wv-comp-card-cover">' +
+          '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+            '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+            (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+            '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playTrack(' + JSON.stringify({id:t.id,title:t.title,artist_name:t.artist_name||'',ia_url:t.ia_url,cover_url:t.cover_url||''}).replace(/</g,'\\u003c').replace(/>/g,'\\u003e') + ')">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="wv-comp-card-title">' + escHtml(t.title || '') + '</div>' +
+        '<div class="wv-comp-card-artist">' + escHtml(t.artist_name || '') + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+
+  // Insert before first .home-section so it appears at top of left column (below hero)
+  var firstSection = left.querySelector('.home-section');
+  if (firstSection) left.insertBefore(el, firstSection);
+  else left.appendChild(el);
+}
+
 function renderHomeSections() {
   var left = document.getElementById('home-left');
   if (!left) return;
 
   // Remove old sections
   left.querySelectorAll('.home-section').forEach(function(el) { el.remove(); });
+
+  renderRecentlyPlayed();
 
   if (_trendingGlobal.length) {
     var tEl = document.createElement('div');

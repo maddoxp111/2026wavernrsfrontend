@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — forgot password</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/x-icon" href="/icon.ico">
+</head>
+<body>
+<div class="wv-auth-page theme-light" id="auth-root">
+  <div class="wv-auth-card wv-card">
+    <div style="font-size:22px;font-weight:800;letter-spacing:-0.04em;color:var(--brand);margin-bottom:24px;">wavernrs</div>
+    <div class="wv-auth-title">Reset password</div>
+    <div class="wv-auth-sub">Enter your email and we'll send a reset link</div>
+
+    <div id="alert-container"></div>
+    <div id="success-container" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:32px;margin-bottom:12px;">📬</div>
+      <div style="font-weight:600;margin-bottom:6px;">Check your inbox</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6;">If an account with that email exists, we sent a reset link. It expires in 1 hour.</div>
+      <a href="/login.html" style="display:inline-block;margin-top:20px;color:var(--brand);font-size:13px;font-weight:500;">Back to login</a>
+    </div>
+
+    <div id="form-container">
+      <div class="wv-form-field">
+        <label class="wv-form-label" for="email">Email address</label>
+        <input class="wv-input" type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <button class="wv-pill brand" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px;" id="submit-btn" onclick="doForgot()">Send reset link</button>
+
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-2);">
+        <a href="/login.html" style="color:var(--text-3);">Back to login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  var _t = localStorage.getItem('wv-theme') || 'light';
+  document.getElementById('auth-root').className = 'wv-auth-page theme-' + _t;
+
+  document.getElementById('email').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doForgot();
+  });
+
+  async function doForgot() {
+    var email = document.getElementById('email').value.trim();
+    var alertEl = document.getElementById('alert-container');
+    alertEl.innerHTML = '';
+
+    if (!email) {
+      alertEl.innerHTML = '<div class="wv-form-error">Please enter your email address</div>';
+      return;
+    }
+
+    var btn = document.getElementById('submit-btn');
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
+
+    try {
+      await api('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('success-container').style.display = 'block';
+    } catch (err) {
+      alertEl.innerHTML = '<div class="wv-form-error">' + (err.message || 'Something went wrong') + '</div>';
+      btn.textContent = 'Send reset link';
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>

@@ -51,6 +51,16 @@
     }
   }
 
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(function() {
+      var btn = document.getElementById('share-btn');
+      if (!btn) return;
+      var orig = btn.innerHTML;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.innerHTML = orig; }, 2000);
+    }).catch(function() {});
+  }
+
   function playThisTrack() {
     if (!track) return;
     playTrack(Object.assign({}, track, { artist_name: track.artists ? track.artists.display_name : '' }));
@@ -90,6 +100,10 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
                 Download
               </a>
+              <button class="btn btn-secondary" id="share-btn" onclick="copyLink()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
+                Share
+              </button>
               <span style="font-size:13px;color:var(--text-3);">${fmtNum(track.play_count)} plays</span>
             </div>
           </div>

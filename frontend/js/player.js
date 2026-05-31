@@ -409,3 +409,28 @@ function renderPlayerTrack(track) { _renderAll(track); }
 function setPlayBtn(playing) { _setPlayBtns(playing); }
 function playIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`; }
 function pauseIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`; }
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  // Skip when focus is in a text field or content-editable element
+  var t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (!audio) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlay();
+  } else if ((e.key === 'ArrowRight' || e.key === 'l') && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    audio.currentTime = Math.min((audio.duration || 0), audio.currentTime + 10);
+  } else if ((e.key === 'ArrowLeft' || e.key === 'j') && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    audio.currentTime = Math.max(0, audio.currentTime - 10);
+  } else if (e.key === 'ArrowRight' && e.shiftKey) {
+    skipNext();
+  } else if (e.key === 'ArrowLeft' && e.shiftKey) {
+    skipPrev();
+  } else if (e.key === 'm' && !e.metaKey && !e.ctrlKey) {
+    toggleMute();
+  }
+});
