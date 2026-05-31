@@ -1,72 +1,90 @@
 // Star rating widget — shared by track.html and album.html.
-// Exposes window.loadRatings(entityType, entityId) which fetches
-// the current averages + user's own rating, then renders the widget
-// into <div id="rating-widget">.
+// Exposes window.loadRatings(entityType, entityId).
 (function () {
   'use strict';
 
   var _data = { avg: null, count: 0, user_rating: null };
   var _entityType = null;
   var _entityId = null;
-  var _hover = null;
 
-  function _starSvg(filled, size) {
-    size = size || 20;
+  function _starSvg(filled) {
     if (filled) {
-      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+      return '<svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
     }
-    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+    return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
   }
 
-  function _render() {
+  function _buildWidget() {
     var container = document.getElementById('rating-widget');
     if (!container) return;
 
-    var isLoggedIn = !!localStorage.getItem('token');
-    var display = _hover !== null ? _hover : (_data.user_rating || 0);
+    var loggedIn = !!localStorage.getItem('token');
+    var current = _data.user_rating || 0;
 
     var starsHtml = '';
     for (var i = 1; i <= 5; i++) {
-      var filled = i <= display;
-      if (isLoggedIn) {
+      if (loggedIn) {
         starsHtml +=
-          '<button data-s="' + i + '" ' +
-          'style="background:none;border:none;cursor:pointer;padding:2px;line-height:0;transition:transform 0.1s;" ' +
-          'onmouseenter="window._rH(' + i + ')" onmouseleave="window._rH(null)" ' +
-          'onclick="window._rC(' + i + ')" title="' + i + ' star' + (i > 1 ? 's' : '') + '">' +
-          _starSvg(filled) +
+          '<button type="button" data-s="' + i + '"' +
+          ' style="background:none;border:none;cursor:pointer;padding:2px;line-height:0;">' +
+          _starSvg(i <= current) +
           '</button>';
       } else {
-        starsHtml += '<span style="line-height:0;display:inline-block;padding:2px;">' + _starSvg(filled) + '</span>';
+        starsHtml +=
+          '<span style="line-height:0;display:inline-block;padding:2px;">' +
+          _starSvg(i <= current) +
+          '</span>';
       }
     }
 
-    var summaryHtml;
-    if (_data.count > 0) {
-      summaryHtml =
-        '<span style="font-size:14px;font-weight:600;color:var(--text);">' + _data.avg + '</span>' +
-        '<span style="font-size:13px;color:var(--text-3);margin-left:5px;">' +
-          '(' + _data.count + ' rating' + (_data.count !== 1 ? 's' : '') + ')' +
-        '</span>';
-    } else {
-      summaryHtml = '<span style="font-size:13px;color:var(--text-3);">No ratings yet — be the first!</span>';
-    }
+    var summaryHtml = _data.count > 0
+      ? '<span style="font-size:14px;font-weight:600;color:var(--text);">' + _data.avg + '</span>' +
+        '<span style="font-size:13px;color:var(--text-3);margin-left:5px;">(' + _data.count + ' rating' + (_data.count !== 1 ? 's' : '') + ')</span>'
+      : '<span style="font-size:13px;color:var(--text-3);">No ratings yet</span>';
 
     container.innerHTML =
       '<div style="display:flex;align-items:center;gap:6px;">' +
-        '<div style="display:flex;gap:0px;align-items:center;">' + starsHtml + '</div>' +
-        '<div>' + summaryHtml + '</div>' +
+        '<div id="wv-stars" style="display:flex;align-items:center;">' + starsHtml + '</div>' +
+        '<div id="wv-rating-summary">' + summaryHtml + '</div>' +
       '</div>';
+
+    if (!loggedIn) return;
+
+    // Event delegation on the container — avoids stale handlers when stars
+    // are re-rendered and prevents hover getting stuck on individual elements.
+    var starsEl = document.getElementById('wv-stars');
+    if (!starsEl) return;
+
+    starsEl.addEventListener('mousemove', function (e) {
+      var btn = e.target.closest('button[data-s]');
+      if (!btn) return;
+      _fillUpTo(parseInt(btn.getAttribute('data-s'), 10));
+    });
+
+    // mouseleave on the container (not individual stars) — never gets stuck.
+    starsEl.addEventListener('mouseleave', function () {
+      _fillUpTo(_data.user_rating || 0);
+    });
+
+    starsEl.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-s]');
+      if (!btn) return;
+      _rC(parseInt(btn.getAttribute('data-s'), 10));
+    });
   }
 
-  window._rH = function (val) { _hover = val; _render(); };
+  function _fillUpTo(n) {
+    var btns = document.querySelectorAll('#wv-stars button[data-s]');
+    btns.forEach(function (btn) {
+      btn.innerHTML = _starSvg(parseInt(btn.getAttribute('data-s'), 10) <= n);
+    });
+  }
 
-  window._rC = async function (val) {
+  async function _rC(val) {
     if (!_entityType || !_entityId) return;
     var token = localStorage.getItem('token');
     if (!token) return;
 
-    // Clicking the same star again removes the rating
     var newVal = _data.user_rating === val ? null : val;
 
     if (newVal === null) {
@@ -82,9 +100,8 @@
       }).catch(function () {});
     }
 
-    // Re-fetch fresh averages
     await _load(_entityType, _entityId);
-  };
+  }
 
   async function _load(entityType, entityId) {
     _entityType = entityType;
@@ -97,8 +114,11 @@
     } catch (e) {
       _data = { avg: null, count: 0, user_rating: null };
     }
-    _render();
+    _buildWidget();
   }
 
   window.loadRatings = _load;
+  // Stubs so any lingering inline handlers in old DOM snapshots don't throw.
+  window._rH = function () {};
+  window._rC = _rC;
 })();
