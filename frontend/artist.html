@@ -51,15 +51,9 @@
 
       document.title = (artist.display_name || 'Artist') + ' — wavernrs';
 
-      var pageBgEl = document.getElementById('wv-page-bg');
-      if (pageBgEl) {
-        if (typeof extractCoverHues === 'function') extractCoverHues(artist.profile_image_url || artist.banner_url, artist.display_name || '', function(c) {
-          var isDark = document.getElementById('wv-root') && document.getElementById('wv-root').classList.contains('theme-dark');
-          pageBgEl.style.background =
-            'radial-gradient(ellipse 130% 90% at -5% 0%, hsla(' + c.h1 + ',85%,' + (isDark ? 36 : 54) + '%,0.85) 0%, transparent 52%),' +
-            'radial-gradient(ellipse 110% 130% at 105% 100%, hsla(' + c.h2 + ',80%,' + (isDark ? 30 : 48) + '%,0.75) 0%, transparent 58%),' +
-            'var(--page-bg)';
-        });
+      // Blurred profile image as the page background (like the home hero).
+      if (typeof window.setPageBgImage === 'function') {
+        window.setPageBgImage(artist.profile_image_url || artist.banner_url || '');
       }
 
       render();

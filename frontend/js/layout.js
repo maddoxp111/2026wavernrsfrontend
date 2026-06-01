@@ -416,6 +416,24 @@
     document.body.style.overflow = '';
   };
 
+  // Set the fixed page background to an image, blurred + darkened — the same
+  // Spotify/Apple-Music look the home hero uses. Pass a falsy url to clear it
+  // back to the default gradient. Used by artist/album/charts/you/discover/
+  // upload pages so each page's background reflects its content.
+  window.setPageBgImage = function(url) {
+    var bg = document.getElementById('wv-page-bg');
+    if (!bg) return;
+    if (url) {
+      bg.style.backgroundImage = 'url(' + String(url).replace(/"/g, '%22') + ')';
+      bg.style.backgroundSize = 'cover';
+      bg.style.backgroundPosition = 'center';
+      bg.style.filter = 'blur(60px) brightness(0.35) saturate(1.6)';
+    } else {
+      bg.style.backgroundImage = '';
+      bg.style.filter = '';
+    }
+  };
+
   // ── Build and inject the shell ────────────────────────────────
   function initShell() {
     // Inject favicon once

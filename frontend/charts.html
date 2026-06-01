@@ -167,6 +167,12 @@ function renderSection(section) {
   var noun = type === 'comps' ? 'comps' : 'edits';
   var destPage = type === 'comps' ? '/album.html?id=' : '/track.html?id=';
 
+  // The page background mirrors the #1 all-time release on the selected tab
+  // (edits/comps). The weekly section never drives the background.
+  if (section === 'alltime' && typeof window.setPageBgImage === 'function') {
+    window.setPageBgImage(list.length && list[0].cover_url ? list[0].cover_url : '');
+  }
+
   if (!list.length) {
     if (sort === 'ratings') {
       body.innerHTML = '<div class="wv-empty">No ' + noun + ' with at least ' + _minRatings + ' ratings yet.</div>';

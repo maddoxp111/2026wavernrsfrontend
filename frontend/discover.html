@@ -74,6 +74,11 @@ async function loadTracks() {
     else if (activeEra) { var d = await api('/discover/era/' + activeEra); items = Array.isArray(d) ? d : []; }
     else { var d = await api('/discover'); items = d.recent || []; }
     _discoverItems = items;
+    // Blurred background from a random release that has cover art.
+    if (typeof window.setPageBgImage === 'function') {
+      var withCover = items.filter(function(i){ return i.cover_url; });
+      window.setPageBgImage(withCover.length ? withCover[Math.floor(Math.random() * withCover.length)].cover_url : '');
+    }
     if (!items.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Nothing here yet</div>'; return; }
     grid.innerHTML = items.map(compCardHTML).join('');
   } catch(err) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>'; }

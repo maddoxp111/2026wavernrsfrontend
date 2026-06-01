@@ -16,6 +16,11 @@ window.navigate = async function(url) {
   window._pageCleanup.forEach(fn => { try { fn(); } catch (_) {} });
   window._pageCleanup = [];
 
+  // Clear any page-specific blurred background. Pages that want one
+  // (album/artist/charts/you/discover/upload/home) re-apply it in their
+  // init script right after; everything else falls back to the default.
+  if (typeof window.setPageBgImage === 'function') window.setPageBgImage('');
+
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error('fetch failed');

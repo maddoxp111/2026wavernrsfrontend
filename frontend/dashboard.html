@@ -151,6 +151,10 @@
       ]);
       artist = me.artist;
       if (!artist || !artist.id) throw new Error('No artist profile found. Try logging out and back in.');
+      // Blurred profile image as the page background (like the home hero).
+      if (typeof window.setPageBgImage === 'function') {
+        window.setPageBgImage(artist.profile_image_url || artist.banner_url || '');
+      }
       const [allTracks, allComps] = await Promise.all([
         api(`/artists/${artist.id}/tracks`),
         api(`/albums/by-artist/${artist.id}`).catch(() => []),
