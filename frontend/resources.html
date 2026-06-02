@@ -16,16 +16,12 @@
     <p style="margin-top:8px;font-size:14px;color:var(--text-2);">Trackers, sheets, and other community resources.</p>
   </div>
 
-  <!-- Tab bar -->
-  <div style="display:flex;gap:8px;border-bottom:1px solid var(--hair);margin:18px 0 22px;">
-    <button class="wv-admin-tab active" id="rtab-tracker" onclick="showResourceTab('tracker')">Tracker</button>
-  </div>
+  <!-- Tab bar (dynamically populated) -->
+  <div id="rtab-bar" style="display:flex;gap:8px;border-bottom:1px solid var(--hair);margin:18px 0 22px;flex-wrap:wrap;"></div>
 
-  <!-- Tracker tab -->
-  <div id="rtab-content-tracker">
-    <div id="tracker-container">
-      <div class="loading"><div class="spinner"></div></div>
-    </div>
+  <!-- Content area -->
+  <div id="tracker-container">
+    <div class="loading"><div class="spinner"></div></div>
   </div>
 </div>
 </div><!-- /view -->
@@ -37,20 +33,23 @@
 <script>
   initPlayer();
 
-  var trackerData = null;     // { url, headers, rows, error }
-  var trackerTitleKey = null;
-  var trackerLinkKeys = [];
-  var trackerMetaKeys = [];
-  var playable = [];          // rows that have a playable audio url, in display order
+  // ── Global state ─────────────────────────────────────────────
+  var trackerTabs = [];       // [{name, url}] from /api/resources/tabs
+  var activeTabIdx = -1;
+  var tabCache = {};          // idx → {data, analysis, groups}
+  var activeData = null;
+  var activeAnalysis = null;
+  var activeGroups = null;    // grouped by era (or null if flat)
+  var playable = [];
   var playIndex = -1;
-  var renderLimit = 300;      // windowed rendering for very large trackers
+  var renderLimit = 300;
+  var eraOpenState = {};      // eraName → bool
 
-  function showResourceTab(tab) {
-    // Single tab for now; structured so more can be added later.
-    document.getElementById('rtab-tracker').classList.toggle('active', tab === 'tracker');
-    if (tab === 'tracker') loadTracker();
+  // ── Utilities ────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
   function firstLine(v) {
     var s = String(v == null ? '' : v).trim();
     var nl = s.indexOf('\n');
@@ -58,15 +57,11 @@
   }
   function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trim() + '…' : s; }
 
-  // Pillowcase (pillows.su / pillowcase.su) hides the file behind a JS player,
-  // but its API serves the raw, range-enabled, CORS-open audio directly:
-  //   https://pillows.su/f/<id>  ->  https://api.pillows.su/api/download/<id>
+  // ── URL helpers ───────────────────────────────────────────────
   function pillowDirect(v) {
     var m = String(v || '').match(/(?:pillows|pillowcase)\.su\/f\/([a-z0-9]+)/i);
     return m ? 'https://api.pillows.su/api/download/' + m[1] : null;
   }
-
-  // Resolve a cell value to a directly-playable audio URL, or null.
   function audioUrl(v) {
     if (!v || !/^https?:\/\//i.test(v)) return null;
     var pc = pillowDirect(v);
@@ -75,59 +70,218 @@
     if (/(cdn\.samply\.app|archive\.org\/download|googleusercontent\.com|\.b-cdn\.net)/i.test(v)) return v;
     return null;
   }
-  function isUrl(v) { return v && /^https?:\/\//i.test(v); }
+  function isUrl(v) { return !!(v && /^https?:\/\//i.test(v)); }
+  function isImageUrl(v) {
+    if (!v || !isUrl(v)) return false;
+    return /\.(jpg|jpeg|png|webp|gif|avif)(\?|#|$)/i.test(v) ||
+      /(googleusercontent|lh[0-9]\.google|cloudinary|imgur\.com|i\.redd\.it|pbs\.twimg|cdn\.discordapp|media\.discordapp)/i.test(v);
+  }
 
+  // ── Column analysis ───────────────────────────────────────────
   function analyzeColumns(headers, rows) {
-    // Title column: prefer a name/title/song/track header, else first column.
-    trackerTitleKey = headers.find(function(h) { return /\b(name|title|song|track)\b/i.test(h); }) || headers[0];
-    // Link columns: any column where most non-empty values look like URLs.
-    trackerLinkKeys = headers.filter(function(h) {
-      if (h === trackerTitleKey) return false;
+    // Title: header match → col1 → col0
+    var titleKey = headers.find(function(h) { return /\b(name|title|song|track)\b/i.test(h); })
+      || headers[1] || headers[0];
+
+    // Era: header match or col0 high-repetition detection
+    var eraKey = headers.find(function(h) {
+      return /\b(era|category|section|group|period|phase)\b/i.test(h);
+    });
+    if (!eraKey) {
+      var col0 = headers[0];
+      if (col0 && col0 !== titleKey) {
+        var runs = 0, maxRun = 0, curVal = null, curRun = 0;
+        rows.forEach(function(r) {
+          var v = (r[col0] || '').trim();
+          if (v && v === curVal) { curRun++; }
+          else { if (curRun >= 3) runs++; maxRun = Math.max(maxRun, curRun); curRun = 1; curVal = v || null; }
+        });
+        if (curRun >= 3) runs++;
+        if (runs >= 2 || maxRun >= 5) eraKey = col0;
+      }
+    }
+
+    // Description: header match
+    var descKey = headers.find(function(h) {
+      return /\b(note|notes|description|desc|info|comment|detail)\b/i.test(h);
+    }) || null;
+
+    // Image: header match or content detection
+    var imageKey = headers.find(function(h) {
+      return /\b(image|img|cover|art|photo|picture|pic|artwork)\b/i.test(h);
+    });
+    if (!imageKey) {
+      imageKey = headers.find(function(h) {
+        if (h === titleKey || h === eraKey || h === descKey) return false;
+        var vals = rows.map(function(r) { return r[h]; }).filter(Boolean);
+        if (vals.length < 2) return false;
+        return vals.filter(isImageUrl).length >= Math.max(1, vals.length * 0.3);
+      }) || null;
+    }
+
+    // Link columns: mostly URLs (≥50% of non-empty values)
+    var linkKeys = headers.filter(function(h) {
+      if (h === titleKey || h === eraKey || h === descKey || h === imageKey) return false;
       var vals = rows.map(function(r) { return r[h]; }).filter(Boolean);
       if (!vals.length) return false;
-      var urls = vals.filter(isUrl).length;
-      return urls >= Math.max(1, vals.length * 0.5);
+      return vals.filter(isUrl).length >= Math.max(1, vals.length * 0.5);
     });
-    // Everything else is metadata.
-    trackerMetaKeys = headers.filter(function(h) {
-      return h !== trackerTitleKey && trackerLinkKeys.indexOf(h) === -1;
+
+    // Meta: everything else
+    var metaKeys = headers.filter(function(h) {
+      return h !== titleKey && h !== eraKey && h !== descKey && h !== imageKey
+        && linkKeys.indexOf(h) === -1;
     });
+
+    // Art tab: tab name contains "art" OR many image URLs in the sheet
+    var tabName = (trackerTabs[activeTabIdx] || {}).name || '';
+    var isArtTab = /\bart\b/i.test(tabName) || (imageKey != null && (function() {
+      var total = 0, imgs = 0;
+      headers.forEach(function(h) {
+        rows.forEach(function(r) { var v = r[h]; if (v && v.trim()) { total++; if (isImageUrl(v)) imgs++; } });
+      });
+      return total > 0 && imgs / total > 0.15;
+    })());
+
+    return { titleKey: titleKey, eraKey: eraKey, descKey: descKey, imageKey: imageKey,
+             linkKeys: linkKeys, metaKeys: metaKeys, isArtTab: isArtTab };
   }
 
-  async function loadTracker() {
-    var el = document.getElementById('tracker-container');
-    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  // ── Era grouping ──────────────────────────────────────────────
+  function groupByEra(rows, an) {
+    var eraKey = an.eraKey;
+    if (!eraKey) return null;
+
+    var groups = [];
+    var eraMap = {};
+
+    rows.forEach(function(r) {
+      var eraName = (r[eraKey] || '').trim() || '—';
+      if (!eraMap[eraName]) {
+        var g = { eraName: eraName, coverUrl: null, rows: [] };
+        eraMap[eraName] = g;
+        groups.push(g);
+      }
+      var g = eraMap[eraName];
+      // Pick up era cover from first image URL found in this row
+      if (!g.coverUrl) {
+        if (an.imageKey && isImageUrl(r[an.imageKey])) {
+          g.coverUrl = r[an.imageKey];
+        } else {
+          for (var k in r) { if (isImageUrl(r[k])) { g.coverUrl = r[k]; break; } }
+        }
+      }
+      g.rows.push(r);
+    });
+
+    return groups;
+  }
+
+  // ── Audio helpers ─────────────────────────────────────────────
+  function firstAudio(r) {
+    if (!activeAnalysis) return null;
+    for (var i = 0; i < activeAnalysis.linkKeys.length; i++) {
+      var a = audioUrl(r[activeAnalysis.linkKeys[i]]);
+      if (a) return a;
+    }
+    return null;
+  }
+  function rowToTrack(r) {
+    return {
+      title: r[activeAnalysis.titleKey] || 'Untitled',
+      ia_url: firstAudio(r),
+      artist_name: 'Tracker',
+      cover_url: null,
+    };
+  }
+  function shortLabel(h) {
+    var s = String(h || 'Link').trim();
+    return s.length > 14 ? s.slice(0, 13) + '…' : s;
+  }
+
+  // ── Tab loading ───────────────────────────────────────────────
+  async function loadTabs() {
+    var container = document.getElementById('tracker-container');
     try {
-      trackerData = await api('/resources/tracker');
+      var data = await api('/resources/tabs');
+      trackerTabs = data.tabs || [];
     } catch (e) {
-      el.innerHTML = emptyState('Couldn\'t load the tracker', 'Try again in a moment.');
+      trackerTabs = [];
+    }
+    renderTabBar();
+    if (!trackerTabs.length) {
+      container.innerHTML = emptyState('No tabs configured', 'An admin can add sheets in the admin panel.');
       return;
     }
-    if (trackerData.error) { el.innerHTML = emptyState('Tracker unavailable', trackerData.error); return; }
-    if (!trackerData.url) { el.innerHTML = emptyState('No tracker set up yet', 'An admin can connect a Google Sheet in the admin panel.'); return; }
-    if (!trackerData.rows || !trackerData.rows.length) { el.innerHTML = emptyState('Tracker is empty', 'The connected sheet has no rows yet.'); return; }
-
-    analyzeColumns(trackerData.headers, trackerData.rows);
-    renderTracker('');
+    switchTab(0);
   }
 
+  function renderTabBar() {
+    var bar = document.getElementById('rtab-bar');
+    if (!trackerTabs.length) { bar.innerHTML = ''; return; }
+    bar.innerHTML = trackerTabs.map(function(t, i) {
+      return '<button class="wv-admin-tab' + (i === activeTabIdx ? ' active' : '') +
+        '" id="rtab-' + i + '" onclick="switchTab(' + i + ')">' + escHtml(t.name || ('Tab ' + (i+1))) + '</button>';
+    }).join('');
+  }
+
+  async function switchTab(idx) {
+    if (idx === activeTabIdx && tabCache[idx]) {
+      // Already loaded and displayed; just update active state
+      trackerTabs.forEach(function(_, i) {
+        var btn = document.getElementById('rtab-' + i);
+        if (btn) btn.classList.toggle('active', i === idx);
+      });
+      return;
+    }
+    activeTabIdx = idx;
+    trackerTabs.forEach(function(_, i) {
+      var btn = document.getElementById('rtab-' + i);
+      if (btn) btn.classList.toggle('active', i === idx);
+    });
+
+    if (tabCache[idx]) {
+      activeData = tabCache[idx].data;
+      activeAnalysis = tabCache[idx].analysis;
+      activeGroups = tabCache[idx].groups;
+      playable = tabCache[idx].playable;
+      renderTracker('');
+      return;
+    }
+
+    var container = document.getElementById('tracker-container');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    try {
+      var data = await api('/resources/tracker?tab=' + idx);
+      if (data.error) { container.innerHTML = emptyState('Tab unavailable', data.error); return; }
+      if (!data.url) { container.innerHTML = emptyState('No sheet configured', 'An admin can connect a Google Sheet in the admin panel.'); return; }
+      if (!data.rows || !data.rows.length) { container.innerHTML = emptyState('Tab is empty', 'The connected sheet has no data.'); return; }
+
+      activeData = data;
+      activeAnalysis = analyzeColumns(data.headers, data.rows);
+      activeGroups = activeAnalysis.eraKey ? groupByEra(data.rows, activeAnalysis) : null;
+      playable = data.rows.map(function(r, i) { return { r: r, i: i }; })
+        .filter(function(x) { return firstAudio(x.r); });
+
+      tabCache[idx] = { data: data, analysis: activeAnalysis, groups: activeGroups, playable: playable };
+      renderTracker('');
+    } catch (e) {
+      container.innerHTML = emptyState('Couldn\'t load tab', 'Try again in a moment.');
+    }
+  }
+
+  // ── Rendering: outer shell ────────────────────────────────────
   function emptyState(title, sub) {
     return '<div class="empty-state" style="text-align:center;padding:60px 20px;">' +
-      '<div class="empty-title" style="font-size:18px;font-weight:700;margin-bottom:6px;">' + escHtml(title) + '</div>' +
+      '<div style="font-size:18px;font-weight:700;margin-bottom:6px;">' + escHtml(title) + '</div>' +
       '<div style="font-size:14px;color:var(--text-3);">' + escHtml(sub) + '</div></div>';
   }
 
-  // Build the static shell (toolbar + search) once, then fill the rows area.
-  // Keeping the search input out of the re-rendered region preserves focus
-  // while typing.
   function renderTracker(query) {
-    var rows = trackerData.rows;
-
-    // Playable list (for Play All / auto-advance) from the full set, in order.
-    playable = rows.map(function(r, i) { return { r: r, i: i }; })
-      .filter(function(x) { return firstAudio(x.r); });
-
+    var rows = activeData.rows;
     var html = '';
+
     html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">';
     if (playable.length) {
       html += '<button class="btn btn-primary" onclick="playAllTracker()">' +
@@ -135,11 +289,11 @@
     }
     html += '<div class="wv-input wv-search-wrap" style="flex:1;min-width:200px;display:flex;align-items:center;gap:8px;padding:9px 14px;">' +
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-      '<input id="tracker-search" placeholder="Search the tracker…" value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
+      '<input id="tracker-search" placeholder="Search…" value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
       'style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;"></div>';
-    html += '<a href="' + escHtml(trackerData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
+    html += '<a href="' + escHtml(activeData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
     html += '</div>';
-    html += '<div id="tracker-count" style="font-size:12.5px;color:var(--text-3);margin-bottom:12px;"></div>';
+    html += '<div id="tracker-count" style="font-size:12.5px;color:var(--text-3);margin-bottom:14px;"></div>';
     html += '<div id="tracker-rows"></div>';
 
     document.getElementById('tracker-container').innerHTML = html;
@@ -152,124 +306,227 @@
     clearTimeout(_searchTimer);
     _searchTimer = setTimeout(function() { renderRows(v); }, 120);
   }
-
   function showMoreTracker() {
     renderLimit += 300;
     var q = (document.getElementById('tracker-search') || {}).value || '';
     renderRows(q);
   }
 
-  // Re-render ONLY the rows + count (search input stays put → keeps focus).
   function renderRows(query) {
-    var rows = trackerData.rows;
+    var rows = activeData.rows;
+    var an = activeAnalysis;
     var q = (query || '').toLowerCase().trim();
+
     var filtered = !q ? rows : rows.filter(function(r) {
       return Object.keys(r).some(function(k) { return (r[k] || '').toLowerCase().indexOf(q) !== -1; });
     });
 
     var countEl = document.getElementById('tracker-count');
-    if (countEl) countEl.textContent = filtered.length + ' of ' + rows.length + ' entries';
+    if (countEl) countEl.textContent = filtered.length.toLocaleString() + ' of ' + rows.length.toLocaleString() + ' entries';
 
     var container = document.getElementById('tracker-rows');
     if (!container) return;
 
-    if (!filtered.length) {
-      container.innerHTML = emptyState('No matches', 'Try a different search.');
-      return;
+    if (!filtered.length) { container.innerHTML = emptyState('No matches', 'Try a different search.'); return; }
+
+    if (an.isArtTab) {
+      renderArtGrid(filtered, rows, container);
+    } else if (an.eraKey && !q) {
+      renderEraGroups(filtered, rows, container);
+    } else {
+      renderFlatList(filtered, rows, container);
     }
+  }
 
+  // ── Art grid ──────────────────────────────────────────────────
+  function renderArtGrid(filtered, allRows, container) {
+    var an = activeAnalysis;
     var shown = filtered.slice(0, renderLimit);
-    var html = '<div class="wv-card" style="padding:8px;">';
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;">';
     shown.forEach(function(r) {
-      var globalIdx = rows.indexOf(r);
-      var title = firstLine(r[trackerTitleKey]) || 'Untitled';
-      var audio = firstAudio(r);
-      // Compact meta: short single-line values from metadata columns only.
-      var meta = trackerMetaKeys.map(function(k) { return firstLine(r[k]); })
-        .filter(function(v) { return v && v.length <= 40; })
-        .slice(0, 5).join('  ·  ');
-      meta = truncate(meta, 130);
-
-      html += '<div class="track-row" id="trk-row-' + globalIdx + '" style="cursor:default;">';
-      html += '<div class="track-row-cover">' +
-        (audio
-          ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>'
-          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>') +
-        '</div>';
-      html += '<div class="track-row-info">' +
-        '<div class="track-row-title">' + escHtml(title) + '</div>' +
-        (meta ? '<div class="track-row-artist">' + escHtml(meta) + '</div>' : '') +
-        '</div>';
-
-      // Actions
-      html += '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">';
-      if (audio) {
-        html += '<button class="btn btn-secondary btn-sm" title="Play" onclick="playTrackerRow(' + globalIdx + ')">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;"><path d="M8 5v14l11-7z"/></svg></button>';
-        html += '<a class="btn btn-secondary btn-sm" title="Download" href="' + escHtml(audio) + '" download target="_blank" rel="noopener" style="text-decoration:none;">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></a>';
+      var imgUrl = (an.imageKey ? r[an.imageKey] : '') || '';
+      if (!isImageUrl(imgUrl)) {
+        for (var k in r) { if (isImageUrl(r[k])) { imgUrl = r[k]; break; } }
       }
-      // Open buttons for each link column that has a URL
-      trackerLinkKeys.forEach(function(k) {
-        var v = r[k];
-        if (!isUrl(v) || v === audio) return;
-        var label = trackerLinkKeys.length > 1 ? shortLabel(k) : 'Open';
-        html += '<a class="btn btn-secondary btn-sm" href="' + escHtml(v) + '" target="_blank" rel="noopener" style="text-decoration:none;">' + escHtml(label) + ' ↗</a>';
-      });
-      html += '</div>';
+      if (!imgUrl) return;
+      var caption = an.titleKey ? firstLine(r[an.titleKey] || '') : '';
+      html += '<div style="border-radius:10px;overflow:hidden;background:var(--surface-2);cursor:pointer;" onclick="window.open(\'' + escHtml(imgUrl) + '\',\'_blank\')">' +
+        '<img src="' + escHtml(imgUrl) + '" alt="' + escHtml(caption) + '" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" loading="lazy">';
+      if (caption) html += '<div style="padding:8px 10px;font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(caption) + '</div>';
       html += '</div>';
     });
     html += '</div>';
-
     if (filtered.length > shown.length) {
-      html += '<div style="text-align:center;margin:18px 0 8px;">' +
-        '<button class="btn btn-secondary" onclick="showMoreTracker()">Show more (' + (filtered.length - shown.length) + ' more)</button></div>';
+      html += '<div style="text-align:center;margin:18px 0 8px;"><button class="btn btn-secondary" onclick="showMoreTracker()">Show more (' + (filtered.length - shown.length) + ' more)</button></div>';
     }
+    container.innerHTML = html;
+  }
 
+  // ── Era-grouped rendering ─────────────────────────────────────
+  function renderEraGroups(filtered, allRows, container) {
+    var an = activeAnalysis;
+    // Re-group the filtered rows (for when filters are applied later)
+    var groups = groupByEra(filtered, an);
+    if (!groups || !groups.length) { renderFlatList(filtered, allRows, container); return; }
+
+    var html = '';
+    groups.forEach(function(group, gi) {
+      var playableCount = group.rows.filter(function(r) { return firstAudio(r); }).length;
+      var isOpen = !!(eraOpenState[group.eraName]);
+
+      html += '<details class="era-section" id="era-' + gi + '"' + (isOpen ? ' open' : '') +
+        ' ontoggle="eraToggled(this,' + gi + ')">';
+
+      // Summary (always rendered)
+      html += '<summary class="era-summary">';
+      html += '<div class="era-cover-thumb">';
+      if (group.coverUrl) {
+        html += '<img src="' + escHtml(group.coverUrl) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+      } else {
+        html += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--text-3);"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>';
+      }
+      html += '</div>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(group.eraName) + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' + group.rows.length + ' track' + (group.rows.length !== 1 ? 's' : '');
+      if (playableCount) html += ' · ' + playableCount + ' playable';
+      html += '</div>';
+      html += '</div>';
+      html += '<svg class="era-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+      html += '</summary>';
+
+      // Tracks: lazy — render a placeholder; filled in eraToggled when opened
+      html += '<div class="era-tracks" id="era-tracks-' + gi + '">';
+      if (isOpen) {
+        html += renderTrackRowsHtml(group.rows, allRows, an);
+      } else {
+        html += '<div class="era-placeholder" style="display:none;"></div>';
+      }
+      html += '</div>';
+
+      html += '</details>';
+    });
+
+    // Store groups for lazy-open use
+    container._groups = groups;
+    container._allRows = allRows;
+    container.innerHTML = html;
+    // Re-attach groups reference after innerHTML overwrites it
+    document.getElementById('tracker-rows')._groups = groups;
+    document.getElementById('tracker-rows')._allRows = allRows;
+
+    highlightPlaying();
+  }
+
+  function eraToggled(el, gi) {
+    var eraName = null;
+    var rowsEl = document.getElementById('tracker-rows');
+    var groups = rowsEl ? rowsEl._groups : null;
+    if (groups && groups[gi]) eraName = groups[gi].eraName;
+    if (eraName) eraOpenState[eraName] = el.open;
+
+    if (el.open) {
+      var tracksEl = document.getElementById('era-tracks-' + gi);
+      if (tracksEl && tracksEl.querySelector('.era-placeholder')) {
+        var group = groups && groups[gi];
+        if (group) {
+          var an = activeAnalysis;
+          var allRows = rowsEl ? rowsEl._allRows : (activeData ? activeData.rows : []);
+          tracksEl.innerHTML = renderTrackRowsHtml(group.rows, allRows, an);
+          highlightPlaying();
+        }
+      }
+    }
+  }
+
+  function renderTrackRowsHtml(groupRows, allRows, an) {
+    if (!groupRows.length) return '<div style="padding:12px;font-size:13px;color:var(--text-3);">No tracks.</div>';
+    return groupRows.map(function(r) {
+      var gi = allRows.indexOf(r);
+      return renderOneRow(r, gi, an);
+    }).join('');
+  }
+
+  // ── Flat list ─────────────────────────────────────────────────
+  function renderFlatList(filtered, allRows, container) {
+    var an = activeAnalysis;
+    var shown = filtered.slice(0, renderLimit);
+    var html = '<div class="wv-card" style="padding:8px;">';
+    shown.forEach(function(r) { html += renderOneRow(r, allRows.indexOf(r), an); });
+    html += '</div>';
+    if (filtered.length > shown.length) {
+      html += '<div style="text-align:center;margin:18px 0 8px;"><button class="btn btn-secondary" onclick="showMoreTracker()">Show more (' + (filtered.length - shown.length) + ' more)</button></div>';
+    }
     container.innerHTML = html;
     highlightPlaying();
   }
 
-  function shortLabel(h) {
-    var s = String(h || 'Link').trim();
-    return s.length > 14 ? s.slice(0, 13) + '…' : s;
-  }
-
-  function firstAudio(r) {
-    for (var i = 0; i < trackerLinkKeys.length; i++) {
-      var a = audioUrl(r[trackerLinkKeys[i]]);
-      if (a) return a;
-    }
-    return null;
-  }
-
-  function rowToTrack(r) {
-    return {
-      title: r[trackerTitleKey] || 'Untitled',
-      ia_url: firstAudio(r),
-      artist_name: 'Tracker',
-      cover_url: null,
-    };
-  }
-
-  function playTrackerRow(globalIdx) {
-    var r = trackerData.rows[globalIdx];
-    if (!r) return;
+  // ── Single row ────────────────────────────────────────────────
+  function renderOneRow(r, globalIdx, an) {
+    var title = firstLine(r[an.titleKey] || '') || 'Untitled';
     var audio = firstAudio(r);
-    if (!audio) return;
-    // Position within the playable queue for auto-advance.
+    var desc = (an.descKey ? r[an.descKey] : '') || '';
+    desc = desc.trim();
+
+    var meta = an.metaKeys.map(function(k) { return firstLine(r[k]); })
+      .filter(function(v) { return v && v.length <= 40; })
+      .slice(0, 5).join('  ·  ');
+    meta = truncate(meta, 130);
+
+    var html = '<div class="track-row" id="trk-row-' + globalIdx + '" style="cursor:default;align-items:flex-start;padding:10px 14px;">';
+
+    // Icon
+    html += '<div class="track-row-cover" style="margin-top:2px;">' +
+      (audio
+        ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>') +
+      '</div>';
+
+    // Info
+    html += '<div class="track-row-info">';
+    html += '<div class="track-row-title">' + escHtml(title) + '</div>';
+    if (desc) {
+      html += '<div class="track-row-artist" style="white-space:normal;line-height:1.4;margin-top:2px;">' + escHtml(truncate(desc, 180)) + '</div>';
+    }
+    if (meta) {
+      html += '<div style="font-size:11.5px;color:var(--text-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(meta) + '</div>';
+    }
+    html += '</div>';
+
+    // Actions
+    html += '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-top:2px;">';
+    if (audio) {
+      html += '<button class="btn btn-secondary btn-sm" title="Play" onclick="playTrackerRow(' + globalIdx + ')">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;"><path d="M8 5v14l11-7z"/></svg></button>';
+      html += '<a class="btn btn-secondary btn-sm" title="Download" href="' + escHtml(audio) + '" download target="_blank" rel="noopener" style="text-decoration:none;">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></a>';
+    }
+    an.linkKeys.forEach(function(k) {
+      var v = r[k];
+      if (!isUrl(v) || audioUrl(v) === audio) return;
+      var label = an.linkKeys.length > 1 ? shortLabel(k) : 'Open';
+      html += '<a class="btn btn-secondary btn-sm" href="' + escHtml(v) + '" target="_blank" rel="noopener" style="text-decoration:none;">' + escHtml(label) + ' ↗</a>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  // ── Player ────────────────────────────────────────────────────
+  function playTrackerRow(globalIdx) {
+    var r = activeData.rows[globalIdx];
+    if (!r || !firstAudio(r)) return;
     playIndex = playable.findIndex(function(x) { return x.i === globalIdx; });
     playTrack(rowToTrack(r));
     highlightPlaying();
   }
-
   function playAllTracker() {
     if (!playable.length) return;
     playIndex = 0;
     playTrack(rowToTrack(playable[0].r));
     highlightPlaying();
   }
-
   function highlightPlaying() {
     document.querySelectorAll('.track-row.playing').forEach(function(el) { el.classList.remove('playing'); });
     if (playIndex >= 0 && playable[playIndex]) {
@@ -278,8 +535,6 @@
     }
   }
 
-  // The player fires playerSkipNext on BOTH the manual next button and natural
-  // track end, so listening to it alone handles auto-advance + manual skip.
   var _onNext = function() {
     if (playIndex >= 0 && playIndex < playable.length - 1) {
       playIndex++; playTrack(rowToTrack(playable[playIndex].r)); highlightPlaying();
@@ -295,11 +550,7 @@
     document.removeEventListener('playerSkipPrev', _onPrev);
   });
 
-  function escHtml(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  loadTracker();
+  loadTabs();
 </script>
 </body>
 </html>

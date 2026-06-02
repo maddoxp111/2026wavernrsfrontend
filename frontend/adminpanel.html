@@ -190,22 +190,23 @@
   </div>
 
   <!-- ── Tracker tab ────────────────────────────────────── -->
-  <div id="tab-tracker" style="display:none;">
-    <div style="max-width:600px;">
-      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:28px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Resources › Tracker</h2>
-        <p style="font-size:14px;color:var(--text-2);margin:0 0 24px;line-height:1.6;">
-          Connect a Google Sheet to power the <b>Tracker</b> tab on the Resources page. The sheet must be shared as
-          <b>“Anyone with the link”</b>. Paste the normal share/edit URL — if a specific tab matters, copy the URL while that tab is open (it includes its <code>gid</code>).
+  <div id=”tab-tracker” style=”display:none;”>
+    <div style=”max-width:700px;”>
+      <div style=”background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:28px;”>
+        <h2 style=”font-size:18px;font-weight:700;margin:0 0 6px;”>Resources › Tracker Tabs</h2>
+        <p style=”font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.6;”>
+          Configure the tabs shown on the Resources page. Each tab connects to a Google Sheet (or a specific tab of a sheet — paste the URL while that tab is open so the <code>gid</code> is included).
+          Sheets must be shared as <b>”Anyone with the link”</b>.
         </p>
 
-        <label class="form-group" style="display:block;font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:6px;">Google Sheet URL</label>
-        <div style="display:flex;gap:8px;">
-          <input type="text" id="tracker-sheet-url" class="wv-input" placeholder="https://docs.google.com/spreadsheets/d/…" style="flex:1;padding:10px 14px;">
-          <button class="btn btn-primary" onclick="saveTrackerSheet()">Save</button>
+        <div id=”tracker-tabs-list” style=”margin-bottom:12px;”></div>
+
+        <button class=”btn btn-secondary btn-sm” onclick=”addTrackerTab()” style=”margin-bottom:18px;”>+ Add Tab</button>
+
+        <div style=”display:flex;gap:10px;align-items:center;”>
+          <button class=”btn btn-primary” onclick=”saveTrackerSheet()”>Save Tabs</button>
+          <div id=”tracker-sheet-status” style=”font-size:13px;”></div>
         </div>
-        <div style="font-size:12px;color:var(--text-3);margin-top:6px;">Leave empty and save to disconnect the tracker.</div>
-        <div id="tracker-sheet-status" style="font-size:13px;margin-top:12px;"></div>
       </div>
     </div>
   </div>
@@ -328,30 +329,69 @@
   }
 
   // ── Tracker (Resources) ───────────────────────────────────────
+  var trackerTabRows = [];
+
   async function loadTrackerSheet() {
-    var input = document.getElementById('tracker-sheet-url');
     var status = document.getElementById('tracker-sheet-status');
     if (status) status.innerHTML = '';
+    trackerTabRows = [];
     try {
-      var data = await adminApi('/admin/tracker-sheet');
-      if (input) input.value = data.url || '';
+      var data = await adminApi('/admin/tracker-tabs');
+      trackerTabRows = data.tabs || [];
+      // If no tracker_tabs, fall back to legacy tracker_sheet
+      if (!trackerTabRows.length) {
+        try {
+          var legacy = await adminApi('/admin/tracker-sheet');
+          if (legacy.url) trackerTabRows = [{ name: 'Tracker', url: legacy.url }];
+        } catch (_) {}
+      }
     } catch (e) {
-      if (status) status.innerHTML = '<span style="color:var(--red);">Failed to load current setting.</span>';
+      if (status) status.innerHTML = '<span style="color:var(--red);">Failed to load.</span>';
     }
+    renderTrackerTabsList();
+  }
+
+  function renderTrackerTabsList() {
+    var list = document.getElementById('tracker-tabs-list');
+    if (!list) return;
+    if (!trackerTabRows.length) {
+      list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:4px 0 8px;">No tabs yet — add one below.</div>';
+      return;
+    }
+    list.innerHTML = trackerTabRows.map(function(t, i) {
+      return '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">' +
+        '<input class="wv-input" style="width:150px;padding:9px 12px;flex-shrink:0;" placeholder="Tab name" value="' + escHtml(t.name || '') + '" ' +
+        'oninput="trackerTabRows[' + i + '].name=this.value">' +
+        '<input class="wv-input" style="flex:1;padding:9px 12px;min-width:0;" placeholder="https://docs.google.com/spreadsheets/d/…" value="' + escHtml(t.url || '') + '" ' +
+        'oninput="trackerTabRows[' + i + '].url=this.value">' +
+        '<button class="btn btn-danger btn-sm" onclick="removeTrackerTab(' + i + ')">Remove</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function addTrackerTab() {
+    trackerTabRows.push({ name: '', url: '' });
+    renderTrackerTabsList();
+    // Focus the new name input
+    var list = document.getElementById('tracker-tabs-list');
+    if (list) { var inputs = list.querySelectorAll('input'); if (inputs.length) inputs[inputs.length - 2].focus(); }
+  }
+
+  function removeTrackerTab(i) {
+    trackerTabRows.splice(i, 1);
+    renderTrackerTabsList();
   }
 
   async function saveTrackerSheet() {
-    var input = document.getElementById('tracker-sheet-url');
     var status = document.getElementById('tracker-sheet-status');
-    var url = (input ? input.value : '').trim();
     if (status) status.innerHTML = 'Saving…';
     try {
-      await adminApi('/admin/tracker-sheet', { method: 'POST', body: JSON.stringify({ url: url }) });
-      if (status) status.innerHTML = url
-        ? '<span style="color:var(--green);">Saved. The Resources › Tracker page now uses this sheet.</span>'
-        : '<span style="color:var(--green);">Tracker disconnected.</span>';
+      await adminApi('/admin/tracker-tabs', { method: 'POST', body: JSON.stringify({ tabs: trackerTabRows }) });
+      if (status) status.innerHTML = trackerTabRows.length
+        ? '<span style="color:var(--green);">Saved ' + trackerTabRows.length + ' tab' + (trackerTabRows.length !== 1 ? 's' : '') + '.</span>'
+        : '<span style="color:var(--green);">All tabs removed.</span>';
     } catch (e) {
-      if (status) status.innerHTML = '<span style="color:var(--red);">Failed to save: ' + escHtml(e.message || 'unknown error') + '</span>';
+      if (status) status.innerHTML = '<span style="color:var(--red);">Failed: ' + escHtml(e.message || 'unknown error') + '</span>';
     }
   }
 
