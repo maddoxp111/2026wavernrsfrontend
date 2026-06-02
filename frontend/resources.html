@@ -106,10 +106,13 @@
       return /\b(note|notes|description|desc|info|comment|detail)\b/i.test(h);
     }) || null;
 
-    // Image: header match or content detection
+    // Image: header match only (content detection picks up random tweet screenshots etc.)
     var imageKey = headers.find(function(h) {
       return /\b(image|img|cover|art|photo|picture|pic|artwork)\b/i.test(h);
-    });
+    }) || null;
+    var imageKeyIsExplicit = !!imageKey;
+
+    // For art tab only, also try content detection if no explicit column
     if (!imageKey) {
       imageKey = headers.find(function(h) {
         if (h === titleKey || h === eraKey || h === descKey) return false;
@@ -143,7 +146,8 @@
       return total > 0 && imgs / total > 0.15;
     })());
 
-    return { titleKey: titleKey, eraKey: eraKey, descKey: descKey, imageKey: imageKey,
+    return { titleKey: titleKey, eraKey: eraKey, descKey: descKey,
+             imageKey: imageKey, imageKeyIsExplicit: imageKeyIsExplicit,
              linkKeys: linkKeys, metaKeys: metaKeys, isArtTab: isArtTab };
   }
 
@@ -152,29 +156,37 @@
     var eraKey = an.eraKey;
     if (!eraKey) return null;
 
+    // Count how many rows each era-column value appears in.
+    // Values that appear fewer than 3 times are summary/stats/changelog rows,
+    // not real eras — skip them entirely.
+    var counts = {};
+    rows.forEach(function(r) {
+      var v = (r[eraKey] || '').trim();
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    });
+
     var groups = [];
     var eraMap = {};
 
     rows.forEach(function(r) {
-      var eraName = (r[eraKey] || '').trim() || '—';
+      var eraName = (r[eraKey] || '').trim();
+      if (!eraName || (counts[eraName] || 0) < 3) return; // skip non-era rows
+
       if (!eraMap[eraName]) {
         var g = { eraName: eraName, coverUrl: null, rows: [] };
         eraMap[eraName] = g;
         groups.push(g);
       }
       var g = eraMap[eraName];
-      // Pick up era cover from first image URL found in this row
-      if (!g.coverUrl) {
-        if (an.imageKey && isImageUrl(r[an.imageKey])) {
-          g.coverUrl = r[an.imageKey];
-        } else {
-          for (var k in r) { if (isImageUrl(r[k])) { g.coverUrl = r[k]; break; } }
-        }
+      // Only use an explicitly-named image column for era covers —
+      // scanning every cell picks up random tweet screenshots and CDN links.
+      if (!g.coverUrl && an.imageKey && an.imageKeyIsExplicit && isImageUrl(r[an.imageKey])) {
+        g.coverUrl = r[an.imageKey];
       }
       g.rows.push(r);
     });
 
-    return groups;
+    return groups.length ? groups : null;
   }
 
   // ── Audio helpers ─────────────────────────────────────────────
