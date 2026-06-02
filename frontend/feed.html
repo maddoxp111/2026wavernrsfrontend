@@ -25,78 +25,91 @@ async function initFeed() {
   if (!isLoggedIn()) { navigate('/login.html'); return; }
   var view = document.getElementById('view');
   view.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:22px;">' +
+    '<div style="display:flex;flex-direction:column;gap:32px;padding-bottom:40px;">' +
     '<h1 style="margin:0;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Following</h1>' +
-    '<div id="feed-grid" class="wv-comp-grid wv-comp-grid-4"><div class="loading"><div class="spinner"></div></div></div>' +
-    '<div id="feed-loadmore" style="display:none;text-align:center;padding:8px 0;"></div>' +
+    '<div id="feed-sections"><div class="loading"><div class="spinner"></div></div></div>' +
     '</div>';
-  loadFeed(false);
+  loadFeed();
 }
 
-async function loadFeed(append) {
-  var grid = document.getElementById('feed-grid');
-  var loadMoreEl = document.getElementById('feed-loadmore');
-  if (!grid) return;
-  if (!append) {
-    grid.innerHTML = '<div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div>';
-    _feedItems = [];
-    _feedPage = 1;
-  } else {
-    _feedPage += 1;
-  }
+async function loadFeed() {
+  var sectionsEl = document.getElementById('feed-sections');
+  if (!sectionsEl) return;
+  sectionsEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    var url = '/feed?page=' + _feedPage;
-    var data = await api(url);
+    // Fetch enough items to get a good cross-section of all followed artists.
+    var data = await api('/feed?limit=100');
     var items = data.items || [];
-    _feedHasMore = !!data.has_more;
+    _feedItems = items;
 
-    if (!append) {
-      _feedItems = items;
-      // Background from the first item that has cover art (only on fresh load, not append).
-      if (typeof window.setPageBgImage === 'function') {
-        var first = items.find(function(i) { return i.cover_url; });
-        window.setPageBgImage(first ? first.cover_url : '');
-      }
-    } else {
-      _feedItems = _feedItems.concat(items);
+    // Background from the first item with cover art.
+    if (typeof window.setPageBgImage === 'function') {
+      var first = items.find(function(i) { return i.cover_url; });
+      window.setPageBgImage(first ? first.cover_url : '');
     }
 
-    if (!_feedItems.length) {
-      grid.innerHTML =
-        '<div class="wv-empty" style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px 0;">' +
+    if (!items.length) {
+      sectionsEl.innerHTML =
+        '<div class="wv-empty" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px 0;">' +
         '<div style="font-size:48px;">&#x1F465;</div>' +
         '<div style="font-size:16px;font-weight:600;color:var(--text);">Follow artists to see their latest releases here</div>' +
-        '<button class="btn btn-primary" onclick="navigate(\'/discover.html\')">Discover artists</button>' +
+        '<button class="wv-pill brand" onclick="navigate(\'/discover.html\')">Discover artists</button>' +
         '</div>';
-      if (loadMoreEl) loadMoreEl.style.display = 'none';
       return;
     }
 
-    if (!append) {
-      grid.innerHTML = _feedItems.map(feedCardHTML).join('');
-    } else {
-      // Remove load-more spinner if present, append new cards
-      var newCards = items.map(feedCardHTML).join('');
-      grid.insertAdjacentHTML('beforeend', newCards);
-    }
-
-    if (loadMoreEl) {
-      if (_feedHasMore) {
-        loadMoreEl.style.display = 'block';
-        loadMoreEl.innerHTML = '<button class="btn btn-secondary" onclick="loadFeed(true)">Load more</button>';
-      } else {
-        loadMoreEl.style.display = 'none';
-        loadMoreEl.innerHTML = '';
+    // Group by artist, preserving chronological order within each group.
+    var groupMap = {};
+    var groupOrder = [];
+    items.forEach(function(item) {
+      var aid = item.artist_id;
+      if (!groupMap[aid]) {
+        groupMap[aid] = { artist: item.artists || {}, items: [] };
+        groupOrder.push(aid);
       }
-    }
+      groupMap[aid].items.push(item);
+    });
+
+    // Render one section per artist.
+    sectionsEl.innerHTML = groupOrder.map(function(aid) {
+      return renderArtistSection(groupMap[aid].artist, groupMap[aid].items);
+    }).join('');
   } catch (err) {
-    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed to load feed: ' + escHtml(err.message) + '</div>';
+    sectionsEl.innerHTML = '<div class="wv-empty">Failed to load feed: ' + escHtml(err.message) + '</div>';
   }
+}
+
+function renderArtistSection(artist, items) {
+  var artistId = artist.id || '';
+  var name = escHtml(artist.display_name || 'Unknown');
+  var pfpBg = coverGradient(artist.display_name || '');
+  var pfpInner = artist.profile_image_url
+    ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display=\'none\'">'
+    : '<span style="font-size:18px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
+  var pfpHtml =
+    '<div style="width:40px;height:40px;border-radius:50%;background:' + pfpBg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.25);">' +
+    pfpInner + '</div>';
+
+  var header =
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;cursor:pointer;" onclick="navigate(\'/artist.html?id=' + artistId + '\')">' +
+    pfpHtml +
+    '<div>' +
+      '<div style="font-size:17px;font-weight:700;letter-spacing:-0.02em;color:var(--text);">' + name + '</div>' +
+      '<div style="font-size:12px;color:var(--text-3);">' + items.length + ' release' + (items.length === 1 ? '' : 's') + '</div>' +
+    '</div>' +
+    '</div>';
+
+  var cards = items.slice(0, 10).map(feedCardHTML).join('');
+  var scrollRow =
+    '<div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">' +
+    '<style>.feed-scroll::-webkit-scrollbar{display:none}</style>' +
+    cards + '</div>';
+
+  return '<div style="display:flex;flex-direction:column;">' + header + scrollRow + '</div>';
 }
 
 function feedCardHTML(item) {
   var isAlbum = item._type === 'album';
-  var artist = item.artists ? item.artists.display_name : 'Unknown';
   var bg = coverGradient(item.title || '');
   var action = isAlbum
     ? "navigate('/album.html?id=" + item.id + "')"
@@ -112,17 +125,14 @@ function feedCardHTML(item) {
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
       '</button>'
     : '';
-  return '<div class="wv-comp-card" onclick="' + action + '">' +
+  return '<div class="wv-comp-card" onclick="' + action + '" style="flex-shrink:0;width:160px;">' +
     '<div class="wv-comp-card-cover">' +
       '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
         '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
-        compBadge +
-        coverImg +
-        playBtn +
+        compBadge + coverImg + playBtn +
       '</div>' +
     '</div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
-    '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
   '</div>';
 }
 

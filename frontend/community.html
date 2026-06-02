@@ -50,11 +50,16 @@
   var currentComments = [];
   var me = null;
   var isMod = false;
+  var _sort = 'trending'; // trending | top | latest
 
   try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch(_) {}
   isMod = sessionStorage.getItem('wv_is_mod') === 'true';
-  if (typeof window.setPageBgImage === 'function') {
-    window.setPageBgImage((me && me.profile_image_url) || '');
+  // Fetch the full artist profile to get profile_image_url for the page background.
+  if (typeof window.setPageBgImage === 'function' && isLoggedIn()) {
+    api('/auth/me').then(function(full) {
+      var img = full && full.artist && (full.artist.profile_image_url || full.artist.banner_url);
+      window.setPageBgImage(img || '');
+    }).catch(function() {});
   }
 
   // ── Formatting ────────────────────────────────────────────────────────────
@@ -115,6 +120,44 @@
     return '<span style="font-weight:600;color:var(--text-2);">' + name + '</span>';
   }
 
+  function _sortedPosts() {
+    var now = Date.now();
+    var weekMs = 7 * 24 * 60 * 60 * 1000;
+    if (_sort === 'latest') {
+      return posts.slice().sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    }
+    if (_sort === 'top') {
+      return posts.slice().sort(function(a, b) {
+        var diff = netScore(b) - netScore(a);
+        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
+      });
+    }
+    // trending: recent posts weighted by engagement
+    return posts.slice().sort(function(a, b) {
+      var aRecent = (now - new Date(a.created_at)) < weekMs ? 1 : 0;
+      var bRecent = (now - new Date(b.created_at)) < weekMs ? 1 : 0;
+      if (aRecent !== bRecent) return bRecent - aRecent;
+      var aScore = netScore(a) + (a.comment_count || 0) * 0.5;
+      var bScore = netScore(b) + (b.comment_count || 0) * 0.5;
+      var diff = bScore - aScore;
+      return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
+    });
+  }
+
+  function setSort(sort) {
+    _sort = sort;
+    var listEl = document.getElementById('posts-list');
+    if (!listEl) return;
+    var sorted = _sortedPosts();
+    listEl.innerHTML = sorted.length
+      ? '<div style="display:flex;flex-direction:column;gap:12px;">' + sorted.map(postRowHTML).join('') + '</div>'
+      : '<div class="empty-state" style="padding:60px 0;"><div style="font-size:32px;margin-bottom:12px;">💬</div><div class="empty-title">No posts yet</div></div>';
+    // Update pill active state
+    document.querySelectorAll('.comm-sort-btn').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.dataset.sort === sort);
+    });
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
   (function init() {
     var params = new URLSearchParams(location.search);
@@ -167,25 +210,42 @@
         '</div>' +
       '</div>';
 
+    var sortPills =
+      '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;">' +
+        ['trending','top','latest'].map(function(s) {
+          var label = s[0].toUpperCase() + s.slice(1);
+          return '<button class="comm-sort-btn wv-seg' + (s === _sort ? ' is-active' : '') + '" data-sort="' + s + '" onclick="setSort(\'' + s + '\')" style="background:none;border:none;cursor:pointer;padding:5px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--text-2);transition:background 0.15s,color 0.15s;">' + label + '</button>';
+        }).join('') +
+      '</div>';
+    if (!document.getElementById('comm-seg-styles')) {
+      var _ss = document.createElement('style');
+      _ss.id = 'comm-seg-styles';
+      _ss.textContent = '.comm-sort-btn.is-active{background:var(--purple,#7c3aed)!important;color:#fff!important;}';
+      document.head.appendChild(_ss);
+    }
     var header =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;">' +
-        '<div>' +
-          '<h1 style="margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
-          '<p style="margin:0;font-size:13.5px;color:var(--text-2);">Discuss music, share thoughts, connect with wavernrs</p>' +
+        '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<h1 style="margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
+            '<p style="margin:0;font-size:13.5px;color:var(--text-2);">Discuss music, share thoughts, connect with wavernrs</p>' +
+          '</div>' +
+          sortPills +
         '</div>' +
         (me ? '<button class="wv-pill brand" onclick="showNewPostForm()" style="flex-shrink:0;gap:6px;">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>' +
           ' New Post</button>' : '') +
       '</div>';
 
-    var postsHTML = !posts.length
+    var _sorted = _sortedPosts();
+    var postsHTML = !_sorted.length
       ? '<div class="empty-state" style="padding:60px 0;">' +
           '<div style="font-size:32px;margin-bottom:12px;">💬</div>' +
           '<div class="empty-title">No posts yet</div>' +
           '<div class="empty-desc">Be the first to start a conversation.</div>' +
         '</div>'
       : '<div style="display:flex;flex-direction:column;gap:12px;">' +
-          posts.map(postRowHTML).join('') +
+          _sorted.map(postRowHTML).join('') +
         '</div>';
 
     view.innerHTML =
