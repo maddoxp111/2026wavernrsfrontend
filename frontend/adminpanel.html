@@ -76,6 +76,7 @@
     <button class="wv-admin-tab"        id="atab-content"  onclick="showAdminTab('content')">Content</button>
     <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
     <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
+    <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
   </div>
 
   <!-- ── Banners tab ─────────────────────────────────────── -->
@@ -188,6 +189,27 @@
     </div>
   </div>
 
+  <!-- ── Tracker tab ────────────────────────────────────── -->
+  <div id="tab-tracker" style="display:none;">
+    <div style="max-width:600px;">
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:28px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Resources › Tracker</h2>
+        <p style="font-size:14px;color:var(--text-2);margin:0 0 24px;line-height:1.6;">
+          Connect a Google Sheet to power the <b>Tracker</b> tab on the Resources page. The sheet must be shared as
+          <b>“Anyone with the link”</b>. Paste the normal share/edit URL — if a specific tab matters, copy the URL while that tab is open (it includes its <code>gid</code>).
+        </p>
+
+        <label class="form-group" style="display:block;font-size:13px;font-weight:500;color:var(--text-2);margin-bottom:6px;">Google Sheet URL</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="tracker-sheet-url" class="wv-input" placeholder="https://docs.google.com/spreadsheets/d/…" style="flex:1;padding:10px 14px;">
+          <button class="btn btn-primary" onclick="saveTrackerSheet()">Save</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:6px;">Leave empty and save to disconnect the tracker.</div>
+        <div id="tracker-sheet-status" style="font-size:13px;margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /admin-content -->
 </div><!-- /view -->
 
@@ -290,7 +312,7 @@
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','tracker'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -302,6 +324,35 @@
     if (tab === 'content')    loadContent();
     if (tab === 'lockdown')   loadLockdown();
     if (tab === 'moderators') loadModerators();
+    if (tab === 'tracker')    loadTrackerSheet();
+  }
+
+  // ── Tracker (Resources) ───────────────────────────────────────
+  async function loadTrackerSheet() {
+    var input = document.getElementById('tracker-sheet-url');
+    var status = document.getElementById('tracker-sheet-status');
+    if (status) status.innerHTML = '';
+    try {
+      var data = await adminApi('/admin/tracker-sheet');
+      if (input) input.value = data.url || '';
+    } catch (e) {
+      if (status) status.innerHTML = '<span style="color:var(--red);">Failed to load current setting.</span>';
+    }
+  }
+
+  async function saveTrackerSheet() {
+    var input = document.getElementById('tracker-sheet-url');
+    var status = document.getElementById('tracker-sheet-status');
+    var url = (input ? input.value : '').trim();
+    if (status) status.innerHTML = 'Saving…';
+    try {
+      await adminApi('/admin/tracker-sheet', { method: 'POST', body: JSON.stringify({ url: url }) });
+      if (status) status.innerHTML = url
+        ? '<span style="color:var(--green);">Saved. The Resources › Tracker page now uses this sheet.</span>'
+        : '<span style="color:var(--green);">Tracker disconnected.</span>';
+    } catch (e) {
+      if (status) status.innerHTML = '<span style="color:var(--red);">Failed to save.</span>';
+    }
   }
 
   function showContentTab(tab) {
