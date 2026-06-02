@@ -75,6 +75,13 @@
     }
     try {
       playlists = await api('/playlists/mine');
+      // Background from logged-in user's profile picture.
+      if (typeof window.setPageBgImage === 'function') {
+        api('/auth/me').then(function(me) {
+          var img = me && me.artist && (me.artist.profile_image_url || me.artist.banner_url);
+          window.setPageBgImage(img || '');
+        }).catch(function() {});
+      }
       renderPlaylists();
     } catch (err) {
       el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load playlists</div></div>';

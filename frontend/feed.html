@@ -52,6 +52,11 @@ async function loadFeed(append) {
 
     if (!append) {
       _feedItems = items;
+      // Background from the first item that has cover art (only on fresh load, not append).
+      if (typeof window.setPageBgImage === 'function') {
+        var first = items.find(function(i) { return i.cover_url; });
+        window.setPageBgImage(first ? first.cover_url : '');
+      }
     } else {
       _feedItems = _feedItems.concat(items);
     }

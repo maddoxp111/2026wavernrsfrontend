@@ -140,6 +140,13 @@
       }
 
       el.innerHTML = html;
+      // Background: first track/album cover, falling back to first artist pfp.
+      if (typeof window.setPageBgImage === 'function') {
+        var bgUrl = (tracks[0] && tracks[0].cover_url) ||
+                    (albums[0] && albums[0].cover_url) ||
+                    (artists[0] && artists[0].profile_image_url) || '';
+        window.setPageBgImage(bgUrl);
+      }
     } catch (err) {
       el.innerHTML = '<div class="empty-state"><div class="empty-title">Search failed</div><div class="empty-desc">' + escHtml(err.message) + '</div></div>';
     }
