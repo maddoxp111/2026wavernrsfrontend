@@ -43,6 +43,7 @@
   var trackerMetaKeys = [];
   var playable = [];          // rows that have a playable audio url, in display order
   var playIndex = -1;
+  var renderLimit = 300;      // windowed rendering for very large trackers
 
   function showResourceTab(tab) {
     // Single tab for now; structured so more can be added later.
@@ -50,9 +51,26 @@
     if (tab === 'tracker') loadTracker();
   }
 
-  // Is this cell value a directly-playable audio URL?
+  function firstLine(v) {
+    var s = String(v == null ? '' : v).trim();
+    var nl = s.indexOf('\n');
+    return nl === -1 ? s : s.slice(0, nl).trim();
+  }
+  function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1).trim() + '…' : s; }
+
+  // Pillowcase (pillows.su / pillowcase.su) hides the file behind a JS player,
+  // but its API serves the raw, range-enabled, CORS-open audio directly:
+  //   https://pillows.su/f/<id>  ->  https://api.pillows.su/api/download/<id>
+  function pillowDirect(v) {
+    var m = String(v || '').match(/(?:pillows|pillowcase)\.su\/f\/([a-z0-9]+)/i);
+    return m ? 'https://api.pillows.su/api/download/' + m[1] : null;
+  }
+
+  // Resolve a cell value to a directly-playable audio URL, or null.
   function audioUrl(v) {
     if (!v || !/^https?:\/\//i.test(v)) return null;
+    var pc = pillowDirect(v);
+    if (pc) return pc;
     if (/\.(mp3|m4a|wav|flac|ogg|aac|opus|mp4)(\?|#|$)/i.test(v)) return v;
     if (/(cdn\.samply\.app|archive\.org\/download|googleusercontent\.com|\.b-cdn\.net)/i.test(v)) return v;
     return null;
@@ -99,20 +117,17 @@
       '<div style="font-size:14px;color:var(--text-3);">' + escHtml(sub) + '</div></div>';
   }
 
+  // Build the static shell (toolbar + search) once, then fill the rows area.
+  // Keeping the search input out of the re-rendered region preserves focus
+  // while typing.
   function renderTracker(query) {
-    var q = (query || '').toLowerCase().trim();
     var rows = trackerData.rows;
-    var filtered = !q ? rows : rows.filter(function(r) {
-      return Object.keys(r).some(function(k) { return (r[k] || '').toLowerCase().indexOf(q) !== -1; });
-    });
 
-    // Build the playable list (for Play All / auto-advance) from the FULL set
-    // in display order, so the queue is stable regardless of filtering.
+    // Playable list (for Play All / auto-advance) from the full set, in order.
     playable = rows.map(function(r, i) { return { r: r, i: i }; })
       .filter(function(x) { return firstAudio(x.r); });
 
     var html = '';
-    // Toolbar
     html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">';
     if (playable.length) {
       html += '<button class="btn btn-primary" onclick="playAllTracker()">' +
@@ -120,26 +135,60 @@
     }
     html += '<div class="wv-input wv-search-wrap" style="flex:1;min-width:200px;display:flex;align-items:center;gap:8px;padding:9px 14px;">' +
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-      '<input id="tracker-search" placeholder="Search the tracker…" value="' + escHtml(query || '') + '" oninput="renderTracker(this.value)" ' +
+      '<input id="tracker-search" placeholder="Search the tracker…" value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
       'style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;"></div>';
     html += '<a href="' + escHtml(trackerData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
     html += '</div>';
+    html += '<div id="tracker-count" style="font-size:12.5px;color:var(--text-3);margin-bottom:12px;"></div>';
+    html += '<div id="tracker-rows"></div>';
 
-    html += '<div style="font-size:12.5px;color:var(--text-3);margin-bottom:12px;">' + filtered.length + ' of ' + rows.length + ' entries</div>';
+    document.getElementById('tracker-container').innerHTML = html;
+    renderRows(query || '');
+  }
+
+  var _searchTimer = null;
+  function onTrackerSearch(v) {
+    renderLimit = 300;
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(function() { renderRows(v); }, 120);
+  }
+
+  function showMoreTracker() {
+    renderLimit += 300;
+    var q = (document.getElementById('tracker-search') || {}).value || '';
+    renderRows(q);
+  }
+
+  // Re-render ONLY the rows + count (search input stays put → keeps focus).
+  function renderRows(query) {
+    var rows = trackerData.rows;
+    var q = (query || '').toLowerCase().trim();
+    var filtered = !q ? rows : rows.filter(function(r) {
+      return Object.keys(r).some(function(k) { return (r[k] || '').toLowerCase().indexOf(q) !== -1; });
+    });
+
+    var countEl = document.getElementById('tracker-count');
+    if (countEl) countEl.textContent = filtered.length + ' of ' + rows.length + ' entries';
+
+    var container = document.getElementById('tracker-rows');
+    if (!container) return;
 
     if (!filtered.length) {
-      html += emptyState('No matches', 'Try a different search.');
-      document.getElementById('tracker-container').innerHTML = html;
+      container.innerHTML = emptyState('No matches', 'Try a different search.');
       return;
     }
 
-    // Rows
-    html += '<div class="wv-card" style="padding:8px;">';
-    filtered.forEach(function(r) {
+    var shown = filtered.slice(0, renderLimit);
+    var html = '<div class="wv-card" style="padding:8px;">';
+    shown.forEach(function(r) {
       var globalIdx = rows.indexOf(r);
-      var title = r[trackerTitleKey] || 'Untitled';
+      var title = firstLine(r[trackerTitleKey]) || 'Untitled';
       var audio = firstAudio(r);
-      var meta = trackerMetaKeys.map(function(k) { return r[k]; }).filter(Boolean).slice(0, 4).join(' · ');
+      // Compact meta: short single-line values from metadata columns only.
+      var meta = trackerMetaKeys.map(function(k) { return firstLine(r[k]); })
+        .filter(function(v) { return v && v.length <= 40; })
+        .slice(0, 5).join('  ·  ');
+      meta = truncate(meta, 130);
 
       html += '<div class="track-row" id="trk-row-' + globalIdx + '" style="cursor:default;">';
       html += '<div class="track-row-cover">' +
@@ -172,7 +221,12 @@
     });
     html += '</div>';
 
-    document.getElementById('tracker-container').innerHTML = html;
+    if (filtered.length > shown.length) {
+      html += '<div style="text-align:center;margin:18px 0 8px;">' +
+        '<button class="btn btn-secondary" onclick="showMoreTracker()">Show more (' + (filtered.length - shown.length) + ' more)</button></div>';
+    }
+
+    container.innerHTML = html;
     highlightPlaying();
   }
 
