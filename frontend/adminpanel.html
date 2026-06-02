@@ -10,6 +10,26 @@
 
 <div id="view">
 
+<!-- ── Edit modal ─────────────────────────────────────────── -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
+  <div style="background:var(--glass-large-bg);backdrop-filter:blur(var(--lg-frost-large));-webkit-backdrop-filter:blur(var(--lg-frost-large));border:1px solid var(--glass-large-border);border-radius:20px;padding:32px 28px 24px;max-width:440px;width:calc(100% - 40px);box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <div id="edit-modal-title" style="font-size:17px;font-weight:700;margin-bottom:18px;"></div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Title</label>
+      <input type="text" id="edit-modal-title-input" class="wv-input" style="width:100%;padding:10px 14px;">
+    </div>
+    <div id="edit-modal-desc-group" class="form-group" style="margin-bottom:14px;display:none;">
+      <label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Description</label>
+      <textarea id="edit-modal-desc-input" class="wv-input" rows="3" style="width:100%;resize:vertical;"></textarea>
+    </div>
+    <div id="edit-modal-alert" style="margin-bottom:10px;font-size:13px;color:#f87171;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Confirm modal ──────────────────────────────────────── -->
 <div id="confirm-modal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">
   <div style="background:var(--glass-large-bg);backdrop-filter:blur(var(--lg-frost-large));-webkit-backdrop-filter:blur(var(--lg-frost-large));border:1px solid var(--glass-large-border);border-radius:20px;padding:32px 28px 24px;max-width:380px;width:calc(100% - 40px);box-shadow:0 8px 40px rgba(0,0,0,0.3);">
@@ -610,8 +630,8 @@
         '<thead><tr>' +
           '<th style="width:36px;"><input type="checkbox" id="select-all-cb" onchange="_toggleAll(this)" title="Select all"></th>' +
           (isEdits
-            ? '<th>Title</th><th>Artist</th><th>Plays</th><th>Action</th>'
-            : '<th>Title</th><th>Artist</th><th>Action</th>') +
+            ? '<th>Title</th><th>Artist</th><th>Plays</th><th style="width:160px;">Actions</th>'
+            : '<th>Title</th><th>Artist</th><th style="width:160px;">Actions</th>') +
         '</tr></thead>' +
         '<tbody>';
 
@@ -620,6 +640,9 @@
           ? '<a href="/track.html?id=' + item.id + '" style="color:var(--brand);">' + escHtml(item.title) + '</a>'
           : '<a href="/album.html?id=' + item.id + '" style="color:var(--brand);">' + escHtml(item.title) + '</a>';
         var artistName = escHtml((item.artists && item.artists.display_name) || '');
+        var editBtn = isEdits
+          ? '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'track\',\'' + item.id + '\',' + JSON.stringify(item.title) + ',null)" style="margin-right:6px;">Edit</button>'
+          : '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'comp\',\'' + item.id + '\',' + JSON.stringify(item.title) + ',' + JSON.stringify(item.description||'') + ')" style="margin-right:6px;">Edit</button>';
         var deleteBtn = isEdits
           ? '<button class="btn btn-danger btn-sm" onclick="deleteTrack(\'' + item.id + '\')">Remove</button>'
           : '<button class="btn btn-danger btn-sm" onclick="deleteComp(\'' + item.id + '\')">Remove</button>';
@@ -629,7 +652,7 @@
           '<td>' + link + '</td>' +
           '<td style="color:var(--text-2);">' + artistName + '</td>' +
           (isEdits ? '<td style="color:var(--text-3);">' + fmtNum(item.play_count) + '</td>' : '') +
-          '<td>' + deleteBtn + '</td>' +
+          '<td>' + editBtn + deleteBtn + '</td>' +
         '</tr>';
       });
 
@@ -801,6 +824,51 @@
       loadModerators();
     } catch (err) { showMsg('admin-alert', err.message); }
   }
+
+  // ── Edit modal ────────────────────────────────────────────────
+
+  var _editType = null;
+  var _editId = null;
+
+  function openEditModal(type, id, title, description) {
+    _editType = type;
+    _editId = id;
+    document.getElementById('edit-modal-title').textContent = type === 'comp' ? 'Edit Comp' : 'Edit Edit';
+    document.getElementById('edit-modal-title-input').value = title || '';
+    var descGroup = document.getElementById('edit-modal-desc-group');
+    descGroup.style.display = type === 'comp' ? '' : 'none';
+    if (type === 'comp') document.getElementById('edit-modal-desc-input').value = description || '';
+    document.getElementById('edit-modal-alert').textContent = '';
+    document.getElementById('edit-modal').style.display = 'flex';
+    setTimeout(function() { document.getElementById('edit-modal-title-input').focus(); }, 50);
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+    _editType = null;
+    _editId = null;
+  }
+
+  async function saveEdit() {
+    var title = document.getElementById('edit-modal-title-input').value.trim();
+    if (!title) { document.getElementById('edit-modal-alert').textContent = 'Title is required'; return; }
+    var body = { title: title };
+    if (_editType === 'comp') {
+      body.description = document.getElementById('edit-modal-desc-input').value.trim() || null;
+    }
+    var endpoint = _editType === 'comp' ? '/admin/albums/' + _editId : '/admin/tracks/' + _editId;
+    try {
+      await adminApi(endpoint, { method: 'PATCH', body: JSON.stringify(body) });
+      closeEditModal();
+      loadContent();
+    } catch (err) {
+      document.getElementById('edit-modal-alert').textContent = err.message || 'Save failed';
+    }
+  }
+
+  document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
 
   // ── Auto-login ────────────────────────────────────────────────
   var savedPw = sessionStorage.getItem('admin_pw');
