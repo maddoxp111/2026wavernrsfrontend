@@ -213,6 +213,7 @@
 
   // ── Tab loading ───────────────────────────────────────────────
   var stemsTabActive = false;
+  var aiTabActive = false;
 
   async function loadTabs() {
     var container = document.getElementById('tracker-container');
@@ -238,11 +239,13 @@
         '" id="rtab-' + i + '" onclick="switchTab(' + i + ')">' + escHtml(t.name || ('Tab ' + (i+1))) + '</button>';
     }).join('');
     html += '<button class="wv-admin-tab' + (stemsTabActive ? ' active' : '') + '" id="rtab-stems" onclick="switchToStems()">Stem Splitter</button>';
+    html += '<button class="wv-admin-tab' + (aiTabActive ? ' active' : '') + '" id="rtab-ai" onclick="switchToAI()">AI Voice</button>';
     bar.innerHTML = html;
   }
 
   function _deactivateAllTabs() {
     stemsTabActive = false;
+    aiTabActive = false;
     activeTabIdx = -1;
     trackerTabs.forEach(function(_, i) {
       var btn = document.getElementById('rtab-' + i);
@@ -250,6 +253,10 @@
     });
     var sb = document.getElementById('rtab-stems');
     if (sb) sb.classList.remove('active');
+    var ab = document.getElementById('rtab-ai');
+    if (ab) ab.classList.remove('active');
+    if (stemsPollTimer) { clearInterval(stemsPollTimer); stemsPollTimer = null; }
+    if (aiPollTimer) { clearInterval(aiPollTimer); aiPollTimer = null; }
   }
 
   async function switchTab(idx) {
@@ -730,6 +737,230 @@
     el.innerHTML = html;
   }
 
+  // ── AI Voice tab ──────────────────────────────────────────────
+  var aiPollTimer = null;
+  var aiMode = 'upload';        // 'upload' | 'url'
+  var aiModels = null;          // cached [{id, name}]
+
+  function switchToAI() {
+    _deactivateAllTabs();
+    aiTabActive = true;
+    var ab = document.getElementById('rtab-ai');
+    if (ab) ab.classList.add('active');
+    renderAITab();
+  }
+
+  async function renderAITab() {
+    if (aiPollTimer) { clearInterval(aiPollTimer); aiPollTimer = null; }
+    var container = document.getElementById('tracker-container');
+
+    if (aiModels === null) {
+      container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try {
+        var md = await api('/rvc/models');
+        aiModels = md.models || [];
+      } catch (e) { aiModels = []; }
+    }
+
+    var modelOpts = aiModels.length
+      ? aiModels.map(function(m) { return '<option value="' + escHtml(m.id) + '">' + escHtml(m.name) + '</option>'; }).join('')
+      : '<option value="">No voice models installed</option>';
+
+    container.innerHTML =
+      '<div style="max-width:600px;margin:0 auto;">' +
+      '<div class="wv-card" style="padding:24px;margin-bottom:20px;">' +
+      '<div style="font-weight:700;font-size:16px;margin-bottom:4px;">AI Voice Conversion</div>' +
+      '<div style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Convert any vocal into an AI model voice (RVC). Drop in a full song and it can isolate the vocals, swap the voice, and remix an AI cover. Runs on the server — takes 2–5 minutes. Free &amp; self-hosted.</div>' +
+
+      // Source mode toggle
+      '<div style="display:flex;gap:6px;margin-bottom:16px;background:var(--glass-pill-bg);padding:4px;border-radius:10px;">' +
+      '<button class="ai-mode-btn" id="ai-mode-upload" onclick="setAIMode(\'upload\')" style="flex:1;padding:8px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">Upload File</button>' +
+      '<button class="ai-mode-btn" id="ai-mode-url" onclick="setAIMode(\'url\')" style="flex:1;padding:8px;border-radius:7px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">From URL</button>' +
+      '</div>' +
+
+      '<div id="ai-upload-block" style="margin-bottom:18px;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Audio file</label>' +
+      '<input id="ai-file" type="file" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg" class="wv-input" style="width:100%;padding:10px 14px;cursor:pointer;">' +
+      '<div style="font-size:12px;color:var(--text-3);margin-top:5px;">A song or a vocal clip — MP3, WAV, FLAC, M4A, OGG, up to 80 MB.</div>' +
+      '</div>' +
+
+      '<div id="ai-url-block" style="margin-bottom:18px;display:none;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Audio URL</label>' +
+      '<input id="ai-url" class="wv-input" style="width:100%;padding:10px 14px;" placeholder="https://…mp3  or paste a pillowcase link">' +
+      '<div style="font-size:12px;color:var(--text-3);margin-top:5px;">Direct .mp3/.wav links, archive.org, and pillowcase (pillows.su) links.</div>' +
+      '</div>' +
+
+      // Voice model
+      '<div style="margin-bottom:18px;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Voice model</label>' +
+      '<select id="ai-model" class="wv-input" style="width:100%;padding:10px 14px;cursor:pointer;">' + modelOpts + '</select>' +
+      '</div>' +
+
+      // Pitch
+      '<div style="margin-bottom:18px;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Pitch shift (semitones)</label>' +
+      '<select id="ai-pitch" class="wv-input" style="width:100%;padding:10px 14px;cursor:pointer;">' +
+      '<option value="-12">-12 (down an octave)</option>' +
+      '<option value="-5">-5</option>' +
+      '<option value="0" selected>0 (same key)</option>' +
+      '<option value="5">+5</option>' +
+      '<option value="12">+12 (up an octave)</option>' +
+      '</select>' +
+      '<div style="font-size:12px;color:var(--text-3);margin-top:5px;">Try +12 when converting a female vocal to a male voice, or -12 for the reverse.</div>' +
+      '</div>' +
+
+      // Isolate toggle
+      '<label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer;font-size:13px;color:var(--text-2);">' +
+      '<input type="checkbox" id="ai-isolate" checked style="width:16px;height:16px;cursor:pointer;">' +
+      '<span>Isolate vocals first &amp; remix an AI cover <span style="color:var(--text-3);">(turn off if you\'re uploading clean a-cappella vocals)</span></span>' +
+      '</label>' +
+
+      '<button class="btn btn-primary" id="ai-btn" onclick="startAIConvert()"' + (aiModels.length ? '' : ' disabled') + '>Convert Voice</button>' +
+      '</div>' +
+      '<div id="ai-results"></div>' +
+      '</div>';
+
+    setAIMode(aiMode);
+  }
+
+  function setAIMode(mode) {
+    aiMode = mode;
+    var up = document.getElementById('ai-upload-block');
+    var ur = document.getElementById('ai-url-block');
+    if (up) up.style.display = mode === 'upload' ? '' : 'none';
+    if (ur) ur.style.display = mode === 'url' ? '' : 'none';
+    ['upload', 'url'].forEach(function(m) {
+      var b = document.getElementById('ai-mode-' + m);
+      if (!b) return;
+      var active = m === mode;
+      b.style.background = active ? 'var(--brand,#7c5cff)' : 'transparent';
+      b.style.color = active ? '#fff' : 'var(--text-2)';
+    });
+  }
+
+  async function startAIConvert() {
+    var model = (document.getElementById('ai-model') || {}).value || '';
+    var pitch = (document.getElementById('ai-pitch') || {}).value || '0';
+    var isolate = !!(document.getElementById('ai-isolate') || {}).checked;
+    var btn = document.getElementById('ai-btn');
+    if (!model) { showAIStatus('error', 'No voice model available.'); return; }
+
+    if (aiMode === 'upload') {
+      var fileInput = document.getElementById('ai-file');
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      if (!file) { showAIStatus('error', 'Please choose an audio file first.'); return; }
+      if (file.size > 80 * 1024 * 1024) { showAIStatus('error', 'File is too large (max 80 MB).'); return; }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+      showAIStatus('loading', 'Uploading file…');
+
+      var form = new FormData();
+      form.append('audio', file);
+      form.append('model', model);
+      form.append('pitch', pitch);
+      form.append('isolate', isolate ? 'true' : 'false');
+      try {
+        var resp = await fetch(API_BASE + '/rvc/upload', { method: 'POST', body: form });
+        var data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok || data.error) {
+          showAIStatus('error', data.error || ('Upload failed (' + resp.status + ').'));
+          if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+          return;
+        }
+        if (btn) btn.textContent = 'Converting…';
+        pollAIStatus(data.id, btn);
+      } catch (e) {
+        showAIStatus('error', e.message || 'Upload failed.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+      }
+      return;
+    }
+
+    var url = ((document.getElementById('ai-url') || {}).value || '').trim();
+    if (!url || !/^https?:\/\//i.test(url)) {
+      showAIStatus('error', 'Please enter a valid audio URL (starting with https://).');
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Converting…'; }
+    showAIStatus('loading', 'Downloading audio…');
+    try {
+      var d = await api('/rvc/convert', { method: 'POST', body: JSON.stringify({ url: url, model: model, pitch: pitch, isolate: isolate }) });
+      if (d.error) {
+        showAIStatus('error', d.error);
+        if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+        return;
+      }
+      pollAIStatus(d.id, btn);
+    } catch (e) {
+      showAIStatus('error', e.message || 'Something went wrong.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+    }
+  }
+
+  function pollAIStatus(id, btn) {
+    var elapsed = 0;
+    if (aiPollTimer) clearInterval(aiPollTimer);
+    aiPollTimer = setInterval(async function() {
+      elapsed += 4;
+      try {
+        var data = await api('/rvc/status/' + id);
+        var s = data.status;
+        if (s === 'downloading') {
+          showAIStatus('loading', 'Downloading audio…');
+        } else if (s === 'isolating') {
+          showAIStatus('loading', 'Isolating vocals… (' + elapsed + 's elapsed)');
+        } else if (s === 'converting') {
+          showAIStatus('loading', 'Converting voice… this can take a few minutes (' + elapsed + 's elapsed)');
+        } else if (s === 'mixing') {
+          showAIStatus('loading', 'Mixing AI cover… (' + elapsed + 's elapsed)');
+        } else if (s === 'succeeded') {
+          clearInterval(aiPollTimer); aiPollTimer = null;
+          if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+          renderAIResults(id, data.results || []);
+        } else if (s === 'failed') {
+          clearInterval(aiPollTimer); aiPollTimer = null;
+          showAIStatus('error', data.error || 'Voice conversion failed.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+        } else if (elapsed > 720) {
+          clearInterval(aiPollTimer); aiPollTimer = null;
+          showAIStatus('error', 'Timed out. The file may be too long — try a shorter clip.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Convert Voice'; }
+        }
+      } catch (e) { /* network blip, keep polling */ }
+    }, 4000);
+  }
+
+  function showAIStatus(type, msg) {
+    var el = document.getElementById('ai-results');
+    if (!el) return;
+    var color = type === 'error' ? 'var(--red,#f87171)' : 'var(--text-3)';
+    var spinner = type === 'loading' ? '<div class="spinner" style="width:18px;height:18px;margin-right:10px;flex-shrink:0;"></div>' : '';
+    el.innerHTML = '<div style="display:flex;align-items:center;padding:16px;font-size:13px;color:' + color + ';">' + spinner + escHtml(msg) + '</div>';
+  }
+
+  var AI_ICONS = { 'AI Cover': '🌟', 'AI Vocals': '🎤', 'Instrumental': '🎵' };
+
+  function renderAIResults(jobId, results) {
+    var el = document.getElementById('ai-results');
+    if (!el) return;
+    if (!results || !results.length) { showAIStatus('error', 'No results returned.'); return; }
+    var html = '<div style="margin-bottom:12px;font-size:13px;color:var(--text-3);">Done — results are kept for 30 minutes.</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">';
+    results.forEach(function(s) {
+      var dlUrl = API_BASE + '/rvc/download/' + encodeURIComponent(jobId) + '/' + encodeURIComponent(s.file);
+      var icon = AI_ICONS[s.label] || '🎵';
+      html += '<div class="wv-card" style="padding:16px;">' +
+        '<div style="font-weight:600;font-size:14px;margin-bottom:12px;">' + icon + ' ' + escHtml(s.label) + '</div>' +
+        '<audio controls src="' + escHtml(dlUrl) + '" style="width:100%;margin-bottom:12px;"></audio>' +
+        '<a href="' + escHtml(dlUrl) + '" download="' + escHtml(s.file) + '" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;text-decoration:none;">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' +
+        ' Download</a>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
   // ── Player ────────────────────────────────────────────────────
   function playTrackerRow(globalIdx) {
     var r = activeData.rows[globalIdx];
@@ -766,6 +997,7 @@
     document.removeEventListener('playerSkipNext', _onNext);
     document.removeEventListener('playerSkipPrev', _onPrev);
     if (stemsPollTimer) { clearInterval(stemsPollTimer); stemsPollTimer = null; }
+    if (aiPollTimer) { clearInterval(aiPollTimer); aiPollTimer = null; }
   });
 
   loadTabs();
