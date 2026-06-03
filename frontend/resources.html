@@ -212,6 +212,8 @@
   }
 
   // ── Tab loading ───────────────────────────────────────────────
+  var stemsTabActive = false;
+
   async function loadTabs() {
     var container = document.getElementById('tracker-container');
     try {
@@ -221,32 +223,46 @@
       trackerTabs = [];
     }
     renderTabBar();
-    if (!trackerTabs.length) {
-      container.innerHTML = emptyState('No tabs configured', 'An admin can add sheets in the admin panel.');
-      return;
+    if (trackerTabs.length) {
+      switchTab(0);
+    } else {
+      // No tracker tabs — default to stems
+      switchToStems();
     }
-    switchTab(0);
   }
 
   function renderTabBar() {
     var bar = document.getElementById('rtab-bar');
-    if (!trackerTabs.length) { bar.innerHTML = ''; return; }
-    bar.innerHTML = trackerTabs.map(function(t, i) {
+    var html = trackerTabs.map(function(t, i) {
       return '<button class="wv-admin-tab' + (i === activeTabIdx ? ' active' : '') +
         '" id="rtab-' + i + '" onclick="switchTab(' + i + ')">' + escHtml(t.name || ('Tab ' + (i+1))) + '</button>';
     }).join('');
+    html += '<button class="wv-admin-tab' + (stemsTabActive ? ' active' : '') + '" id="rtab-stems" onclick="switchToStems()">Stem Splitter</button>';
+    bar.innerHTML = html;
+  }
+
+  function _deactivateAllTabs() {
+    stemsTabActive = false;
+    activeTabIdx = -1;
+    trackerTabs.forEach(function(_, i) {
+      var btn = document.getElementById('rtab-' + i);
+      if (btn) btn.classList.remove('active');
+    });
+    var sb = document.getElementById('rtab-stems');
+    if (sb) sb.classList.remove('active');
   }
 
   async function switchTab(idx) {
-    if (idx === activeTabIdx && tabCache[idx]) {
-      // Already loaded and displayed; just update active state
+    if (idx === activeTabIdx && tabCache[idx] && !stemsTabActive) {
       trackerTabs.forEach(function(_, i) {
         var btn = document.getElementById('rtab-' + i);
         if (btn) btn.classList.toggle('active', i === idx);
       });
       return;
     }
+    _deactivateAllTabs();
     activeTabIdx = idx;
+    stemsTabActive = false;
     trackerTabs.forEach(function(_, i) {
       var btn = document.getElementById('rtab-' + i);
       if (btn) btn.classList.toggle('active', i === idx);
@@ -525,6 +541,136 @@
     return html;
   }
 
+  // ── Stem Splitter tab ─────────────────────────────────────────
+  var stemsPollTimer = null;
+
+  function switchToStems() {
+    _deactivateAllTabs();
+    stemsTabActive = true;
+    var sb = document.getElementById('rtab-stems');
+    if (sb) sb.classList.add('active');
+    renderStemsTab();
+  }
+
+  var STEM_LABELS = {
+    vocals: '🎤 Vocals', drums: '🥁 Drums', bass: '🎸 Bass', other: '🎵 Other',
+    guitar: '🎸 Guitar', piano: '🎹 Piano', no_vocals: '🎵 Instrumental',
+    accompaniment: '🎵 Accompaniment',
+  };
+  function stemLabel(url) {
+    var fname = (url || '').split('?')[0].split('/').pop().replace(/\.[^.]+$/, '').toLowerCase();
+    return STEM_LABELS[fname] || (fname.charAt(0).toUpperCase() + fname.slice(1));
+  }
+
+  function renderStemsTab() {
+    if (stemsPollTimer) { clearInterval(stemsPollTimer); stemsPollTimer = null; }
+    var container = document.getElementById('tracker-container');
+    container.innerHTML =
+      '<div style="max-width:600px;margin:0 auto;">' +
+      '<div class="wv-card" style="padding:24px;margin-bottom:20px;">' +
+      '<div style="font-weight:700;font-size:16px;margin-bottom:4px;">Split Audio into Stems</div>' +
+      '<div style="font-size:13px;color:var(--text-3);margin-bottom:20px;">Separate a track into vocals, drums, bass, and more using AI. Powered by Demucs (HTDemucs) via Replicate — takes ~30 seconds.</div>' +
+      '<div style="margin-bottom:14px;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Audio URL</label>' +
+      '<input id="stems-url" class="wv-input" style="width:100%;padding:10px 14px;" placeholder="https://…mp3  or paste a pillowcase link">' +
+      '</div>' +
+      '<div style="margin-bottom:20px;">' +
+      '<label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Model</label>' +
+      '<select id="stems-model" class="wv-input" style="width:100%;padding:10px 14px;cursor:pointer;">' +
+      '<option value="htdemucs">HTDemucs — Standard quality, 4 stems</option>' +
+      '<option value="htdemucs_6s">HTDemucs 6-stem — +guitar &amp; piano</option>' +
+      '<option value="htdemucs_ft">HTDemucs Fine-tuned — Higher quality, slower</option>' +
+      '<option value="mdx_extra">MDX Extra — Alternative model</option>' +
+      '</select>' +
+      '</div>' +
+      '<button class="btn btn-primary" id="stems-btn" onclick="startStemSplit()">Split Track</button>' +
+      '</div>' +
+      '<div id="stems-results"></div>' +
+      '</div>';
+  }
+
+  async function startStemSplit() {
+    var url = (document.getElementById('stems-url') || {}).value || '';
+    var model = (document.getElementById('stems-model') || {}).value || 'htdemucs';
+    url = url.trim();
+
+    if (!url || !/^https?:\/\//i.test(url)) {
+      showStemsStatus('error', 'Please enter a valid audio URL (starting with https://).');
+      return;
+    }
+
+    var btn = document.getElementById('stems-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Splitting…'; }
+    showStemsStatus('loading', 'Starting… this takes about 30 seconds.');
+
+    try {
+      var data = await api('/stems/split', { method: 'POST', body: JSON.stringify({ url: url, model: model }) });
+      if (data.error) { showStemsStatus('error', data.error); if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; } return; }
+      if (data.status === 'succeeded' && data.output) {
+        renderStemResults(data.output);
+        if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; }
+        return;
+      }
+      pollStemStatus(data.id, btn);
+    } catch (e) {
+      showStemsStatus('error', e.message || 'Something went wrong.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; }
+    }
+  }
+
+  function pollStemStatus(id, btn) {
+    var elapsed = 0;
+    if (stemsPollTimer) clearInterval(stemsPollTimer);
+    stemsPollTimer = setInterval(async function() {
+      elapsed += 3;
+      showStemsStatus('loading', 'Splitting… (~' + Math.max(0, 30 - elapsed) + 's remaining)');
+      try {
+        var data = await api('/stems/status/' + id);
+        if (data.status === 'succeeded') {
+          clearInterval(stemsPollTimer); stemsPollTimer = null;
+          if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; }
+          renderStemResults(data.output || []);
+        } else if (data.status === 'failed' || data.error) {
+          clearInterval(stemsPollTimer); stemsPollTimer = null;
+          showStemsStatus('error', data.error || 'Stem splitting failed.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; }
+        } else if (elapsed > 180) {
+          clearInterval(stemsPollTimer); stemsPollTimer = null;
+          showStemsStatus('error', 'Timed out. The file may be too long or the service is busy.');
+          if (btn) { btn.disabled = false; btn.textContent = 'Split Track'; }
+        }
+      } catch (e) { /* network blip — keep polling */ }
+    }, 3000);
+  }
+
+  function showStemsStatus(type, msg) {
+    var el = document.getElementById('stems-results');
+    if (!el) return;
+    var color = type === 'error' ? 'var(--red,#f87171)' : 'var(--text-3)';
+    var spinner = type === 'loading' ? '<div class="spinner" style="width:18px;height:18px;margin-right:10px;flex-shrink:0;"></div>' : '';
+    el.innerHTML = '<div style="display:flex;align-items:center;padding:16px;font-size:13px;color:' + color + ';">' + spinner + escHtml(msg) + '</div>';
+  }
+
+  function renderStemResults(stems) {
+    var el = document.getElementById('stems-results');
+    if (!el) return;
+    if (!stems || !stems.length) { showStemsStatus('error', 'No stems returned.'); return; }
+    var html = '<div style="margin-bottom:12px;font-size:13px;color:var(--text-3);">Done — ' + stems.length + ' stems ready. Right-click/long-press Download to save.</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">';
+    stems.forEach(function(url) {
+      var label = stemLabel(url);
+      html += '<div class="wv-card" style="padding:16px;">' +
+        '<div style="font-weight:600;font-size:14px;margin-bottom:12px;">' + escHtml(label) + '</div>' +
+        '<audio controls src="' + escHtml(url) + '" style="width:100%;margin-bottom:12px;"></audio>' +
+        '<a href="' + escHtml(url) + '" download target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;text-decoration:none;">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' +
+        ' Download</a>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
   // ── Player ────────────────────────────────────────────────────
   function playTrackerRow(globalIdx) {
     var r = activeData.rows[globalIdx];
@@ -560,6 +706,7 @@
   window._pageCleanup.push(function() {
     document.removeEventListener('playerSkipNext', _onNext);
     document.removeEventListener('playerSkipPrev', _onPrev);
+    if (stemsPollTimer) { clearInterval(stemsPollTimer); stemsPollTimer = null; }
   });
 
   loadTabs();
