@@ -78,6 +78,7 @@
     <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
     <button class="wv-admin-tab"        id="atab-aivoices" onclick="showAdminTab('aivoices')">AI Voices</button>
+    <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
   </div>
 
   <!-- ── Banners tab ─────────────────────────────────────── -->
@@ -243,6 +244,37 @@
     </div>
   </div>
 
+  <!-- ── Badges tab ─────────────────────────────────────────── -->
+  <div id="tab-badges" style="display:none;">
+    <div style="max-width:700px;display:flex;flex-direction:column;gap:24px;">
+
+      <!-- Verified Artists -->
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:24px;">
+        <h2 style="font-size:16px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px;">
+          <span class="wv-verified-icon">✓</span> Verified Artists
+        </h2>
+        <p style="font-size:13px;color:var(--text-2);margin:0 0 16px;">Search for an artist and toggle their verified badge.</p>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="badge-artist-search" class="wv-input" placeholder="Artist name…" style="flex:1;" oninput="searchBadgeArtists()">
+        </div>
+        <div id="badge-artists-results"></div>
+      </div>
+
+      <!-- Highlighted / Exclusive Comps -->
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:24px;">
+        <h2 style="font-size:16px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px;">
+          <span class="wv-badge-hl-icon">★</span> Highlighted &amp; Exclusive Comps
+        </h2>
+        <p style="font-size:13px;color:var(--text-2);margin:0 0 16px;">Search for a comp and toggle its badges.</p>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="badge-album-search" class="wv-input" placeholder="Comp title…" style="flex:1;" oninput="searchBadgeAlbums()">
+        </div>
+        <div id="badge-albums-results"></div>
+      </div>
+
+    </div>
+  </div>
+
 </div><!-- /admin-content -->
 </div><!-- /view -->
 
@@ -345,7 +377,7 @@
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','tracker','aivoices'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','tracker','aivoices','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -359,6 +391,7 @@
     if (tab === 'moderators') loadModerators();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'aivoices')   loadRvcModels();
+    if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); }
   }
 
   // ── AI Voices (RVC models) ────────────────────────────────────
@@ -646,42 +679,79 @@
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       var tags = await fetch(API_BASE + '/eratags').then(function(r) { return r.json(); });
-      if (!tags.length) {
-        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No era tags yet.</div>';
-        return;
-      }
-      el.innerHTML = '<table class="admin-table">' +
-        '<thead><tr><th>Order</th><th>Name</th><th>ID</th><th>Actions</th></tr></thead>' +
-        '<tbody>' + tags.map(function(t, i) {
-          return '<tr>' +
-            '<td style="display:flex;gap:4px;">' +
-              '<button class="btn btn-ghost btn-sm" onclick="moveEraTag(\'' + t.id + '\',' + i + ',-1)" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
-              '<button class="btn btn-ghost btn-sm" onclick="moveEraTag(\'' + t.id + '\',' + i + ',1)" ' + (i === tags.length - 1 ? 'disabled' : '') + '>↓</button>' +
-            '</td>' +
-            '<td><span class="badge">' + escHtml(t.name) + '</span></td>' +
-            '<td style="color:var(--text-3);font-size:12px;">' + t.id + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" onclick="deleteEraTag(\'' + t.id + '\')">Delete</button></td>' +
-          '</tr>';
-        }).join('') + '</tbody></table>';
       eraTagsCache = tags;
+      renderEraTagsDraggable(tags);
     } catch (err) {
       el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
 
-  async function moveEraTag(id, currentIndex, direction) {
-    var tags = eraTagsCache;
-    var newIndex = currentIndex + direction;
-    if (newIndex < 0 || newIndex >= tags.length) return;
-    var a = tags[currentIndex], b = tags[newIndex];
-    var pw = adminPw;
+  function renderEraTagsDraggable(tags) {
+    var el = document.getElementById('eratags-list');
+    if (!tags.length) {
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No era tags yet.</div>';
+      return;
+    }
+    var list = document.createElement('div');
+    list.id = 'eratag-drag-list';
+    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+    var _dragSrcIdx = null;
+
+    function buildRow(t, i) {
+      var row = document.createElement('div');
+      row.dataset.id = t.id;
+      row.dataset.idx = i;
+      row.draggable = true;
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--glass-medium-bg);border:1px solid var(--glass-medium-border);border-radius:12px;cursor:grab;user-select:none;transition:opacity 0.15s,background 0.15s;';
+      row.innerHTML =
+        '<span style="color:var(--text-3);font-size:16px;cursor:grab;flex-shrink:0;">⠿</span>' +
+        '<span class="badge" style="flex:1;">' + escHtml(t.name) + '</span>' +
+        '<span style="color:var(--text-3);font-size:11px;margin-right:4px;">' + t.id.slice(0,8) + '…</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteEraTag(\'' + t.id + '\')">Delete</button>';
+
+      row.addEventListener('dragstart', function(e) {
+        _dragSrcIdx = i;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(function() { row.style.opacity = '0.4'; }, 0);
+      });
+      row.addEventListener('dragend', function() { row.style.opacity = ''; });
+      row.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        row.style.background = 'var(--purple-bg,rgba(139,92,246,0.12))';
+      });
+      row.addEventListener('dragleave', function() { row.style.background = ''; });
+      row.addEventListener('drop', function(e) {
+        e.preventDefault();
+        row.style.background = '';
+        var destIdx = parseInt(row.dataset.idx);
+        if (_dragSrcIdx === null || _dragSrcIdx === destIdx) return;
+        saveEraTagOrder(_dragSrcIdx, destIdx);
+      });
+      return row;
+    }
+
+    tags.forEach(function(t, i) { list.appendChild(buildRow(t, i)); });
+    el.innerHTML = '';
+    el.appendChild(list);
+  }
+
+  async function saveEraTagOrder(srcIdx, destIdx) {
+    var tags = eraTagsCache.slice();
+    var moved = tags.splice(srcIdx, 1)[0];
+    tags.splice(destIdx, 0, moved);
+    eraTagsCache = tags;
+    renderEraTagsDraggable(tags);
     try {
-      await Promise.all([
-        fetch(API_BASE + '/eratags/' + a.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: newIndex }) }),
-        fetch(API_BASE + '/eratags/' + b.id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': pw }, body: JSON.stringify({ position: currentIndex }) }),
-      ]);
-      loadEraTags();
-    } catch (err) { showMsg('admin-alert', 'Reorder failed: ' + err.message); }
+      await Promise.all(tags.map(function(t, i) {
+        return fetch(API_BASE + '/eratags/' + t.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPw },
+          body: JSON.stringify({ position: i }),
+        });
+      }));
+    } catch (err) { showMsg('admin-alert', 'Reorder failed: ' + err.message); loadEraTags(); }
   }
 
   async function createEraTag() {
@@ -1090,6 +1160,91 @@
   document.getElementById('edit-modal').addEventListener('click', function(e) {
     if (e.target === this) closeEditModal();
   });
+
+  // ── Badges ────────────────────────────────────────────────────
+
+  var _badgeArtistTimer = null;
+  var _badgeAlbumTimer = null;
+
+  function searchBadgeArtists() {
+    clearTimeout(_badgeArtistTimer);
+    _badgeArtistTimer = setTimeout(_doSearchBadgeArtists, 300);
+  }
+
+  async function _doSearchBadgeArtists() {
+    var q = (document.getElementById('badge-artist-search').value || '').trim();
+    var el = document.getElementById('badge-artists-results');
+    if (!el) return;
+    el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">Searching…</div>';
+    try {
+      var data = await adminApi('/admin/badges/artists' + (q ? '?q=' + encodeURIComponent(q) : ''));
+      if (!data.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">No artists found.</div>'; return; }
+      el.innerHTML = data.map(function(a) {
+        var isV = a.is_verified;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);">' +
+          '<div>' +
+            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(a.display_name) + '</span>' +
+            (isV ? '<span class="wv-verified-icon" style="margin-left:6px;">✓</span>' : '') +
+          '</div>' +
+          '<button class="btn btn-sm ' + (isV ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeArtist(\'' + a.id + '\',' + !isV + ')">' +
+            (isV ? 'Remove Verified' : 'Set Verified') +
+          '</button>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+    }
+  }
+
+  async function setBadgeArtist(id, value) {
+    try {
+      await adminApi('/admin/badges/artist/' + id + '/verified', { method: 'POST', body: JSON.stringify({ value: value }) });
+      _doSearchBadgeArtists();
+    } catch (e) { showMsg('admin-alert', e.message); }
+  }
+
+  function searchBadgeAlbums() {
+    clearTimeout(_badgeAlbumTimer);
+    _badgeAlbumTimer = setTimeout(_doSearchBadgeAlbums, 300);
+  }
+
+  async function _doSearchBadgeAlbums() {
+    var q = (document.getElementById('badge-album-search').value || '').trim();
+    var el = document.getElementById('badge-albums-results');
+    if (!el) return;
+    el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">Searching…</div>';
+    try {
+      var data = await adminApi('/admin/badges/albums' + (q ? '?q=' + encodeURIComponent(q) : ''));
+      if (!data.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">No comps found.</div>'; return; }
+      el.innerHTML = data.map(function(a) {
+        var isH = a.is_highlighted, isE = a.is_exclusive;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);gap:10px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(a.title) + '</span>' +
+            (isH ? '<span class="wv-badge-hl-icon" style="margin-left:6px;">★</span>' : '') +
+            (isE ? '<span class="wv-badge-ex-icon" style="margin-left:4px;">◆</span>' : '') +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            '<button class="btn btn-sm ' + (isH ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeAlbum(\'' + a.id + '\',\'highlighted\',' + !isH + ')">' +
+              (isH ? 'Remove Highlight' : 'Highlight') +
+            '</button>' +
+            '<button class="btn btn-sm ' + (isE ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeAlbum(\'' + a.id + '\',\'exclusive\',' + !isE + ')">' +
+              (isE ? 'Remove Exclusive' : 'Make Exclusive') +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+    }
+  }
+
+  async function setBadgeAlbum(id, badge, value) {
+    try {
+      await adminApi('/admin/badges/album/' + id + '/' + badge, { method: 'POST', body: JSON.stringify({ value: value }) });
+      _doSearchBadgeAlbums();
+    } catch (e) { showMsg('admin-alert', e.message); }
+  }
 
   // ── Auto-login ────────────────────────────────────────────────
   var savedPw = sessionStorage.getItem('admin_pw');

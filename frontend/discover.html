@@ -20,6 +20,8 @@ var params = new URLSearchParams(location.search);
 var activeTab = params.get('tab') || 'recent';
 var activeEra = params.get('era') || null;
 var _discoverItems = [];
+var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+getBadgeData().then(function(b){ _badges = b || _badges; }).catch(function(){});
 initPlayer();
 
 async function initDiscover() {
@@ -86,8 +88,18 @@ async function loadTracks() {
 
 function compCardHTML(item) {
   var seed = item.title||'', isAlbum = item._type==='album', artist = item.artists ? item.artists.display_name : 'Unknown';
+  var artistId = item.artists ? item.artists.id : null;
   var action = isAlbum ? "navigate('/album.html?id="+item.id+"')" : "navigate('/track.html?id="+item.id+"')";
   var bg = coverGradient(seed);
+
+  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+  var isVerified = artistId && b.verified_artists.indexOf(artistId) !== -1;
+  var isHighlighted = isAlbum && b.highlighted_albums.indexOf(item.id) !== -1;
+  var isExclusive = isAlbum && b.exclusive_albums.indexOf(item.id) !== -1;
+  var titleBadges = (isHighlighted ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
+                    (isExclusive   ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
+  var artistBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '';
+
   return '<div class="wv-comp-card" onclick="'+action+'">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:'+bg+';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
     '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
@@ -96,8 +108,8 @@ function compCardHTML(item) {
     '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playDiscover(\''+item.id+'\')">' +
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>' +
     '</div></div>' +
-    '<div class="wv-comp-card-title">'+escHtml(item.title)+'</div>' +
-    '<div class="wv-comp-card-artist">'+escHtml(artist)+'</div></div>';
+    '<div class="wv-comp-card-title" style="display:flex;align-items:center;gap:2px;">'+escHtml(item.title)+titleBadges+'</div>' +
+    '<div class="wv-comp-card-artist" style="display:flex;align-items:center;">'+escHtml(artist)+artistBadge+'</div></div>';
 }
 
 function playDiscover(id) {

@@ -27,6 +27,7 @@ var _trendingGlobal = [];
 var _newReleasesGlobal = [];
 var _chartsTab = 'alltime';
 var _chartsDataCache = null;
+var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
 
 async function loadHome() {
   try {
@@ -34,10 +35,12 @@ async function loadHome() {
       api('/discover'),
       api('/discover/trending').catch(function() { return []; }),
       api('/charts').catch(function() { return { alltime: [], weekly: [] }; }),
+      getBadgeData().catch(function() { return { verified_artists: [], highlighted_albums: [], exclusive_albums: [] }; }),
     ]);
     var discoverData = results[0];
     var trendingData = results[1];
     var chartsData = results[2];
+    _badges = results[3] || _badges;
 
     var recent = discoverData.recent || [];
     _trendingGlobal = Array.isArray(trendingData) ? trendingData : [];
@@ -284,10 +287,21 @@ function compCardHTML(item) {
   var seed = item.title || '';
   var isAlbum = item._type === 'album';
   var artist = item.artists ? item.artists.display_name : 'Unknown';
+  var artistId = item.artists ? item.artists.id : null;
   var action = isAlbum
     ? "navigate('/album.html?id=" + item.id + "')"
     : "navigate('/track.html?id=" + item.id + "')";
   var coverBg = coverGradient(seed);
+
+  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+  var isVerified = artistId && b.verified_artists.indexOf(artistId) !== -1;
+  var isHighlighted = isAlbum && b.highlighted_albums.indexOf(item.id) !== -1;
+  var isExclusive = isAlbum && b.exclusive_albums.indexOf(item.id) !== -1;
+
+  var titleBadges = '';
+  if (isHighlighted) titleBadges += '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>';
+  if (isExclusive)   titleBadges += '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>';
+  var artistBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '';
 
   return '<div class="wv-comp-card" onclick="' + action + '">' +
     '<div class="wv-comp-card-cover">' +
@@ -300,8 +314,8 @@ function compCardHTML(item) {
         '</button>' +
       '</div>' +
     '</div>' +
-    '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
-    '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
+    '<div class="wv-comp-card-title" style="display:flex;align-items:center;gap:2px;">' + escHtml(item.title) + titleBadges + '</div>' +
+    '<div class="wv-comp-card-artist" style="display:flex;align-items:center;">' + escHtml(artist) + artistBadge + '</div>' +
   '</div>';
 }
 

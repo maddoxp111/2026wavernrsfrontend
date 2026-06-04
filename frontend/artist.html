@@ -79,12 +79,17 @@
     } catch (err) { alert(err.message); }
   }
 
-  function render() {
+  async function render() {
     var me = null;
     try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
     var isOwner = !!(me && artist.user_id === me.id);
     var totalPlays = uploads.filter(function(u) { return u._type === 'track'; })
       .reduce(function(sum, t) { return sum + (t.play_count || 0); }, 0);
+
+    var badges = await getBadgeData().catch(function() { return { verified_artists: [] }; });
+    var isVerified = badges.verified_artists && badges.verified_artists.indexOf(artist.id) !== -1;
+    var verifiedBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist" style="margin-left:6px;width:18px;height:18px;font-size:11px;">✓</span>' : '';
+    var verifiedPill = isVerified ? '<span class="wv-badge-pill wv-badge-verified-pill" style="margin-left:6px;">✓ Verified Artist</span>' : '';
 
     var avatarBg = coverGradient(artist.display_name || '');
     var avatarInner = artist.profile_image_url
@@ -105,7 +110,7 @@
             avatarInner +
           '</div>' +
           '<div style="flex:1;min-width:0;padding-bottom:4px;">' +
-            '<div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;">' + escHtml(artist.display_name || 'Unknown') + '</div>' +
+            '<div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">' + escHtml(artist.display_name || 'Unknown') + verifiedPill + '</div>' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
               (isOwner
                 ? '<a href="/dashboard.html" class="btn btn-secondary btn-sm">Manage music</a>'

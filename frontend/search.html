@@ -62,7 +62,12 @@
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     try {
-      var results = await api('/search?q=' + encodeURIComponent(q));
+      var _results = await Promise.all([
+        api('/search?q=' + encodeURIComponent(q)),
+        getBadgeData().catch(function(){ return { verified_artists:[], highlighted_albums:[], exclusive_albums:[] }; }),
+      ]);
+      var results = _results[0];
+      var badges = _results[1] || { verified_artists:[], highlighted_albums:[], exclusive_albums:[] };
       var tracks = results.tracks || [];
       var artists = results.artists || [];
       var albums = results.albums || [];
@@ -84,9 +89,10 @@
             var inner = a.profile_image_url
               ? '<img src="' + escHtml(a.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'">'
               : '<span style="font-size:22px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((a.display_name || '?')[0].toUpperCase()) + '</span>';
+            var isV = badges.verified_artists && badges.verified_artists.indexOf(a.id) !== -1;
             return '<div onclick="navigate(\'/artist.html?id=' + a.id + '\')" style="cursor:pointer;flex-shrink:0;text-align:center;width:88px;">' +
               '<div style="width:88px;height:88px;border-radius:50%;background:' + bg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">' + inner + '</div>' +
-              '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);">' + escHtml(a.display_name) + '</div>' +
+              '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);display:flex;align-items:center;justify-content:center;gap:2px;">' + escHtml(a.display_name) + (isV ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '') + '</div>' +
               '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">Artist</div>' +
             '</div>';
           }).join('') +
@@ -101,12 +107,16 @@
           albums.map(function(a) {
             var bg = coverGradient(a.title || '');
             var artistName = escHtml((a.artists && a.artists.display_name) || 'Unknown');
+            var isH = badges.highlighted_albums && badges.highlighted_albums.indexOf(a.id) !== -1;
+            var isE = badges.exclusive_albums   && badges.exclusive_albums.indexOf(a.id) !== -1;
+            var titleBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
+                              (isE ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
             return '<div class="scroll-card" onclick="navigate(\'/album.html?id=' + a.id + '\')" style="flex-shrink:0;width:140px;">' +
               '<div class="scroll-card-cover" style="background:' + bg + ';">' +
                 (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
                 '<div class="scroll-card-overlay"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></div>' +
               '</div>' +
-              '<div class="scroll-card-title">' + escHtml(a.title) + '</div>' +
+              '<div class="scroll-card-title" style="display:flex;align-items:center;gap:2px;">' + escHtml(a.title) + titleBadges + '</div>' +
               '<div class="scroll-card-sub">' + artistName + '</div>' +
             '</div>';
           }).join('') +

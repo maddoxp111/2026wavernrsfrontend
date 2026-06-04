@@ -55,9 +55,16 @@
     }
   }
 
-  function renderAlbum() {
+  async function renderAlbum() {
     const artist = album.artists || {};
     const eraName = album.era_tag?.name || album.genre || '';
+    const badges = await getBadgeData().catch(() => ({ verified_artists: [], highlighted_albums: [], exclusive_albums: [] }));
+    const isHighlighted = badges.highlighted_albums && badges.highlighted_albums.indexOf(album.id) !== -1;
+    const isExclusive   = badges.exclusive_albums   && badges.exclusive_albums.indexOf(album.id) !== -1;
+    const isVerified    = artist.id && badges.verified_artists && badges.verified_artists.indexOf(artist.id) !== -1;
+    const badgePills = (isExclusive   ? '<span class="wv-badge-pill wv-badge-exclusive" style="margin-right:4px;">◆ Wavernrs Exclusive</span>' : '') +
+                       (isHighlighted ? '<span class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;">★ Highlighted by Wavernrs</span>' : '');
+    const verifiedBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '';
 
     // Pre-render 5 empty stars so the widget is immediately visible.
     // loadRatings() will overwrite this with real data once the API responds.
@@ -106,8 +113,9 @@
           </div>
           <div class="wv-media-header-info" style="flex:1;min-width:0;">
             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:6px;">Compilation</div>
+            ${badgePills ? `<div style="margin-bottom:8px;">${badgePills}</div>` : ''}
             <div class="wv-title" style="font-size:32px;font-weight:800;letter-spacing:-0.04em;line-height:1.05;margin-bottom:6px;">${escHtml(album.title)}</div>
-            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-2);font-weight:500;">${escHtml(artist.display_name || 'Unknown')}</a>
+            <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-2);font-weight:500;display:inline-flex;align-items:center;gap:4px;">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
             ${album.description ? `<p style="margin-top:10px;font-size:14px;color:var(--text-2);line-height:1.6;">${escHtml(album.description)}</p>` : ''}
             <div style="margin-top:8px;font-size:13px;color:var(--text-3);">${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}</div>

@@ -651,3 +651,45 @@
       .catch(function() {});
   })();
 })();
+
+// ── Marquee: scroll overflowing titles on hover ──────────────────────────────
+(function () {
+  var SEL = '.wv-track-title,.track-row-title,.wv-comp-card-title,.scroll-card-title,.wv-card-title';
+  function apply(el) {
+    if (el._mq) return; el._mq = true;
+    requestAnimationFrame(function () {
+      var ov = el.scrollWidth - el.clientWidth;
+      if (ov > 2) {
+        el.style.setProperty('--mq-dist', -(ov + 16) + 'px');
+        el.style.setProperty('--mq-dur', Math.max(3, ov / 40) + 's');
+        el.classList.add('wv-mq');
+      }
+    });
+  }
+  window.initMarquees = function (root) { (root || document).querySelectorAll(SEL).forEach(apply); };
+  new MutationObserver(function (ms) {
+    ms.forEach(function (m) {
+      m.addedNodes.forEach(function (n) {
+        if (n.nodeType !== 1) return;
+        if (n.matches && n.matches(SEL)) apply(n);
+        if (n.querySelectorAll) n.querySelectorAll(SEL).forEach(apply);
+      });
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+})();
+
+// ── Badge data: fetched once, cached for the session ────────────────────────
+(function () {
+  var _cache = null;
+  window.getBadgeData = async function () {
+    if (_cache) return _cache;
+    try {
+      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+      _cache = await (await fetch(base + '/badges')).json();
+    } catch { _cache = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] }; }
+    return _cache;
+  };
+  window.invalidateBadgeCache = function () { _cache = null; };
+  // Pre-warm the cache as soon as the script loads so badges are ready by render time
+  window.getBadgeData();
+})();
