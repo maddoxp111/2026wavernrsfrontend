@@ -140,7 +140,7 @@ img { display: block; }
 .wv-app {
   display: grid;
   grid-template-columns: 248px 1fr;
-  grid-template-rows: 60px 1fr 76px;
+  grid-template-rows: 60px 1fr 0;
   gap: 14px;
   padding: 16px;
   height: 100vh;
@@ -457,6 +457,11 @@ img { display: block; }
   width: 100%;
 }
 .player-bar.hidden { display: none; }
+
+/* Expand player row when player is active */
+.wv-app:has(.player-bar:not(.hidden)) {
+  grid-template-rows: 60px 1fr 76px;
+}
 
 .player-track {
   display: flex; align-items: center; gap: 12px;
@@ -808,9 +813,14 @@ img { display: block; }
 
   #wv-content {
     position: absolute;
-    top: 116px; left: 0; right: 0; bottom: 158px;
+    top: 116px; left: 0; right: 0; bottom: 88px;
     overflow-y: auto; overflow-x: hidden;
     padding: 0 12px;
+  }
+  /* Push content up when mini-player is visible */
+  .wv-app:has(.player-bar:not(.hidden)) #wv-content,
+  .wv-app:has(.player-mini:not(.hidden)) #wv-content {
+    bottom: 158px;
   }
 
   #wv-player-slot {
