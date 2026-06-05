@@ -133,6 +133,22 @@
       }).join('');
     }
 
+    var searchSection = isOwner
+      ? '<div style="margin-top:36px;">' +
+          '<h2 class="section-title">Add Tracks</h2>' +
+          '<div style="position:relative;margin-bottom:12px;">' +
+            '<input type="text" id="pl-search-input" placeholder="Search edits and album tracks…" ' +
+              'style="width:100%;padding:10px 14px;background:var(--surface-2);border:1px solid var(--border);' +
+              'border-radius:8px;color:var(--text-primary);font-size:14px;box-sizing:border-box;" ' +
+              'autocomplete="off">' +
+            '<div id="pl-search-spinner" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);">' +
+              '<div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>' +
+            '</div>' +
+          '</div>' +
+          '<div id="pl-search-results"></div>' +
+        '</div>'
+      : '';
+
     document.getElementById('playlist-container').innerHTML =
       '<div style="padding:32px 0;">' +
         '<div class="playlist-header">' +
@@ -155,7 +171,10 @@
           '<h2 class="section-title">Tracks</h2>' +
           '<div class="track-list" id="pl-tracklist">' + trackListHtml + '</div>' +
         '</div>' +
+        searchSection +
       '</div>';
+
+    if (isOwner) initSearchSection();
   }
 
   function playAll() {
@@ -235,6 +254,116 @@
       navigate('/dashboard.html');
     } catch (err) {
       alert('Failed to delete playlist: ' + (err.message || 'error'));
+    }
+  }
+
+  // ── Track search (owner only) ───────────────────────────────────────────────
+  var _searchTimer = null;
+
+  function initSearchSection() {
+    var input = document.getElementById('pl-search-input');
+    if (!input) return;
+    input.addEventListener('input', function () {
+      clearTimeout(_searchTimer);
+      var q = input.value.trim();
+      if (!q) { document.getElementById('pl-search-results').innerHTML = ''; return; }
+      if (q.length < 2) return;
+      _searchTimer = setTimeout(function () { runSearch(q); }, 300);
+    });
+  }
+
+  async function runSearch(q) {
+    var spinner = document.getElementById('pl-search-spinner');
+    var resultsEl = document.getElementById('pl-search-results');
+    if (!resultsEl) return;
+    if (spinner) spinner.style.display = '';
+    resultsEl.innerHTML = '';
+    try {
+      var data = await api('/search?q=' + encodeURIComponent(q));
+      if (spinner) spinner.style.display = 'none';
+      var results = data.tracks || [];
+      if (!results.length) {
+        resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--text-tertiary);">No tracks found.</div>';
+        return;
+      }
+      var existingIds = {};
+      tracks.forEach(function (t) { existingIds[t.id] = true; });
+      resultsEl.innerHTML = '<div class="track-list" style="margin-top:4px;">' +
+        results.map(function (t) {
+          var artistName = (t.artists && t.artists.display_name) ? t.artists.display_name : 'Unknown';
+          var cover = t.cover_url || (t.albums && t.albums.cover_url) || '';
+          var coverHtml = cover
+            ? '<img src="' + escHtml(cover) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">'
+            : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--surface-2);border-radius:4px;">🎵</div>';
+          var already = existingIds[t.id];
+          var btn = already
+            ? '<span style="font-size:12px;color:var(--text-tertiary);padding:6px 10px;white-space:nowrap;">In playlist</span>'
+            : '<button class="wv-pill" style="white-space:nowrap;font-size:12px;padding:6px 10px;" ' +
+                'onclick="addSearchTrack(\'' + escHtml(t.id) + '\',\'' + escHtml(t.title) + '\',\'' + escHtml(artistName) + '\',\'' + escHtml(cover) + '\',\'' + escHtml(t.ia_url || '') + '\',this)">' +
+                '+ Add</button>';
+          return '<div class="wv-track-row" style="pointer-events:none;">' +
+            '<div class="track-row-cover" style="pointer-events:none;">' + coverHtml + '</div>' +
+            '<div class="track-row-info" style="flex:1;pointer-events:none;">' +
+              '<div class="track-row-title">' + escHtml(t.title || 'Unknown') + '</div>' +
+              '<div class="track-row-artist">' + escHtml(artistName) + '</div>' +
+            '</div>' +
+            '<div style="flex-shrink:0;pointer-events:auto;">' + btn + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    } catch (err) {
+      if (spinner) spinner.style.display = 'none';
+      resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:#f87171;">Search failed.</div>';
+    }
+  }
+
+  async function addSearchTrack(trackId, title, artistName, coverUrl, iaUrl, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      await api('/playlists/' + playlistId + '/tracks', {
+        method: 'POST',
+        body: JSON.stringify({ track_id: trackId }),
+      });
+      // Add to local tracks array so it shows in the list and future searches show "In playlist"
+      tracks.push({ id: trackId, title: title, artist_name: artistName, cover_url: coverUrl, ia_url: iaUrl, play_count: 0 });
+      invalidatePlaylistCache();
+      // Update button to "In playlist" and re-render tracklist
+      var parent = btn.closest('div[style*="flex-shrink"]');
+      if (parent) parent.innerHTML = '<span style="font-size:12px;color:var(--text-tertiary);padding:6px 10px;white-space:nowrap;">In playlist</span>';
+      // Re-render just the tracklist section
+      var tlEl = document.getElementById('pl-tracklist');
+      if (tlEl) {
+        tlEl.innerHTML = tracks.map(function(t, i) {
+          var cover = t.cover_url
+            ? '<img src="' + escHtml(t.cover_url) + '" alt="">'
+            : '🎵';
+          var removeBtn = isOwner
+            ? '<button class="btn btn-danger btn-sm remove-track-btn" onclick="event.stopPropagation();removeTrack(\'' + escHtml(t.id) + '\', ' + i + ')">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
+              '</button>'
+            : '';
+          return '<div class="wv-track-row' + (i === currentIndex ? ' playing' : '') + '" onclick="playAtIndex(' + i + ')">' +
+            '<div class="track-row-num">' + (i + 1) + '</div>' +
+            '<div class="track-row-cover">' + cover + '</div>' +
+            '<div class="track-row-info">' +
+              '<div class="track-row-title">' + escHtml(t.title || 'Unknown') + '</div>' +
+              '<div class="track-row-artist">' + escHtml(t.artist_name || 'Unknown') + '</div>' +
+            '</div>' +
+            '<span class="track-row-plays">' + fmtNum(t.play_count) + ' plays</span>' +
+            removeBtn +
+          '</div>';
+        }).join('');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      if (err && err.message && err.message.includes('409')) {
+        btn.textContent = 'Already added';
+        tracks.push({ id: trackId }); // prevent double-click
+      } else {
+        btn.textContent = 'Failed';
+        setTimeout(function () { btn.textContent = '+ Add'; btn.disabled = false; }, 2000);
+      }
     }
   }
 
