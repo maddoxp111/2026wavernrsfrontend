@@ -13,6 +13,7 @@ function logout() {
   localStorage.removeItem('user');
   localStorage.removeItem('wv_site_access');
   sessionStorage.removeItem('wv_is_mod');
+  sessionStorage.removeItem('mod_reauth_ok');
   window.location.href = '/login.html';
 }
 
