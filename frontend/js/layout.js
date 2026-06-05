@@ -787,10 +787,12 @@
       var target;
       try { target = new URL(url, location.href); } catch(e) { return orig.apply(this, arguments); }
       var path = target.pathname;
-      // Always allow community / auth pages — force full reload so overlay doesn't persist
+      // Always allow community / auth pages — dismiss overlay and SPA-navigate
+      // (login/register fall back to full reload inside the router since they have no #view)
       if (_cdAllowed.some(function(p) { return path.includes(p); })) {
-        location.assign(url);
-        return;
+        var ov = document.getElementById('wv-countdown-overlay');
+        if (ov) ov.remove();
+        return orig.apply(this, arguments);
       }
       // If bypass is active, pass through normally
       if (localStorage.getItem(BYPASS_KEY) === '1') {
