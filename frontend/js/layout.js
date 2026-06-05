@@ -112,7 +112,7 @@
 
   // ── Topbar HTML ───────────────────────────────────────────────
   function buildTopbarHTML() {
-    var theme = localStorage.getItem('wv-theme') || 'light';
+    var theme = 'dark';
     var user = null;
     try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
     var isLoggedIn = !!localStorage.getItem('token');
@@ -136,10 +136,6 @@
 
     // Right
     html += '<div class="wv-topbar-right">';
-
-    // Theme toggle (circle)
-    html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.toggleTheme()" title="Toggle theme">' +
-            (theme === 'dark' ? icon('moon') : icon('sun')) + '</button>';
 
     if (isLoggedIn && user) {
       // Bell
@@ -194,22 +190,6 @@
     });
   }
   window._updateNavActive = updateActive;
-
-  // ── Theme toggle ──────────────────────────────────────────────
-  window.toggleTheme = function() {
-    var root = document.getElementById('wv-root');
-    if (!root) return;
-    var isDark = root.classList.contains('theme-dark');
-    var next = isDark ? 'light' : 'dark';
-    root.classList.toggle('theme-dark', !isDark);
-    root.classList.toggle('theme-light', isDark);
-    // Sync theme on body so modals/dropdowns outside #wv-root also update
-    document.body.classList.remove('theme-light', 'theme-dark');
-    document.body.classList.add('theme-' + next);
-    localStorage.setItem('wv-theme', next);
-    var btn = document.getElementById('wv-theme-btn');
-    if (btn) btn.innerHTML = next === 'dark' ? icon('moon') : icon('sun');
-  };
 
   // ── More menu (profile dropdown) ─────────────────────────────
   window._toggleMoreMenu = function(e) {
@@ -459,7 +439,7 @@
       document.head.appendChild(man);
     }
 
-    var theme = localStorage.getItem('wv-theme') || 'dark';
+    var theme = 'dark';
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
 
