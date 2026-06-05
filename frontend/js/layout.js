@@ -702,6 +702,14 @@
   document.head.appendChild(s);
 })();
 
+// ── Ensure ratings.js is available on all pages (SPA doesn't reload src scripts) ──
+(function () {
+  if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
+  var s = document.createElement('script');
+  s.src = '/js/ratings.js';
+  document.head.appendChild(s);
+})();
+
 // ── Countdown / pre-launch lockdown ─────────────────────────────────────────
 (function () {
   var BYPASS_KEY = 'wv_countdown_bypass';
