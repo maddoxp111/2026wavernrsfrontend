@@ -738,6 +738,11 @@
           '<div class="wv-cd-unit"><span id="wv-cd-mins">00</span><label>minutes</label></div>' +
           '<div class="wv-cd-unit"><span id="wv-cd-secs">00</span><label>seconds</label></div>' +
         '</div>' +
+        '<div class="wv-cd-links">' +
+          '<a href="/community.html" class="wv-pill brand" style="text-decoration:none;">Community</a>' +
+          '<a href="/login.html" class="wv-pill" style="text-decoration:none;">Log in</a>' +
+          '<a href="/register.html" class="wv-pill" style="text-decoration:none;">Sign up</a>' +
+        '</div>' +
         (hasPassword
           ? '<div class="wv-cd-pw-wrap">' +
               '<input type="password" id="wv-cd-pw" class="wv-input" placeholder="Have early access? Enter password…" onkeydown="if(event.key===\'Enter\')window._verifyCountdown()">' +
@@ -777,8 +782,9 @@
 
   // Run the check once on every page load
   (async function () {
-    // Skip for the admin panel — admins always get in
-    if (location.pathname.includes('adminpanel')) return;
+    // Pages that are always accessible during countdown
+    var _cdAllowed = ['adminpanel', 'community', 'login', 'register'];
+    if (_cdAllowed.some(function(p) { return location.pathname.includes(p); })) return;
     // Bypass already granted this session
     if (localStorage.getItem(BYPASS_KEY) === '1') return;
     try {
