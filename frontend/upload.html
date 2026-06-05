@@ -225,9 +225,12 @@
     // SSE doesn't support custom headers in EventSource, so we use fetch with a streaming reader.
     try {
       var token = localStorage.getItem('token');
+      var siteAccess = localStorage.getItem('wv_site_access');
       var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+      var streamHeaders = { 'Authorization': 'Bearer ' + token };
+      if (siteAccess) streamHeaders['X-Site-Access'] = siteAccess;
       var resp2 = await fetch(base + '/import/jobs/' + jobId + '/events', {
-        headers: { 'Authorization': 'Bearer ' + token },
+        headers: streamHeaders,
       });
       if (!resp2.ok || !resp2.body) throw new Error('stream failed');
       var reader = resp2.body.getReader();
