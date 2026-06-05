@@ -117,7 +117,15 @@
             <div class="wv-title" style="font-size:32px;font-weight:800;letter-spacing:-0.04em;line-height:1.05;margin-bottom:6px;">${escHtml(album.title)}</div>
             <a href="/artist.html?id=${artist.id}" style="font-size:16px;color:var(--text-2);font-weight:500;display:inline-flex;align-items:center;gap:4px;">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
-            ${album.description ? `<p style="margin-top:10px;font-size:14px;color:var(--text-2);line-height:1.6;">${escHtml(album.description)}</p>` : ''}
+            ${album.description ? (() => {
+              const desc = album.description;
+              if (desc.length <= 100) {
+                return `<p style="margin-top:10px;font-size:14px;color:var(--text-2);line-height:1.6;">${escHtml(desc)}</p>`;
+              }
+              const short = escHtml(desc.slice(0, 100).trimEnd());
+              const full  = escHtml(desc);
+              return `<p id="album-desc" style="margin-top:10px;font-size:14px;color:var(--text-2);line-height:1.6;">${short}<span id="album-desc-ellipsis">… </span><span id="album-desc-full" style="display:none;">${full.slice(short.length)}</span><button id="album-desc-toggle" onclick="(function(){var f=document.getElementById('album-desc-full'),e=document.getElementById('album-desc-ellipsis'),b=document.getElementById('album-desc-toggle');var open=f.style.display!=='none'?false:true;f.style.display=open?'':'none';e.style.display=open?'none':'';b.textContent=open?'Show less':'Read more…';})()" style="background:none;border:none;cursor:pointer;color:var(--brand,#a78bfa);font-size:13px;font-weight:600;padding:0;margin:0;">Read more…</button></p>`;
+            })() : ''}
             <div style="margin-top:8px;font-size:13px;color:var(--text-3);">${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}</div>
             <div style="margin-top:18px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
