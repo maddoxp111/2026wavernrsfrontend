@@ -332,47 +332,81 @@
 
   // ── Album comments ────────────────────────────────────────────────────────
   var albumMyVotes = {};
+  var _acMe = null;
+  try { _acMe = JSON.parse(localStorage.getItem('user')); } catch(_) {}
+
+  function _acAvatar(uname) {
+    return '<div style="width:32px;height:32px;border-radius:50%;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:var(--purple);">' + (uname.charAt(0).toUpperCase() || '?') + '</div>';
+  }
+
+  function _acBuildRow(c, isReply) {
+    var uname = escHtml((c.users && c.users.username) || 'Unknown');
+    var uv = albumMyVotes[c.id] || 0;
+    var upActive = uv === 1 ? 'color:var(--brand);font-weight:700;' : 'color:var(--text-3);';
+    var downActive = uv === -1 ? 'color:#f87171;font-weight:700;' : 'color:var(--text-3);';
+    var timeStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
+    var editedMark = c.edited_at ? '<span style="font-size:10px;color:var(--text-3);margin-left:4px;">(edited)</span>' : '';
+    var isMine = _acMe && c.user_id === _acMe.id;
+
+    var actionBtns = '<button onclick="acShowReply(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Reply</button>';
+    if (isMine) {
+      actionBtns +=
+        '<button onclick="acStartEdit(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Edit</button>' +
+        '<button onclick="deleteAlbumComment(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Delete</button>';
+    }
+
+    var indent = isReply ? 'margin-left:44px;' : '';
+    return '<div id="albumcomment-' + escHtml(c.id) + '" style="' + indent + '">' +
+      '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background=\'var(--hair)\'" onmouseleave="this.style.background=\'transparent\'">' +
+        _acAvatar(uname) +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
+            '<span style="font-size:13px;font-weight:600;color:var(--text);">' + uname + '</span>' +
+            '<span style="font-size:11px;color:var(--text-3);">' + timeStr + '</span>' +
+            editedMark +
+          '</div>' +
+          '<div id="acbody-' + escHtml(c.id) + '" style="font-size:14px;color:var(--text-2);line-height:1.5;word-break:break-word;">' + escHtml(c.body || '') + '</div>' +
+          '<div style="display:flex;align-items:center;gap:2px;margin-top:6px;flex-wrap:wrap;">' +
+            '<button id="acvote-up-btn-' + escHtml(c.id) + '" onclick="voteAlbumComment(\'' + escHtml(c.id) + '\',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:12px;' + upActive + '">▲</button>' +
+            '<span id="acvote-up-' + escHtml(c.id) + '" style="font-size:11px;color:var(--text-3);min-width:14px;text-align:center;">' + (c.upvotes || 0) + '</span>' +
+            '<button id="acvote-down-btn-' + escHtml(c.id) + '" onclick="voteAlbumComment(\'' + escHtml(c.id) + '\',-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:12px;' + downActive + '">▼</button>' +
+            '<span id="acvote-down-' + escHtml(c.id) + '" style="font-size:11px;color:var(--text-3);min-width:14px;text-align:center;">' + (c.downvotes || 0) + '</span>' +
+            '<span style="width:6px;"></span>' +
+            actionBtns +
+          '</div>' +
+          '<div id="acreply-box-' + escHtml(c.id) + '" style="display:none;margin-top:10px;"></div>' +
+          '<div id="acedit-box-' + escHtml(c.id) + '" style="display:none;margin-top:10px;"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
 
   async function loadAlbumComments() {
     var el = document.getElementById('album-comments-list');
     if (!el) return;
     try {
-      var comments = await api('/albums/' + albumId + '/comments');
-      if (!comments.length) {
+      var allComments = await api('/albums/' + albumId + '/comments');
+      if (!allComments.length) {
         el.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">No comments yet. Be the first!</div></div>';
         return;
       }
-      for (var c of comments) albumMyVotes[c.id] = c.user_vote || 0;
-      el.innerHTML = comments.map(function(c) {
-        var uname = escHtml((c.users && c.users.username) || 'Unknown');
-        var votes = c.net_votes || 0;
-        var uv = albumMyVotes[c.id] || 0;
-        var upActive = uv === 1 ? 'color:var(--brand);font-weight:700;' : 'color:var(--text-3);';
-        var downActive = uv === -1 ? 'color:#f87171;font-weight:700;' : 'color:var(--text-3);';
-        var timeStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
-        var deleteBtn = '';
-        var me = null;
-        try { me = JSON.parse(localStorage.getItem('user')); } catch(_) {}
-        if (me && c.user_id === me.id) {
-          deleteBtn = '<button onclick="deleteAlbumComment(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;" title="Delete">✕</button>';
+      for (var c of allComments) albumMyVotes[c.id] = c.user_vote || 0;
+
+      // Split into top-level and replies, build reply map
+      var topLevel = allComments.filter(function(c) { return !c.parent_id; });
+      var replyMap = {};
+      allComments.filter(function(c) { return !!c.parent_id; }).forEach(function(c) {
+        if (!replyMap[c.parent_id]) replyMap[c.parent_id] = [];
+        replyMap[c.parent_id].push(c);
+      });
+
+      el.innerHTML = topLevel.map(function(c) {
+        var html = _acBuildRow(c, false);
+        var replies = replyMap[c.id] || [];
+        if (replies.length) {
+          html += replies.map(function(r) { return _acBuildRow(r, true); }).join('');
         }
-        return '<div id="albumcomment-' + escHtml(c.id) + '" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background=\'var(--hair)\'" onmouseleave="this.style.background=\'transparent\'">' +
-          '<div style="width:32px;height:32px;border-radius:50%;background:var(--purple-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;color:var(--purple);">' + uname.charAt(0).toUpperCase() + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
-              '<span style="font-size:13px;font-weight:600;color:var(--text);">' + uname + '</span>' +
-              '<span style="font-size:11px;color:var(--text-3);">' + timeStr + '</span>' +
-              deleteBtn +
-            '</div>' +
-            '<div style="font-size:14px;color:var(--text-2);line-height:1.5;word-break:break-word;">' + escHtml(c.body) + '</div>' +
-            '<div style="display:flex;align-items:center;gap:6px;margin-top:8px;">' +
-              '<button id="acvote-up-btn-' + escHtml(c.id) + '" onclick="voteAlbumComment(\'' + escHtml(c.id) + '\',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:13px;' + upActive + '">▲</button>' +
-              '<span id="acvote-up-' + escHtml(c.id) + '" style="font-size:12px;color:var(--text-3);min-width:16px;text-align:center;">' + (c.upvotes || 0) + '</span>' +
-              '<button id="acvote-down-btn-' + escHtml(c.id) + '" onclick="voteAlbumComment(\'' + escHtml(c.id) + '\',-1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:13px;' + downActive + '">▼</button>' +
-              '<span id="acvote-down-' + escHtml(c.id) + '" style="font-size:12px;color:var(--text-3);min-width:16px;text-align:center;">' + (c.downvotes || 0) + '</span>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
+        return html;
       }).join('');
     } catch(err) {
       el.innerHTML = '<div class="empty-state" style="padding:16px;"><div class="empty-desc">Failed to load comments</div></div>';
@@ -389,6 +423,97 @@
       loadAlbumComments();
     } catch(err) {
       alert(err.message || 'Failed to post comment');
+    }
+  }
+
+  function acShowReply(parentId) {
+    // Close any other open reply boxes
+    document.querySelectorAll('[id^="acreply-box-"]').forEach(function(el) {
+      if (el.id !== 'acreply-box-' + parentId) el.style.display = 'none';
+    });
+    var box = document.getElementById('acreply-box-' + parentId);
+    if (!box) return;
+    if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+    if (!isLoggedIn()) { navigate('/login.html'); return; }
+    box.style.display = '';
+    box.innerHTML =
+      '<div style="display:flex;gap:8px;">' +
+        '<textarea id="acreply-input-' + escHtml(parentId) + '" class="wv-input" rows="2" placeholder="Write a reply…" style="flex:1;resize:vertical;"></textarea>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px;">' +
+        '<button class="btn btn-primary btn-sm" onclick="submitReply(\'' + escHtml(parentId) + '\')">Reply</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'acreply-box-' + escHtml(parentId) + '\').style.display=\'none\'">Cancel</button>' +
+      '</div>';
+    var ta = document.getElementById('acreply-input-' + parentId);
+    if (ta) setTimeout(function() { ta.focus(); }, 50);
+  }
+
+  async function submitReply(parentId) {
+    var ta = document.getElementById('acreply-input-' + parentId);
+    var body = ta ? ta.value.trim() : '';
+    if (!body) return;
+    var btn = document.querySelector('#acreply-box-' + parentId + ' .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
+    try {
+      await api('/albums/' + albumId + '/comments', { method: 'POST', body: JSON.stringify({ body: body, parent_id: parentId }) });
+      loadAlbumComments();
+    } catch(err) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Reply'; }
+      alert(err.message || 'Failed to post reply');
+    }
+  }
+
+  function acStartEdit(commentId) {
+    var bodyEl = document.getElementById('acbody-' + commentId);
+    var editBox = document.getElementById('acedit-box-' + commentId);
+    if (!bodyEl || !editBox) return;
+    var current = bodyEl.textContent || '';
+    bodyEl.style.display = 'none';
+    editBox.style.display = '';
+    editBox.innerHTML =
+      '<textarea id="acedit-input-' + escHtml(commentId) + '" class="wv-input" rows="3" style="width:100%;resize:vertical;">' + escHtml(current) + '</textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:6px;">' +
+        '<button class="btn btn-primary btn-sm" onclick="submitEdit(\'' + escHtml(commentId) + '\')">Save</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="acCancelEdit(\'' + escHtml(commentId) + '\')">Cancel</button>' +
+      '</div>';
+    var ta = document.getElementById('acedit-input-' + commentId);
+    if (ta) { setTimeout(function() { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 50); }
+  }
+
+  function acCancelEdit(commentId) {
+    var bodyEl = document.getElementById('acbody-' + commentId);
+    var editBox = document.getElementById('acedit-box-' + commentId);
+    if (bodyEl) bodyEl.style.display = '';
+    if (editBox) editBox.style.display = 'none';
+  }
+
+  async function submitEdit(commentId) {
+    var ta = document.getElementById('acedit-input-' + commentId);
+    var body = ta ? ta.value.trim() : '';
+    if (!body) return;
+    var btn = document.querySelector('#acedit-box-' + commentId + ' .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      var updated = await api('/albums/' + albumId + '/comments/' + commentId, { method: 'PATCH', body: JSON.stringify({ body: body }) });
+      var bodyEl = document.getElementById('acbody-' + commentId);
+      var editBox = document.getElementById('acedit-box-' + commentId);
+      if (bodyEl) { bodyEl.textContent = updated.body || body; bodyEl.style.display = ''; }
+      if (editBox) editBox.style.display = 'none';
+      // Show edited mark if not already there
+      var row = document.getElementById('albumcomment-' + commentId);
+      if (row && !row.querySelector('.ac-edited')) {
+        var meta = row.querySelector('[style*="margin-bottom:4px"]');
+        if (meta) {
+          var mark = document.createElement('span');
+          mark.className = 'ac-edited';
+          mark.style.cssText = 'font-size:10px;color:var(--text-3);margin-left:4px;';
+          mark.textContent = '(edited)';
+          meta.appendChild(mark);
+        }
+      }
+    } catch(err) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      alert(err.message || 'Failed to save');
     }
   }
 
@@ -411,6 +536,7 @@
     if (!confirm('Delete this comment?')) return;
     try {
       await api('/albums/' + albumId + '/comments/' + commentId, { method: 'DELETE' });
+      // Remove the comment row and any reply rows beneath it
       var el = document.getElementById('albumcomment-' + commentId);
       if (el) el.remove();
     } catch(err) { alert(err.message || 'Failed to delete'); }
