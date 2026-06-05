@@ -168,6 +168,28 @@
 
         <div id="lockdown-status" style="font-size:13px;"></div>
       </div>
+
+      <!-- Countdown lockdown -->
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:28px;margin-top:20px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Pre-Launch Countdown</h2>
+        <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.6;">
+          Set a launch date and time. The site will show a full-screen countdown to everyone until that moment. People with the early-access password can bypass it. Clears automatically after the launch time passes.
+        </p>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Launch date &amp; time</label>
+          <input type="datetime-local" id="cd-launch-at" class="wv-input" style="width:100%;padding:10px 14px;">
+          <div style="font-size:12px;color:var(--text-3);margin-top:4px;">Times are in your local timezone.</div>
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Early-access password <span style="font-weight:400;color:var(--text-3);">(optional)</span></label>
+          <input type="text" id="cd-password" class="wv-input" placeholder="Leave blank to show countdown with no bypass" style="width:100%;padding:10px 14px;">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveCountdown()">Save &amp; Enable</button>
+          <button class="btn btn-secondary" onclick="clearCountdown()">Clear / Disable</button>
+        </div>
+        <div id="cd-status" style="font-size:13px;margin-top:10px;"></div>
+      </div>
     </div>
   </div>
 
@@ -270,6 +292,18 @@
           <input id="badge-album-search" class="wv-input" placeholder="Comp title…" style="flex:1;" oninput="searchBadgeAlbums()">
         </div>
         <div id="badge-albums-results"></div>
+      </div>
+
+      <!-- Highlighted / Exclusive Edits -->
+      <div style="background:var(--glass-medium-bg);backdrop-filter:blur(var(--lg-frost-medium));-webkit-backdrop-filter:blur(var(--lg-frost-medium));border:1px solid var(--glass-medium-border);border-radius:20px;padding:24px;">
+        <h2 style="font-size:16px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px;">
+          <span class="wv-badge-hl-icon">★</span> Highlighted &amp; Exclusive Edits
+        </h2>
+        <p style="font-size:13px;color:var(--text-2);margin:0 0 16px;">Search for an individual edit and toggle its badges.</p>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="badge-track-search" class="wv-input" placeholder="Edit title…" style="flex:1;" oninput="searchBadgeTracks()">
+        </div>
+        <div id="badge-tracks-results"></div>
       </div>
 
     </div>
@@ -391,7 +425,7 @@
     if (tab === 'moderators') loadModerators();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'aivoices')   loadRvcModels();
-    if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); }
+    if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
   }
 
   // ── AI Voices (RVC models) ────────────────────────────────────
@@ -1244,6 +1278,88 @@
       await adminApi('/admin/badges/album/' + id + '/' + badge, { method: 'POST', body: JSON.stringify({ value: value }) });
       _doSearchBadgeAlbums();
     } catch (e) { showMsg('admin-alert', e.message); }
+  }
+
+  var _badgeTrackTimer = null;
+
+  function searchBadgeTracks() {
+    clearTimeout(_badgeTrackTimer);
+    _badgeTrackTimer = setTimeout(_doSearchBadgeTracks, 300);
+  }
+
+  async function _doSearchBadgeTracks() {
+    var q = (document.getElementById('badge-track-search').value || '').trim();
+    var el = document.getElementById('badge-tracks-results');
+    if (!el) return;
+    if (!q) { el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">Type to search edits…</div>'; return; }
+    el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">Searching…</div>';
+    try {
+      var data = await adminApi('/admin/badges/tracks?q=' + encodeURIComponent(q));
+      if (!data.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:13px;">No edits found.</div>'; return; }
+      el.innerHTML = data.map(function(t) {
+        var isH = t.is_highlighted, isE = t.is_exclusive;
+        var artist = (t.artists && t.artists.display_name) ? t.artists.display_name : '';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);gap:10px;flex-wrap:wrap;">' +
+          '<div>' +
+            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(t.title) + '</span>' +
+            (artist ? '<span style="font-size:12px;color:var(--text-3);margin-left:6px;">— ' + escapeHtmlAdmin(artist) + '</span>' : '') +
+            (isH ? '<span class="wv-badge-hl-icon" style="margin-left:6px;">★</span>' : '') +
+            (isE ? '<span class="wv-badge-ex-icon" style="margin-left:4px;">◆</span>' : '') +
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            '<button class="btn btn-sm ' + (isH ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeTrack(\'' + t.id + '\',\'highlighted\',' + !isH + ')">' +
+              (isH ? 'Remove Highlight' : 'Highlight') +
+            '</button>' +
+            '<button class="btn btn-sm ' + (isE ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeTrack(\'' + t.id + '\',\'exclusive\',' + !isE + ')">' +
+              (isE ? 'Remove Exclusive' : 'Make Exclusive') +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+    }
+  }
+
+  async function setBadgeTrack(id, badge, value) {
+    try {
+      await adminApi('/admin/badges/track/' + id + '/' + badge, { method: 'POST', body: JSON.stringify({ value: value }) });
+      _doSearchBadgeTracks();
+    } catch (e) { showMsg('admin-alert', e.message); }
+  }
+
+  // ── Countdown ─────────────────────────────────────────────────
+
+  async function saveCountdown() {
+    var launchAtEl = document.getElementById('cd-launch-at');
+    var passwordEl = document.getElementById('cd-password');
+    var statusEl   = document.getElementById('cd-status');
+    var localVal   = launchAtEl ? launchAtEl.value : '';
+    if (!localVal) { if (statusEl) { statusEl.textContent = 'Pick a launch date/time first.'; statusEl.style.color = 'var(--red)'; } return; }
+    var launchAt   = new Date(localVal).toISOString();
+    var password   = passwordEl ? passwordEl.value.trim() : '';
+    if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.style.color = 'var(--text-3)'; }
+    try {
+      await adminApi('/admin/countdown', { method: 'POST', body: JSON.stringify({ launch_at: launchAt, password: password || null }) });
+      if (statusEl) { statusEl.textContent = '✓ Countdown saved! Launch: ' + new Date(launchAt).toLocaleString(); statusEl.style.color = '#4ade80'; }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
+    }
+  }
+
+  async function clearCountdown() {
+    var statusEl = document.getElementById('cd-status');
+    if (statusEl) { statusEl.textContent = 'Clearing…'; statusEl.style.color = 'var(--text-3)'; }
+    try {
+      await adminApi('/admin/countdown', { method: 'POST', body: JSON.stringify({ launch_at: null, password: null }) });
+      var el = document.getElementById('cd-launch-at');
+      if (el) el.value = '';
+      var pel = document.getElementById('cd-password');
+      if (pel) pel.value = '';
+      if (statusEl) { statusEl.textContent = '✓ Countdown disabled.'; statusEl.style.color = '#4ade80'; }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
+    }
   }
 
   // ── Auto-login ────────────────────────────────────────────────

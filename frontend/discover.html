@@ -20,7 +20,7 @@ var params = new URLSearchParams(location.search);
 var activeTab = params.get('tab') || 'recent';
 var activeEra = params.get('era') || null;
 var _discoverItems = [];
-var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
 getBadgeData().then(function(b){ _badges = b || _badges; }).catch(function(){});
 initPlayer();
 
@@ -92,10 +92,10 @@ function compCardHTML(item) {
   var action = isAlbum ? "navigate('/album.html?id="+item.id+"')" : "navigate('/track.html?id="+item.id+"')";
   var bg = coverGradient(seed);
 
-  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
   var isVerified = artistId && b.verified_artists.indexOf(artistId) !== -1;
-  var isHighlighted = isAlbum && b.highlighted_albums.indexOf(item.id) !== -1;
-  var isExclusive = isAlbum && b.exclusive_albums.indexOf(item.id) !== -1;
+  var isHighlighted = isAlbum ? b.highlighted_albums.indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
+  var isExclusive   = isAlbum ? b.exclusive_albums.indexOf(item.id)   !== -1 : (b.exclusive_tracks   || []).indexOf(item.id) !== -1;
   var titleBadges = (isHighlighted ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
                     (isExclusive   ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
   var artistBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '';

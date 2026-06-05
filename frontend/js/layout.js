@@ -693,3 +693,103 @@
   // Pre-warm the cache as soon as the script loads so badges are ready by render time
   window.getBadgeData();
 })();
+
+// ── Countdown / pre-launch lockdown ─────────────────────────────────────────
+(function () {
+  var BYPASS_KEY = 'wv_countdown_bypass';
+  var _cdTimer = null;
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function tickCountdown(launchAt) {
+    var diff = new Date(launchAt).getTime() - Date.now();
+    if (diff <= 0) {
+      localStorage.removeItem(BYPASS_KEY);
+      var ov = document.getElementById('wv-cd-overlay');
+      if (ov) ov.remove();
+      if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+      return;
+    }
+    var days  = Math.floor(diff / 86400000);
+    var hours = Math.floor((diff % 86400000) / 3600000);
+    var mins  = Math.floor((diff % 3600000) / 60000);
+    var secs  = Math.floor((diff % 60000) / 1000);
+    var d = document.getElementById('wv-cd-days');
+    var h = document.getElementById('wv-cd-hours');
+    var m = document.getElementById('wv-cd-mins');
+    var s = document.getElementById('wv-cd-secs');
+    if (d) d.textContent = pad(days);
+    if (h) h.textContent = pad(hours);
+    if (m) m.textContent = pad(mins);
+    if (s) s.textContent = pad(secs);
+  }
+
+  function showCountdownOverlay(launchAt, hasPassword) {
+    if (document.getElementById('wv-cd-overlay')) return;
+    var ov = document.createElement('div');
+    ov.id = 'wv-cd-overlay';
+    ov.innerHTML =
+      '<div class="wv-cd-inner">' +
+        '<div class="wv-cd-logo">wavernrs</div>' +
+        '<div class="wv-cd-sub">Something big is coming.</div>' +
+        '<div class="wv-cd-timer">' +
+          '<div class="wv-cd-unit"><span id="wv-cd-days">00</span><label>days</label></div>' +
+          '<div class="wv-cd-unit"><span id="wv-cd-hours">00</span><label>hours</label></div>' +
+          '<div class="wv-cd-unit"><span id="wv-cd-mins">00</span><label>minutes</label></div>' +
+          '<div class="wv-cd-unit"><span id="wv-cd-secs">00</span><label>seconds</label></div>' +
+        '</div>' +
+        (hasPassword
+          ? '<div class="wv-cd-pw-wrap">' +
+              '<input type="password" id="wv-cd-pw" class="wv-input" placeholder="Have early access? Enter password…" onkeydown="if(event.key===\'Enter\')window._verifyCountdown()">' +
+              '<button class="wv-pill" style="margin-top:10px;width:100%;" onclick="window._verifyCountdown()">Enter</button>' +
+              '<div id="wv-cd-err" style="color:#f87171;font-size:13px;margin-top:8px;min-height:18px;"></div>' +
+            '</div>'
+          : '') +
+      '</div>';
+    document.body.appendChild(ov);
+    tickCountdown(launchAt);
+    _cdTimer = setInterval(function () { tickCountdown(launchAt); }, 1000);
+  }
+
+  window._verifyCountdown = async function () {
+    var pw = (document.getElementById('wv-cd-pw') || {}).value || '';
+    var errEl = document.getElementById('wv-cd-err');
+    try {
+      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+      var r = await fetch(base + '/site/countdown/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      var d = await r.json();
+      if (d.ok) {
+        localStorage.setItem(BYPASS_KEY, '1');
+        var ov = document.getElementById('wv-cd-overlay');
+        if (ov) { ov.style.opacity = '0'; ov.style.transition = 'opacity 0.4s'; setTimeout(function(){ ov.remove(); }, 400); }
+        if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+      } else {
+        if (errEl) errEl.textContent = 'Wrong password.';
+      }
+    } catch (e) {
+      if (errEl) errEl.textContent = 'Could not verify — check your connection.';
+    }
+  };
+
+  // Run the check once on every page load
+  (async function () {
+    // Skip for the admin panel — admins always get in
+    if (location.pathname.includes('adminpanel')) return;
+    // Bypass already granted this session
+    if (localStorage.getItem(BYPASS_KEY) === '1') return;
+    try {
+      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
+      var r = await fetch(base + '/site/countdown');
+      var d = await r.json();
+      if (!d.active || d.elapsed) {
+        localStorage.removeItem(BYPASS_KEY);
+        return;
+      }
+      showCountdownOverlay(d.launch_at, d.has_password);
+    } catch (_) {}
+  })();
+})();

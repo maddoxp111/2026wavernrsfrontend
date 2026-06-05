@@ -27,7 +27,7 @@ var _trendingGlobal = [];
 var _newReleasesGlobal = [];
 var _chartsTab = 'alltime';
 var _chartsDataCache = null;
-var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
 
 async function loadHome() {
   try {
@@ -293,10 +293,10 @@ function compCardHTML(item) {
     : "navigate('/track.html?id=" + item.id + "')";
   var coverBg = coverGradient(seed);
 
-  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [] };
+  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
   var isVerified = artistId && b.verified_artists.indexOf(artistId) !== -1;
-  var isHighlighted = isAlbum && b.highlighted_albums.indexOf(item.id) !== -1;
-  var isExclusive = isAlbum && b.exclusive_albums.indexOf(item.id) !== -1;
+  var isHighlighted = isAlbum ? b.highlighted_albums.indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
+  var isExclusive   = isAlbum ? b.exclusive_albums.indexOf(item.id)   !== -1 : (b.exclusive_tracks   || []).indexOf(item.id) !== -1;
 
   var titleBadges = '';
   if (isHighlighted) titleBadges += '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>';

@@ -67,7 +67,7 @@
         getBadgeData().catch(function(){ return { verified_artists:[], highlighted_albums:[], exclusive_albums:[] }; }),
       ]);
       var results = _results[0];
-      var badges = _results[1] || { verified_artists:[], highlighted_albums:[], exclusive_albums:[] };
+      var badges = _results[1] || { verified_artists:[], highlighted_albums:[], exclusive_albums:[], highlighted_tracks:[], exclusive_tracks:[] };
       var tracks = results.tracks || [];
       var artists = results.artists || [];
       var albums = results.albums || [];
@@ -132,13 +132,17 @@
             var bg = coverGradient(t.title || '');
             var artistName = escHtml((t.artists && t.artists.display_name) || 'Unknown');
             var td = JSON.stringify({id:t.id,title:t.title,ia_url:t.ia_url||'',cover_url:t.cover_url||'',artist_name:(t.artists&&t.artists.display_name)||''}).replace(/"/g,'&quot;');
+            var isH = badges.highlighted_tracks && badges.highlighted_tracks.indexOf(t.id) !== -1;
+            var isE = badges.exclusive_tracks   && badges.exclusive_tracks.indexOf(t.id) !== -1;
+            var trackBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
+                              (isE ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
             return '<div class="track-row" onclick="playThis(' + td + ')">' +
               '<div class="track-row-num">' + (i + 1) + '</div>' +
               '<div class="track-row-cover" style="background:' + bg + ';">' +
                 (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
               '</div>' +
               '<div class="track-row-info">' +
-                '<div class="track-row-title">' + escHtml(t.title) + '</div>' +
+                '<div class="track-row-title" style="display:flex;align-items:center;gap:3px;">' + escHtml(t.title) + trackBadges + '</div>' +
                 '<div class="track-row-artist">' + artistName + '</div>' +
               '</div>' +
               '<button onclick="event.stopPropagation();playThis(' + td + ')" class="wv-icon-circle" title="Play" style="flex-shrink:0;">' +
