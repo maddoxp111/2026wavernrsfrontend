@@ -163,15 +163,19 @@
     playAtIndex(0);
   }
 
-  function playAtIndex(index) {
-    var t = tracks[index];
-    if (!t) return;
-    currentIndex = index;
-    playTrack({ ...t, artist_name: t.artist_name });
-    // Highlight
+  function _highlightPlRow(index) {
     document.querySelectorAll('#pl-tracklist .wv-track-row').forEach(function(row, i) {
       row.classList.toggle('playing', i === index);
     });
+  }
+
+  function playAtIndex(index) {
+    if (!tracks[index]) return;
+    currentIndex = index;
+    var q = tracks.map(function(t) { return Object.assign({}, t, { artist_name: t.artist_name }); });
+    setPlayerQueue(q, index, _highlightPlRow);
+    playQueueIndex(index);
+    _highlightPlRow(index);
   }
 
   async function removeTrack(trackId, index) {
@@ -186,29 +190,8 @@
     }
   }
 
-  // Skip event listeners — register with cleanup
-  var _onTrackEnded = function() {
-    if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
-      playAtIndex(currentIndex + 1);
-    } else {
-      currentIndex = -1;
-    }
-  };
-  var _onSkipNext = function() {
-    if (currentIndex >= 0 && currentIndex < tracks.length - 1) playAtIndex(currentIndex + 1);
-  };
-  var _onSkipPrev = function() {
-    if (currentIndex > 0) playAtIndex(currentIndex - 1);
-  };
-
-  document.addEventListener('trackEnded', _onTrackEnded);
-  document.addEventListener('playerSkipNext', _onSkipNext);
-  document.addEventListener('playerSkipPrev', _onSkipPrev);
-  window._pageCleanup.push(function() {
-    document.removeEventListener('trackEnded', _onTrackEnded);
-    document.removeEventListener('playerSkipNext', _onSkipNext);
-    document.removeEventListener('playerSkipPrev', _onSkipPrev);
-  });
+  // Skip/auto-advance is handled by the player's global queue (set in
+  // playAtIndex), so it keeps working from the OS media controls too.
 
   // ── Edit modal ─────────────────────────────────────────────────────────────
   function openEditModal() {

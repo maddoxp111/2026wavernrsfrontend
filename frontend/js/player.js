@@ -2,6 +2,32 @@ const PLAYER_KEY = 'player_current';
 let audio = null;
 let currentTrack = null;
 
+// ── Global play queue ───────────────────────────────────────────────────────
+// Lives in the player (not the page) so skip/prev keep working from the OS media
+// UI (Control Center / lock screen) even after navigating away from the source
+// page. Pages that have an ordered list (album, playlist) populate this via
+// setPlayerQueue(); everyone else uses plain playTrack(), which resets it.
+let _pq = [];          // array of playTrack-ready track objects
+let _pqIdx = -1;       // current index within _pq
+let _pqOnChange = null; // optional callback(idx) for row highlighting
+let _fromQueue = false; // guard so queue-driven plays don't reset the queue
+
+window.setPlayerQueue = function (list, idx, onChange) {
+  _pq = Array.isArray(list) ? list : [];
+  _pqIdx = (typeof idx === 'number') ? idx : -1;
+  _pqOnChange = (typeof onChange === 'function') ? onChange : null;
+};
+
+window.playQueueIndex = function (idx) {
+  if (idx < 0 || idx >= _pq.length) return false;
+  _pqIdx = idx;
+  _fromQueue = true;
+  playTrack(_pq[idx]);
+  _fromQueue = false;
+  if (_pqOnChange) { try { _pqOnChange(idx); } catch (_) {} }
+  return true;
+};
+
 let _iosUnlocked = false;
 function _unlockIOS() {
   if (_iosUnlocked || !audio) return;
@@ -170,10 +196,18 @@ function toggleMute() {
 
 function skipPrev() {
   if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
+  if (_pq.length && _pqIdx >= 0) {
+    if (_pqIdx > 0) window.playQueueIndex(_pqIdx - 1);
+    return;
+  }
   document.dispatchEvent(new CustomEvent('playerSkipPrev'));
 }
 
 function skipNext() {
+  if (_pq.length && _pqIdx >= 0) {
+    if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
+    return;
+  }
   document.dispatchEvent(new CustomEvent('playerSkipNext'));
 }
 
@@ -256,7 +290,13 @@ function initPlayer() {
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
-    document.dispatchEvent(new CustomEvent('playerSkipNext'));
+    // Auto-advance: prefer the global queue; fall back to the legacy event for
+    // pages (e.g. resources/tracker) that manage their own list.
+    if (_pq.length && _pqIdx >= 0) {
+      if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
+    } else {
+      document.dispatchEvent(new CustomEvent('playerSkipNext'));
+    }
   });
   audio.addEventListener('play', () => _setPlayBtns(true));
   audio.addEventListener('pause', () => _setPlayBtns(false));
@@ -314,6 +354,10 @@ function registerPlay(trackId) {
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
+
+  // A standalone play (not driven by the queue) clears any old queue so the OS
+  // media controls don't skip back into a comp the user has moved on from.
+  if (!_fromQueue) { _pq = []; _pqIdx = -1; _pqOnChange = null; }
 
   currentTrack = { ...track, _savedTime: 0 };
   localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));

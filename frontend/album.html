@@ -234,50 +234,35 @@
     playAtIndex(0);
   }
 
-  function playAtIndex(index) {
-    const item = albumTracks[index];
-    if (!item) return;
-    const trackData = item.tracks || item;
-    currentTrackIndex = index;
-    playTrack({
-      ...trackData,
-      artist_name: trackData.artists?.display_name || album.artists?.display_name,
-      _album_id: album.id,
-      _album_title: album.title,
-      _album_cover: album.cover_url || null,
+  function _buildAlbumQueue() {
+    return albumTracks.map((item) => {
+      const td = item.tracks || item;
+      return {
+        ...td,
+        cover_url: td.cover_url || album.cover_url || '',
+        artist_name: td.artists?.display_name || album.artists?.display_name,
+        _album_id: album.id,
+        _album_title: album.title,
+        _album_cover: album.cover_url || null,
+      };
     });
-    // Highlight active row
+  }
+
+  function _highlightAlbumRow(index) {
     document.querySelectorAll('#tracklist .track-row').forEach((row, i) => {
       row.classList.toggle('playing', i === index);
     });
   }
 
-  // Auto-advance and skip/prev — register cleanup so they don't fire on other pages
-  var _onTrackEnded = () => {
-    if (currentTrackIndex >= 0 && currentTrackIndex < albumTracks.length - 1) {
-      playAtIndex(currentTrackIndex + 1);
-    } else {
-      currentTrackIndex = -1;
-    }
-  };
-  var _onSkipNext = () => {
-    if (currentTrackIndex >= 0 && currentTrackIndex < albumTracks.length - 1) {
-      playAtIndex(currentTrackIndex + 1);
-    }
-  };
-  var _onSkipPrev = () => {
-    if (currentTrackIndex > 0) {
-      playAtIndex(currentTrackIndex - 1);
-    }
-  };
-  document.addEventListener('trackEnded', _onTrackEnded);
-  document.addEventListener('playerSkipNext', _onSkipNext);
-  document.addEventListener('playerSkipPrev', _onSkipPrev);
-  window._pageCleanup.push(() => {
-    document.removeEventListener('trackEnded', _onTrackEnded);
-    document.removeEventListener('playerSkipNext', _onSkipNext);
-    document.removeEventListener('playerSkipPrev', _onSkipPrev);
-  });
+  function playAtIndex(index) {
+    if (!albumTracks[index]) return;
+    currentTrackIndex = index;
+    // Hand the full ordered list to the player so skip/prev (incl. OS media
+    // controls) work even after navigating away from this page.
+    setPlayerQueue(_buildAlbumQueue(), index, _highlightAlbumRow);
+    playQueueIndex(index);
+    _highlightAlbumRow(index);
+  }
 
   async function loadMoreLikeThis() {
     var el = document.getElementById('more-like-this');

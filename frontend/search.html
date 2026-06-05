@@ -131,7 +131,8 @@
           tracks.map(function(t, i) {
             var bg = coverGradient(t.title || '');
             var artistName = escHtml((t.artists && t.artists.display_name) || 'Unknown');
-            var td = JSON.stringify({id:t.id,title:t.title,ia_url:t.ia_url||'',cover_url:t.cover_url||'',artist_name:(t.artists&&t.artists.display_name)||''}).replace(/"/g,'&quot;');
+            var coverUrl = t.cover_url || (t.albums && t.albums.cover_url) || '';
+            var td = JSON.stringify({id:t.id,title:t.title,ia_url:t.ia_url||'',cover_url:coverUrl,artist_name:(t.artists&&t.artists.display_name)||''}).replace(/"/g,'&quot;');
             var isH = badges.highlighted_tracks && badges.highlighted_tracks.indexOf(t.id) !== -1;
             var isE = badges.exclusive_tracks   && badges.exclusive_tracks.indexOf(t.id) !== -1;
             var trackBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
@@ -139,7 +140,7 @@
             return '<div class="track-row" onclick="playThis(' + td + ')">' +
               '<div class="track-row-num">' + (i + 1) + '</div>' +
               '<div class="track-row-cover" style="background:' + bg + ';">' +
-                (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
+                (coverUrl ? '<img src="' + escHtml(coverUrl) + '" onerror="this.style.display=\'none\'">' : '') +
               '</div>' +
               '<div class="track-row-info">' +
                 '<div class="track-row-title" style="display:flex;align-items:center;gap:3px;">' + escHtml(t.title) + trackBadges + '</div>' +
