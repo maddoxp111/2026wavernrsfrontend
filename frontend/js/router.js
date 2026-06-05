@@ -1,9 +1,13 @@
 window._pageCleanup = [];
 
+var _inPopstate = false;
+
 window.navigate = async function(url) {
   // Normalise: if already here, skip
   const target = new URL(url, location.href);
-  if (target.pathname + target.search === location.pathname + location.search) return;
+  var fromPopstate = _inPopstate;
+  _inPopstate = false;
+  if (!fromPopstate && target.pathname + target.search === location.pathname + location.search) return;
 
   // Auth pages are standalone (no #view) — always do a full navigation
   const path = target.pathname;
@@ -41,7 +45,7 @@ window.navigate = async function(url) {
     if (curView) curView.replaceWith(newView.cloneNode(true));
 
     // Push state FIRST so location.search is correct when page script reads it
-    history.pushState(null, doc.title, url);
+    if (!fromPopstate) history.pushState(null, doc.title, url);
 
     // Update active nav states
     if (typeof window._updateNavActive === 'function') {
@@ -81,6 +85,7 @@ document.addEventListener('click', e => {
 
 // Browser back / forward
 window.addEventListener('popstate', () => {
+  _inPopstate = true;
   navigate(location.pathname + location.search);
 });
 

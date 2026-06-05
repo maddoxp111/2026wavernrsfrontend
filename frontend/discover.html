@@ -33,6 +33,7 @@ async function initDiscover() {
     '<div class="wv-utabs" id="disc-tabs">' +
     '<button class="wv-utab' + (activeTab==='recent'?' active':'') + '" onclick="setTab(\'recent\')">Recent</button>' +
     '<button class="wv-utab' + (activeTab==='trending'?' active':'') + '" onclick="setTab(\'trending\')">Trending</button>' +
+    '<button class="wv-utab' + (activeTab==='highlighted'?' active':'') + '" onclick="setTab(\'highlighted\')">⭐ Highlighted</button>' +
     '</div>' +
     '<div id="disc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
     '</div>';
@@ -43,7 +44,8 @@ async function initDiscover() {
 function setTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.wv-utab').forEach(function(btn) {
-    btn.classList.toggle('active', btn.textContent.toLowerCase().trim() === tab);
+    var oc = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('active', oc.indexOf("'" + tab + "'") !== -1);
   });
   loadTracks();
   var u = new URL(location.href); u.searchParams.set('tab', tab); history.replaceState(null,'',u);
@@ -73,6 +75,7 @@ async function loadTracks() {
   try {
     var items = [];
     if (activeTab === 'trending') { items = await api('/discover/trending'); }
+    else if (activeTab === 'highlighted') { items = await api('/discover/highlighted'); }
     else if (activeEra) { var d = await api('/discover/era/' + activeEra); items = Array.isArray(d) ? d : []; }
     else { var d = await api('/discover'); items = d.recent || []; }
     _discoverItems = items;

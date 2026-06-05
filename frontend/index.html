@@ -209,6 +209,12 @@ function heroMore(e) {
 
 var _recentPlayed = [];
 
+function navigateRecent(idx) {
+  var t = _recentPlayed[idx];
+  if (!t) return;
+  navigate(t._type === 'album' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id);
+}
+
 function playRecent(idx) {
   var t = _recentPlayed[idx];
   if (!t) return;
@@ -226,6 +232,10 @@ function renderRecentlyPlayed() {
   if (existing) existing.remove();
 
   try { _recentPlayed = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch(e) { _recentPlayed = []; }
+  // Filter out tracker tracks (no id) and unplayable track entries (no ia_url)
+  _recentPlayed = _recentPlayed.filter(function(t) {
+    return t.id && (t._type === 'album' || t.ia_url);
+  });
   if (!_recentPlayed.length) return;
 
   var el = document.createElement('div');
@@ -235,7 +245,7 @@ function renderRecentlyPlayed() {
     _recentPlayed.slice(0, 4).map(function(t, i) {
       var coverBg = (typeof coverGradient === 'function') ? coverGradient(t.title || '') : '#1a1a2e';
       var isAlbum = t._type === 'album';
-      return '<div class="wv-comp-card" onclick="playRecent(' + i + ')">' +
+      return '<div class="wv-comp-card" onclick="navigateRecent(' + i + ')">' +
         '<div class="wv-comp-card-cover">' +
           '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
             '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +

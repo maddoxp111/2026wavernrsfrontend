@@ -694,10 +694,19 @@
   window.getBadgeData();
 })();
 
+// ── Ensure playlists.js is available on all pages (SPA doesn't reload src scripts) ──
+(function () {
+  if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
+  var s = document.createElement('script');
+  s.src = '/js/playlists.js';
+  document.head.appendChild(s);
+})();
+
 // ── Countdown / pre-launch lockdown ─────────────────────────────────────────
 (function () {
   var BYPASS_KEY = 'wv_countdown_bypass';
   var _cdTimer = null;
+  var _cdAllowed = ['adminpanel', 'community', 'login', 'register'];
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -708,6 +717,11 @@
       var ov = document.getElementById('wv-cd-overlay');
       if (ov) ov.remove();
       if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+      // Unwrap navigate if it was wrapped
+      if (typeof window._cdOrigNavigate === 'function') {
+        window.navigate = window._cdOrigNavigate;
+        window._cdOrigNavigate = null;
+      }
       return;
     }
     var days  = Math.floor(diff / 86400000);
@@ -731,7 +745,7 @@
     ov.innerHTML =
       '<div class="wv-cd-inner">' +
         '<div class="wv-cd-logo">wavernrs</div>' +
-        '<div class="wv-cd-sub">Something big is coming.</div>' +
+        '<div class="wv-cd-sub">“welcome back” -mp</div>' +
         '<div class="wv-cd-timer">' +
           '<div class="wv-cd-unit"><span id="wv-cd-days">00</span><label>days</label></div>' +
           '<div class="wv-cd-unit"><span id="wv-cd-hours">00</span><label>hours</label></div>' +
@@ -739,9 +753,9 @@
           '<div class="wv-cd-unit"><span id="wv-cd-secs">00</span><label>seconds</label></div>' +
         '</div>' +
         '<div class="wv-cd-links">' +
-          '<a href="/community.html" class="wv-pill brand" style="text-decoration:none;">Community</a>' +
-          '<a href="/login.html" class="wv-pill" style="text-decoration:none;">Log in</a>' +
-          '<a href="/register.html" class="wv-pill" style="text-decoration:none;">Sign up</a>' +
+          '<button onclick="location.assign(\'/community.html\')" class="wv-pill brand">Community</button>' +
+          '<button onclick="location.assign(\'/login.html\')" class="wv-pill">Log in</button>' +
+          '<button onclick="location.assign(\'/register.html\')" class="wv-pill">Sign up</button>' +
         '</div>' +
         (hasPassword
           ? '<div class="wv-cd-pw-wrap">' +
@@ -754,6 +768,29 @@
     document.body.appendChild(ov);
     tickCountdown(launchAt);
     _cdTimer = setInterval(function () { tickCountdown(launchAt); }, 1000);
+  }
+
+  function wrapNavigate(launchAt, hasPassword) {
+    if (window._cdOrigNavigate) return; // already wrapped
+    var orig = window.navigate;
+    if (typeof orig !== 'function') return;
+    window._cdOrigNavigate = orig;
+    window.navigate = function(url) {
+      var target;
+      try { target = new URL(url, location.href); } catch(e) { return orig.apply(this, arguments); }
+      var path = target.pathname;
+      // Always allow community / auth pages — force full reload so overlay doesn't persist
+      if (_cdAllowed.some(function(p) { return path.includes(p); })) {
+        location.assign(url);
+        return;
+      }
+      // If bypass is active, pass through normally
+      if (localStorage.getItem(BYPASS_KEY) === '1') {
+        return orig.apply(this, arguments);
+      }
+      // Blocked — ensure overlay is shown
+      showCountdownOverlay(launchAt, hasPassword);
+    };
   }
 
   window._verifyCountdown = async function () {
@@ -772,6 +809,8 @@
         var ov = document.getElementById('wv-cd-overlay');
         if (ov) { ov.style.opacity = '0'; ov.style.transition = 'opacity 0.4s'; setTimeout(function(){ ov.remove(); }, 400); }
         if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+        // Unwrap navigate so full site is accessible
+        if (window._cdOrigNavigate) { window.navigate = window._cdOrigNavigate; window._cdOrigNavigate = null; }
       } else {
         if (errEl) errEl.textContent = 'Wrong password.';
       }
@@ -782,20 +821,26 @@
 
   // Run the check once on every page load
   (async function () {
-    // Pages that are always accessible during countdown
-    var _cdAllowed = ['adminpanel', 'community', 'login', 'register'];
-    if (_cdAllowed.some(function(p) { return location.pathname.includes(p); })) return;
-    // Bypass already granted this session
-    if (localStorage.getItem(BYPASS_KEY) === '1') return;
     try {
       var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
       var r = await fetch(base + '/site/countdown');
       var d = await r.json();
+
       if (!d.active || d.elapsed) {
         localStorage.removeItem(BYPASS_KEY);
         return;
       }
-      showCountdownOverlay(d.launch_at, d.has_password);
+
+      // Countdown is active — wrap navigate to enforce access restrictions
+      wrapNavigate(d.launch_at, d.has_password);
+
+      // If already bypassed via password, allow free navigation
+      if (localStorage.getItem(BYPASS_KEY) === '1') return;
+
+      // Show overlay on restricted pages
+      var isAllowedPage = _cdAllowed.some(function(p) { return location.pathname.includes(p); });
+      if (!isAllowedPage) showCountdownOverlay(d.launch_at, d.has_password);
     } catch (_) {}
   })();
 })();
+
