@@ -653,6 +653,14 @@
     requestAnimationFrame(function () {
       var ov = el.scrollWidth - el.clientWidth;
       if (ov > 2) {
+        // Wrap children in an inner span so the animation moves the text,
+        // not the element itself (which would shift sibling flex items).
+        if (!el.querySelector('.wv-mq-inner')) {
+          var inner = document.createElement('span');
+          inner.className = 'wv-mq-inner';
+          while (el.firstChild) inner.appendChild(el.firstChild);
+          el.appendChild(inner);
+        }
         el.style.setProperty('--mq-dist', -(ov + 16) + 'px');
         el.style.setProperty('--mq-dur', Math.max(3, ov / 40) + 's');
         el.classList.add('wv-mq');
