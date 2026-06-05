@@ -580,8 +580,10 @@
       .then(function(d) {
         if (d.ok) {
           sessionStorage.setItem('site_lock_verified', '1');
-          var ls = document.getElementById('wv-lockscreen');
-          if (ls) ls.remove();
+          if (d.access_token) localStorage.setItem('wv_site_access', d.access_token);
+          // Reload so content refetches with the access token now that the
+          // server-side gate will recognise this visitor.
+          location.reload();
         } else {
           if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">Incorrect password. Try again.</div>';
           if (pw) { pw.value = ''; pw.focus(); }
@@ -816,11 +818,10 @@
       var d = await r.json();
       if (d.ok) {
         localStorage.setItem(BYPASS_KEY, '1');
-        var ov = document.getElementById('wv-cd-overlay');
-        if (ov) { ov.style.opacity = '0'; ov.style.transition = 'opacity 0.4s'; setTimeout(function(){ ov.remove(); }, 400); }
-        if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
-        // Unwrap navigate so full site is accessible
-        if (window._cdOrigNavigate) { window.navigate = window._cdOrigNavigate; window._cdOrigNavigate = null; }
+        if (d.access_token) localStorage.setItem('wv_site_access', d.access_token);
+        // Reload so page content refetches with the early-access token (any
+        // content requests that fired before unlock would have been 403'd).
+        location.reload();
       } else {
         if (errEl) errEl.textContent = 'Wrong password.';
       }

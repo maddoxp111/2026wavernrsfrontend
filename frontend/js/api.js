@@ -18,6 +18,8 @@ async function api(path, options = {}) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  const siteAccess = localStorage.getItem('wv_site_access');
+  if (siteAccess) headers['X-Site-Access'] = siteAccess;
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -33,6 +35,8 @@ async function apiUpload(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
+  const siteAccess = localStorage.getItem('wv_site_access');
+  if (siteAccess) headers['X-Site-Access'] = siteAccess;
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,
