@@ -725,7 +725,7 @@
 
 // ── Countdown / pre-launch lockdown ─────────────────────────────────────────
 (function () {
-  var BYPASS_KEY = 'wv_countdown_bypass';
+  var BYPASS_KEY = 'wv_cd_bypass_2';
   var _cdTimer = null;
   var _cdAllowed = ['adminpanel', 'community', 'login', 'register'];
 
