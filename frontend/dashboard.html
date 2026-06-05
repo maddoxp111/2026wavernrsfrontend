@@ -184,7 +184,7 @@
   function render() {
     const totalPlays = uploads.filter(u => u._type === 'track').reduce((s, t) => s + (t.play_count || 0), 0);
     const avatarContent = artist.profile_image_url
-      ? `<img src="${artist.profile_image_url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      ? `<img src="${escHtml(artist.profile_image_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
       : escHtml(artist.display_name?.[0]?.toUpperCase() || '?');
 
     // Stats card — shown at top of main content when stats are available
@@ -350,7 +350,7 @@
       return;
     }
     el.innerHTML = `<div class="track-list">` + uploads.map(item => {
-      const cover = item.cover_url ? `<img src="${item.cover_url}" alt="">` : '&#x1F3B5;';
+      const cover = item.cover_url ? `<img src="${escHtml(item.cover_url)}" alt="">` : '&#x1F3B5;';
       const isAlbum = item._type === 'album';
       const sub = isAlbum
         ? `Comp · ${timeAgo(item.created_at)}`

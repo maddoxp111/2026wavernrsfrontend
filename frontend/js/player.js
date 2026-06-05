@@ -2,6 +2,14 @@ const PLAYER_KEY = 'player_current';
 let audio = null;
 let currentTrack = null;
 
+// Escape a value for safe insertion into an HTML attribute / text node.
+// cover_url is user-controlled free text, so it must never hit innerHTML raw.
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ── Global play queue ───────────────────────────────────────────────────────
 // Lives in the player (not the page) so skip/prev keep working from the OS media
 // UI (Control Center / lock screen) even after navigating away from the source
@@ -428,7 +436,7 @@ function _renderAll(track) {
   // Gradient cover (design uses color gradients seeded by track title)
   const bg = (typeof coverGradient === 'function') ? coverGradient(seed) : '#333';
   const gloss = '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:inherit;"></div>';
-  const imgOver = cover ? `<img src="${cover}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.style.opacity=0">` : '';
+  const imgOver = cover ? `<img src="${_esc(cover)}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.style.opacity=0">` : '';
   const coverHtml = `<div style="position:absolute;inset:0;background:${bg};border-radius:inherit;overflow:hidden;">${gloss}${imgOver}</div>`;
   const largeCoverHtml = coverHtml;
 
