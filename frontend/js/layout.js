@@ -252,6 +252,12 @@
   // ── Notification panel ────────────────────────────────────────
   var _notifCache = null;
 
+  function _escN(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   function _notifIcon(type) {
     var icons = {
       like:              '❤️',
@@ -284,8 +290,8 @@
       return '<div class="wv-notif-item' + (n.read ? '' : ' unread') + '" onclick="window._markNotifRead(\'' + n.id + '\',this)">' +
         '<div class="wv-notif-icon">' + _notifIcon(n.type) + '</div>' +
         '<div class="wv-notif-body">' +
-          '<div class="wv-notif-title">' + (n.title || '').replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>' +
-          (n.body ? '<div class="wv-notif-desc">' + n.body.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>' : '') +
+          '<div class="wv-notif-title">' + _escN(n.title || '') + '</div>' +
+          (n.body ? '<div class="wv-notif-desc">' + _escN(n.body) + '</div>' : '') +
           '<div class="wv-notif-time">' + _notifTimeAgo(n.created_at) + '</div>' +
         '</div>' +
         (!n.read ? '<div class="wv-notif-unread-dot"></div>' : '') +

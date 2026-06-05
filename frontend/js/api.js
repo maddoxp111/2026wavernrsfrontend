@@ -298,10 +298,16 @@ function timeAgo(dateStr) {
   return new Date(dateStr).toLocaleDateString();
 }
 
+function _escMsg(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function showAlert(containerId, message, type = 'error') {
   const el = document.getElementById(containerId);
   if (!el) return;
-  el.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+  el.innerHTML = `<div class="alert alert-${type}">${_escMsg(message)}</div>`;
 }
 
 function clearAlert(containerId) {
