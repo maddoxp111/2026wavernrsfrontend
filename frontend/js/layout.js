@@ -624,6 +624,11 @@
     }
   };
 
+  // The Mod Panel link must be re-earned from the server on every full load —
+  // never trust a persisted or hand-edited wv_is_mod flag for the first paint.
+  // _checkModStatus() below re-adds it once /mod/check confirms in this session.
+  sessionStorage.removeItem('wv_is_mod');
+
   initShell();
   // Load banners after shell exists
   window.renderSiteBanners();
@@ -632,7 +637,7 @@
   // Runs AFTER initShell so the sidebar elements exist.
   // No sessionStorage caching — always re-checks so role changes take effect immediately.
   (function _checkModStatus() {
-    if (!localStorage.getItem('token')) return;
+    if (!localStorage.getItem('token')) { sessionStorage.removeItem('wv_is_mod'); return; }
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
     fetch(base + '/mod/check', {
       headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },

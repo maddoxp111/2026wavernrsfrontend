@@ -11,6 +11,8 @@ function isLoggedIn() { return !!getToken(); }
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('wv_site_access');
+  sessionStorage.removeItem('wv_is_mod');
   window.location.href = '/login.html';
 }
 
