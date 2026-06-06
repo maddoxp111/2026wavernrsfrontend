@@ -1,6 +1,7 @@
 const PLAYER_KEY = 'player_current';
 let audio = null;
 let currentTrack = null;
+let _restoreCanplayFn = null; // tracked so playTrack() can cancel it
 
 // Escape a value for safe insertion into an HTML attribute / text node.
 // cover_url is user-controlled free text, so it must never hit innerHTML raw.
@@ -262,9 +263,11 @@ function initPlayer() {
       if (t.ia_url) {
         audio.src = t.ia_url;
         if (t._savedTime && t._savedTime > 1) {
-          audio.addEventListener('canplay', () => {
+          _restoreCanplayFn = () => {
             audio.currentTime = t._savedTime;
-          }, { once: true });
+            _restoreCanplayFn = null;
+          };
+          audio.addEventListener('canplay', _restoreCanplayFn, { once: true });
         }
         audio.load();
         // Stay paused — user must press play
@@ -399,8 +402,13 @@ function playTrack(track) {
   if (history.length > 8) history = history.slice(0, 8);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 
+  // Cancel any pending restore-position listener so it doesn't seek this
+  // new track to the previous session's position.
+  if (_restoreCanplayFn) {
+    audio.removeEventListener('canplay', _restoreCanplayFn);
+    _restoreCanplayFn = null;
+  }
   audio.src = track.ia_url;
-  audio.currentTime = 0;
   const p = audio.play();
   if (p) p.catch(() => {});
 
