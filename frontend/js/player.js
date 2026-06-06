@@ -38,13 +38,28 @@ window.playQueueIndex = function (idx) {
 };
 
 let _iosUnlocked = false;
+let _iosUnlockPending = false;
 function _unlockIOS() {
   if (_iosUnlocked || !audio) return;
   _iosUnlocked = true;
+  _iosUnlockPending = true;
   const s = audio.src, t = audio.currentTime, p = audio.paused;
-  audio.src = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZFRlYW0gQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//MUxAAKAdABQAAAAP//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  const _dummy = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZFRlYW0gQ3JlYXRpdmUgQ29tbW9ucyBBdHRyaWJ1dGlvbgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQxAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA//MUxAAKAdABQAAAAP//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+  audio.src = _dummy;
   audio.volume = 0;
-  audio.play().then(() => { audio.pause(); audio.src = s; audio.currentTime = t; audio.volume = 0.8; if (!p && s) audio.play().catch(()=>{}); }).catch(() => { audio.src = s; audio.currentTime = t; audio.volume = 0.8; });
+  audio.play().then(() => {
+    audio.pause();
+    if (_iosUnlockPending) {
+      _iosUnlockPending = false;
+      audio.src = s; audio.currentTime = t; audio.volume = 0.8;
+      if (!p && s) audio.play().catch(() => {});
+    }
+  }).catch(() => {
+    if (_iosUnlockPending) {
+      _iosUnlockPending = false;
+      audio.src = s; audio.currentTime = t; audio.volume = 0.8;
+    }
+  });
   document.removeEventListener('touchstart', _unlockIOS);
 }
 
@@ -298,6 +313,7 @@ function initPlayer() {
   });
 
   audio.addEventListener('timeupdate', _onTimeUpdate);
+  audio.addEventListener('loadedmetadata', _onTimeUpdate);
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
@@ -408,6 +424,9 @@ function playTrack(track) {
     audio.removeEventListener('canplay', _restoreCanplayFn);
     _restoreCanplayFn = null;
   }
+  // If the iOS unlock fires on the same tap, prevent its .then() from
+  // restoring the old empty src over the track we're about to play.
+  _iosUnlockPending = false;
   audio.src = track.ia_url;
   const p = audio.play();
   if (p) p.catch(() => {});
