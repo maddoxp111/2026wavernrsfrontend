@@ -252,6 +252,10 @@
             '<div style="font-size:12px;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Upload</div>' +
             utActions +
           '</div>' +
+          '<div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Password</div>' +
+            '<button class="btn btn-secondary btn-sm" onclick="resetUserPassword(\'' + u.id + '\',\'' + escHtml(u.username) + '\')">Reset to Password1</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join('');
@@ -370,6 +374,19 @@
       var card = document.getElementById('upload-card-' + type + '-' + id);
       if (card) card.remove();
       showAlert('Removed.', 'success');
+    } catch (err) {
+      showAlert(err.message, 'error');
+    }
+  }
+
+  // ── Password Reset ────────────────────────────────────────────────────────
+  async function resetUserPassword(userId, username) {
+    if (!confirm('Reset ' + username + '\'s password to "Password1"?')) return;
+    try {
+      var r = await fetch(API_BASE + '/mod/users/' + userId + '/reset-password', { method: 'POST', headers: authHeaders() });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      showAlert('Password reset to "Password1" for ' + escHtml(username) + '.', 'success');
     } catch (err) {
       showAlert(err.message, 'error');
     }

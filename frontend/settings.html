@@ -84,6 +84,23 @@
             <div style="font-size:12px;color:var(--text-2);">Your login username</div>
           </div>
         </div>
+
+        <!-- Change password — hidden for OAuth-only accounts -->
+        <div id="change-password-section" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--hair);">
+          <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Change Password</div>
+          <div class="wv-form-field" style="margin-bottom:10px;">
+            <input class="wv-input" type="password" id="cp-current" placeholder="Current password" autocomplete="current-password">
+          </div>
+          <div class="wv-form-field" style="margin-bottom:10px;">
+            <input class="wv-input" type="password" id="cp-new" placeholder="New password (min 6 chars)" autocomplete="new-password">
+          </div>
+          <div class="wv-form-field" style="margin-bottom:14px;">
+            <input class="wv-input" type="password" id="cp-confirm" placeholder="Confirm new password" autocomplete="new-password">
+          </div>
+          <div id="cp-alert" style="font-size:13px;margin-bottom:10px;"></div>
+          <button class="wv-pill brand" onclick="changePassword()">Update Password</button>
+        </div>
+
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--hair);">
           <button class="wv-pill" style="color:var(--red);" onclick="if(confirm('Log out?'))logout()">Log out</button>
         </div>
@@ -155,6 +172,7 @@
       document.getElementById('edit-banner').value = artist.banner_url || '';
       document.getElementById('edit-banner-url').value = artist.banner_url || '';
       document.getElementById('settings-username').textContent = '@' + (me.username || '');
+      if (me.has_password) document.getElementById('change-password-section').style.display = '';
 
       // Avatar display
       const wrap = document.getElementById('avatar-preview-wrap');
@@ -253,6 +271,28 @@
     } else {
       var token = localStorage.getItem('token');
       location.href = API_BASE + '/oauth/' + provider + '/link?token=' + encodeURIComponent(token);
+    }
+  }
+
+  async function changePassword() {
+    var current = document.getElementById('cp-current').value;
+    var newPw = document.getElementById('cp-new').value;
+    var confirm = document.getElementById('cp-confirm').value;
+    var alertEl = document.getElementById('cp-alert');
+    alertEl.style.color = 'var(--red)'; alertEl.textContent = '';
+    if (!current || !newPw || !confirm) { alertEl.textContent = 'All fields are required.'; return; }
+    if (newPw !== confirm) { alertEl.textContent = 'New passwords do not match.'; return; }
+    if (newPw.length < 6) { alertEl.textContent = 'New password must be at least 6 characters.'; return; }
+    try {
+      await api('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: current, newPassword: newPw }) });
+      alertEl.style.color = '#4ade80';
+      alertEl.textContent = '✓ Password updated.';
+      document.getElementById('cp-current').value = '';
+      document.getElementById('cp-new').value = '';
+      document.getElementById('cp-confirm').value = '';
+    } catch (err) {
+      alertEl.style.color = 'var(--red)';
+      alertEl.textContent = err.message || 'Failed to update password.';
     }
   }
 
