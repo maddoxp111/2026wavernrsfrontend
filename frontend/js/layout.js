@@ -515,7 +515,37 @@
     // Already verified this session?
     if (sessionStorage.getItem('site_lock_verified')) return;
 
-    // Show a minimal lockscreen immediately to avoid flash of content
+    // Only pre-render the lockscreen if the site was locked on the last check.
+    // This avoids a flash-of-lockscreen on every page load when the site is open.
+    // If it wasn't locked last time (or we've never checked), skip the immediate
+    // render and wait for the API — the server blocks all content anyway.
+    var wasLocked = localStorage.getItem('wv_site_was_locked') === '1';
+    if (wasLocked) {
+      _showLockCard(theme);
+    }
+
+    // Fetch lock status
+    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-status' : '/api/site/lock-status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        localStorage.setItem('wv_site_was_locked', d.locked ? '1' : '0');
+        if (!d.locked) {
+          var el = document.getElementById('wv-lockscreen');
+          if (el) el.remove();
+        } else {
+          // Locked — make sure the card is visible even if we skipped pre-render
+          if (!document.getElementById('wv-lockscreen')) _showLockCard(theme);
+        }
+      })
+      .catch(function() {
+        // API error — don't block the user
+        var el = document.getElementById('wv-lockscreen');
+        if (el) el.remove();
+      });
+  }
+
+  function _showLockCard(theme) {
+    if (document.getElementById('wv-lockscreen')) return;
     var ls = document.createElement('div');
     ls.id = 'wv-lockscreen';
     ls.className = 'theme-' + (theme || 'dark');
@@ -533,23 +563,6 @@
         '</div>' +
       '</div>';
     document.body.appendChild(ls);
-
-    // Fetch lock status
-    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-status' : '/api/site/lock-status')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.locked) {
-          // Not locked — remove screen immediately
-          var el = document.getElementById('wv-lockscreen');
-          if (el) el.remove();
-        }
-        // else: keep lockscreen visible, user must enter password
-      })
-      .catch(function() {
-        // API error — don't block the user
-        var el = document.getElementById('wv-lockscreen');
-        if (el) el.remove();
-      });
   }
 
   window._submitSiteLock = function() {
