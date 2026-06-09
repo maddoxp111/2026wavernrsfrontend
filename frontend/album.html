@@ -193,8 +193,10 @@
                 <textarea id="album-comment-input" class="wv-input" placeholder="Add a comment…"
                   style="min-height:72px;resize:vertical;line-height:1.5;"
                   onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postAlbumComment()"></textarea>
-                <div style="display:flex;justify-content:flex-end;">
-                  <button class="btn btn-primary btn-sm" onclick="postAlbumComment()">Post</button>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                  <button id="ac-ts-toggle" onclick="toggleAcTsComment()" title="Pin this comment to the moment you're at in the playing track"
+                    style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>
+                  <button class="btn btn-primary btn-sm" onclick="postAlbumComment()" style="margin-left:auto;">Post</button>
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
@@ -376,7 +378,7 @@
             '<span style="font-size:11px;color:var(--text-3);">' + timeStr + '</span>' +
             editedMark +
           '</div>' +
-          '<div id="acbody-' + escHtml(c.id) + '" style="font-size:14px;color:var(--text-2);line-height:1.5;word-break:break-word;">' + escHtml(c.body || '') + '</div>' +
+          '<div id="acbody-' + escHtml(c.id) + '" style="font-size:14px;color:var(--text-2);line-height:1.5;word-break:break-word;">' + _acTsChip(c) + escHtml(c.body || '') + '</div>' +
           '<div style="display:flex;align-items:center;gap:2px;margin-top:6px;flex-wrap:wrap;">' +
             '<button id="acvote-up-btn-' + escHtml(c.id) + '" onclick="voteAlbumComment(\'' + escHtml(c.id) + '\',1)" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:12px;' + upActive + '">▲</button>' +
             '<span id="acvote-up-' + escHtml(c.id) + '" style="font-size:11px;color:var(--text-3);min-width:14px;text-align:center;">' + (c.upvotes || 0) + '</span>' +
@@ -424,13 +426,124 @@
     }
   }
 
+  // ── Timestamped comp comments ─────────────────────────────────────────────
+  // A comp comment can be pinned to a moment in whichever track of THIS comp is
+  // currently playing. Clicking the chip plays that track and seeks there.
+  var acTsEnabled = false;
+  var acTsTime = null;
+  var acTsTrackId = null;
+
+  function fmtT(s) {
+    s = Math.max(0, Math.floor(Number(s) || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  // Index of the currently-playing track within THIS comp, or -1.
+  function _playingCompIndex() {
+    if (typeof currentTrack === 'undefined' || !currentTrack) return -1;
+    if (typeof audio === 'undefined' || !audio || !audio.src) return -1;
+    // Queue objects built by _buildAlbumQueue carry _album_id; trust that first.
+    if (currentTrack._album_id && currentTrack._album_id !== album.id) return -1;
+    for (var i = 0; i < albumTracks.length; i++) {
+      var td = albumTracks[i].tracks || albumTracks[i];
+      if (td.id === currentTrack.id) return i;
+    }
+    return -1;
+  }
+
+  function _trackTitleById(id) {
+    for (var i = 0; i < albumTracks.length; i++) {
+      var td = albumTracks[i].tracks || albumTracks[i];
+      if (td.id === id) return td.title || 'Track ' + (i + 1);
+    }
+    return 'this track';
+  }
+
+  function toggleAcTsComment() {
+    var idx = _playingCompIndex();
+    if (idx < 0) { acTsEnabled = false; acTsTime = null; acTsTrackId = null; _updateAcTsChip(); return; }
+    acTsEnabled = !acTsEnabled;
+    if (acTsEnabled) {
+      acTsTime = Math.round(audio.currentTime * 10) / 10;
+      var td = albumTracks[idx].tracks || albumTracks[idx];
+      acTsTrackId = td.id;
+    } else {
+      acTsTime = null; acTsTrackId = null;
+    }
+    _updateAcTsChip();
+  }
+
+  function _updateAcTsChip() {
+    var chip = document.getElementById('ac-ts-toggle');
+    if (!chip) return;
+    var idx = _playingCompIndex();
+    if (idx < 0) {
+      chip.style.display = 'none';
+      acTsEnabled = false; acTsTime = null; acTsTrackId = null;
+      return;
+    }
+    chip.style.display = 'inline-flex';
+    if (acTsEnabled && acTsTime != null) {
+      chip.textContent = '⏱ ' + fmtT(acTsTime) + ' on “' + (_trackTitleById(acTsTrackId)) + '” ✓';
+      chip.style.borderColor = 'var(--brand)';
+      chip.style.background = 'var(--brand-bg)';
+      chip.style.color = 'var(--brand)';
+    } else {
+      chip.textContent = '⏱ at ' + fmtT(audio.currentTime);
+      chip.style.borderColor = 'var(--hair-strong)';
+      chip.style.background = 'transparent';
+      chip.style.color = 'var(--text-3)';
+    }
+  }
+
+  function _acTsChip(c) {
+    if (c.track_time == null || !c.track_ref_id) return '';
+    var label = '@ ' + fmtT(c.track_time) + ' · ' + escHtml(_trackTitleById(c.track_ref_id));
+    return '<button onclick="seekToCompComment(\'' + escHtml(c.track_ref_id) + '\',' + Number(c.track_time) + ')" ' +
+      'title="Jump to this moment" ' +
+      'style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">' +
+      label + '</button>';
+  }
+
+  function seekToCompComment(trackRefId, t) {
+    var idx = -1;
+    for (var i = 0; i < albumTracks.length; i++) {
+      var td = albumTracks[i].tracks || albumTracks[i];
+      if (td.id === trackRefId) { idx = i; break; }
+    }
+    if (idx < 0) return;
+    if (_playingCompIndex() === idx) {
+      audio.currentTime = t;
+      audio.play().catch(function(){});
+      return;
+    }
+    playAtIndex(idx);
+    var onCan = function() {
+      audio.removeEventListener('canplay', onCan);
+      audio.currentTime = t;
+    };
+    audio.addEventListener('canplay', onCan);
+  }
+
+  // Keep the chip label fresh while a comp track plays.
+  var _acTsTimer = setInterval(function() {
+    if (!document.getElementById('ac-ts-toggle')) { clearInterval(_acTsTimer); return; }
+    _updateAcTsChip();
+  }, 500);
+
   async function postAlbumComment() {
     var input = document.getElementById('album-comment-input');
     var body = input ? input.value.trim() : '';
     if (!body) return;
     try {
-      await api('/albums/' + albumId + '/comments', { method: 'POST', body: JSON.stringify({ body: body }) });
+      var payload = { body: body };
+      if (acTsEnabled && acTsTime != null && acTsTrackId) {
+        payload.track_time = acTsTime;
+        payload.track_ref_id = acTsTrackId;
+      }
+      await api('/albums/' + albumId + '/comments', { method: 'POST', body: JSON.stringify(payload) });
       input.value = '';
+      acTsEnabled = false; acTsTime = null; acTsTrackId = null;
       loadAlbumComments();
     } catch(err) {
       alert(err.message || 'Failed to post comment');
