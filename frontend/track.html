@@ -149,7 +149,16 @@
           <h2 class="section-title">Comments</h2>
           <div id="ts-timeline-wrap" style="display:none;margin-bottom:18px;">
             <div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Comments on the timeline — tap a dot to jump there</div>
-            <div id="ts-timeline" style="position:relative;height:22px;background:var(--hair);border-radius:11px;"></div>
+            <div style="position:relative;">
+              <div id="ts-bubble" style="display:none;position:absolute;bottom:30px;transform:translateX(-50%);max-width:240px;z-index:5;background:var(--surface-2,#1a1a1a);border:1px solid var(--brand);border-radius:12px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,0.4);pointer-events:none;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                  <span id="ts-bubble-user" style="font-size:11.5px;font-weight:700;color:var(--brand);"></span>
+                  <span id="ts-bubble-time" style="font-size:10.5px;color:var(--text-3);"></span>
+                </div>
+                <div id="ts-bubble-text" style="font-size:12.5px;color:var(--text);line-height:1.4;word-break:break-word;"></div>
+              </div>
+              <div id="ts-timeline" style="position:relative;height:22px;background:var(--hair);border-radius:11px;"></div>
+            </div>
           </div>
           <div id="comment-form" style="margin-bottom:24px;">
             ${isLoggedIn() ? `
@@ -416,6 +425,40 @@
     }).join('');
   }
 
+  // ── Live surfacing: pop a comment up when playback reaches its moment ──────
+  var _tsLastTime = 0;
+  var _tsBubbleUntil = 0;
+
+  function _tsShowBubble(c) {
+    var bub = document.getElementById('ts-bubble');
+    if (!bub) return;
+    var dur = (_isThisTrackLoaded() && audio.duration && isFinite(audio.duration)) ? audio.duration : 0;
+    if (!dur) return;
+    var pct = Math.min(96, Math.max(2, (c.track_time / dur) * 100));
+    document.getElementById('ts-bubble-user').textContent = (c.users && c.users.username) || 'unknown';
+    document.getElementById('ts-bubble-time').textContent = '@ ' + fmtT(c.track_time);
+    document.getElementById('ts-bubble-text').textContent = c.content || '';
+    bub.style.left = pct + '%';
+    bub.style.display = 'block';
+    _tsBubbleUntil = Date.now() + 4500;
+  }
+
+  function _tsCheckCrossing() {
+    if (!_isThisTrackLoaded() || audio.paused) { _tsLastTime = _isThisTrackLoaded() ? audio.currentTime : _tsLastTime; return; }
+    var now = audio.currentTime;
+    // Comments whose moment we just passed (forward) since the last check.
+    // If several were crossed at once (e.g. a seek), surface the latest.
+    var crossed = null;
+    for (var i = 0; i < _tsComments.length; i++) {
+      var t = Number(_tsComments[i].track_time);
+      if (t > _tsLastTime && t <= now) {
+        if (!crossed || t > Number(crossed.track_time)) crossed = _tsComments[i];
+      }
+    }
+    if (crossed) _tsShowBubble(crossed);
+    _tsLastTime = now;
+  }
+
   // Keep the chip label and timeline fresh while this page is open. The
   // interval kills itself once the SPA swaps the page (elements disappear).
   var _tsTimer = setInterval(function() {
@@ -425,7 +468,11 @@
     _updateTsChip();
     // Re-render markers when duration becomes known (first play)
     if (wrap && wrap.style.display === 'none' && _tsComments.length) renderTsTimeline();
-  }, 500);
+    _tsCheckCrossing();
+    // Auto-hide the bubble after its window elapses.
+    var bub = document.getElementById('ts-bubble');
+    if (bub && bub.style.display !== 'none' && Date.now() > _tsBubbleUntil) bub.style.display = 'none';
+  }, 300);
 
   async function loadMoreLikeThis() {
     if (!track) return;

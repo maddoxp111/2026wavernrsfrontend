@@ -404,6 +404,7 @@
         return;
       }
       for (var c of allComments) albumMyVotes[c.id] = c.user_vote || 0;
+      _acTsComments = allComments.filter(function(c) { return c.track_time != null && c.track_ref_id; });
 
       // Split into top-level and replies, build reply map
       var topLevel = allComments.filter(function(c) { return !c.parent_id; });
@@ -525,11 +526,76 @@
     audio.addEventListener('canplay', onCan);
   }
 
-  // Keep the chip label fresh while a comp track plays.
+  // ── Live surfacing: pop a comp comment when playback reaches its moment ────
+  var _acTsComments = [];
+  var _acLastTime = 0;
+  var _acLastTrackId = null;
+  var _acToastUntil = 0;
+
+  function _acToastEl() {
+    var el = document.getElementById('ac-ts-toast');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'ac-ts-toast';
+    el.style.cssText = 'display:none;position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:400;' +
+      'max-width:min(420px,92vw);background:var(--surface-2,#1a1a1a);border:1px solid var(--brand);border-radius:14px;' +
+      'padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,0.5);';
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+        '<span id="ac-toast-user" style="font-size:12px;font-weight:700;color:var(--brand);"></span>' +
+        '<span id="ac-toast-meta" style="font-size:10.5px;color:var(--text-3);"></span>' +
+      '</div>' +
+      '<div id="ac-toast-text" style="font-size:13px;color:var(--text);line-height:1.4;word-break:break-word;"></div>';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function _acShowToast(c) {
+    var el = _acToastEl();
+    document.getElementById('ac-toast-user').textContent = (c.users && c.users.username) || 'unknown';
+    document.getElementById('ac-toast-meta').textContent = '@ ' + fmtT(c.track_time) + ' · ' + _trackTitleById(c.track_ref_id);
+    document.getElementById('ac-toast-text').textContent = c.body || c.content || '';
+    el.style.display = 'block';
+    _acToastUntil = Date.now() + 4500;
+  }
+
+  function _acCheckCrossing() {
+    var idx = _playingCompIndex();
+    if (idx < 0) { _acLastTrackId = null; return; }
+    var td = albumTracks[idx].tracks || albumTracks[idx];
+    var curId = td.id;
+    var now = audio.currentTime;
+    // Reset the crossing baseline when the playing track changes.
+    if (curId !== _acLastTrackId) { _acLastTrackId = curId; _acLastTime = now; return; }
+    if (audio.paused) { _acLastTime = now; return; }
+    var crossed = null;
+    for (var i = 0; i < _acTsComments.length; i++) {
+      var c = _acTsComments[i];
+      if (c.track_ref_id !== curId) continue;
+      var t = Number(c.track_time);
+      if (t > _acLastTime && t <= now) {
+        if (!crossed || t > Number(crossed.track_time)) crossed = c;
+      }
+    }
+    if (crossed) _acShowToast(crossed);
+    _acLastTime = now;
+  }
+
+  // Keep the chip label fresh and surface comments live while a comp track plays.
   var _acTsTimer = setInterval(function() {
-    if (!document.getElementById('ac-ts-toggle')) { clearInterval(_acTsTimer); return; }
+    // album-comments-list always exists on this page (chip is login-gated, so
+    // don't key the timer's lifetime to it — logged-out users surface too).
+    if (!document.getElementById('album-comments-list')) {
+      clearInterval(_acTsTimer);
+      var stale = document.getElementById('ac-ts-toast'); // lives on body, outside #view
+      if (stale) stale.remove();
+      return;
+    }
     _updateAcTsChip();
-  }, 500);
+    _acCheckCrossing();
+    var toast = document.getElementById('ac-ts-toast');
+    if (toast && toast.style.display !== 'none' && Date.now() > _acToastUntil) toast.style.display = 'none';
+  }, 300);
 
   async function postAlbumComment() {
     var input = document.getElementById('album-comment-input');
