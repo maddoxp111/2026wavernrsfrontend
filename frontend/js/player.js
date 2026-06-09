@@ -25,6 +25,7 @@ window.setPlayerQueue = function (list, idx, onChange) {
   _pq = Array.isArray(list) ? list : [];
   _pqIdx = (typeof idx === 'number') ? idx : -1;
   _pqOnChange = (typeof onChange === 'function') ? onChange : null;
+  _renderQueuePanel();
 };
 
 window.playQueueIndex = function (idx) {
@@ -34,6 +35,7 @@ window.playQueueIndex = function (idx) {
   playTrack(_pq[idx]);
   _fromQueue = false;
   if (_pqOnChange) { try { _pqOnChange(idx); } catch (_) {} }
+  _renderQueuePanel();
   return true;
 };
 
@@ -100,6 +102,9 @@ function injectPlayer() {
         <button class="player-btn player-icon-btn" id="player-repeat-btn" onclick="toggleRepeat()" title="Repeat">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
         </button>
+        <button class="player-btn player-icon-btn" id="player-queue-btn" onclick="toggleQueuePanel()" title="Up Next">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
+        </button>
       </div>
       <div class="player-progress">
         <span class="player-time" id="time-elapsed">0:00</span>
@@ -149,7 +154,9 @@ function injectPlayer() {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
       </button>
       <span class="pfs-label">Now Playing</span>
-      <div style="width:40px;"></div>
+      <button class="player-btn player-icon-btn" id="pfs-queue-btn" onclick="toggleQueuePanel()" title="Up Next" style="width:40px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
+      </button>
     </div>
     <div class="pfs-cover-wrap">
       <div class="pfs-cover" id="pfs-cover">
@@ -193,7 +200,104 @@ function injectPlayer() {
     </div>
   `;
   document.body.appendChild(fs);
+
+  // ── UP NEXT QUEUE PANEL ──
+  document.getElementById('wv-queue-panel')?.remove();
+  const qp = document.createElement('div');
+  qp.id = 'wv-queue-panel';
+  qp.innerHTML = `
+    <div class="wv-queue-head">
+      <span class="wv-queue-title">Up Next</span>
+      <span class="wv-queue-count" id="wv-queue-count"></span>
+      <button class="wv-queue-clear" onclick="clearPlayerQueue()">Clear</button>
+      <button class="wv-queue-close" onclick="toggleQueuePanel()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="wv-queue-list" id="wv-queue-list"></div>
+  `;
+  document.body.appendChild(qp);
+  _renderQueuePanel();
 }
+
+// ── Up Next queue panel ──────────────────────────────────────────────────────
+function toggleQueuePanel() {
+  const qp = document.getElementById('wv-queue-panel');
+  if (!qp) return;
+  const open = qp.classList.toggle('open');
+  const btn = document.getElementById('player-queue-btn');
+  if (btn) btn.classList.toggle('player-icon-active', open);
+  if (open) _renderQueuePanel();
+}
+
+function clearPlayerQueue() {
+  _pq = [];
+  _pqIdx = -1;
+  _pqOnChange = null;
+  _renderQueuePanel();
+}
+
+function removeQueueItem(i) {
+  if (i < 0 || i >= _pq.length) return;
+  _pq.splice(i, 1);
+  if (i < _pqIdx) _pqIdx--;
+  else if (i === _pqIdx) _pqIdx = Math.min(_pqIdx, _pq.length - 1); // keep playing current audio
+  _renderQueuePanel();
+}
+
+function _renderQueuePanel() {
+  const list = document.getElementById('wv-queue-list');
+  const count = document.getElementById('wv-queue-count');
+  if (!list) return;
+  if (count) count.textContent = _pq.length ? _pq.length + (_pq.length === 1 ? ' track' : ' tracks') : '';
+
+  if (!_pq.length) {
+    list.innerHTML = '<div class="wv-queue-empty">Queue is empty — play a comp or playlist.</div>';
+    return;
+  }
+
+  list.innerHTML = _pq.map((t, i) => {
+    const isNow = i === _pqIdx;
+    const cover = t.cover_url
+      ? `<img src="${_esc(t.cover_url)}" alt="" loading="lazy">`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>`;
+    const artist = t.artist_name || (t.artists && t.artists.display_name) || '';
+    return `<div class="wv-queue-row${isNow ? ' now' : ''}" onclick="playQueueIndex(${i})">
+      <div class="wv-queue-cover">${cover}</div>
+      <div class="wv-queue-meta">
+        <div class="wv-queue-row-title">${_esc(t.title || '—')}</div>
+        <div class="wv-queue-row-artist">${_esc(artist)}</div>
+      </div>
+      ${isNow
+        ? '<span class="wv-queue-now-dot" title="Now playing"></span>'
+        : `<button class="wv-queue-remove" onclick="event.stopPropagation();removeQueueItem(${i})" aria-label="Remove from queue">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>`}
+    </div>`;
+  }).join('');
+
+  // Keep the now-playing row in view when the panel is open
+  const qp = document.getElementById('wv-queue-panel');
+  if (qp && qp.classList.contains('open')) {
+    const nowRow = list.querySelector('.wv-queue-row.now');
+    if (nowRow) nowRow.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+// Close the panel when clicking outside it (but not on the queue buttons)
+document.addEventListener('click', function (e) {
+  const qp = document.getElementById('wv-queue-panel');
+  if (!qp || !qp.classList.contains('open')) return;
+  // Clicking a row re-renders the list, detaching the clicked node before this
+  // bubbled handler runs — a detached target means the click was inside the panel.
+  if (!e.target.isConnected) return;
+  if (qp.contains(e.target)) return;
+  const btn = e.target.closest && e.target.closest('#player-queue-btn, #pfs-queue-btn');
+  if (btn) return;
+  qp.classList.remove('open');
+  const qbtn = document.getElementById('player-queue-btn');
+  if (qbtn) qbtn.classList.remove('player-icon-active');
+});
 
 let _shuffle = false;
 let _repeat = false;
@@ -384,7 +488,7 @@ function playTrack(track) {
 
   // A standalone play (not driven by the queue) clears any old queue so the OS
   // media controls don't skip back into a comp the user has moved on from.
-  if (!_fromQueue) { _pq = []; _pqIdx = -1; _pqOnChange = null; }
+  if (!_fromQueue) { _pq = []; _pqIdx = -1; _pqOnChange = null; _renderQueuePanel(); }
 
   currentTrack = { ...track, _savedTime: 0 };
   localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));

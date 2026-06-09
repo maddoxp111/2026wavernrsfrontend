@@ -147,14 +147,20 @@
 
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
+          <div id="ts-timeline-wrap" style="display:none;margin-bottom:18px;">
+            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Comments on the timeline — tap a dot to jump there</div>
+            <div id="ts-timeline" style="position:relative;height:22px;background:var(--hair);border-radius:11px;"></div>
+          </div>
           <div id="comment-form" style="margin-bottom:24px;">
             ${isLoggedIn() ? `
               <div style="display:flex;flex-direction:column;gap:10px;">
                 <textarea id="comment-input" class="wv-input" placeholder="Add a comment…"
                   style="min-height:72px;resize:vertical;line-height:1.5;"
                   onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment()"></textarea>
-                <div style="display:flex;justify-content:flex-end;">
-                  <button class="btn btn-primary btn-sm" onclick="postComment()">Post</button>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                  <button id="ts-toggle" onclick="toggleTsComment()" title="Pin this comment to the current moment in the track"
+                    style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>
+                  <button class="btn btn-primary btn-sm" onclick="postComment()" style="margin-left:auto;">Post</button>
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
@@ -221,6 +227,8 @@
       const comments = await api(`/tracks/${trackId}/comments`);
       const el = document.getElementById('comments-list');
       if (!el) return;
+      _tsComments = comments.filter(c => c.track_time != null);
+      renderTsTimeline();
       if (!comments.length) {
         el.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">No comments yet. Be the first!</div></div>`;
         return;
@@ -244,7 +252,7 @@
                 <span style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(username)}</span>
                 <span style="font-size:11.5px;color:var(--text-3);">${timeAgo(c.created_at)}</span>
               </div>
-              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${escHtml(c.content)}</div>
+              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="Jump to this moment" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
               <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
                 <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)"
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${upActive ? 'var(--brand)' : 'var(--hair-strong)'};background:${upActive ? 'var(--brand-bg)' : 'transparent'};color:${upActive ? 'var(--brand)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
@@ -309,16 +317,115 @@
     const content = input?.value.trim();
     if (!content) return;
     try {
+      const body = { content };
+      if (tsEnabled && tsCapturedTime != null) body.track_time = tsCapturedTime;
       await api(`/tracks/${trackId}/comments`, {
         method: 'POST',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(body),
       });
       input.value = '';
+      tsEnabled = false;
+      tsCapturedTime = null;
       loadComments();
     } catch (err) {
       alert(err.message);
     }
   }
+
+  // ── Timestamped comments ──────────────────────────────────────────────────
+  var _tsComments = [];
+  var tsEnabled = false;
+  var tsCapturedTime = null;
+
+  function fmtT(s) {
+    s = Math.max(0, Math.floor(Number(s) || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  // Is THIS track the one loaded in the global player?
+  function _isThisTrackLoaded() {
+    return typeof currentTrack !== 'undefined' && currentTrack && currentTrack.id === trackId &&
+      typeof audio !== 'undefined' && audio && audio.src;
+  }
+
+  function toggleTsComment() {
+    var chip = document.getElementById('ts-toggle');
+    if (!chip) return;
+    tsEnabled = !tsEnabled;
+    if (tsEnabled && _isThisTrackLoaded()) {
+      tsCapturedTime = Math.round(audio.currentTime * 10) / 10;
+    } else {
+      tsEnabled = false;
+      tsCapturedTime = null;
+    }
+    _updateTsChip();
+  }
+
+  function _updateTsChip() {
+    var chip = document.getElementById('ts-toggle');
+    if (!chip) return;
+    if (!_isThisTrackLoaded()) {
+      chip.style.display = 'none';
+      tsEnabled = false;
+      tsCapturedTime = null;
+      return;
+    }
+    chip.style.display = 'inline-flex';
+    if (tsEnabled && tsCapturedTime != null) {
+      chip.textContent = '⏱ at ' + fmtT(tsCapturedTime) + ' ✓';
+      chip.style.borderColor = 'var(--brand)';
+      chip.style.background = 'var(--brand-bg)';
+      chip.style.color = 'var(--brand)';
+    } else {
+      chip.textContent = '⏱ at ' + fmtT(audio.currentTime);
+      chip.style.borderColor = 'var(--hair-strong)';
+      chip.style.background = 'transparent';
+      chip.style.color = 'var(--text-3)';
+    }
+  }
+
+  function seekToComment(t) {
+    if (_isThisTrackLoaded()) {
+      audio.currentTime = t;
+      audio.play().catch(function(){});
+    } else {
+      playThisTrack();
+      var onCan = function() {
+        audio.removeEventListener('canplay', onCan);
+        audio.currentTime = t;
+      };
+      audio.addEventListener('canplay', onCan);
+    }
+  }
+
+  function renderTsTimeline() {
+    var wrap = document.getElementById('ts-timeline-wrap');
+    var bar = document.getElementById('ts-timeline');
+    if (!wrap || !bar) return;
+    // Need the track loaded so we know the duration to position markers.
+    var dur = _isThisTrackLoaded() && audio.duration && isFinite(audio.duration) ? audio.duration : 0;
+    if (!_tsComments.length || !dur) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    bar.innerHTML = _tsComments.map(function(c) {
+      var pct = Math.min(98, Math.max(1, (c.track_time / dur) * 100));
+      var who = (c.users && c.users.username) || 'unknown';
+      var snippet = String(c.content || '').slice(0, 60);
+      return '<button onclick="seekToComment(' + Number(c.track_time) + ')" ' +
+        'title="' + escHtml(who + ' @ ' + fmtT(c.track_time) + ': ' + snippet) + '" ' +
+        'style="position:absolute;left:' + pct + '%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:var(--brand);border:2px solid var(--page-bg-base,#000);cursor:pointer;padding:0;"></button>';
+    }).join('');
+  }
+
+  // Keep the chip label and timeline fresh while this page is open. The
+  // interval kills itself once the SPA swaps the page (elements disappear).
+  var _tsTimer = setInterval(function() {
+    var chip = document.getElementById('ts-toggle');
+    var wrap = document.getElementById('ts-timeline-wrap');
+    if (!chip && !wrap) { clearInterval(_tsTimer); return; }
+    _updateTsChip();
+    // Re-render markers when duration becomes known (first play)
+    if (wrap && wrap.style.display === 'none' && _tsComments.length) renderTsTimeline();
+  }, 500);
 
   async function loadMoreLikeThis() {
     if (!track) return;
