@@ -71,9 +71,9 @@
 
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Import from link</div>' +
-          '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public <b>untitled.stream</b> or <b>Samply</b> link — pulls every track and the cover art.</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public <b>untitled.stream</b>, <b>Samply</b>, or <b>mega.nz folder</b> link — pulls every track and the cover art. Mega folders: each audio file becomes a track (sorted by filename), and an image in the folder becomes the cover.</div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-            '<input id="arc-import-url" class="wv-input" placeholder="untitled.stream/library/project/… or samply.app/p/…" style="flex:1;min-width:220px;">' +
+            '<input id="arc-import-url" class="wv-input" placeholder="untitled.stream/library/project/…, samply.app/p/…, or mega.nz/folder/…" style="flex:1;min-width:220px;">' +
             '<button class="wv-pill brand" id="arc-import-btn" onclick="startArchiveImport()">Import</button>' +
           '</div>' +
           '<div id="arc-import-status" style="margin-top:10px;font-size:13px;display:none;"></div>' +
@@ -104,7 +104,7 @@
 
         '<div class="wv-card" style="padding:20px 24px;margin-top:20px;">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Bulk import</div>' +
-          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Queue several comps at once — each row needs an <b>untitled.stream</b> or <b>Samply</b> link, an artist name, and an era tag. Comps upload one at a time with a 5 second pause between each so Internet Archive doesn\'t rate-limit us.</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Queue several comps at once — each row needs an <b>untitled.stream</b>, <b>Samply</b>, or <b>mega.nz folder</b> link, an artist name, and an era tag. Comps upload one at a time with a 5 second pause between each so Internet Archive doesn\'t rate-limit us.</div>' +
           '<div id="arc-bulk-rows"></div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill" onclick="arcBulkAddRow()">+ Add row</button>' +
@@ -189,6 +189,15 @@
   function _arcImportEndpoint(url) {
     if (/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) return '/import/untitled';
     if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) return '/import/samply';
+    if (/^https?:\/\/mega(\.co)?\.nz\/(folder\/[\w-]+#[\w-]+|#F![\w-]+![\w-]+)\/?$/.test(url)) return '/import/mega';
+    return null;
+  }
+
+  // Specific error for unsupported link shapes (returns null when the generic
+  // "not a valid link" message is fine).
+  function _arcBadLinkMessage(url) {
+    if (/mega(\.co)?\.nz\/(file\/|#!)/.test(url)) return "Mega single-file links aren't supported — paste a folder link (the whole folder becomes one comp).";
+    if (/mega(\.co)?\.nz\/folder\/[\w-]+$/.test(url)) return 'That mega folder link is missing its key — copy the full link including the part after #.';
     return null;
   }
 
@@ -229,7 +238,7 @@
     if (common.error) { _arcStatus('arc-import-status', common.error, '#f87171'); return; }
     var url = ((document.getElementById('arc-import-url') || {}).value || '').trim();
     var endpoint = _arcImportEndpoint(url);
-    if (!endpoint) { _arcStatus('arc-import-status', 'That doesn\'t look like an untitled.stream or Samply link.', '#f87171'); return; }
+    if (!endpoint) { _arcStatus('arc-import-status', _arcBadLinkMessage(url) || 'That doesn\'t look like an untitled.stream, Samply, or mega.nz folder link.', '#f87171'); return; }
 
     var btn = document.getElementById('arc-import-btn');
     btn.disabled = true;
@@ -258,7 +267,7 @@
     row.style.cssText = 'padding:12px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:10px;margin-bottom:10px;';
     row.innerHTML =
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
-        '<input class="wv-input arc-bulk-link" placeholder="untitled.stream/library/project/… or samply.app/p/…" style="flex:2;min-width:220px;padding:8px 12px;">' +
+        '<input class="wv-input arc-bulk-link" placeholder="untitled.stream, samply.app, or mega.nz/folder link" style="flex:2;min-width:220px;padding:8px 12px;">' +
         '<input class="wv-input arc-bulk-artist" placeholder="Artist name" style="flex:1;min-width:130px;padding:8px 12px;">' +
         '<select class="wv-input arc-bulk-era" style="min-width:130px;padding:8px 12px;">' + _arcEraOptionsHTML() + '</select>' +
         '<button class="wv-icon-circle" title="Remove row" onclick="this.closest(\'.arc-bulk-row\').remove()" style="flex-shrink:0;">✕</button>' +
@@ -287,7 +296,7 @@
       url = url.trim(); artist = artist.trim();
       if (!url && !artist) return; // fully blank row — ignore
       var endpoint = _arcImportEndpoint(url);
-      if (!endpoint) { _arcBulkRowStatus(row, 'Not a valid untitled.stream or Samply link.', '#f87171'); hasInvalid = true; return; }
+      if (!endpoint) { _arcBulkRowStatus(row, _arcBadLinkMessage(url) || 'Not a valid untitled.stream, Samply, or mega.nz folder link.', '#f87171'); hasInvalid = true; return; }
       if (!artist) { _arcBulkRowStatus(row, 'Artist name is required.', '#f87171'); hasInvalid = true; return; }
       if (!era) { _arcBulkRowStatus(row, 'Pick an era tag.', '#f87171'); hasInvalid = true; return; }
       jobs.push({ row: row, url: url, artist: artist, era: era, endpoint: endpoint });
