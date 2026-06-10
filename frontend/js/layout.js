@@ -52,6 +52,7 @@
     if (p.endsWith('/community.html')) return 'community';
     if (p.endsWith('/adminpanel.html')) return 'admin';
     if (p.endsWith('/modpanel.html')) return 'modpanel';
+    if (p.endsWith('/archivepanel.html')) return 'archivepanel';
     return '';
   }
 
@@ -99,6 +100,9 @@
       html += navItem('settings', 'Settings', '/settings.html', 'settings');
       if (isLoggedIn && sessionStorage.getItem('wv_is_mod') === 'true') {
         html += navItem('modpanel', 'Mod Panel', '/modpanel.html', 'shield');
+      }
+      if (isLoggedIn && sessionStorage.getItem('wv_is_archiver') === 'true') {
+        html += navItem('archivepanel', 'Archive Panel', '/archivepanel.html', 'archive');
       }
       html += '</nav>';
     }
@@ -626,38 +630,39 @@
     }
   };
 
-  // The Mod Panel link must be re-earned from the server on every full load —
-  // never trust a persisted or hand-edited wv_is_mod flag for the first paint.
-  // _checkModStatus() below re-adds it once /mod/check confirms in this session.
+  // The Mod Panel / Archive Panel links must be re-earned from the server on every
+  // full load — never trust persisted flags for the first paint.
   sessionStorage.removeItem('wv_is_mod');
+  sessionStorage.removeItem('wv_is_archiver');
 
   initShell();
   // Load banners after shell exists
   window.renderSiteBanners();
 
-  // Check moderator status and inject Mod Panel link if applicable.
+  // Check moderator and archiver status, then inject nav links if applicable.
   // Runs AFTER initShell so the sidebar elements exist.
-  // No sessionStorage caching — always re-checks so role changes take effect immediately.
-  (function _checkModStatus() {
-    if (!localStorage.getItem('token')) { sessionStorage.removeItem('wv_is_mod'); return; }
+  (function _checkRoleStatus() {
+    var token = localStorage.getItem('token');
+    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); return; }
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
-    fetch(base + '/mod/check', {
-      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-    })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) {
-        var isMod = !!(d && d.is_mod);
-        var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
-        sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
-        // Rebuild sidebar whenever mod status is true or just changed
-        if (isMod || wasMod !== isMod) {
-          var sidebar = document.getElementById('wv-sidebar');
-          if (sidebar) sidebar.innerHTML = buildSidebarHTML();
-          var drawer = document.getElementById('wv-drawer');
-          if (drawer) drawer.innerHTML = buildSidebarHTML();
-        }
-      })
-      .catch(function() {});
+    var headers = { 'Authorization': 'Bearer ' + token };
+    Promise.all([
+      fetch(base + '/mod/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+      fetch(base + '/archive/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    ]).then(function(results) {
+      var isMod = !!(results[0] && results[0].is_mod);
+      var isArchiver = !!(results[1] && results[1].is_archiver);
+      var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
+      var wasArchiver = sessionStorage.getItem('wv_is_archiver') === 'true';
+      sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
+      sessionStorage.setItem('wv_is_archiver', isArchiver ? 'true' : 'false');
+      if (isMod || isArchiver || wasMod !== isMod || wasArchiver !== isArchiver) {
+        var sidebar = document.getElementById('wv-sidebar');
+        if (sidebar) sidebar.innerHTML = buildSidebarHTML();
+        var drawer = document.getElementById('wv-drawer');
+        if (drawer) drawer.innerHTML = buildSidebarHTML();
+      }
+    });
   })();
 })();
 

@@ -76,6 +76,7 @@
     <button class="wv-admin-tab"        id="atab-content"  onclick="showAdminTab('content')">Content</button>
     <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
     <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
+    <button class="wv-admin-tab"        id="atab-archivers"  onclick="showAdminTab('archivers')">Archivers</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
     <button class="wv-admin-tab"        id="atab-aivoices" onclick="showAdminTab('aivoices')">AI Voices</button>
     <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
@@ -210,6 +211,27 @@
 
       <!-- Current moderators list -->
       <div id="moderators-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ── Archivers tab ────────────────────────────────────── -->
+  <div id="tab-archivers" style="display:none;">
+    <div style="max-width:640px;">
+      <h2 style="font-size:18px;font-weight:700;margin:0 0 8px;">Manage Archivers</h2>
+      <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.55;">Archivers can upload archive comps via the Archive Panel. They do not have access to mod tools and do not need to enter a password to access the panel.</p>
+
+      <!-- Add archiver form -->
+      <div style="margin-bottom:24px;padding:18px 20px;background:var(--glass-small-bg);border:1px solid var(--hair);border-radius:16px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Add archiver by username</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="archiver-username-input" class="wv-input" placeholder="Username..." style="flex:1;min-width:180px;padding:9px 14px;">
+          <button class="btn btn-primary" onclick="lookupAndAddArchiver()">Add Archiver</button>
+        </div>
+        <div id="archiver-lookup-result" style="margin-top:8px;font-size:13px;"></div>
+      </div>
+
+      <!-- Current archivers list -->
+      <div id="archivers-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -411,7 +433,7 @@
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','tracker','aivoices','badges'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','archivers','tracker','aivoices','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -423,6 +445,7 @@
     if (tab === 'content')    loadContent();
     if (tab === 'lockdown')   loadLockdown();
     if (tab === 'moderators') loadModerators();
+    if (tab === 'archivers')  loadArchivers();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'aivoices')   loadRvcModels();
     if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
@@ -1147,6 +1170,79 @@
     try {
       await adminApi('/admin/moderators/' + userId, { method: 'DELETE' });
       loadModerators();
+    } catch (err) { showMsg('admin-alert', err.message); }
+  }
+
+  // ── Archivers ─────────────────────────────────────────────────
+
+  async function loadArchivers() {
+    var el = document.getElementById('archivers-list');
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var archivers = await adminApi('/admin/archivers');
+      if (!_allAdminUsers.length) {
+        var users = await adminApi('/admin/users').catch(function() { return []; });
+        _allAdminUsers = users || [];
+      }
+      if (!archivers.length) {
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No archivers yet.</div>';
+        return;
+      }
+      el.innerHTML = '<table class="admin-table">' +
+        '<thead><tr><th>Username</th><th>Added</th><th>Actions</th></tr></thead>' +
+        '<tbody>' + archivers.map(function(a) {
+          var username = (a.users && a.users.username) ? escHtml(a.users.username) : '<em style="color:var(--text-3);">unknown</em>';
+          var added = a.created_at ? new Date(a.created_at).toLocaleDateString() : '—';
+          return '<tr>' +
+            '<td style="font-weight:600;">' + username + '</td>' +
+            '<td style="color:var(--text-2);">' + added + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="removeArchiver(\'' + (a.users && a.users.id ? a.users.id : a.user_id) + '\')">Remove</button></td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
+    } catch (err) {
+      el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
+    }
+  }
+
+  async function lookupAndAddArchiver() {
+    var inputEl = document.getElementById('archiver-username-input');
+    var resultEl = document.getElementById('archiver-lookup-result');
+    var username = inputEl ? inputEl.value.trim() : '';
+    if (!username) { resultEl.innerHTML = '<span style="color:var(--red);">Enter a username</span>'; return; }
+
+    if (!_allAdminUsers.length) {
+      try {
+        _allAdminUsers = await adminApi('/admin/users');
+      } catch (err) {
+        resultEl.innerHTML = '<span style="color:var(--red);">Could not load users: ' + escHtml(err.message) + '</span>';
+        return;
+      }
+    }
+
+    var match = _allAdminUsers.find(function(u) { return u.username && u.username.toLowerCase() === username.toLowerCase(); });
+    if (!match) {
+      resultEl.innerHTML = '<span style="color:var(--red);">User "' + escHtml(username) + '" not found.</span>';
+      return;
+    }
+
+    resultEl.innerHTML = '<span style="color:var(--text-2);">Found: <strong>' + escHtml(match.username) + '</strong> — adding…</span>';
+
+    try {
+      await adminApi('/admin/archivers', { method: 'POST', body: JSON.stringify({ user_id: match.id }) });
+      if (inputEl) inputEl.value = '';
+      resultEl.innerHTML = '<span style="color:#4ade80;">&#x2713; ' + escHtml(match.username) + ' added as archiver.</span>';
+      setTimeout(function() { resultEl.innerHTML = ''; }, 3000);
+      loadArchivers();
+    } catch (err) {
+      resultEl.innerHTML = '<span style="color:var(--red);">Failed: ' + escHtml(err.message) + '</span>';
+    }
+  }
+
+  async function removeArchiver(userId) {
+    if (!await adminConfirm('Remove archiver?', 'This user will lose archiver permissions immediately.', 'Remove')) return;
+    try {
+      await adminApi('/admin/archivers/' + userId, { method: 'DELETE' });
+      loadArchivers();
     } catch (err) { showMsg('admin-alert', err.message); }
   }
 
