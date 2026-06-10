@@ -71,8 +71,9 @@
       var tracks = results.tracks || [];
       var artists = results.artists || [];
       var albums = results.albums || [];
+      var archived = results.archived || [];
 
-      if (!tracks.length && !artists.length && !albums.length) {
+      if (!tracks.length && !artists.length && !albums.length && !archived.length) {
         el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No results for "' + escHtml(q) + '"</div><div class="empty-desc">Try a different search term.</div></div>';
         return;
       }
@@ -149,6 +150,26 @@
               '<button onclick="event.stopPropagation();playThis(' + td + ')" class="wv-icon-circle" title="Play" style="flex-shrink:0;">' +
                 '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
               '</button>' +
+            '</div>';
+          }).join('') +
+          '</div></div>';
+      }
+
+      // Archived comps — preserved by the team, surfaced only here and the Archive page
+      if (archived.length) {
+        html += '<div class="search-results-section">' +
+          '<div class="search-results-title">Archived</div>' +
+          '<div class="scroll-row">' +
+          archived.map(function(a) {
+            var bg = coverGradient(a.title || '');
+            return '<div class="scroll-card" onclick="navigate(\'/album.html?id=' + a.id + '\')" style="flex-shrink:0;width:140px;">' +
+              '<div class="scroll-card-cover" style="background:' + bg + ';position:relative;">' +
+                (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
+                '<div style="position:absolute;top:6px;left:6px;padding:2px 7px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:8.5px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>' +
+                '<div class="scroll-card-overlay"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></div>' +
+              '</div>' +
+              '<div class="scroll-card-title">' + escHtml(a.title) + '</div>' +
+              '<div class="scroll-card-sub">' + escHtml(a.archive_artist_name || 'Unknown') + '</div>' +
             '</div>';
           }).join('') +
           '</div></div>';
