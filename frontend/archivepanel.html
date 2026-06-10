@@ -101,9 +101,23 @@
           '<button class="wv-pill brand" id="arc-upload-btn" onclick="startArchiveUpload()">Upload Archive Comp</button>' +
           '<div id="arc-upload-status" style="margin-top:12px;font-size:13px;"></div>' +
         '</div>' +
+
+        '<div class="wv-card" style="padding:20px 24px;margin-top:20px;">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Bulk import</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Queue several comps at once — each row needs an <b>untitled.stream</b> or <b>Samply</b> link, an artist name, and an era tag. Comps upload one at a time with a 5 second pause between each so Internet Archive doesn\'t rate-limit us.</div>' +
+          '<div id="arc-bulk-rows"></div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">' +
+            '<button class="wv-pill" onclick="arcBulkAddRow()">+ Add row</button>' +
+            '<button class="wv-pill brand" id="arc-bulk-btn" onclick="startArchiveBulk()">Upload All</button>' +
+          '</div>' +
+          '<div id="arc-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
+        '</div>' +
       '</div>';
 
     arcLoadEraTags();
+    arcBulkAddRow();
+    arcBulkAddRow();
+    arcBulkAddRow();
   }
 
   function escHtml(s) {
@@ -111,13 +125,28 @@
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  var _arcEraTags = [];
+
+  function _arcEraOptionsHTML() {
+    return '<option value="">Era tag…</option>' +
+      _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
+  }
+
   async function arcLoadEraTags() {
     try {
       var tags = await api('/eratags');
+      _arcEraTags = tags || [];
       var sel = document.getElementById('arc-era');
-      if (!sel) return;
-      sel.innerHTML = '<option value="">Select era tag…</option>' +
-        tags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
+      if (sel) {
+        sel.innerHTML = '<option value="">Select era tag…</option>' +
+          _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
+      }
+      // Refresh era selects on any bulk rows created before the tags arrived
+      document.querySelectorAll('.arc-bulk-era').forEach(function(s) {
+        var cur = s.value;
+        s.innerHTML = _arcEraOptionsHTML();
+        s.value = cur;
+      });
     } catch (_) {}
   }
 
@@ -157,72 +186,148 @@
     return { artist: artist.trim(), era: era };
   }
 
+  function _arcImportEndpoint(url) {
+    if (/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) return '/import/untitled';
+    if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) return '/import/samply';
+    return null;
+  }
+
+  // Follow an import job's SSE stream. Resolves with the `done` event,
+  // rejects on an `error` event or a dropped connection.
+  async function _arcStreamJob(jobId, onStatus) {
+    var token = localStorage.getItem('token');
+    var siteAccess = localStorage.getItem('wv_site_access');
+    var streamHeaders = { 'Authorization': 'Bearer ' + token };
+    if (siteAccess) streamHeaders['X-Site-Access'] = siteAccess;
+    var resp = await fetch(API_BASE + '/import/jobs/' + jobId + '/events', { headers: streamHeaders });
+    if (!resp.ok || !resp.body) throw new Error('stream failed');
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var buf = '';
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      buf += decoder.decode(chunk.value, { stream: true });
+      var parts = buf.split('\n\n');
+      buf = parts.pop();
+      for (var i = 0; i < parts.length; i++) {
+        var line = parts[i].trim();
+        if (!line.startsWith('data:')) continue;
+        var evt;
+        try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+        if (evt.type === 'status') onStatus(evt.message);
+        else if (evt.type === 'track') onStatus('Importing track ' + evt.i + ' of ' + evt.n + ': ' + evt.title);
+        else if (evt.type === 'done') return evt;
+        else if (evt.type === 'error') throw new Error(evt.message);
+      }
+    }
+    throw new Error('Connection closed before the import finished');
+  }
+
   async function startArchiveImport() {
     var common = _arcValidateCommon();
     if (common.error) { _arcStatus('arc-import-status', common.error, '#f87171'); return; }
     var url = ((document.getElementById('arc-import-url') || {}).value || '').trim();
-    var endpoint = null;
-    if (/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) endpoint = '/import/untitled';
-    else if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) endpoint = '/import/samply';
+    var endpoint = _arcImportEndpoint(url);
     if (!endpoint) { _arcStatus('arc-import-status', 'That doesn\'t look like an untitled.stream or Samply link.', '#f87171'); return; }
 
     var btn = document.getElementById('arc-import-btn');
     btn.disabled = true;
     _arcStatus('arc-import-status', 'Starting archive import…');
-    var jobId;
     try {
       var resp = await api(endpoint, { method: 'POST', body: JSON.stringify({
         url: url, era_tag_id: common.era, archive_artist_name: common.artist,
       }) });
-      jobId = resp.jobId;
+      var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcStatus('arc-import-status', msg); });
+      var msg = 'Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
+      if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
+      _arcStatus('arc-import-status', msg + ' Opening…', '#4ade80');
+      setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
     } catch (err) {
-      _arcStatus('arc-import-status', 'Could not start import: ' + err.message, '#f87171');
+      _arcStatus('arc-import-status', 'Error: ' + err.message, '#f87171');
       btn.disabled = false;
-      return;
+    }
+  }
+
+  // ── Bulk import ─────────────────────────────────────────────────────────────
+  function arcBulkAddRow() {
+    var wrap = document.getElementById('arc-bulk-rows');
+    if (!wrap) return;
+    var row = document.createElement('div');
+    row.className = 'arc-bulk-row';
+    row.style.cssText = 'padding:12px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:10px;margin-bottom:10px;';
+    row.innerHTML =
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+        '<input class="wv-input arc-bulk-link" placeholder="untitled.stream/library/project/… or samply.app/p/…" style="flex:2;min-width:220px;padding:8px 12px;">' +
+        '<input class="wv-input arc-bulk-artist" placeholder="Artist name" style="flex:1;min-width:130px;padding:8px 12px;">' +
+        '<select class="wv-input arc-bulk-era" style="min-width:130px;padding:8px 12px;">' + _arcEraOptionsHTML() + '</select>' +
+        '<button class="wv-icon-circle" title="Remove row" onclick="this.closest(\'.arc-bulk-row\').remove()" style="flex-shrink:0;">✕</button>' +
+      '</div>' +
+      '<div class="arc-bulk-status" style="margin-top:7px;font-size:12.5px;color:var(--text-3);display:none;"></div>';
+    wrap.appendChild(row);
+  }
+
+  function _arcBulkRowStatus(row, msg, color) {
+    var el = row.querySelector('.arc-bulk-status');
+    if (!el) return;
+    el.style.display = '';
+    el.style.color = color || 'var(--text-3)';
+    el.textContent = msg;
+  }
+
+  async function startArchiveBulk() {
+    var rows = Array.from(document.querySelectorAll('.arc-bulk-row'));
+    var jobs = [];
+    var hasInvalid = false;
+
+    rows.forEach(function(row) {
+      var url = (row.querySelector('.arc-bulk-link') || {}).value || '';
+      var artist = (row.querySelector('.arc-bulk-artist') || {}).value || '';
+      var era = (row.querySelector('.arc-bulk-era') || {}).value || '';
+      url = url.trim(); artist = artist.trim();
+      if (!url && !artist) return; // fully blank row — ignore
+      var endpoint = _arcImportEndpoint(url);
+      if (!endpoint) { _arcBulkRowStatus(row, 'Not a valid untitled.stream or Samply link.', '#f87171'); hasInvalid = true; return; }
+      if (!artist) { _arcBulkRowStatus(row, 'Artist name is required.', '#f87171'); hasInvalid = true; return; }
+      if (!era) { _arcBulkRowStatus(row, 'Pick an era tag.', '#f87171'); hasInvalid = true; return; }
+      jobs.push({ row: row, url: url, artist: artist, era: era, endpoint: endpoint });
+    });
+
+    if (hasInvalid) { _arcStatus('arc-bulk-status', 'Fix the highlighted rows, then press Upload All again.', '#f87171'); return; }
+    if (!jobs.length) { _arcStatus('arc-bulk-status', 'Add at least one comp link.', '#f87171'); return; }
+
+    var btn = document.getElementById('arc-bulk-btn');
+    btn.disabled = true;
+    var done = 0, failed = 0;
+
+    for (var i = 0; i < jobs.length; i++) {
+      // 5s gap between comps so Internet Archive doesn't rate-limit us
+      if (i > 0) {
+        _arcStatus('arc-bulk-status', 'Waiting 5 seconds before the next comp…');
+        await new Promise(function(r) { setTimeout(r, 5000); });
+      }
+      var j = jobs[i];
+      _arcStatus('arc-bulk-status', 'Uploading comp ' + (i + 1) + ' of ' + jobs.length + '…');
+      _arcBulkRowStatus(j.row, 'Starting import…');
+      try {
+        var resp = await api(j.endpoint, { method: 'POST', body: JSON.stringify({
+          url: j.url, era_tag_id: j.era, archive_artist_name: j.artist,
+        }) });
+        var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcBulkRowStatus(j.row, msg); });
+        var msg = '✓ Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
+        if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
+        _arcBulkRowStatus(j.row, msg, '#4ade80');
+        done++;
+      } catch (err) {
+        _arcBulkRowStatus(j.row, 'Failed: ' + (err.message || 'Import error'), '#f87171');
+        failed++;
+      }
     }
 
-    try {
-      var token = localStorage.getItem('token');
-      var siteAccess = localStorage.getItem('wv_site_access');
-      var streamHeaders = { 'Authorization': 'Bearer ' + token };
-      if (siteAccess) streamHeaders['X-Site-Access'] = siteAccess;
-      var resp2 = await fetch(API_BASE + '/import/jobs/' + jobId + '/events', { headers: streamHeaders });
-      if (!resp2.ok || !resp2.body) throw new Error('stream failed');
-      var reader = resp2.body.getReader();
-      var decoder = new TextDecoder();
-      var buf = '';
-      while (true) {
-        var chunk = await reader.read();
-        if (chunk.done) break;
-        buf += decoder.decode(chunk.value, { stream: true });
-        var parts = buf.split('\n\n');
-        buf = parts.pop();
-        for (var i = 0; i < parts.length; i++) {
-          var line = parts[i].trim();
-          if (!line.startsWith('data:')) continue;
-          var evt;
-          try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
-          if (evt.type === 'status') _arcStatus('arc-import-status', evt.message);
-          else if (evt.type === 'track') _arcStatus('arc-import-status', 'Importing track ' + evt.i + ' of ' + evt.n + ': ' + evt.title);
-          else if (evt.type === 'done') {
-            var msg = 'Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
-            if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
-            _arcStatus('arc-import-status', msg + ' Opening…', '#4ade80');
-            setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
-            return;
-          } else if (evt.type === 'error') {
-            _arcStatus('arc-import-status', 'Error: ' + evt.message, '#f87171');
-            btn.disabled = false;
-            return;
-          }
-        }
-      }
-      _arcStatus('arc-import-status', 'Connection closed.', '#f87171');
-      btn.disabled = false;
-    } catch (err) {
-      _arcStatus('arc-import-status', 'Lost connection to import: ' + err.message, '#f87171');
-      btn.disabled = false;
-    }
+    _arcStatus('arc-bulk-status',
+      'Done — ' + done + ' comp' + (done === 1 ? '' : 's') + ' archived' + (failed ? ', ' + failed + ' failed.' : '.'),
+      failed ? '#f87171' : '#4ade80');
+    btn.disabled = false;
   }
 
   async function startArchiveUpload() {
