@@ -1,34 +1,63 @@
 import SwiftUI
 
-// Dark look matching the site's liquid-glass theme.
+// ── Palette (dark base that makes glass pop) ─────────────────────────────────
 enum Theme {
-    static let bg = Color(red: 0.05, green: 0.05, blue: 0.07)
-    static let card = Color.white.opacity(0.06)
+    static let bg = Color(red: 0.05, green: 0.05, blue: 0.08)
+    // iOS 26 glass replaces these at runtime; kept as fallbacks for older builds.
+    static let card = Color.white.opacity(0.07)
     static let hairline = Color.white.opacity(0.10)
     static let text = Color.white
     static let text2 = Color.white.opacity(0.65)
     static let text3 = Color.white.opacity(0.40)
-    static let accent = Color(red: 0.95, green: 0.35, blue: 0.62) // site pink
+    static let accent = Color(red: 0.95, green: 0.35, blue: 0.62)
 }
 
-struct CardBackground: ViewModifier {
+// ── Liquid Glass card modifier ────────────────────────────────────────────────
+// On iOS 26+ uses the native .glassEffect(). On older builds falls back to the
+// manual frosted-card look so the project still compiles on Xcode < 26.
+struct GlassCard: ViewModifier {
+    var corner: CGFloat = 14
     func body(content: Content) -> some View {
-        content
-            .background(Theme.card)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Theme.hairline, lineWidth: 1)
-            )
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: corner, style: .continuous))
+        } else {
+            content
+                .background(Theme.card)
+                .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .stroke(Theme.hairline, lineWidth: 1)
+                )
+        }
     }
 }
 
 extension View {
-    func wvCard() -> some View { modifier(CardBackground()) }
+    func wvCard(corner: CGFloat = 14) -> some View { modifier(GlassCard(corner: corner)) }
 }
 
-// Square cover artwork that falls back to a placeholder, and prefers a local
-// downloaded cover when one exists.
+// ── App background gradient ───────────────────────────────────────────────────
+// A rich dark gradient gives glass something interesting to refract.
+struct AppBackground: View {
+    var body: some View {
+        ZStack {
+            Theme.bg
+            LinearGradient(
+                stops: [
+                    .init(color: Color(red: 0.25, green: 0.05, blue: 0.35).opacity(0.55), location: 0),
+                    .init(color: Color.clear, location: 0.5),
+                    .init(color: Color(red: 0.05, green: 0.10, blue: 0.30).opacity(0.45), location: 1),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        .ignoresSafeArea()
+    }
+}
+
+// ── Square cover art ──────────────────────────────────────────────────────────
 struct CoverArt: View {
     let trackId: String?
     let remoteUrl: String?
@@ -40,11 +69,8 @@ struct CoverArt: View {
                 Image(uiImage: img).resizable().scaledToFill()
             } else if let s = remoteUrl, let url = URL(string: s) {
                 AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        placeholder
-                    }
+                    if let image = phase.image { image.resizable().scaledToFill() }
+                    else { placeholder }
                 }
             } else {
                 placeholder
@@ -56,9 +82,35 @@ struct CoverArt: View {
 
     private var placeholder: some View {
         ZStack {
-            Theme.card
-            Image(systemName: "music.note")
-                .foregroundColor(Theme.text3)
+            LinearGradient(colors: [Color.white.opacity(0.07), Color.white.opacity(0.03)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Image(systemName: "music.note").foregroundColor(Theme.text3)
+        }
+    }
+}
+
+// ── Round avatar (for artist profile images) ──────────────────────────────────
+struct AvatarView: View {
+    let url: String?
+    var size: CGFloat = 44
+
+    var body: some View {
+        Group {
+            if let s = url, let u = URL(string: s) {
+                AsyncImage(url: u) { phase in
+                    if let img = phase.image { img.resizable().scaledToFill() }
+                    else { placeholder }
+                }
+            } else { placeholder }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+
+    private var placeholder: some View {
+        ZStack {
+            Circle().fill(Theme.accent.opacity(0.25))
+            Image(systemName: "person.fill").foregroundColor(Theme.accent)
         }
     }
 }

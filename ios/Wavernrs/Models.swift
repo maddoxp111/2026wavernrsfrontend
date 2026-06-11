@@ -15,6 +15,29 @@ struct Artist: Codable, Identifiable, Hashable {
     }
 }
 
+struct ArtistFull: Codable, Identifiable, Hashable {
+    let id: String
+    let displayName: String?
+    let bio: String?
+    let profileImageUrl: String?
+    let bannerUrl: String?
+    let location: String?
+    let website: String?
+    let trackCount: Int?
+    let followerCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, bio, location, website
+        case displayName = "display_name"
+        case profileImageUrl = "profile_image_url"
+        case bannerUrl = "banner_url"
+        case trackCount = "track_count"
+        case followerCount = "follower_count"
+    }
+
+    var name: String { displayName ?? "Unknown" }
+}
+
 struct Track: Codable, Identifiable, Hashable {
     let id: String
     let title: String?
@@ -157,6 +180,7 @@ struct ChartsResponse: Codable {
 
 struct SearchResponse: Codable {
     let tracks: [Track]?
+    let artists: [Artist]?
     let albums: [Album]?
     let archived: [Album]?
 }

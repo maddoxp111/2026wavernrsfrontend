@@ -1,6 +1,15 @@
 import SwiftUI
 
-// ── Home: recent feed (mirrors the site's Discover "recent") ────────────────
+// Navigation values used across all browse views:
+//   String           → album ID (opens AlbumView)
+//   "artist:<id>"    → artist ID (opens ArtistProfileView)
+// Using a wrapper enum keeps NavigationStack from conflating the two.
+enum NavTarget: Hashable {
+    case album(String)
+    case artist(String)
+}
+
+// ── Home: recent feed ────────────────────────────────────────────────────────
 
 struct HomeView: View {
     @State private var feed: [FeedItem] = []
@@ -31,7 +40,8 @@ struct HomeView: View {
                                         MediaTile(title: track.title ?? "Untitled",
                                                   subtitle: track.artistName,
                                                   coverUrl: track.coverUrl,
-                                                  trackId: track.id)
+                                                  trackId: track.id,
+                                                  artistId: track.artists?.id)
                                             .frame(width: 140)
                                     }
                                 }
@@ -45,11 +55,12 @@ struct HomeView: View {
                         ForEach(feed) { item in
                             switch item {
                             case .album(let album):
-                                NavigationLink(value: album.id) {
+                                NavigationLink(value: NavTarget.album(album.id)) {
                                     MediaTile(title: album.title ?? "Untitled",
                                               subtitle: album.artistName,
                                               coverUrl: album.coverUrl,
-                                              trackId: nil)
+                                              trackId: nil,
+                                              artistId: album.artists?.id)
                                 }
                             case .track(let track):
                                 Button {
@@ -58,7 +69,8 @@ struct HomeView: View {
                                     MediaTile(title: track.title ?? "Untitled",
                                               subtitle: track.artistName,
                                               coverUrl: track.coverUrl,
-                                              trackId: track.id)
+                                              trackId: track.id,
+                                              artistId: track.artists?.id)
                                 }
                             }
                         }
@@ -68,24 +80,20 @@ struct HomeView: View {
                 .padding(.vertical, 14)
             }
         }
-        .background(Theme.bg)
-        .navigationDestination(for: String.self) { albumId in
-            AlbumView(albumId: albumId)
+        .background(AppBackground())
+        .navigationDestination(for: NavTarget.self) { target in
+            navDestination(target)
         }
         .task { await load() }
         .refreshable { await load() }
     }
 
     private func load() async {
-        loading = feed.isEmpty
-        error = nil
+        loading = feed.isEmpty; error = nil
         do {
             let d = try await API.discover()
-            feed = d.recent
-            trending = d.trending ?? []
-        } catch {
-            self.error = "Couldn't load — check your connection. Your Downloads still work offline."
-        }
+            feed = d.recent; trending = d.trending ?? []
+        } catch { self.error = "Couldn't load — Downloads still work offline." }
         loading = false
     }
 }
@@ -103,15 +111,13 @@ struct ChartsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 Picker("", selection: $universe) {
                     ForEach(Universe.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
+                }.pickerStyle(.segmented)
                 Picker("", selection: $window) {
                     ForEach(Window.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
+                }.pickerStyle(.segmented)
 
                 if let error {
                     ErrorRetryView(message: error) { await load() }
@@ -125,10 +131,8 @@ struct ChartsView: View {
             }
             .padding(16)
         }
-        .background(Theme.bg)
-        .navigationDestination(for: String.self) { albumId in
-            AlbumView(albumId: albumId)
-        }
+        .background(AppBackground())
+        .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
         .task { await load() }
     }
 
@@ -155,14 +159,14 @@ struct ChartRow: View {
     var body: some View {
         Group {
             if isAlbum {
-                NavigationLink(value: item.id) { rowBody }
+                NavigationLink(value: NavTarget.album(item.id)) { row }
             } else {
-                Button { Task { await playTrack() } } label: { rowBody }
+                Button { Task { await playTrack() } } label: { row }
             }
         }
     }
 
-    private var rowBody: some View {
+    private var row: some View {
         HStack(spacing: 12) {
             Text("\(rank)")
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
@@ -173,17 +177,14 @@ struct ChartRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title ?? "Untitled")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Theme.text)
-                    .lineLimit(1)
+                    .foregroundColor(Theme.text).lineLimit(1)
                 Text(item.artistName)
                     .font(.system(size: 12))
-                    .foregroundColor(Theme.text2)
-                    .lineLimit(1)
+                    .foregroundColor(Theme.text2).lineLimit(1)
             }
             Spacer()
             Text("\(item.playCount ?? 0) plays")
-                .font(.system(size: 11))
-                .foregroundColor(Theme.text3)
+                .font(.system(size: 11)).foregroundColor(Theme.text3)
         }
         .padding(10)
         .wvCard()
@@ -208,8 +209,7 @@ struct ArchiveView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Comps preserved by the wavernrs and yzyplayer's team — not by artists on the site, but too good to be lost.")
-                    .font(.system(size: 12.5))
-                    .foregroundColor(Theme.text2)
+                    .font(.system(size: 12.5)).foregroundColor(Theme.text2)
                     .padding(.horizontal, 16)
 
                 if loading {
@@ -219,11 +219,11 @@ struct ArchiveView: View {
                 } else {
                     LazyVGrid(columns: cols, spacing: 14) {
                         ForEach(albums) { album in
-                            NavigationLink(value: album.id) {
+                            NavigationLink(value: NavTarget.album(album.id)) {
                                 MediaTile(title: album.title ?? "Untitled",
                                           subtitle: album.artistName,
                                           coverUrl: album.coverUrl,
-                                          trackId: nil)
+                                          trackId: nil, artistId: nil)
                             }
                         }
                     }
@@ -232,17 +232,14 @@ struct ArchiveView: View {
             }
             .padding(.vertical, 14)
         }
-        .background(Theme.bg)
-        .navigationDestination(for: String.self) { albumId in
-            AlbumView(albumId: albumId)
-        }
+        .background(AppBackground())
+        .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
         .task { await load() }
         .refreshable { await load() }
     }
 
     private func load() async {
-        loading = albums.isEmpty
-        error = nil
+        loading = albums.isEmpty; error = nil
         do { albums = try await API.archive() }
         catch { self.error = "Couldn't load the archive." }
         loading = false
@@ -267,13 +264,12 @@ struct SearchView: View {
                     if let tracks = r.tracks, !tracks.isEmpty {
                         SectionHeader("Tracks")
                         ForEach(tracks) { track in
-                            Button {
-                                player.play(queue: [PlayableTrack(track: track)])
-                            } label: {
+                            Button { player.play(queue: [PlayableTrack(track: track)]) } label: {
                                 TrackRow(title: track.title ?? "Untitled",
                                          subtitle: track.artistName,
                                          coverUrl: track.coverUrl,
-                                         trackId: track.id)
+                                         trackId: track.id,
+                                         artistId: track.artists?.id)
                             }
                             .padding(.horizontal, 16)
                         }
@@ -286,38 +282,43 @@ struct SearchView: View {
                         SectionHeader("Archived")
                         albumRows(archived)
                     }
-                    if (r.tracks ?? []).isEmpty && (r.albums ?? []).isEmpty && (r.archived ?? []).isEmpty {
-                        Text("No results for “\(query)”")
+                    // Artists from search
+                    if let artists = r.artists, !artists.isEmpty {
+                        SectionHeader("Artists")
+                        ForEach(artists) { artist in
+                            NavigationLink(value: NavTarget.artist(artist.id)) {
+                                ArtistRow(artist: artist)
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                    }
+                    if (r.tracks ?? []).isEmpty && (r.albums ?? []).isEmpty &&
+                       (r.archived ?? []).isEmpty && (r.artists ?? []).isEmpty {
+                        Text("No results for "\(query)"")
                             .foregroundColor(Theme.text3)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 40)
+                            .frame(maxWidth: .infinity).padding(.top, 40)
                     }
                 } else {
-                    Text("Search tracks, comps, and the archive")
+                    Text("Search tracks, comps, artists, and the archive")
                         .foregroundColor(Theme.text3)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 60)
+                        .frame(maxWidth: .infinity).padding(.top, 60)
                 }
             }
             .padding(.vertical, 14)
         }
-        .background(Theme.bg)
+        .background(AppBackground())
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
-        .navigationDestination(for: String.self) { albumId in
-            AlbumView(albumId: albumId)
-        }
+        .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
         .onChange(of: query) { q in
             searchTask?.cancel()
             guard q.trimmingCharacters(in: .whitespaces).count >= 2 else {
                 results = nil; searching = false; return
             }
             searchTask = Task {
-                try? await Task.sleep(nanoseconds: 350_000_000) // debounce
+                try? await Task.sleep(nanoseconds: 350_000_000)
                 guard !Task.isCancelled else { return }
                 searching = results == nil
-                if let r = try? await API.search(q), !Task.isCancelled {
-                    results = r
-                }
+                if let r = try? await API.search(q), !Task.isCancelled { results = r }
                 searching = false
             }
         }
@@ -326,57 +327,66 @@ struct SearchView: View {
     @ViewBuilder
     private func albumRows(_ albums: [Album]) -> some View {
         ForEach(albums) { album in
-            NavigationLink(value: album.id) {
+            NavigationLink(value: NavTarget.album(album.id)) {
                 TrackRow(title: album.title ?? "Untitled",
                          subtitle: album.artistName,
                          coverUrl: album.coverUrl,
-                         trackId: nil)
+                         trackId: nil, artistId: album.artists?.id)
             }
             .padding(.horizontal, 16)
         }
     }
 }
 
-// ── Shared bits ──────────────────────────────────────────────────────────────
+// ── Shared components ────────────────────────────────────────────────────────
 
 struct SectionHeader: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .bold))
-            .textCase(.uppercase)
-            .foregroundColor(Theme.text3)
-            .padding(.horizontal, 16)
+            .font(.system(size: 11.5, weight: .bold)).textCase(.uppercase)
+            .foregroundColor(Theme.text3).padding(.horizontal, 16)
     }
 }
 
+// Tile used in grids — cover + title + tappable artist name
 struct MediaTile: View {
     let title: String
     let subtitle: String
     let coverUrl: String?
     let trackId: String?
+    let artistId: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             CoverArt(trackId: trackId, remoteUrl: coverUrl, corner: 12)
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Theme.text)
-                .lineLimit(1)
-            Text(subtitle)
-                .font(.system(size: 11.5))
-                .foregroundColor(Theme.text2)
-                .lineLimit(1)
+                .foregroundColor(Theme.text).lineLimit(1)
+            if let artistId {
+                NavigationLink(value: NavTarget.artist(artistId)) {
+                    Text(subtitle)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(Theme.accent).lineLimit(1)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text(subtitle)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(Theme.text2).lineLimit(1)
+            }
         }
     }
 }
 
+// Row used in lists — cover + title/subtitle + tappable artist
 struct TrackRow: View {
     let title: String
     let subtitle: String
     let coverUrl: String?
     let trackId: String?
+    let artistId: String?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -385,12 +395,19 @@ struct TrackRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Theme.text)
-                    .lineLimit(1)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(Theme.text2)
-                    .lineLimit(1)
+                    .foregroundColor(Theme.text).lineLimit(1)
+                if let artistId {
+                    NavigationLink(value: NavTarget.artist(artistId)) {
+                        Text(subtitle)
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.accent).lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.text2).lineLimit(1)
+                }
             }
             Spacer()
         }
@@ -402,18 +419,26 @@ struct TrackRow: View {
 struct ErrorRetryView: View {
     let message: String
     let retry: () async -> Void
-
     var body: some View {
         VStack(spacing: 12) {
             Text(message)
-                .font(.system(size: 13.5))
-                .foregroundColor(Theme.text2)
+                .font(.system(size: 13.5)).foregroundColor(Theme.text2)
                 .multilineTextAlignment(.center)
-            Button("Retry") { Task { await retry() } }
-                .buttonStyle(.bordered)
+            Button("Retry") { Task { await retry() } }.buttonStyle(.bordered)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 60)
-        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity).padding(.top, 60).padding(.horizontal, 24)
+    }
+}
+
+// ── Shared NavigationStack destination handler ────────────────────────────────
+// Every top-level view registers the same .navigationDestination; this helper
+// keeps them consistent.
+@ViewBuilder
+func navDestination(_ target: NavTarget) -> some View {
+    switch target {
+    case .album(let id):
+        AlbumView(albumId: id)
+    case .artist(let id):
+        ArtistProfileView(artistId: id)
     }
 }

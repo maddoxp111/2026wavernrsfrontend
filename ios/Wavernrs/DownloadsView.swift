@@ -62,7 +62,8 @@ struct DownloadsView: View {
                                     TrackRow(title: item.title,
                                              subtitle: item.artistName,
                                              coverUrl: item.remoteCoverUrl,
-                                             trackId: item.id)
+                                             trackId: item.id,
+                                             artistId: nil)
                                 }
                                 .padding(.horizontal, 16)
                                 .contextMenu {
@@ -79,6 +80,6 @@ struct DownloadsView: View {
             }
             .padding(.vertical, 14)
         }
-        .background(Theme.bg)
+        .background(AppBackground())
     }
 }

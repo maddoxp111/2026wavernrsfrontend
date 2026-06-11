@@ -4,6 +4,7 @@ enum Page: String, CaseIterable {
     case home = "Home"
     case charts = "Charts"
     case archive = "Archive"
+    case artists = "Artists"
     case search = "Search"
     case downloads = "Downloads"
 
@@ -12,6 +13,7 @@ enum Page: String, CaseIterable {
         case .home: return "house"
         case .charts: return "chart.bar"
         case .archive: return "archivebox"
+        case .artists: return "person.2"
         case .search: return "magnifyingglass"
         case .downloads: return "arrow.down.circle"
         }
@@ -21,20 +23,25 @@ enum Page: String, CaseIterable {
 struct ContentView: View {
     @State private var page: Page = .home
     @State private var drawerOpen = false
-    @State private var showArtistsAlert = false
     @State private var showFullPlayer = false
     @EnvironmentObject var player: PlayerManager
 
     var body: some View {
         ZStack(alignment: .leading) {
+            // ── Background ──
+            AppBackground()
+
             // ── Main content ──
             NavigationStack {
                 pageView
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
-                            Button { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = true } } label: {
+                            Button {
+                                withAnimation(.easeOut(duration: 0.22)) { drawerOpen = true }
+                            } label: {
                                 Image(systemName: "line.3.horizontal")
+                                    .foregroundColor(Theme.text)
                             }
                         }
                         ToolbarItem(placement: .principal) {
@@ -48,36 +55,25 @@ struct ContentView: View {
                             MiniPlayerBar { showFullPlayer = true }
                         }
                     }
-                    .background(Theme.bg.ignoresSafeArea())
+                    .toolbarBackground(.visible, for: .navigationBar)
             }
             .disabled(drawerOpen)
 
             // ── Drawer overlay ──
             if drawerOpen {
-                Color.black.opacity(0.5)
+                Color.black.opacity(0.45)
                     .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = false } }
+                    .onTapGesture { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } }
 
                 SidebarView(
                     page: $page,
-                    close: { withAnimation(.easeOut(duration: 0.2)) { drawerOpen = false } },
-                    artistsTapped: { showArtistsAlert = true }
+                    close: { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } }
                 )
                 .transition(.move(edge: .leading))
             }
         }
         .sheet(isPresented: $showFullPlayer) {
             NowPlayingView()
-        }
-        .alert("Artists live on the web", isPresented: $showArtistsAlert) {
-            Button("Open wavernrs.com") {
-                if let url = URL(string: "https://www.wavernrs.com") {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Everything artist-related — uploading, artist profiles, your dashboard — is only available on the web at www.wavernrs.com. The app is for listening.")
         }
     }
 
@@ -87,6 +83,7 @@ struct ContentView: View {
         case .home: HomeView()
         case .charts: ChartsView()
         case .archive: ArchiveView()
+        case .artists: ArtistsView()
         case .search: SearchView()
         case .downloads: DownloadsView()
         }
@@ -98,75 +95,58 @@ struct ContentView: View {
 struct SidebarView: View {
     @Binding var page: Page
     let close: () -> Void
-    let artistsTapped: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Text("wavernrs")
                 .font(.system(size: 22, weight: .heavy))
                 .foregroundColor(Theme.text)
-                .padding(.horizontal, 18)
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+                .padding(.top, 28)
+                .padding(.bottom, 18)
 
             ForEach(Page.allCases, id: \.self) { p in
                 Button {
                     page = p
                     close()
                 } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: p.icon).frame(width: 22)
+                    HStack(spacing: 14) {
+                        Image(systemName: p.icon)
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: 24)
                         Text(p.rawValue)
+                            .font(.system(size: 15, weight: page == p ? .bold : .regular))
                         Spacer()
                     }
-                    .font(.system(size: 15, weight: page == p ? .bold : .regular))
                     .foregroundColor(page == p ? Theme.accent : Theme.text)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 18)
-                    .background(page == p ? Theme.card : .clear)
+                    .padding(.vertical, 11)
+                    .padding(.horizontal, 16)
+                    .background(page == p ? Theme.accent.opacity(0.12) : Color.clear)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
             }
-
-            Divider().background(Theme.hairline).padding(.vertical, 10)
-
-            // Artists — listening-only app, so this just points at the web.
-            Button {
-                close()
-                artistsTapped()
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.2").frame(width: 22)
-                        Text("Artists")
-                        Spacer()
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.text3)
-                    }
-                    .font(.system(size: 15))
-                    .foregroundColor(Theme.text)
-                    Text("Artist features are web-only")
-                        .font(.system(size: 11.5))
-                        .foregroundColor(Theme.text3)
-                        .padding(.leading, 34)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 18)
-            }
-            .padding(.horizontal, 8)
 
             Spacer()
 
-            Text("listening-only app · everything else at wavernrs.com")
-                .font(.system(size: 11))
-                .foregroundColor(Theme.text3)
-                .padding(18)
+            // Bottom note — Artist management is web-only (uploading/profiles)
+            VStack(alignment: .leading, spacing: 6) {
+                Divider().background(Theme.hairline)
+                HStack(spacing: 8) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.text3)
+                    Text("Upload & manage at wavernrs.com")
+                        .font(.system(size: 11.5))
+                        .foregroundColor(Theme.text3)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
         }
-        .frame(width: 280, alignment: .leading)
+        .frame(width: 270, alignment: .leading)
         .frame(maxHeight: .infinity)
-        .background(Color(red: 0.08, green: 0.08, blue: 0.10))
+        .background(.ultraThinMaterial)
         .ignoresSafeArea()
     }
 }

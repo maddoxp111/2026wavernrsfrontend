@@ -48,6 +48,18 @@ enum API {
         try await get("search", query: [URLQueryItem(name: "q", value: q)])
     }
 
+    static func artist(id: String) async throws -> ArtistFull {
+        try await get("artists/\(id)")
+    }
+
+    static func artistTracks(id: String) async throws -> [Track] {
+        try await get("artists/\(id)/tracks")
+    }
+
+    static func artistAlbums(id: String) async throws -> [Album] {
+        try await get("albums/by-artist/\(id)")
+    }
+
     // Fire-and-forget stream count. Failures (e.g. offline) are ignored.
     static func reportPlay(trackId: String) {
         var req = URLRequest(url: base.appendingPathComponent("tracks/\(trackId)/play"))

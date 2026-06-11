@@ -20,9 +20,18 @@ struct AlbumView: View {
                             .font(.system(size: 21, weight: .heavy))
                             .foregroundColor(Theme.text)
                             .multilineTextAlignment(.center)
-                        Text(album.artistName)
-                            .font(.system(size: 14))
-                            .foregroundColor(Theme.text2)
+                        if let artistId = album.artists?.id {
+                            NavigationLink(value: NavTarget.artist(artistId)) {
+                                Text(album.artistName)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Theme.accent)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Text(album.artistName)
+                                .font(.system(size: 14))
+                                .foregroundColor(Theme.text2)
+                        }
                         if album.isArchive == true {
                             Text("ARCHIVE")
                                 .font(.system(size: 10, weight: .heavy))
@@ -82,7 +91,8 @@ struct AlbumView: View {
                 ProgressView().padding(.top, 100)
             }
         }
-        .background(Theme.bg)
+        .background(AppBackground())
+        .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
         .task { await load() }
     }
 

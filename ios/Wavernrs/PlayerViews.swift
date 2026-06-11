@@ -42,12 +42,7 @@ struct MiniPlayerBar: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Theme.hairline, lineWidth: 1)
-                )
+                .wvCard(corner: 14)
                 .padding(.horizontal, 10)
                 .padding(.bottom, 4)
             }
@@ -159,7 +154,7 @@ struct NowPlayingView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.bg.ignoresSafeArea())
+        .background(AppBackground())
         .presentationDragIndicator(.hidden)
     }
 
