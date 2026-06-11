@@ -124,8 +124,9 @@
     try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
     var isLoggedIn = !!localStorage.getItem('token');
 
-    // Mobile hamburger (hidden on desktop via CSS, shown on mobile)
+    // Mobile hamburger + search (hidden on desktop via CSS, shown on mobile)
     var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search.html\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
 
     // Left: logo (hidden on mobile, shown by mobile CSS with flex-1 center)
     html += '<a href="/index.html" class="wv-topbar-logo">wavernrs</a>';
@@ -496,12 +497,21 @@
     document.body.style.overflow = 'hidden';
     document.body.insertBefore(root, document.body.firstChild);
 
-    // Mobile: show hamburger button in topbar
+    // Mobile: show hamburger + search buttons in topbar
     var mq = window.matchMedia('(max-width: 768px)');
     function checkMobile() {
       var menuBtn = root.querySelector('#wv-menu-btn');
+      var searchBtn = root.querySelector('#wv-search-btn-mobile');
       if (menuBtn) menuBtn.style.display = mq.matches ? 'flex' : 'none';
+      if (searchBtn) searchBtn.style.display = mq.matches ? 'flex' : 'none';
     }
+    window._checkMobileTopbar = function() {
+      var menuBtn = document.getElementById('wv-menu-btn');
+      var searchBtn = document.getElementById('wv-search-btn-mobile');
+      var isMobile = window.matchMedia('(max-width: 768px)').matches;
+      if (menuBtn) menuBtn.style.display = isMobile ? 'flex' : 'none';
+      if (searchBtn) searchBtn.style.display = isMobile ? 'flex' : 'none';
+    };
     checkMobile();
     mq.addListener(checkMobile);
 
@@ -603,7 +613,7 @@
   // ── updateNav — called after auth state changes ───────────────
   window.updateNav = function() {
     var topbar = document.getElementById('wv-topbar');
-    if (topbar) topbar.innerHTML = buildTopbarHTML();
+    if (topbar) { topbar.innerHTML = buildTopbarHTML(); if (window._checkMobileTopbar) window._checkMobileTopbar(); }
     var sidebar = document.getElementById('wv-sidebar');
     if (sidebar) sidebar.innerHTML = buildSidebarHTML();
     var drawer = document.getElementById('wv-drawer');
