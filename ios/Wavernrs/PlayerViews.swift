@@ -73,6 +73,77 @@ struct MiniPlayerBar: View {
     }
 }
 
+// ── Mini player as a native tab bar accessory (iOS 26 Liquid Glass) ─────────
+// The system wraps this in a glass capsule above the tab bar, so it carries no
+// card background of its own.
+
+struct MiniPlayerAccessory: View {
+    let expand: () -> Void
+    @EnvironmentObject var player: PlayerManager
+    @State private var dragProgress: Double?
+
+    var body: some View {
+        if let track = player.current {
+            VStack(spacing: 3) {
+                HStack(spacing: 10) {
+                    CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 6)
+                        .frame(width: 30, height: 30)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(track.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Theme.text).lineLimit(1)
+                        Text(track.artistName)
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.text2).lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Button { player.togglePlayPause() } label: {
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 17)).foregroundColor(Theme.text)
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    Button { player.next() } label: {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 14)).foregroundColor(Theme.text2)
+                            .frame(width: 30, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Thin scrubber — drag to seek.
+                GeometryReader { geo in
+                    let live = player.duration > 0
+                        ? min(max(player.currentTime / player.duration, 0), 1) : 0
+                    let progress = dragProgress ?? live
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.18))
+                        Capsule().fill(Theme.accent)
+                            .frame(width: max(3, geo.size.width * progress))
+                    }
+                    .contentShape(Rectangle().inset(by: -8))
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { v in
+                                dragProgress = min(max(v.location.x / geo.size.width, 0), 1)
+                            }
+                            .onEnded { v in
+                                let p = min(max(v.location.x / geo.size.width, 0), 1)
+                                if player.duration > 0 { player.seek(to: p * player.duration) }
+                                dragProgress = nil
+                            }
+                    )
+                }
+                .frame(height: 3)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+            .onTapGesture { expand() }
+        }
+    }
+}
+
 // ── Full Now Playing sheet ───────────────────────────────────────────────────
 
 struct NowPlayingView: View {

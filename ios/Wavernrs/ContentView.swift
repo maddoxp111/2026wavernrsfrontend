@@ -41,27 +41,80 @@ struct ContentView: View {
     @EnvironmentObject var player: PlayerManager
 
     var body: some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                glassLayout
+            } else {
+                legacyLayout
+            }
+        }
+        .sheet(isPresented: $showFullPlayer) { NowPlayingView() }
+    }
+
+    // ── iOS 26+: native Liquid Glass tab bar with the mini player docked as a
+    // bottom accessory (Apple Music style). The bar minimizes on scroll and the
+    // search tab floats separately, all provided by the system.
+    @available(iOS 26.0, *)
+    private var glassLayout: some View {
+        ZStack(alignment: .leading) {
+            TabView(selection: $page) {
+                Tab(Page.home.rawValue, systemImage: Page.home.icon, value: Page.home) {
+                    pageNav(.home)
+                }
+                Tab(Page.discover.rawValue, systemImage: Page.discover.icon, value: Page.discover) {
+                    pageNav(.discover)
+                }
+                Tab(Page.account.rawValue, systemImage: Page.account.icon, value: Page.account) {
+                    pageNav(.account)
+                }
+                Tab(Page.search.rawValue, systemImage: Page.search.icon, value: Page.search, role: .search) {
+                    pageNav(.search)
+                }
+
+                // Drawer-only pages ride along as hidden tabs so selecting them
+                // keeps the tab bar and mini player on screen.
+                Tab(Page.charts.rawValue, systemImage: Page.charts.icon, value: Page.charts) {
+                    pageNav(.charts)
+                }
+                .hidden(true)
+                Tab(Page.archive.rawValue, systemImage: Page.archive.icon, value: Page.archive) {
+                    pageNav(.archive)
+                }
+                .hidden(true)
+                Tab(Page.artists.rawValue, systemImage: Page.artists.icon, value: Page.artists) {
+                    pageNav(.artists)
+                }
+                .hidden(true)
+                Tab(Page.community.rawValue, systemImage: Page.community.icon, value: Page.community) {
+                    pageNav(.community)
+                }
+                .hidden(true)
+                Tab(Page.downloads.rawValue, systemImage: Page.downloads.icon, value: Page.downloads) {
+                    pageNav(.downloads)
+                }
+                .hidden(true)
+            }
+            .tabBarMinimizeBehavior(.onScrollDown)
+            .tabViewBottomAccessory {
+                if player.current != nil {
+                    MiniPlayerAccessory { showFullPlayer = true }
+                }
+            }
+            .disabled(drawerOpen)
+
+            if drawerOpen { drawerOverlay }
+        }
+    }
+
+    // ── Pre-iOS 26: custom glass pill bar + mini player in a safe-area inset ──
+    private var legacyLayout: some View {
         ZStack(alignment: .leading) {
             AppBackground()
 
             NavigationStack {
-                pageView
+                pageView(for: page)
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button {
-                                withAnimation(.easeOut(duration: 0.22)) { drawerOpen = true }
-                            } label: {
-                                Image(systemName: "line.3.horizontal")
-                                    .foregroundColor(Theme.text)
-                            }
-                        }
-                        ToolbarItem(placement: .principal) {
-                            Text("wavernrs")
-                                .font(.system(size: 17, weight: .heavy))
-                                .foregroundColor(Theme.text)
-                        }
-                    }
+                    .toolbar { navToolbar }
                     .toolbarBackground(.visible, for: .navigationBar)
             }
             .safeAreaInset(edge: .bottom) {
@@ -76,22 +129,51 @@ struct ContentView: View {
             }
             .disabled(drawerOpen)
 
-            if drawerOpen {
-                Color.black.opacity(0.45)
-                    .ignoresSafeArea()
-                    .onTapGesture { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } }
+            if drawerOpen { drawerOverlay }
+        }
+    }
 
-                SidebarView(page: $page,
-                            close: { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } })
-                    .transition(.move(edge: .leading))
+    // ── Shared pieces ─────────────────────────────────────────────────────────
+
+    @ViewBuilder
+    private var drawerOverlay: some View {
+        Color.black.opacity(0.45)
+            .ignoresSafeArea()
+            .onTapGesture { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } }
+
+        SidebarView(page: $page,
+                    close: { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } })
+            .transition(.move(edge: .leading))
+    }
+
+    @ToolbarContentBuilder
+    private var navToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button {
+                withAnimation(.easeOut(duration: 0.22)) { drawerOpen = true }
+            } label: {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundColor(Theme.text)
             }
         }
-        .sheet(isPresented: $showFullPlayer) { NowPlayingView() }
+        ToolbarItem(placement: .principal) {
+            Text("wavernrs")
+                .font(.system(size: 17, weight: .heavy))
+                .foregroundColor(Theme.text)
+        }
+    }
+
+    private func pageNav(_ p: Page) -> some View {
+        NavigationStack {
+            pageView(for: p)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { navToolbar }
+        }
     }
 
     @ViewBuilder
-    private var pageView: some View {
-        switch page {
+    private func pageView(for p: Page) -> some View {
+        switch p {
         case .home: HomeView()
         case .discover: DiscoverView()
         case .charts: ChartsView()
