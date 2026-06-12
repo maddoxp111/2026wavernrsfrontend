@@ -61,8 +61,17 @@ final class PlayerManager: ObservableObject {
     }
 
     func togglePlayPause() {
-        if isPlaying { player.pause(); isPlaying = false }
-        else { player.play(); isPlaying = true }
+        if isPlaying { pause() } else { resume() }
+    }
+
+    func resume() {
+        try? AVAudioSession.sharedInstance().setActive(true)
+        player.play(); isPlaying = true
+        updateNowPlayingElapsed()
+    }
+
+    func pause() {
+        player.pause(); isPlaying = false
         updateNowPlayingElapsed()
     }
 
@@ -116,7 +125,11 @@ final class PlayerManager: ObservableObject {
         player.replaceCurrentItem(with: item)
         currentTime = 0
         duration = 0
-        if autoplay { player.play(); isPlaying = true }
+        if autoplay {
+            // Ensure the session is live so iOS hands us the now-playing slot.
+            try? AVAudioSession.sharedInstance().setActive(true)
+            player.play(); isPlaying = true
+        }
 
         addToRecentlyPlayed(track)
         API.reportPlay(trackId: track.id)
@@ -136,10 +149,26 @@ final class PlayerManager: ObservableObject {
 
     private func setupRemoteCommands() {
         let center = MPRemoteCommandCenter.shared()
+
+        // Commands iOS should surface in Control Center / lock screen.
+        center.playCommand.isEnabled = true
+        center.pauseCommand.isEnabled = true
+        center.nextTrackCommand.isEnabled = true
+        center.previousTrackCommand.isEnabled = true
+        center.changePlaybackPositionCommand.isEnabled = true
+        // Disable the ones we don't handle so they don't take over the UI.
+        center.seekForwardCommand.isEnabled = false
+        center.seekBackwardCommand.isEnabled = false
+        center.skipForwardCommand.isEnabled = false
+        center.skipBackwardCommand.isEnabled = false
+
         center.playCommand.addTarget { [weak self] _ in
-            Task { @MainActor in self?.togglePlayPause() }; return .success
+            Task { @MainActor in self?.resume() }; return .success
         }
         center.pauseCommand.addTarget { [weak self] _ in
+            Task { @MainActor in self?.pause() }; return .success
+        }
+        center.togglePlayPauseCommand.addTarget { [weak self] _ in
             Task { @MainActor in self?.togglePlayPause() }; return .success
         }
         center.nextTrackCommand.addTarget { [weak self] _ in
