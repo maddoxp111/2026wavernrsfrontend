@@ -5,34 +5,65 @@ import SwiftUI
 struct MiniPlayerBar: View {
     let expand: () -> Void
     @EnvironmentObject var player: PlayerManager
+    // While the user drags the scrubber, this overrides the live progress.
+    @State private var dragProgress: Double?
 
     var body: some View {
         if let track = player.current {
-            HStack(spacing: 12) {
-                CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
-                    .frame(width: 40, height: 40)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(track.title)
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundColor(Theme.text).lineLimit(1)
-                    Text(track.artistName)
-                        .font(.system(size: 11.5))
-                        .foregroundColor(Theme.text2).lineLimit(1)
+            VStack(spacing: 7) {
+                HStack(spacing: 12) {
+                    CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
+                        .frame(width: 40, height: 40)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(track.title)
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundColor(Theme.text).lineLimit(1)
+                        Text(track.artistName)
+                            .font(.system(size: 11.5))
+                            .foregroundColor(Theme.text2).lineLimit(1)
+                    }
+                    Spacer()
+                    Button { player.togglePlayPause() } label: {
+                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 18)).foregroundColor(Theme.text)
+                            .frame(width: 38, height: 38)
+                    }
+                    Button { player.next() } label: {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 15)).foregroundColor(Theme.text2)
+                            .frame(width: 34, height: 38)
+                    }
                 }
-                Spacer()
-                Button { player.togglePlayPause() } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 18)).foregroundColor(Theme.text)
-                        .frame(width: 38, height: 38)
+
+                // Thin scrubber — shows progress, drag anywhere on it to seek.
+                GeometryReader { geo in
+                    let live = player.duration > 0
+                        ? min(max(player.currentTime / player.duration, 0), 1) : 0
+                    let progress = dragProgress ?? live
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.18))
+                        Capsule().fill(Theme.accent)
+                            .frame(width: max(4, geo.size.width * progress))
+                    }
+                    .contentShape(Rectangle().inset(by: -10))
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { v in
+                                dragProgress = min(max(v.location.x / geo.size.width, 0), 1)
+                            }
+                            .onEnded { v in
+                                let p = min(max(v.location.x / geo.size.width, 0), 1)
+                                if player.duration > 0 { player.seek(to: p * player.duration) }
+                                dragProgress = nil
+                            }
+                    )
                 }
-                Button { player.next() } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 15)).foregroundColor(Theme.text2)
-                        .frame(width: 34, height: 38)
-                }
+                .frame(height: 3)
+                .padding(.horizontal, 2)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 10)
             .wvCard(corner: 14)
             .padding(.horizontal, 10)
             .padding(.bottom, 4)

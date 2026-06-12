@@ -113,7 +113,7 @@ struct AlbumView: View {
             } else if let error {
                 ErrorRetryView(message: error) { await load() }
             } else {
-                ProgressView().padding(.top, 100)
+                ProgressView().frame(maxWidth: .infinity).padding(.top, 100)
             }
         }
         .background(AppBackground())

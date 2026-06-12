@@ -21,7 +21,7 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             if loading {
-                ProgressView().padding(.top, 80)
+                ProgressView().frame(maxWidth: .infinity).padding(.top, 80)
             } else if let error {
                 ErrorRetryView(message: error) { await load() }
             } else {
@@ -381,7 +381,7 @@ struct ChartsView: View {
                         ChartRow(rank: rank + 1, item: item, isAlbum: universe == .comps)
                     }
                 } else {
-                    ProgressView().padding(.top, 60)
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
                 }
             }
             .padding(16)

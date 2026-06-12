@@ -12,7 +12,7 @@ struct CommunityView: View {
     var body: some View {
         ScrollView {
             if loading {
-                ProgressView().padding(.top, 80)
+                ProgressView().frame(maxWidth: .infinity).padding(.top, 80)
             } else if let error {
                 ErrorRetryView(message: error) { await load() }
             } else if posts.isEmpty {
