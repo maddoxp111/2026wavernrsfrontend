@@ -304,3 +304,8 @@ struct PlayableTrack: Identifiable, Hashable, Codable {
         self.position = position
     }
 }
+
+struct IdentifiableString: Identifiable {
+    let value: String
+    var id: String { value }
+}

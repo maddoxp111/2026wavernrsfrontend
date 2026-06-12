@@ -114,6 +114,18 @@ enum API {
         try await get("playlists/\(id)", token: token)
     }
 
+    static func addTrackToPlaylist(playlistId: String, trackId: String, token: String) async throws {
+        var req = URLRequest(url: base.appendingPathComponent("playlists/\(playlistId)/tracks"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try? JSONEncoder().encode(["track_id": trackId])
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw APIError.badStatus(http.statusCode)
+        }
+    }
+
     // ── Fire-and-forget ───────────────────────────────────────────────────────
 
     static func reportPlay(trackId: String) {

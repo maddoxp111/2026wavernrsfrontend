@@ -60,17 +60,17 @@ struct ContentView: View {
                                 .foregroundColor(Theme.text)
                         }
                     }
-                    .safeAreaInset(edge: .bottom) {
-                        VStack(spacing: 4) {
-                            if player.current != nil {
-                                MiniPlayerBar { showFullPlayer = true }
-                            }
-                            BottomTabBar(page: $page)
-                        }
-                        // Pull the bar down toward the home indicator.
-                        .padding(.bottom, -14)
-                    }
                     .toolbarBackground(.visible, for: .navigationBar)
+            }
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 4) {
+                    if player.current != nil {
+                        MiniPlayerBar { showFullPlayer = true }
+                    }
+                    BottomTabBar(page: $page)
+                }
+                // Pull the bar down toward the home indicator.
+                .padding(.bottom, -14)
             }
             .disabled(drawerOpen)
 

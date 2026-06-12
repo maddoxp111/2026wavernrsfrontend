@@ -4,6 +4,7 @@ struct AlbumView: View {
     let albumId: String
     @State private var album: Album?
     @State private var error: String?
+    @State private var addToPlaylistTrack: PlayableTrack?
     @EnvironmentObject var player: PlayerManager
     @EnvironmentObject var downloads: DownloadManager
 
@@ -79,7 +80,9 @@ struct AlbumView: View {
                     // Tracklist
                     VStack(spacing: 6) {
                         ForEach(Array(album.sortedTracks.enumerated()), id: \.element.id) { i, track in
-                            AlbumTrackRow(album: album, track: track, index: i)
+                            AlbumTrackRow(album: album, track: track, index: i) {
+                                addToPlaylistTrack = PlayableTrack(track: track, album: album)
+                            }
                         }
                     }
                     .padding(.horizontal, 14)
@@ -93,6 +96,9 @@ struct AlbumView: View {
         }
         .background(AppBackground())
         .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
+        .sheet(item: $addToPlaylistTrack) { track in
+            AddToPlaylistSheet(trackId: track.id, trackTitle: track.title)
+        }
         .task { await load() }
     }
 
@@ -112,6 +118,7 @@ struct AlbumTrackRow: View {
     let album: Album
     let track: Track
     let index: Int
+    var onAddToPlaylist: (() -> Void)? = nil
     @EnvironmentObject var player: PlayerManager
     @EnvironmentObject var downloads: DownloadManager
 
@@ -159,6 +166,25 @@ struct AlbumTrackRow: View {
         .padding(.horizontal, 12)
         .background(isCurrent ? Theme.card : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contextMenu {
+            Button {
+                let q = album.sortedTracks.map { PlayableTrack(track: $0, album: album) }
+                player.play(queue: q, startAt: index)
+            } label: {
+                Label("Play", systemImage: "play.fill")
+            }
+            if let onAddToPlaylist {
+                Button { onAddToPlaylist() } label: {
+                    Label("Add to Playlist", systemImage: "plus")
+                }
+            }
+            Button {
+                downloads.download(PlayableTrack(track: track, album: album))
+            } label: {
+                Label("Download", systemImage: "arrow.down.circle")
+            }
+            .disabled(downloads.isDownloaded(trackId: track.id))
+        }
     }
 
     private var isCurrent: Bool { player.current?.id == track.id }

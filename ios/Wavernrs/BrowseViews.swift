@@ -112,8 +112,8 @@ struct HomeView: View {
             let d = try await API.discover()
             let albums = d.recent.compactMap { item -> Album? in
                 if case .album(let a) = item { return a } else { return nil }
-            }
-            // First 5 albums go into the carousel; rest become New Releases.
+            }.shuffled()
+            // First 5 (randomly ordered each launch) go into the carousel; rest become New Releases.
             featuredAlbums = Array(albums.prefix(5))
             newReleases = albums.count > 5 ? Array(albums.dropFirst(5)) : Array(albums.dropFirst())
             trending = d.trending ?? []
