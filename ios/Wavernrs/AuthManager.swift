@@ -118,14 +118,11 @@ final class AuthManager: NSObject, ObservableObject {
 // Presentation anchor for the OAuth sheet.
 extension AuthManager: ASWebAuthenticationPresentationContextProviding {
     nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        // Find the active key window on the main thread.
-        if Thread.isMainThread {
-            return keyWindow() ?? ASPresentationAnchor()
-        }
-        return DispatchQueue.main.sync { keyWindow() ?? ASPresentationAnchor() }
+        MainActor.assumeIsolated { keyWindow() ?? ASPresentationAnchor() }
     }
 
-    nonisolated private func keyWindow() -> UIWindow? {
+    @MainActor
+    private func keyWindow() -> UIWindow? {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .flatMap { $0.windows }

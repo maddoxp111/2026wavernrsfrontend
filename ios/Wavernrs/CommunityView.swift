@@ -48,7 +48,7 @@ struct CommunityView: View {
         }
         .background(AppBackground())
         .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
-        .safeAreaInset(edge: .bottom, alignment: .trailing) {
+        .overlay(alignment: .bottomTrailing) {
             if auth.isLoggedIn {
                 Button {
                     showComposer = true
@@ -62,7 +62,7 @@ struct CommunityView: View {
                         .shadow(radius: 8)
                 }
                 .padding(.trailing, 20)
-                .padding(.bottom, 8)
+                .padding(.bottom, 16)
             }
         }
         .sheet(isPresented: $showComposer) {
