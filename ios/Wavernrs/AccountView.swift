@@ -30,13 +30,10 @@ struct LoginForm: View {
     var body: some View {
         VStack(spacing: 28) {
             VStack(spacing: 6) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundColor(Theme.accent)
-                Text("wavernrs")
-                    .font(.system(size: 28, weight: .heavy))
+                Text("Sign In")
+                    .font(.system(size: 26, weight: .heavy))
                     .foregroundColor(Theme.text)
-                Text("Sign in to access your playlists")
+                Text("Access your playlists and profile")
                     .font(.system(size: 14))
                     .foregroundColor(Theme.text2)
             }
@@ -87,6 +84,23 @@ struct LoginForm: View {
             }
             .padding(.horizontal, 24)
 
+            // ── OAuth ──
+            VStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    Rectangle().fill(Theme.hairline).frame(height: 1)
+                    Text("or").font(.system(size: 12)).foregroundColor(Theme.text3)
+                    Rectangle().fill(Theme.hairline).frame(height: 1)
+                }
+
+                oauthButton(icon: "globe", label: "Continue with Google") {
+                    auth.loginWithOAuth(.google)
+                }
+                oauthButton(icon: "bubble.left.and.bubble.right.fill", label: "Continue with Discord") {
+                    auth.loginWithOAuth(.discord)
+                }
+            }
+            .padding(.horizontal, 24)
+
             Link("Don't have an account? Join at wavernrs.com",
                  destination: URL(string: "https://wavernrs.com")!)
                 .font(.system(size: 13))
@@ -94,6 +108,23 @@ struct LoginForm: View {
 
             Spacer()
         }
+    }
+
+    private func oauthButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                Text(label)
+                    .font(.system(size: 14.5, weight: .semibold))
+            }
+            .foregroundColor(Theme.text)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .wvCard(corner: 14)
+        }
+        .buttonStyle(.plain)
+        .disabled(auth.isLoading)
     }
 }
 
