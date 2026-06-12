@@ -218,6 +218,7 @@ struct ArtistHeaderView: View {
                     }
                 }
                 Spacer()
+                FollowButton(artistId: artist.id)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)

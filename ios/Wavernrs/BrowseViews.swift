@@ -5,6 +5,7 @@ enum NavTarget: Hashable {
     case artist(String)
     case track(String)
     case playlist(String)
+    case communityPost(String)
 }
 
 // ── Home ─────────────────────────────────────────────────────────────────────
@@ -798,5 +799,6 @@ func navDestination(_ target: NavTarget) -> some View {
     case .artist(let id): ArtistProfileView(artistId: id)
     case .track(let id): TrackDetailView(trackId: id)
     case .playlist(let id): PlaylistDetailView(playlistId: id)
+    case .communityPost(let id): CommunityPostView(postId: id)
     }
 }

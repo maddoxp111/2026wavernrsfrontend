@@ -87,6 +87,8 @@ struct Album: Codable, Identifiable, Hashable {
     let sourceUrl: String?
     let isHighlighted: Bool?
     let isExclusive: Bool?
+    let likeCount: Int?
+    let userLiked: Bool?
     let artists: Artist?
     let albumTracks: [AlbumTrackEntry]?
 
@@ -100,6 +102,8 @@ struct Album: Codable, Identifiable, Hashable {
         case sourceUrl = "source_url"
         case isHighlighted = "is_highlighted"
         case isExclusive = "is_exclusive"
+        case likeCount = "like_count"
+        case userLiked = "user_liked"
         case albumTracks = "album_tracks"
     }
 
@@ -308,4 +312,127 @@ struct PlayableTrack: Identifiable, Hashable, Codable {
 struct IdentifiableString: Identifiable {
     let value: String
     var id: String { value }
+}
+
+// ── Social: follows, likes, ratings ──────────────────────────────────────────
+
+struct FollowStatus: Codable {
+    let following: Bool
+    let followerCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case following
+        case followerCount = "follower_count"
+    }
+}
+
+struct LikeStatus: Codable {
+    let liked: Bool
+}
+
+struct RatingSummary: Codable {
+    let avg: Double?
+    let count: Int
+    let userRating: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case avg, count
+        case userRating = "user_rating"
+    }
+}
+
+// ── Release (album) comments ─────────────────────────────────────────────────
+
+struct ReleaseComment: Codable, Identifiable {
+    let id: String
+    let body: String?
+    let createdAt: String?
+    let userId: String?
+    let parentId: String?
+    var netVotes: Int?
+    var userVote: Int?
+    let users: CommentUser?
+
+    struct CommentUser: Codable {
+        let username: String?
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, body, users
+        case createdAt = "created_at"
+        case userId = "user_id"
+        case parentId = "parent_id"
+        case netVotes = "net_votes"
+        case userVote = "user_vote"
+    }
+
+    var username: String { users?.username ?? "unknown" }
+}
+
+// ── Community ────────────────────────────────────────────────────────────────
+
+struct CommunityPost: Codable, Identifiable {
+    let id: String
+    let title: String?
+    let body: String?
+    let username: String?
+    let artistId: String?
+    let profileImageUrl: String?
+    let createdAt: String?
+    let userId: String?
+    var netVotes: Int?
+    let commentCount: Int?
+    var userVote: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, body, username
+        case artistId = "artist_id"
+        case profileImageUrl = "profile_image_url"
+        case createdAt = "created_at"
+        case userId = "user_id"
+        case netVotes = "net_votes"
+        case commentCount = "comment_count"
+        case userVote = "user_vote"
+    }
+}
+
+struct CommunityComment: Codable, Identifiable {
+    let id: String
+    let postId: String?
+    let parentId: String?
+    let body: String?
+    let username: String?
+    let artistId: String?
+    let profileImageUrl: String?
+    let createdAt: String?
+    let userId: String?
+    var netVotes: Int?
+    var userVote: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, body, username
+        case postId = "post_id"
+        case parentId = "parent_id"
+        case artistId = "artist_id"
+        case profileImageUrl = "profile_image_url"
+        case createdAt = "created_at"
+        case userId = "user_id"
+        case netVotes = "net_votes"
+        case userVote = "user_vote"
+    }
+}
+
+struct CommunityPostDetail: Codable {
+    let post: CommunityPost
+    let comments: [CommunityComment]
+}
+
+struct VoteResult: Codable {
+    let netVotes: Int?
+    let userVote: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case netVotes = "net_votes"
+        case userVote = "user_vote"
+    }
 }

@@ -8,6 +8,7 @@ enum Page: String, CaseIterable {
     case charts = "Charts"
     case archive = "Archive"
     case artists = "Artists"
+    case community = "Community"
     case downloads = "Downloads"
     case account = "Account"
     case search = "Search"
@@ -19,6 +20,7 @@ enum Page: String, CaseIterable {
         case .charts: return "chart.bar"
         case .archive: return "archivebox"
         case .artists: return "person.2"
+        case .community: return "bubble.left.and.bubble.right"
         case .downloads: return "arrow.down.circle"
         case .account: return "person.circle"
         case .search: return "magnifyingglass"
@@ -29,7 +31,7 @@ enum Page: String, CaseIterable {
     static let tabPages: [Page] = [.home, .discover, .account, .search]
 
     // Sidebar: all except account (it lives in the tab bar).
-    static let sidebarPages: [Page] = [.home, .discover, .charts, .archive, .artists, .downloads, .search]
+    static let sidebarPages: [Page] = [.home, .discover, .charts, .archive, .artists, .community, .downloads, .search]
 }
 
 struct ContentView: View {
@@ -95,6 +97,7 @@ struct ContentView: View {
         case .charts: ChartsView()
         case .archive: ArchiveView()
         case .artists: ArtistsView()
+        case .community: CommunityView()
         case .downloads: DownloadsView()
         case .account: AccountView()
         case .search: SearchView()

@@ -38,6 +38,25 @@ enum API {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    // Authenticated POST with an arbitrary JSON body. Pass `Empty.self`-style
+    // throwaway decoding by decoding into the expected response type.
+    private static func authedPost<T: Decodable>(_ path: String,
+                                                  body: [String: Any] = [:],
+                                                  token: String) async throws -> T {
+        var req = URLRequest(url: base.appendingPathComponent(path))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        if !body.isEmpty {
+            req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw APIError.badStatus(http.statusCode)
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     // ── Discover ──────────────────────────────────────────────────────────────
 
     static func discover() async throws -> DiscoverResponse {
@@ -70,8 +89,8 @@ enum API {
         try await get("archive")
     }
 
-    static func album(id: String) async throws -> Album {
-        try await get("albums/\(id)")
+    static func album(id: String, token: String? = nil) async throws -> Album {
+        try await get("albums/\(id)", token: token)
     }
 
     static func track(id: String) async throws -> Track {
@@ -124,6 +143,75 @@ enum API {
         if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw APIError.badStatus(http.statusCode)
         }
+    }
+
+    // ── Social: follows, likes, ratings ───────────────────────────────────────
+
+    static func followStatus(artistId: String, token: String?) async throws -> FollowStatus {
+        try await get("artists/\(artistId)/follow", token: token)
+    }
+
+    static func toggleFollow(artistId: String, token: String) async throws -> FollowStatus {
+        try await authedPost("artists/\(artistId)/follow", token: token)
+    }
+
+    static func toggleAlbumLike(albumId: String, token: String) async throws -> LikeStatus {
+        try await authedPost("albums/\(albumId)/like", token: token)
+    }
+
+    static func ratings(entityType: String, entityId: String, token: String?) async throws -> RatingSummary {
+        try await get("ratings/\(entityType)/\(entityId)", token: token)
+    }
+
+    static func setRating(entityType: String, entityId: String, rating: Int, token: String) async throws {
+        struct OK: Decodable { let ok: Bool? }
+        let _: OK = try await authedPost(
+            "ratings",
+            body: ["entity_id": entityId, "entity_type": entityType, "rating": rating],
+            token: token
+        )
+    }
+
+    // ── Release (album) comments ──────────────────────────────────────────────
+
+    static func albumComments(albumId: String, token: String?) async throws -> [ReleaseComment] {
+        try await get("albums/\(albumId)/comments", token: token)
+    }
+
+    static func postAlbumComment(albumId: String, body: String, token: String) async throws -> ReleaseComment {
+        try await authedPost("albums/\(albumId)/comments", body: ["body": body], token: token)
+    }
+
+    static func voteAlbumComment(albumId: String, commentId: String, vote: Int, token: String) async throws -> VoteResult {
+        try await authedPost("albums/\(albumId)/comments/\(commentId)/vote", body: ["vote": vote], token: token)
+    }
+
+    // ── Community ─────────────────────────────────────────────────────────────
+
+    static func communityPosts(token: String?) async throws -> [CommunityPost] {
+        try await get("community/posts", token: token)
+    }
+
+    static func communityPost(id: String, token: String?) async throws -> CommunityPostDetail {
+        try await get("community/posts/\(id)", token: token)
+    }
+
+    static func createCommunityPost(title: String, body: String, token: String) async throws -> CommunityPost {
+        try await authedPost("community/posts", body: ["title": title, "body": body], token: token)
+    }
+
+    static func voteCommunityPost(id: String, vote: Int, token: String) async throws -> VoteResult {
+        try await authedPost("community/posts/\(id)/vote", body: ["vote": vote], token: token)
+    }
+
+    static func postCommunityComment(postId: String, body: String, parentId: String? = nil, token: String) async throws -> CommunityComment {
+        var payload: [String: Any] = ["body": body]
+        if let parentId { payload["parent_id"] = parentId }
+        return try await authedPost("community/posts/\(postId)/comments", body: payload, token: token)
+    }
+
+    static func voteCommunityComment(commentId: String, vote: Int, token: String) async throws -> VoteResult {
+        try await authedPost("community/comments/\(commentId)/vote", body: ["vote": vote], token: token)
     }
 
     // ── Fire-and-forget ───────────────────────────────────────────────────────

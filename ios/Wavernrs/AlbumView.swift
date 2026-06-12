@@ -5,8 +5,11 @@ struct AlbumView: View {
     @State private var album: Album?
     @State private var error: String?
     @State private var addToPlaylistTrack: PlayableTrack?
+    @State private var likeCount = 0
+    @State private var userLiked = false
     @EnvironmentObject var player: PlayerManager
     @EnvironmentObject var downloads: DownloadManager
+    @EnvironmentObject var auth: AuthManager
 
     var body: some View {
         ScrollView {
@@ -68,7 +71,23 @@ struct AlbumView: View {
                                 .clipShape(Capsule())
                         }
                         .disabled(allDownloaded(album))
+
+                        Button {
+                            Task { await toggleLike() }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: userLiked ? "heart.fill" : "heart")
+                                if likeCount > 0 { Text("\(likeCount)") }
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 14).padding(.vertical, 10)
+                            .background(Theme.card)
+                            .foregroundColor(userLiked ? .pink : Theme.text)
+                            .clipShape(Capsule())
+                        }
                     }
+
+                    RatingStarsView(entityType: "album", entityId: album.id)
 
                     if let desc = album.description, !desc.isEmpty {
                         Text(desc)
@@ -86,7 +105,10 @@ struct AlbumView: View {
                         }
                     }
                     .padding(.horizontal, 14)
-                    .padding(.bottom, 24)
+
+                    ReleaseCommentsSection(albumId: album.id)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 24)
                 }
             } else if let error {
                 ErrorRetryView(message: error) { await load() }
@@ -109,8 +131,30 @@ struct AlbumView: View {
 
     private func load() async {
         error = nil
-        do { album = try await API.album(id: albumId) }
-        catch { self.error = "Couldn't load this comp." }
+        do {
+            let a = try await API.album(id: albumId, token: auth.token)
+            album = a
+            likeCount = a.likeCount ?? 0
+            userLiked = a.userLiked ?? false
+        } catch { self.error = "Couldn't load this comp." }
+    }
+
+    private func toggleLike() async {
+        guard let token = auth.token, auth.isLoggedIn else { return }
+        // Optimistic flip; reconcile with the server response.
+        let wasLiked = userLiked
+        userLiked.toggle()
+        likeCount += userLiked ? 1 : -1
+        do {
+            let result = try await API.toggleAlbumLike(albumId: albumId, token: token)
+            if result.liked != userLiked {
+                userLiked = result.liked
+                likeCount += result.liked ? 1 : -1
+            }
+        } catch {
+            userLiked = wasLiked
+            likeCount += wasLiked ? 1 : -1
+        }
     }
 }
 
