@@ -71,27 +71,57 @@ struct AppBackground: View {
     }
 }
 
+// ── In-memory cover cache ─────────────────────────────────────────────────────
+// AsyncImage restarts its download whenever the view is re-created (the mini
+// player rebuilds on every progress tick), which flashes the placeholder.
+// Caching decoded images lets CoverArt render instantly on re-creation.
+enum CoverImageCache {
+    static let shared = NSCache<NSString, UIImage>()
+}
+
 // ── Square cover art ──────────────────────────────────────────────────────────
 struct CoverArt: View {
     let trackId: String?
     let remoteUrl: String?
     var corner: CGFloat = 10
+    @State private var remoteImage: UIImage?
+
+    init(trackId: String?, remoteUrl: String?, corner: CGFloat = 10) {
+        self.trackId = trackId
+        self.remoteUrl = remoteUrl
+        self.corner = corner
+        // Seed from cache synchronously so re-created views never flash.
+        if let s = remoteUrl, let cached = CoverImageCache.shared.object(forKey: s as NSString) {
+            _remoteImage = State(initialValue: cached)
+        }
+    }
 
     var body: some View {
         Group {
             if let tid = trackId, let img = DownloadManager.shared.localCoverImage(trackId: tid) {
                 Image(uiImage: img).resizable().scaledToFill()
-            } else if let s = remoteUrl, let url = URL(string: s) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image { image.resizable().scaledToFill() }
-                    else { placeholder }
-                }
+            } else if let img = remoteImage {
+                Image(uiImage: img).resizable().scaledToFill()
             } else {
                 placeholder
             }
         }
         .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .task(id: remoteUrl) { await loadRemote() }
+    }
+
+    private func loadRemote() async {
+        guard remoteImage == nil, let s = remoteUrl, let url = URL(string: s) else { return }
+        let key = s as NSString
+        if let cached = CoverImageCache.shared.object(forKey: key) {
+            remoteImage = cached
+            return
+        }
+        guard let (data, _) = try? await URLSession.shared.data(from: url),
+              let img = UIImage(data: data) else { return }
+        CoverImageCache.shared.setObject(img, forKey: key)
+        remoteImage = img
     }
 
     private var placeholder: some View {

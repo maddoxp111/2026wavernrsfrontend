@@ -96,9 +96,7 @@ struct ContentView: View {
             }
             .tabBarMinimizeBehavior(.onScrollDown)
             .tabViewBottomAccessory {
-                if player.current != nil {
-                    MiniPlayerAccessory { showFullPlayer = true }
-                }
+                MiniPlayerAccessory { showFullPlayer = true }
             }
             .disabled(drawerOpen)
 
@@ -119,9 +117,7 @@ struct ContentView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 4) {
-                    if player.current != nil {
-                        MiniPlayerBar { showFullPlayer = true }
-                    }
+                    MiniPlayerBar { showFullPlayer = true }
                     BottomTabBar(page: $page)
                 }
                 // Pull the bar down toward the home indicator.

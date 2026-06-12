@@ -9,30 +9,47 @@ struct MiniPlayerBar: View {
     @State private var dragProgress: Double?
 
     var body: some View {
-        if let track = player.current {
-            VStack(spacing: 7) {
+        let track = player.current
+        VStack(spacing: 7) {
                 HStack(spacing: 12) {
-                    CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
+                    if let track {
+                        CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
+                            .frame(width: 40, height: 40)
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.white.opacity(0.08))
+                            Image(systemName: "music.note")
+                                .font(.system(size: 15))
+                                .foregroundColor(Theme.text3)
+                        }
                         .frame(width: 40, height: 40)
+                    }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(track.title)
+                        Text(track?.title ?? "Nothing playing")
                             .font(.system(size: 13.5, weight: .semibold))
-                            .foregroundColor(Theme.text).lineLimit(1)
-                        Text(track.artistName)
-                            .font(.system(size: 11.5))
-                            .foregroundColor(Theme.text2).lineLimit(1)
+                            .foregroundColor(track == nil ? Theme.text2 : Theme.text).lineLimit(1)
+                        if let track {
+                            Text(track.artistName)
+                                .font(.system(size: 11.5))
+                                .foregroundColor(Theme.text2).lineLimit(1)
+                        }
                     }
                     Spacer()
                     Button { player.togglePlayPause() } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 18)).foregroundColor(Theme.text)
+                            .font(.system(size: 18))
+                            .foregroundColor(track == nil ? Theme.text3 : Theme.text)
                             .frame(width: 38, height: 38)
                     }
+                    .disabled(track == nil)
                     Button { player.next() } label: {
                         Image(systemName: "forward.fill")
-                            .font(.system(size: 15)).foregroundColor(Theme.text2)
+                            .font(.system(size: 15))
+                            .foregroundColor(track == nil ? Theme.text3 : Theme.text2)
                             .frame(width: 34, height: 38)
                     }
+                    .disabled(track == nil)
                 }
 
                 // Thin scrubber — shows progress, drag anywhere on it to seek.
@@ -68,8 +85,7 @@ struct MiniPlayerBar: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 4)
             .contentShape(Rectangle())
-            .onTapGesture { expand() }
-        }
+            .onTapGesture { if player.current != nil { expand() } }
     }
 }
 
@@ -83,64 +99,80 @@ struct MiniPlayerAccessory: View {
     @State private var dragProgress: Double?
 
     var body: some View {
-        if let track = player.current {
-            VStack(spacing: 3) {
-                HStack(spacing: 10) {
+        let track = player.current
+        VStack(spacing: 3) {
+            HStack(spacing: 10) {
+                if let track {
                     CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 6)
                         .frame(width: 30, height: 30)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(track.title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Theme.text).lineLimit(1)
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                        Image(systemName: "music.note")
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.text3)
+                    }
+                    .frame(width: 30, height: 30)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(track?.title ?? "Nothing playing")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(track == nil ? Theme.text2 : Theme.text).lineLimit(1)
+                    if let track {
                         Text(track.artistName)
                             .font(.system(size: 11))
                             .foregroundColor(Theme.text2).lineLimit(1)
                     }
-                    Spacer(minLength: 8)
-                    Button { player.togglePlayPause() } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 17)).foregroundColor(Theme.text)
-                            .frame(width: 34, height: 34)
-                    }
-                    .buttonStyle(.plain)
-                    Button { player.next() } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 14)).foregroundColor(Theme.text2)
-                            .frame(width: 30, height: 34)
-                    }
-                    .buttonStyle(.plain)
                 }
-
-                // Thin scrubber — drag to seek.
-                GeometryReader { geo in
-                    let live = player.duration > 0
-                        ? min(max(player.currentTime / player.duration, 0), 1) : 0
-                    let progress = dragProgress ?? live
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.18))
-                        Capsule().fill(Theme.accent)
-                            .frame(width: max(3, geo.size.width * progress))
-                    }
-                    .contentShape(Rectangle().inset(by: -8))
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { v in
-                                dragProgress = min(max(v.location.x / geo.size.width, 0), 1)
-                            }
-                            .onEnded { v in
-                                let p = min(max(v.location.x / geo.size.width, 0), 1)
-                                if player.duration > 0 { player.seek(to: p * player.duration) }
-                                dragProgress = nil
-                            }
-                    )
+                Spacer(minLength: 8)
+                Button { player.togglePlayPause() } label: {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 17))
+                        .foregroundColor(track == nil ? Theme.text3 : Theme.text)
+                        .frame(width: 34, height: 34)
                 }
-                .frame(height: 3)
+                .buttonStyle(.plain)
+                .disabled(track == nil)
+                Button { player.next() } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(track == nil ? Theme.text3 : Theme.text2)
+                        .frame(width: 30, height: 34)
+                }
+                .buttonStyle(.plain)
+                .disabled(track == nil)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 5)
-            .contentShape(Rectangle())
-            .onTapGesture { expand() }
+
+            // Thin scrubber — drag to seek.
+            GeometryReader { geo in
+                let live = player.duration > 0
+                    ? min(max(player.currentTime / player.duration, 0), 1) : 0
+                let progress = dragProgress ?? live
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.18))
+                    Capsule().fill(Theme.accent)
+                        .frame(width: max(3, geo.size.width * progress))
+                }
+                .contentShape(Rectangle().inset(by: -8))
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { v in
+                            dragProgress = min(max(v.location.x / geo.size.width, 0), 1)
+                        }
+                        .onEnded { v in
+                            let p = min(max(v.location.x / geo.size.width, 0), 1)
+                            if player.duration > 0 { player.seek(to: p * player.duration) }
+                            dragProgress = nil
+                        }
+                )
+            }
+            .frame(height: 3)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        .onTapGesture { if player.current != nil { expand() } }
     }
 }
 
