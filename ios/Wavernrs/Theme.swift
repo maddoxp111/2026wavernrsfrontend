@@ -9,7 +9,7 @@ enum Theme {
     static let text = Color.white
     static let text2 = Color.white.opacity(0.65)
     static let text3 = Color.white.opacity(0.40)
-    static let accent = Color(red: 0.95, green: 0.35, blue: 0.62)
+    static let accent = Color(red: 0.62, green: 0.40, blue: 0.96)
 }
 
 // ── Liquid Glass card modifier ────────────────────────────────────────────────

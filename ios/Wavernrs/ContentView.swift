@@ -61,13 +61,14 @@ struct ContentView: View {
                         }
                     }
                     .safeAreaInset(edge: .bottom) {
-                        VStack(spacing: 6) {
+                        VStack(spacing: 4) {
                             if player.current != nil {
                                 MiniPlayerBar { showFullPlayer = true }
                             }
                             BottomTabBar(page: $page)
                         }
-                        .padding(.bottom, 0)
+                        // Pull the bar down toward the home indicator.
+                        .padding(.bottom, -14)
                     }
                     .toolbarBackground(.visible, for: .navigationBar)
             }
@@ -127,7 +128,7 @@ struct BottomTabBar: View {
         .padding(.horizontal, 12)
         .glassPill()
         .padding(.horizontal, 24)
-        .padding(.bottom, 10)
+        .padding(.bottom, 2)
     }
 }
 
