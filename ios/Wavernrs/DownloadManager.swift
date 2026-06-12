@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import UIKit
 
 // Local downloads — like other streaming services' offline mode. Audio files
