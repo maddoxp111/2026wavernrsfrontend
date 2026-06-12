@@ -1,16 +1,16 @@
 import SwiftUI
 
-// Navigation targets used across all browse views.
 enum NavTarget: Hashable {
     case album(String)
     case artist(String)
     case track(String)
+    case playlist(String)
 }
 
 // ── Home ─────────────────────────────────────────────────────────────────────
 
 struct HomeView: View {
-    @State private var featured: Album?
+    @State private var featuredAlbums: [Album] = []
     @State private var newReleases: [Album] = []
     @State private var trending: [Track] = []
     @State private var error: String?
@@ -26,28 +26,32 @@ struct HomeView: View {
             } else {
                 VStack(alignment: .leading, spacing: 22) {
 
-                    // Featured Comp — hero tile
-                    if let featured {
-                        SectionHeader("Featured Comp")
-                        NavigationLink(value: NavTarget.album(featured.id)) {
-                            FeaturedHeroTile(album: featured)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
+                    // Auto-rotating featured carousel
+                    if !featuredAlbums.isEmpty {
+                        SectionHeader("Featured")
+                        FeaturedCarousel(albums: featuredAlbums)
                     }
 
-                    // Continue Listening — shows when something is queued
-                    if let current = player.current {
+                    // Continue Listening — last 4 played tracks
+                    if !player.recentlyPlayed.isEmpty {
                         SectionHeader("Continue Listening")
-                        Button { player.togglePlayPause() } label: {
-                            TrackRow(title: current.title,
-                                     subtitle: current.artistName,
-                                     coverUrl: current.remoteCoverUrl,
-                                     trackId: current.id,
-                                     artistId: nil)
+                        ForEach(player.recentlyPlayed) { track in
+                            Button {
+                                if player.current?.id == track.id {
+                                    player.togglePlayPause()
+                                } else {
+                                    player.play(queue: [track])
+                                }
+                            } label: {
+                                TrackRow(title: track.title,
+                                         subtitle: track.artistName,
+                                         coverUrl: track.remoteCoverUrl,
+                                         trackId: track.id,
+                                         artistId: track.artistId)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 16)
                         }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 16)
                     }
 
                     // Trending edits — horizontal scroll
@@ -109,8 +113,9 @@ struct HomeView: View {
             let albums = d.recent.compactMap { item -> Album? in
                 if case .album(let a) = item { return a } else { return nil }
             }
-            featured = albums.first
-            newReleases = albums.isEmpty ? [] : Array(albums.dropFirst())
+            // First 5 albums go into the carousel; rest become New Releases.
+            featuredAlbums = Array(albums.prefix(5))
+            newReleases = albums.count > 5 ? Array(albums.dropFirst(5)) : Array(albums.dropFirst())
             trending = d.trending ?? []
         } catch {
             self.error = "Couldn't load — Downloads still work offline."
@@ -119,24 +124,54 @@ struct HomeView: View {
     }
 }
 
-// Wide hero banner for the featured comp
+// ── Featured album carousel — auto-rotates every 15 s, manually swipeable ───
+
+struct FeaturedCarousel: View {
+    let albums: [Album]
+    @State private var current = 0
+    @State private var timer: Timer?
+
+    var body: some View {
+        TabView(selection: $current) {
+            ForEach(Array(albums.enumerated()), id: \.offset) { i, album in
+                NavigationLink(value: NavTarget.album(album.id)) {
+                    FeaturedHeroTile(album: album)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .tag(i)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .always))
+        .frame(height: 240)
+        .onAppear(perform: startTimer)
+        .onDisappear(perform: stopTimer)
+    }
+
+    private func startTimer() {
+        guard albums.count > 1 else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in
+            withAnimation { current = (current + 1) % albums.count }
+        }
+    }
+
+    private func stopTimer() { timer?.invalidate(); timer = nil }
+}
+
+// Wide hero tile inside the carousel
 struct FeaturedHeroTile: View {
     let album: Album
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Cover rendered as overlay so scaledToFill can't expand layout.
             Rectangle()
                 .fill(Theme.card)
                 .overlay(
                     Group {
                         if let s = album.coverUrl, let url = URL(string: s) {
                             AsyncImage(url: url) { phase in
-                                if let img = phase.image {
-                                    img.resizable().scaledToFill()
-                                } else {
-                                    Color.clear
-                                }
+                                if let img = phase.image { img.resizable().scaledToFill() }
+                                else { Color.clear }
                             }
                         }
                     }
@@ -160,8 +195,7 @@ struct FeaturedHeroTile: View {
                 }
                 Text(album.title ?? "Untitled")
                     .font(.system(size: 20, weight: .heavy))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
+                    .foregroundColor(.white).lineLimit(2)
                 Text(album.artistName)
                     .font(.system(size: 13))
                     .foregroundColor(.white.opacity(0.8))
@@ -187,77 +221,130 @@ struct FeaturedHeroTile: View {
 // ── Discover ─────────────────────────────────────────────────────────────────
 
 struct DiscoverView: View {
-    @State private var topComps: [ChartsItem] = []
-    @State private var topTracks: [ChartsItem] = []
-    @State private var trending: [Track] = []
+    enum Tab: String, CaseIterable {
+        case recent = "Recent", trending = "Trending", highlighted = "⭐ Highlighted"
+    }
+
+    @State private var eraTags: [EraTag] = []
+    @State private var selectedEra: EraTag?
+    @State private var activeTab: Tab = .recent
+    @State private var items: [FeedItem] = []
     @State private var loading = true
     @State private var error: String?
 
+    private let cols = [GridItem(.adaptive(minimum: 150), spacing: 14)]
+
     var body: some View {
         ScrollView {
-            if loading {
-                ProgressView().padding(.top, 80)
-            } else if let error {
-                ErrorRetryView(message: error) { await load() }
-            } else {
-                VStack(alignment: .leading, spacing: 22) {
-                    if !topComps.isEmpty {
-                        SectionHeader("Top Comps This Week")
-                        ForEach(Array(topComps.prefix(5).enumerated()), id: \.element.id) { i, item in
-                            ChartRow(rank: i + 1, item: item, isAlbum: true)
-                                .padding(.horizontal, 16)
-                        }
-                    }
+            VStack(alignment: .leading, spacing: 16) {
 
-                    if !topTracks.isEmpty {
-                        SectionHeader("Top Edits This Week")
-                        ForEach(Array(topTracks.prefix(5).enumerated()), id: \.element.id) { i, item in
-                            ChartRow(rank: i + 1, item: item, isAlbum: false)
-                                .padding(.horizontal, 16)
+                // Era tag pills
+                if !eraTags.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            eraButton(nil, label: "All")
+                            ForEach(eraTags) { tag in eraButton(tag, label: tag.name) }
                         }
-                    }
-
-                    if !trending.isEmpty {
-                        SectionHeader("Trending Edits")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(trending) { track in
-                                    NavigationLink(value: NavTarget.track(track.id)) {
-                                        MediaTile(title: track.title ?? "Untitled",
-                                                  subtitle: track.artistName,
-                                                  coverUrl: track.coverUrl,
-                                                  trackId: track.id,
-                                                  artistId: track.artists?.id,
-                                                  isExclusive: track.isExclusive == true)
-                                            .frame(width: 140)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
                     }
                 }
-                .padding(.vertical, 14)
+
+                // Tabs (hidden when an era is selected — era overrides tabs)
+                if selectedEra == nil {
+                    Picker("", selection: $activeTab) {
+                        ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                }
+
+                if loading {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+                } else if let error {
+                    ErrorRetryView(message: error) { await load() }
+                } else if items.isEmpty {
+                    Text("Nothing here yet.")
+                        .foregroundColor(Theme.text3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+                } else {
+                    LazyVGrid(columns: cols, spacing: 14) {
+                        ForEach(items) { item in
+                            switch item {
+                            case .album(let album):
+                                NavigationLink(value: NavTarget.album(album.id)) {
+                                    MediaTile(title: album.title ?? "Untitled",
+                                              subtitle: album.artistName,
+                                              coverUrl: album.coverUrl,
+                                              trackId: nil, artistId: album.artists?.id,
+                                              isExclusive: album.isExclusive == true,
+                                              isHighlighted: album.isHighlighted == true)
+                                }
+                                .buttonStyle(.plain)
+                            case .track(let track):
+                                NavigationLink(value: NavTarget.track(track.id)) {
+                                    MediaTile(title: track.title ?? "Untitled",
+                                              subtitle: track.artistName,
+                                              coverUrl: track.coverUrl,
+                                              trackId: track.id, artistId: track.artists?.id,
+                                              isExclusive: track.isExclusive == true)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
             }
+            .padding(.vertical, 14)
         }
         .background(AppBackground())
         .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
-        .task { await load() }
+        .task {
+            async let tags = API.eraTags()
+            eraTags = (try? await tags) ?? []
+            await load()
+        }
+        .onChange(of: activeTab) { _ in Task { await load() } }
+        .onChange(of: selectedEra) { _ in Task { await load() } }
         .refreshable { await load() }
+    }
+
+    @ViewBuilder
+    private func eraButton(_ tag: EraTag?, label: String) -> some View {
+        let active = selectedEra?.id == tag?.id
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) { selectedEra = tag }
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: active ? .bold : .medium))
+                .foregroundColor(active ? .white : Theme.text2)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(active ? Theme.accent : Theme.card)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func load() async {
         loading = true; error = nil
         do {
-            async let charts = API.charts()
-            async let discover = API.discover()
-            let (c, d) = try await (charts, discover)
-            topComps = (c.comps?.weekly ?? [])
-                .sorted { ($0.wavernrsScore ?? 0) > ($1.wavernrsScore ?? 0) }
-            topTracks = (c.edits?.weekly ?? [])
-                .sorted { ($0.wavernrsScore ?? 0) > ($1.wavernrsScore ?? 0) }
-            trending = d.trending ?? []
+            if let era = selectedEra {
+                items = try await API.discoverEra(id: era.id)
+            } else {
+                switch activeTab {
+                case .recent:
+                    let d = try await API.discover()
+                    items = d.recent
+                case .trending:
+                    let tracks = try await API.discoverTrending()
+                    items = tracks.map { .track($0) }
+                case .highlighted:
+                    items = try await API.discoverHighlighted()
+                }
+            }
         } catch {
             self.error = "Couldn't load."
         }
@@ -355,13 +442,12 @@ struct ChartRow: View {
     }
 }
 
-// ── Archive ──────────────────────────────────────────────────────────────────
+// ── Archive ───────────────────────────────────────────────────────────────────
 
 struct ArchiveView: View {
     @State private var albums: [Album] = []
     @State private var error: String?
     @State private var loading = true
-
     private let cols = [GridItem(.adaptive(minimum: 150), spacing: 14)]
 
     var body: some View {
@@ -370,7 +456,6 @@ struct ArchiveView: View {
                 Text("Comps preserved by the wavernrs and yzyplayer's team — not by artists on the site, but too good to be lost.")
                     .font(.system(size: 12.5)).foregroundColor(Theme.text2)
                     .padding(.horizontal, 16)
-
                 if loading {
                     ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
                 } else if let error {
@@ -406,14 +491,13 @@ struct ArchiveView: View {
     }
 }
 
-// ── Search ───────────────────────────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────────────────
 
 struct SearchView: View {
     @State private var query = ""
     @State private var results: SearchResponse?
     @State private var searching = false
     @State private var searchTask: Task<Void, Never>?
-    @EnvironmentObject var player: PlayerManager
 
     var body: some View {
         ScrollView {
@@ -437,12 +521,10 @@ struct SearchView: View {
                         }
                     }
                     if let albums = r.albums, !albums.isEmpty {
-                        SectionHeader("Comps")
-                        albumRows(albums)
+                        SectionHeader("Comps"); albumRows(albums)
                     }
                     if let archived = r.archived, !archived.isEmpty {
-                        SectionHeader("Archived")
-                        albumRows(archived)
+                        SectionHeader("Archived"); albumRows(archived)
                     }
                     if let artists = r.artists, !artists.isEmpty {
                         SectionHeader("Artists")
@@ -520,48 +602,36 @@ struct TrackDetailView: View {
                         .padding(.top, 24)
 
                     VStack(spacing: 8) {
-                        HStack(spacing: 6) {
-                            if track.isExclusive == true {
-                                Label("wavernrs exclusive", systemImage: "lock.fill")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.purple)
-                                    .clipShape(Capsule())
-                            }
+                        if track.isExclusive == true {
+                            Label("wavernrs exclusive", systemImage: "lock.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(Color.purple).clipShape(Capsule())
                         }
                         Text(track.title ?? "Untitled")
                             .font(.system(size: 22, weight: .heavy))
                             .foregroundColor(Theme.text)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(3)
+                            .multilineTextAlignment(.center).lineLimit(3)
 
                         if let artistId = track.artists?.id {
                             NavigationLink(value: NavTarget.artist(artistId)) {
                                 HStack(spacing: 4) {
-                                    Text(track.artistName)
-                                        .font(.system(size: 15))
-                                        .foregroundColor(Theme.accent)
+                                    Text(track.artistName).foregroundColor(Theme.accent)
                                     if track.artists?.isVerified == true {
                                         Image(systemName: "checkmark.seal.fill")
-                                            .font(.system(size: 12))
-                                            .foregroundColor(.blue)
+                                            .font(.system(size: 12)).foregroundColor(.blue)
                                     }
                                 }
+                                .font(.system(size: 15))
                             }
                         } else {
-                            Text(track.artistName)
-                                .font(.system(size: 15))
-                                .foregroundColor(Theme.text2)
+                            Text(track.artistName).font(.system(size: 15)).foregroundColor(Theme.text2)
                         }
                     }
                     .padding(.horizontal, 24)
 
-                    // Play button
-                    Button {
-                        player.play(queue: [PlayableTrack(track: track)])
-                    } label: {
+                    Button { player.play(queue: [PlayableTrack(track: track)]) } label: {
                         Label("Play", systemImage: "play.fill")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
@@ -572,30 +642,24 @@ struct TrackDetailView: View {
                     }
                     .padding(.horizontal, 24)
 
-                    // Download / offline status
                     let playable = PlayableTrack(track: track)
                     if downloads.isDownloaded(trackId: track.id) {
                         Label("Available offline", systemImage: "checkmark.circle.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Theme.accent)
+                            .font(.system(size: 13, weight: .semibold)).foregroundColor(Theme.accent)
                     } else if downloads.isBusy(trackId: track.id) {
                         Label("Downloading…", systemImage: "arrow.down.circle")
-                            .font(.system(size: 13))
-                            .foregroundColor(Theme.text3)
+                            .font(.system(size: 13)).foregroundColor(Theme.text3)
                     } else if track.iaUrl != nil {
                         Button { downloads.download(playable) } label: {
                             Label("Download for offline", systemImage: "arrow.down.circle")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Theme.text2)
+                                .font(.system(size: 13, weight: .semibold)).foregroundColor(Theme.text2)
                         }
                     }
 
-                    // Link to the parent comp if this track is part of one
                     if let albumId = track.albumId {
                         NavigationLink(value: NavTarget.album(albumId)) {
                             Label("View Comp", systemImage: "music.note.list")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Theme.accent)
+                                .font(.system(size: 13, weight: .semibold)).foregroundColor(Theme.accent)
                         }
                     }
                 }
@@ -618,7 +682,7 @@ struct TrackDetailView: View {
     }
 }
 
-// ── Shared components ────────────────────────────────────────────────────────
+// ── Shared components ─────────────────────────────────────────────────────────
 
 struct SectionHeader: View {
     let text: String
@@ -630,7 +694,6 @@ struct SectionHeader: View {
     }
 }
 
-// Tile used in grids — cover + title + tappable artist name + optional badges
 struct MediaTile: View {
     let title: String
     let subtitle: String
@@ -646,10 +709,8 @@ struct MediaTile: View {
                 CoverArt(trackId: trackId, remoteUrl: coverUrl, corner: 12)
                 if isExclusive {
                     Text("EXC")
-                        .font(.system(size: 8, weight: .black))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
+                        .font(.system(size: 8, weight: .black)).foregroundColor(.white)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
                         .background(Color.purple)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         .padding(5)
@@ -660,28 +721,21 @@ struct MediaTile: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Theme.text).lineLimit(1)
                 if isHighlighted {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 9))
-                        .foregroundColor(Theme.accent)
+                    Image(systemName: "star.fill").font(.system(size: 9)).foregroundColor(Theme.accent)
                 }
             }
             if let artistId {
                 NavigationLink(value: NavTarget.artist(artistId)) {
-                    Text(subtitle)
-                        .font(.system(size: 11.5))
-                        .foregroundColor(Theme.accent).lineLimit(1)
+                    Text(subtitle).font(.system(size: 11.5)).foregroundColor(Theme.accent).lineLimit(1)
                 }
                 .buttonStyle(.plain)
             } else {
-                Text(subtitle)
-                    .font(.system(size: 11.5))
-                    .foregroundColor(Theme.text2).lineLimit(1)
+                Text(subtitle).font(.system(size: 11.5)).foregroundColor(Theme.text2).lineLimit(1)
             }
         }
     }
 }
 
-// Row used in lists — cover + title/subtitle + optional badges
 struct TrackRow: View {
     let title: String
     let subtitle: String
@@ -697,10 +751,8 @@ struct TrackRow: View {
                     .frame(width: 46, height: 46)
                 if isExclusive {
                     Text("EXC")
-                        .font(.system(size: 7, weight: .black))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
+                        .font(.system(size: 7, weight: .black)).foregroundColor(.white)
+                        .padding(.horizontal, 3).padding(.vertical, 1)
                         .background(Color.purple)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                         .offset(x: 4, y: -4)
@@ -712,15 +764,11 @@ struct TrackRow: View {
                     .foregroundColor(Theme.text).lineLimit(1)
                 if let artistId {
                     NavigationLink(value: NavTarget.artist(artistId)) {
-                        Text(subtitle)
-                            .font(.system(size: 12))
-                            .foregroundColor(Theme.accent).lineLimit(1)
+                        Text(subtitle).font(.system(size: 12)).foregroundColor(Theme.accent).lineLimit(1)
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundColor(Theme.text2).lineLimit(1)
+                    Text(subtitle).font(.system(size: 12)).foregroundColor(Theme.text2).lineLimit(1)
                 }
             }
             Spacer()
@@ -735,9 +783,7 @@ struct ErrorRetryView: View {
     let retry: () async -> Void
     var body: some View {
         VStack(spacing: 12) {
-            Text(message)
-                .font(.system(size: 13.5)).foregroundColor(Theme.text2)
-                .multilineTextAlignment(.center)
+            Text(message).font(.system(size: 13.5)).foregroundColor(Theme.text2).multilineTextAlignment(.center)
             Button("Retry") { Task { await retry() } }.buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity).padding(.top, 60).padding(.horizontal, 24)
@@ -748,11 +794,9 @@ struct ErrorRetryView: View {
 @ViewBuilder
 func navDestination(_ target: NavTarget) -> some View {
     switch target {
-    case .album(let id):
-        AlbumView(albumId: id)
-    case .artist(let id):
-        ArtistProfileView(artistId: id)
-    case .track(let id):
-        TrackDetailView(trackId: id)
+    case .album(let id): AlbumView(albumId: id)
+    case .artist(let id): ArtistProfileView(artistId: id)
+    case .track(let id): TrackDetailView(trackId: id)
+    case .playlist(let id): PlaylistDetailView(playlistId: id)
     }
 }

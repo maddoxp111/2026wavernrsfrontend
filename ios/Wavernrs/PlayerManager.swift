@@ -4,9 +4,6 @@ import AVFoundation
 import MediaPlayer
 import UIKit
 
-// Queue-based audio player. Prefers a local download when one exists, so
-// anything in Downloads plays fully offline. Publishes state for the mini bar
-// and the full Now Playing screen, and drives the lock-screen controls.
 @MainActor
 final class PlayerManager: ObservableObject {
     static let shared = PlayerManager()
@@ -16,6 +13,8 @@ final class PlayerManager: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var currentTime: Double = 0
     @Published private(set) var duration: Double = 0
+    // Last 4 unique tracks played — persisted across launches.
+    @Published private(set) var recentlyPlayed: [PlayableTrack] = []
 
     var current: PlayableTrack? {
         queue.indices.contains(index) ? queue[index] : nil
@@ -24,8 +23,15 @@ final class PlayerManager: ObservableObject {
     private let player = AVPlayer()
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
+    private let recentKey = "wv_recently_played"
 
     private init() {
+        // Restore recently played list.
+        if let data = UserDefaults.standard.data(forKey: recentKey),
+           let saved = try? JSONDecoder().decode([PlayableTrack].self, from: data) {
+            recentlyPlayed = saved
+        }
+
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
 
@@ -67,7 +73,6 @@ final class PlayerManager: ObservableObject {
     }
 
     func previous() {
-        // Standard behavior: restart the track unless we're near its start.
         if currentTime > 3 || index == 0 {
             seek(to: 0)
         } else {
@@ -87,7 +92,6 @@ final class PlayerManager: ObservableObject {
     private func loadCurrent(autoplay: Bool) {
         guard let track = current else { return }
 
-        // Offline copy wins; otherwise stream from IA.
         let url: URL
         if let local = DownloadManager.shared.localAudioURL(trackId: track.id) {
             url = local
@@ -114,8 +118,18 @@ final class PlayerManager: ObservableObject {
         duration = 0
         if autoplay { player.play(); isPlaying = true }
 
+        addToRecentlyPlayed(track)
         API.reportPlay(trackId: track.id)
         updateNowPlayingInfo(for: track)
+    }
+
+    private func addToRecentlyPlayed(_ track: PlayableTrack) {
+        var updated = recentlyPlayed.filter { $0.id != track.id }
+        updated.insert(track, at: 0)
+        recentlyPlayed = Array(updated.prefix(4))
+        if let data = try? JSONEncoder().encode(recentlyPlayed) {
+            UserDefaults.standard.set(data, forKey: recentKey)
+        }
     }
 
     // ── Lock screen / control center ─────────────────────────────────────────
@@ -153,7 +167,6 @@ final class PlayerManager: ObservableObject {
         if let album = track.albumTitle { info[MPMediaItemPropertyAlbumTitle] = album }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
-        // Artwork loads async (local first, then remote) and patches in after.
         Task { [weak self] in
             guard let self else { return }
             var image = DownloadManager.shared.localCoverImage(trackId: track.id)

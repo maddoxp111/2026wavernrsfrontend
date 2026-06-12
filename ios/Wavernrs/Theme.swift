@@ -35,6 +35,20 @@ struct GlassCard: ViewModifier {
 
 extension View {
     func wvCard(corner: CGFloat = 14) -> some View { modifier(GlassCard(corner: corner)) }
+    func glassPill() -> some View { modifier(GlassPill()) }
+}
+
+// ── Floating pill modifier for the bottom tab bar ─────────────────────────────
+struct GlassPill: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: Capsule())
+        } else {
+            content
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+        }
+    }
 }
 
 // ── App background gradient ───────────────────────────────────────────────────

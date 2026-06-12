@@ -1,7 +1,6 @@
 import Foundation
 
 // ── API models ────────────────────────────────────────────────────────────────
-// Field names mirror the backend JSON (Supabase snake_case) via CodingKeys.
 
 struct Artist: Codable, Identifiable, Hashable {
     let id: String
@@ -116,7 +115,6 @@ struct Album: Codable, Identifiable, Hashable {
     }
 }
 
-// Discover returns a mixed feed where each item carries `_type`.
 enum FeedItem: Codable, Identifiable, Hashable {
     case track(Track)
     case album(Album)
@@ -158,7 +156,6 @@ struct ChartsBucket: Codable {
     let weekly: [ChartsItem]?
 }
 
-// Charts items are tracks or albums enriched with score fields.
 struct ChartsItem: Codable, Identifiable, Hashable {
     let id: String
     let title: String?
@@ -195,14 +192,86 @@ struct SearchResponse: Codable {
     let archived: [Album]?
 }
 
+// ── Era tags ─────────────────────────────────────────────────────────────────
+
+struct EraTag: Codable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let position: Int?
+}
+
+// ── Auth & user ──────────────────────────────────────────────────────────────
+
+struct LoginResponse: Codable {
+    let token: String
+    let user: LoginUser
+
+    struct LoginUser: Codable {
+        let id: String
+        let username: String
+    }
+}
+
+struct UserProfile: Codable, Identifiable {
+    let id: String
+    let username: String
+    let artist: ArtistFull?
+}
+
+// ── Playlists ────────────────────────────────────────────────────────────────
+
+struct PlaylistSummary: Codable, Identifiable {
+    let id: String
+    let title: String
+    let description: String?
+    let trackCount: Int?
+    let isPublic: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, description
+        case trackCount = "track_count"
+        case isPublic = "is_public"
+    }
+}
+
+struct PlaylistDetail: Codable, Identifiable {
+    let id: String
+    let title: String
+    let description: String?
+    let isPublic: Bool?
+    let tracks: [PlaylistTrackEntry]?
+}
+
+struct PlaylistTrackEntry: Codable, Identifiable {
+    let id: String
+    let title: String?
+    let coverUrl: String?
+    let iaUrl: String?
+    let artistName: String?
+    let position: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, position
+        case coverUrl = "cover_url"
+        case iaUrl = "ia_url"
+        case artistName = "artist_name"
+    }
+
+    func toPlayable() -> PlayableTrack {
+        PlayableTrack(id: id, title: title ?? "Untitled",
+                      artistName: artistName ?? "Unknown", artistId: nil,
+                      remoteAudioUrl: iaUrl, remoteCoverUrl: coverUrl,
+                      albumId: nil, albumTitle: nil, position: position ?? 0)
+    }
+}
+
 // ── Playback / downloads ─────────────────────────────────────────────────────
 
-// The unit the player and download manager work with — built either from an
-// online Track or from a saved download.
 struct PlayableTrack: Identifiable, Hashable, Codable {
     let id: String
     let title: String
     let artistName: String
+    let artistId: String?
     let remoteAudioUrl: String?
     let remoteCoverUrl: String?
     let albumId: String?
@@ -213,6 +282,7 @@ struct PlayableTrack: Identifiable, Hashable, Codable {
         self.id = track.id
         self.title = track.title ?? "Untitled"
         self.artistName = album?.artistName ?? track.artistName
+        self.artistId = track.artists?.id
         self.remoteAudioUrl = track.iaUrl
         self.remoteCoverUrl = track.coverUrl ?? album?.coverUrl
         self.albumId = album?.id ?? track.albumId
@@ -220,11 +290,13 @@ struct PlayableTrack: Identifiable, Hashable, Codable {
         self.position = track.trackPosition ?? 0
     }
 
-    init(id: String, title: String, artistName: String, remoteAudioUrl: String?,
-         remoteCoverUrl: String?, albumId: String?, albumTitle: String?, position: Int) {
+    init(id: String, title: String, artistName: String, artistId: String?,
+         remoteAudioUrl: String?, remoteCoverUrl: String?,
+         albumId: String?, albumTitle: String?, position: Int) {
         self.id = id
         self.title = title
         self.artistName = artistName
+        self.artistId = artistId
         self.remoteAudioUrl = remoteAudioUrl
         self.remoteCoverUrl = remoteCoverUrl
         self.albumId = albumId
