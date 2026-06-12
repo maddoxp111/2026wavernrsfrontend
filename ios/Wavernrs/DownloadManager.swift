@@ -32,8 +32,17 @@ final class DownloadManager: ObservableObject {
     private func loadIndex() {
         guard let data = try? Data(contentsOf: indexFile),
               let saved = try? JSONDecoder().decode([PlayableTrack].self, from: data) else { return }
+        // Older builds saved audio as "<id>.audio", which AVPlayer can't sniff
+        // a format from — rename those to the track's real extension.
+        for item in saved {
+            let legacy = audioDir.appendingPathComponent(item.id + ".audio")
+            if fm.fileExists(atPath: legacy.path) {
+                let fixed = audioFile(for: item.id, remoteUrl: item.remoteAudioUrl)
+                try? fm.moveItem(at: legacy, to: fixed)
+            }
+        }
         // Drop entries whose audio file went missing.
-        items = saved.filter { fm.fileExists(atPath: audioFile(for: $0.id).path) }
+        items = saved.filter { localAudioURL(trackId: $0.id) != nil }
     }
 
     private func saveIndex() {
@@ -44,8 +53,12 @@ final class DownloadManager: ObservableObject {
 
     // ── Paths / lookups ──────────────────────────────────────────────────────
 
-    private func audioFile(for trackId: String) -> URL {
-        audioDir.appendingPathComponent(trackId + ".audio")
+    // AVPlayer infers the audio format from the file extension, so files are
+    // stored with the extension of the source URL (falling back to mp3).
+    private func audioFile(for trackId: String, remoteUrl: String?) -> URL {
+        var ext = (remoteUrl.flatMap(URL.init(string:))?.pathExtension ?? "").lowercased()
+        if ext.isEmpty || ext.count > 5 { ext = "mp3" }
+        return audioDir.appendingPathComponent(trackId + "." + ext)
     }
 
     private func coverFile(for trackId: String) -> URL {
@@ -61,8 +74,9 @@ final class DownloadManager: ObservableObject {
     }
 
     func localAudioURL(trackId: String) -> URL? {
-        let f = audioFile(for: trackId)
-        return fm.fileExists(atPath: f.path) ? f : nil
+        let names = (try? fm.contentsOfDirectory(atPath: audioDir.path)) ?? []
+        guard let match = names.first(where: { $0.hasPrefix(trackId + ".") }) else { return nil }
+        return audioDir.appendingPathComponent(match)
     }
 
     // Cheap synchronous read used by CoverArt (always called from view bodies,
@@ -116,7 +130,7 @@ final class DownloadManager: ObservableObject {
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 throw URLError(.badServerResponse)
             }
-            let dest = audioFile(for: playable.id)
+            let dest = audioFile(for: playable.id, remoteUrl: playable.remoteAudioUrl)
             try? fm.removeItem(at: dest)
             try fm.moveItem(at: tmp, to: dest)
             progress[playable.id] = 0.9
@@ -133,14 +147,14 @@ final class DownloadManager: ObservableObject {
             }
         } catch {
             // Leave nothing half-written.
-            try? fm.removeItem(at: audioFile(for: playable.id))
+            if let f = localAudioURL(trackId: playable.id) { try? fm.removeItem(at: f) }
         }
     }
 
     // ── Deletion ─────────────────────────────────────────────────────────────
 
     func delete(trackId: String) {
-        try? fm.removeItem(at: audioFile(for: trackId))
+        if let f = localAudioURL(trackId: trackId) { try? fm.removeItem(at: f) }
         try? fm.removeItem(at: coverFile(for: trackId))
         coverCache[trackId] = nil
         items.removeAll { $0.id == trackId }

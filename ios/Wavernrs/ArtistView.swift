@@ -18,6 +18,7 @@ struct ArtistsView: View {
                         NavigationLink(value: NavTarget.artist(artist.id)) {
                             ArtistRow(artist: artist)
                         }
+                        .buttonStyle(.plain)
                         .padding(.horizontal, 16)
                     }
                 }
@@ -72,9 +73,16 @@ struct ArtistRow: View {
     var body: some View {
         HStack(spacing: 12) {
             AvatarView(url: artist.profileImageUrl, size: 46)
-            Text(artist.displayName ?? "Unknown")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Theme.text)
+            HStack(spacing: 5) {
+                Text(artist.displayName ?? "Unknown")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Theme.text)
+                if artist.isVerified == true {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.blue)
+                }
+            }
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
@@ -90,90 +98,44 @@ struct ArtistRow: View {
 struct ArtistProfileView: View {
     let artistId: String
     @State private var artist: ArtistFull?
-    @State private var tracks: [Track] = []
     @State private var albums: [Album] = []
     @State private var error: String?
-    @EnvironmentObject var player: PlayerManager
+
+    private let cols = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
     var body: some View {
         ScrollView {
             if let artist {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Banner / header
                     ArtistHeaderView(artist: artist)
 
-                    VStack(alignment: .leading, spacing: 18) {
-                        // Bio
-                        if let bio = artist.bio, !bio.isEmpty {
-                            Text(bio)
-                                .font(.system(size: 13.5))
+                    if albums.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 30))
+                                .foregroundColor(Theme.text3)
+                            Text("No uploads yet")
+                                .font(.system(size: 14))
                                 .foregroundColor(Theme.text2)
-                                .padding(.horizontal, 18)
-                                .padding(.top, 16)
                         }
-
-                        // Stats
-                        HStack(spacing: 24) {
-                            statBadge(label: "Followers", value: artist.followerCount ?? 0)
-                            statBadge(label: "Tracks", value: artist.trackCount ?? 0)
-                            if let loc = artist.location, !loc.isEmpty {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(loc)
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(Theme.text)
-                                    Text("Location")
-                                        .font(.system(size: 10.5))
-                                        .foregroundColor(Theme.text3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
+                    } else {
+                        LazyVGrid(columns: cols, spacing: 12) {
+                            ForEach(albums) { album in
+                                NavigationLink(value: NavTarget.album(album.id)) {
+                                    MediaTile(title: album.title ?? "Untitled",
+                                              subtitle: album.artistName,
+                                              coverUrl: album.coverUrl,
+                                              trackId: nil, artistId: nil,
+                                              isExclusive: album.isExclusive == true,
+                                              isHighlighted: album.isHighlighted == true)
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, 18)
-
-                        // Tracks
-                        if !tracks.isEmpty {
-                            SectionHeader("Tracks")
-                            ForEach(tracks.prefix(20)) { track in
-                                Button {
-                                    player.play(queue: tracks.map { PlayableTrack(track: $0) },
-                                                startAt: tracks.firstIndex(of: track) ?? 0)
-                                } label: {
-                                    TrackRow(title: track.title ?? "Untitled",
-                                             subtitle: track.artistName,
-                                             coverUrl: track.coverUrl,
-                                             trackId: track.id,
-                                             artistId: nil)
-                                }
-                                .padding(.horizontal, 14)
-                            }
-                        }
-
-                        // Comps
-                        if !albums.isEmpty {
-                            SectionHeader("Comps")
-                            let cols = [GridItem(.adaptive(minimum: 150), spacing: 12)]
-                            LazyVGrid(columns: cols, spacing: 12) {
-                                ForEach(albums) { album in
-                                    NavigationLink(value: NavTarget.album(album.id)) {
-                                        MediaTile(title: album.title ?? "Untitled",
-                                                  subtitle: album.artistName,
-                                                  coverUrl: album.coverUrl,
-                                                  trackId: nil, artistId: nil)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 14)
-                        }
-
-                        if let web = artist.website, !web.isEmpty, let url = URL(string: web) {
-                            Link(destination: url) {
-                                Label(web.replacingOccurrences(of: "https://", with: ""), systemImage: "link")
-                                    .font(.system(size: 12.5))
-                                    .foregroundColor(Theme.accent)
-                            }
-                            .padding(.horizontal, 18)
-                        }
+                        .padding(14)
                     }
-                    .padding(.bottom, 32)
                 }
             } else if let error {
                 ErrorRetryView(message: error) { await load() }
@@ -187,26 +149,13 @@ struct ArtistProfileView: View {
         .task { await load() }
     }
 
-    private func statBadge(label: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value.formatted())
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Theme.text)
-            Text(label)
-                .font(.system(size: 10.5))
-                .foregroundColor(Theme.text3)
-        }
-    }
-
     private func load() async {
         error = nil
         async let a = API.artist(id: artistId)
-        async let t = API.artistTracks(id: artistId)
         async let al = API.artistAlbums(id: artistId)
         do {
-            let (artistData, tracksData, albumsData) = try await (a, t, al)
+            let (artistData, albumsData) = try await (a, al)
             artist = artistData
-            tracks = tracksData
             albums = albumsData
         } catch {
             self.error = "Couldn't load this artist."
@@ -219,35 +168,54 @@ struct ArtistHeaderView: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Banner
-            if let bannerUrl = artist.bannerUrl, let url = URL(string: bannerUrl) {
-                AsyncImage(url: url) { phase in
-                    if let img = phase.image {
-                        img.resizable().scaledToFill()
-                    } else {
-                        bannerPlaceholder
+            // Banner — rendered as an overlay on a fixed-size base so the
+            // scaledToFill image can never expand the page layout sideways.
+            Rectangle()
+                .fill(Color.clear)
+                .overlay(
+                    Group {
+                        if let bannerUrl = artist.bannerUrl, let url = URL(string: bannerUrl) {
+                            AsyncImage(url: url) { phase in
+                                if let img = phase.image {
+                                    img.resizable().scaledToFill()
+                                } else {
+                                    bannerPlaceholder
+                                }
+                            }
+                        } else {
+                            bannerPlaceholder
+                        }
                     }
-                }
-            } else {
-                bannerPlaceholder
-            }
+                )
+                .clipped()
 
-            // Gradient overlay so text is always readable
             LinearGradient(
                 stops: [.init(color: .clear, location: 0.3),
                         .init(color: Color(red: 0.05, green: 0.05, blue: 0.08), location: 1)],
                 startPoint: .top, endPoint: .bottom
             )
 
-            // Avatar + name
             HStack(alignment: .bottom, spacing: 14) {
                 AvatarView(url: artist.profileImageUrl, size: 72)
                     .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 2))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(artist.name)
-                        .font(.system(size: 22, weight: .heavy))
-                        .foregroundColor(.white)
-                        .shadow(radius: 4)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(artist.name)
+                            .font(.system(size: 22, weight: .heavy))
+                            .foregroundColor(.white)
+                            .shadow(radius: 4)
+                        if artist.isVerified == true {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 17))
+                                .foregroundColor(.blue)
+                                .shadow(radius: 4)
+                        }
+                    }
+                    if let loc = artist.location, !loc.isEmpty {
+                        Text(loc)
+                            .font(.system(size: 11.5))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
                 }
                 Spacer()
             }
@@ -255,6 +223,7 @@ struct ArtistHeaderView: View {
             .padding(.bottom, 18)
         }
         .frame(height: 220)
+        .frame(maxWidth: .infinity)
         .clipped()
     }
 

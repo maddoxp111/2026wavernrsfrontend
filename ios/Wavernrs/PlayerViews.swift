@@ -8,45 +8,46 @@ struct MiniPlayerBar: View {
 
     var body: some View {
         if let track = player.current {
-            Button(action: expand) {
-                HStack(spacing: 12) {
-                    CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
-                        .frame(width: 40, height: 40)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(track.title)
-                            .font(.system(size: 13.5, weight: .semibold))
-                            .foregroundColor(Theme.text)
-                            .lineLimit(1)
-                        Text(track.artistName)
-                            .font(.system(size: 11.5))
-                            .foregroundColor(Theme.text2)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Button {
-                        player.togglePlayPause()
-                    } label: {
-                        Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(Theme.text)
-                            .frame(width: 38, height: 38)
-                    }
-                    Button {
-                        player.next()
-                    } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 15))
-                            .foregroundColor(Theme.text2)
-                            .frame(width: 34, height: 38)
-                    }
+            HStack(spacing: 12) {
+                CoverArt(trackId: track.id, remoteUrl: track.remoteCoverUrl, corner: 8)
+                    .frame(width: 40, height: 40)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(track.title)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                        .lineLimit(1)
+                    Text(track.artistName)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(Theme.text2)
+                        .lineLimit(1)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .wvCard(corner: 14)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 4)
+                Spacer()
+                Button {
+                    player.togglePlayPause()
+                } label: {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(Theme.text)
+                        .frame(width: 38, height: 38)
+                }
+                Button {
+                    player.next()
+                } label: {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(Theme.text2)
+                        .frame(width: 34, height: 38)
+                }
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .wvCard(corner: 14)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 4)
+            // Tapping anywhere outside the buttons opens the full player.
+            // Buttons intercept their own hit areas; the gesture fires elsewhere.
+            .contentShape(Rectangle())
+            .onTapGesture { expand() }
         }
     }
 }

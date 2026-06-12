@@ -7,11 +7,13 @@ struct Artist: Codable, Identifiable, Hashable {
     let id: String
     let displayName: String?
     let profileImageUrl: String?
+    let isVerified: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
         case displayName = "display_name"
         case profileImageUrl = "profile_image_url"
+        case isVerified = "is_verified"
     }
 }
 
@@ -25,6 +27,7 @@ struct ArtistFull: Codable, Identifiable, Hashable {
     let website: String?
     let trackCount: Int?
     let followerCount: Int?
+    let isVerified: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, bio, location, website
@@ -33,6 +36,7 @@ struct ArtistFull: Codable, Identifiable, Hashable {
         case bannerUrl = "banner_url"
         case trackCount = "track_count"
         case followerCount = "follower_count"
+        case isVerified = "is_verified"
     }
 
     var name: String { displayName ?? "Unknown" }
@@ -48,6 +52,7 @@ struct Track: Codable, Identifiable, Hashable {
     let albumId: String?
     let trackPosition: Int?
     let isArchive: Bool?
+    let isExclusive: Bool?
     let artists: Artist?
 
     enum CodingKeys: String, CodingKey {
@@ -59,6 +64,7 @@ struct Track: Codable, Identifiable, Hashable {
         case albumId = "album_id"
         case trackPosition = "track_position"
         case isArchive = "is_archive"
+        case isExclusive = "is_exclusive"
     }
 
     var artistName: String { artists?.displayName ?? "Unknown" }
@@ -80,6 +86,8 @@ struct Album: Codable, Identifiable, Hashable {
     let isArchive: Bool?
     let archiveArtistName: String?
     let sourceUrl: String?
+    let isHighlighted: Bool?
+    let isExclusive: Bool?
     let artists: Artist?
     let albumTracks: [AlbumTrackEntry]?
 
@@ -91,6 +99,8 @@ struct Album: Codable, Identifiable, Hashable {
         case isArchive = "is_archive"
         case archiveArtistName = "archive_artist_name"
         case sourceUrl = "source_url"
+        case isHighlighted = "is_highlighted"
+        case isExclusive = "is_exclusive"
         case albumTracks = "album_tracks"
     }
 
