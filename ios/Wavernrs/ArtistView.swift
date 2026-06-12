@@ -140,7 +140,8 @@ struct ArtistProfileView: View {
                                     TrackRow(title: track.title ?? "Untitled",
                                              subtitle: track.artistName,
                                              coverUrl: track.coverUrl,
-                                             trackId: track.id)
+                                             trackId: track.id,
+                                             artistId: nil)
                                 }
                                 .padding(.horizontal, 14)
                             }
