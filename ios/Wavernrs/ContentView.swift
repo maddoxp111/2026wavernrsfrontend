@@ -38,6 +38,8 @@ struct ContentView: View {
     @State private var page: Page = .home
     @State private var drawerOpen = false
     @State private var showFullPlayer = false
+    // Programmatic path for the Home tab — drawer-only pages push onto it.
+    @State private var homePath = NavigationPath()
     @EnvironmentObject var player: PlayerManager
 
     var body: some View {
@@ -59,7 +61,13 @@ struct ContentView: View {
         ZStack(alignment: .leading) {
             TabView(selection: $page) {
                 Tab(Page.home.rawValue, systemImage: Page.home.icon, value: Page.home) {
-                    pageNav(.home)
+                    // Home owns a programmatic path so the drawer can push
+                    // its pages while the tab bar and mini player stay up.
+                    NavigationStack(path: $homePath) {
+                        pageView(for: .home)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar { navToolbar }
+                    }
                 }
                 Tab(Page.discover.rawValue, systemImage: Page.discover.icon, value: Page.discover) {
                     pageNav(.discover)
@@ -70,29 +78,6 @@ struct ContentView: View {
                 Tab(Page.search.rawValue, systemImage: Page.search.icon, value: Page.search, role: .search) {
                     pageNav(.search)
                 }
-
-                // Drawer-only pages ride along as hidden tabs so selecting them
-                // keeps the tab bar and mini player on screen.
-                Tab(Page.charts.rawValue, systemImage: Page.charts.icon, value: Page.charts) {
-                    pageNav(.charts)
-                }
-                .hidden(true)
-                Tab(Page.archive.rawValue, systemImage: Page.archive.icon, value: Page.archive) {
-                    pageNav(.archive)
-                }
-                .hidden(true)
-                Tab(Page.artists.rawValue, systemImage: Page.artists.icon, value: Page.artists) {
-                    pageNav(.artists)
-                }
-                .hidden(true)
-                Tab(Page.community.rawValue, systemImage: Page.community.icon, value: Page.community) {
-                    pageNav(.community)
-                }
-                .hidden(true)
-                Tab(Page.downloads.rawValue, systemImage: Page.downloads.icon, value: Page.downloads) {
-                    pageNav(.downloads)
-                }
-                .hidden(true)
             }
             .tabBarMinimizeBehavior(.onScrollDown)
             .tabViewBottomAccessory {
@@ -137,9 +122,21 @@ struct ContentView: View {
             .ignoresSafeArea()
             .onTapGesture { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } }
 
-        SidebarView(page: $page,
+        SidebarView(current: page,
+                    select: { selectSidebarPage($0) },
                     close: { withAnimation(.easeOut(duration: 0.22)) { drawerOpen = false } })
             .transition(.move(edge: .leading))
+    }
+
+    private func selectSidebarPage(_ p: Page) {
+        if #available(iOS 26.0, *), !Page.tabPages.contains(p) {
+            // Drawer-only pages aren't tabs in the native bar — push them on
+            // the Home stack so the tab bar and mini player stay visible.
+            page = .home
+            homePath.append(NavTarget.page(p))
+        } else {
+            page = p
+        }
     }
 
     @ToolbarContentBuilder
@@ -216,7 +213,8 @@ struct BottomTabBar: View {
 // ── Sidebar (drawer) ─────────────────────────────────────────────────────────
 
 struct SidebarView: View {
-    @Binding var page: Page
+    let current: Page
+    let select: (Page) -> Void
     let close: () -> Void
 
     var body: some View {
@@ -230,7 +228,7 @@ struct SidebarView: View {
 
             ForEach(Page.sidebarPages, id: \.self) { p in
                 Button {
-                    page = p
+                    select(p)
                     close()
                 } label: {
                     HStack(spacing: 14) {
@@ -238,10 +236,10 @@ struct SidebarView: View {
                             .font(.system(size: 16, weight: .medium))
                             .frame(width: 24)
                         Text(p.rawValue)
-                            .font(.system(size: 15, weight: page == p ? .bold : .regular))
+                            .font(.system(size: 15, weight: current == p ? .bold : .regular))
                         Spacer()
                     }
-                    .foregroundColor(page == p ? Theme.accent : Theme.text)
+                    .foregroundColor(current == p ? Theme.accent : Theme.text)
                     .padding(.vertical, 11)
                     .padding(.horizontal, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)

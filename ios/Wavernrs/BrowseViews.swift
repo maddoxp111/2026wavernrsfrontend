@@ -6,6 +6,8 @@ enum NavTarget: Hashable {
     case track(String)
     case playlist(String)
     case communityPost(String)
+    // Drawer-only top-level pages, pushed onto the Home tab's stack on iOS 26.
+    case page(Page)
 }
 
 // ── Home ─────────────────────────────────────────────────────────────────────
@@ -800,5 +802,15 @@ func navDestination(_ target: NavTarget) -> some View {
     case .track(let id): TrackDetailView(trackId: id)
     case .playlist(let id): PlaylistDetailView(playlistId: id)
     case .communityPost(let id): CommunityPostView(postId: id)
+    case .page(let p):
+        switch p {
+        case .charts: ChartsView()
+        case .archive: ArchiveView()
+        case .artists: ArtistsView()
+        case .community: CommunityView()
+        case .downloads: DownloadsView()
+        // Tab pages are reached via the tab bar, never pushed.
+        default: HomeView()
+        }
     }
 }
