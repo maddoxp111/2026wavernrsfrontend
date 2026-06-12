@@ -294,7 +294,7 @@ struct SearchView: View {
                     }
                     if (r.tracks ?? []).isEmpty && (r.albums ?? []).isEmpty &&
                        (r.archived ?? []).isEmpty && (r.artists ?? []).isEmpty {
-                        Text("No results for "\(query)"")
+                        Text("No results for \"\(query)\"")
                             .foregroundColor(Theme.text3)
                             .frame(maxWidth: .infinity).padding(.top, 40)
                     }

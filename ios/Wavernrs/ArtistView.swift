@@ -23,7 +23,7 @@ struct ArtistsView: View {
                 }
                 .padding(.vertical, 14)
             } else if query.count >= 2 {
-                Text("No artists found for "\(query)"")
+                Text("No artists found for \"\(query)\"")
                     .foregroundColor(Theme.text3)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 60)
