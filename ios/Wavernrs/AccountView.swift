@@ -239,7 +239,7 @@ struct PlaylistDetailView: View {
     let playlistId: String
     @State private var detail: PlaylistDetail?
     @State private var error: String?
-    @State private var addToPlaylistTrackId: String?
+    @State private var addToPlaylistTarget: IdentifiableString?
     @State private var addToPlaylistTrackTitle: String = ""
     @EnvironmentObject var player: PlayerManager
     @EnvironmentObject var auth: AuthManager
@@ -308,7 +308,7 @@ struct PlaylistDetailView: View {
                                 }
                                 Button {
                                     addToPlaylistTrackTitle = entry.title ?? "Untitled"
-                                    addToPlaylistTrackId = entry.id
+                                    addToPlaylistTarget = IdentifiableString(value: entry.id)
                                 } label: {
                                     Label("Add to Playlist", systemImage: "plus")
                                 }
@@ -326,10 +326,7 @@ struct PlaylistDetailView: View {
         .background(AppBackground())
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
-        .sheet(item: Binding(
-            get: { addToPlaylistTrackId.map { IdentifiableString(value: $0) } },
-            set: { addToPlaylistTrackId = $0?.value }
-        )) { item in
+        .sheet(item: $addToPlaylistTarget) { item in
             AddToPlaylistSheet(trackId: item.value, trackTitle: addToPlaylistTrackTitle)
         }
         .task { await load() }
