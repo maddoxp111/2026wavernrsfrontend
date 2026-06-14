@@ -185,6 +185,13 @@
             '<select id="arc-era" class="wv-input" style="max-width:400px;"><option value="">Loading…</option></select>' +
           '</div>' +
 
+          // Era tag keywords
+          '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
+            '<div style="font-weight:700;margin-bottom:4px;">Era Tag Keywords</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Comma-separated keywords per era tag. When the Discord bot imports a comp, it checks the title against these keywords and assigns the matching tag. If nothing matches, it falls back to <b>Other</b>.</div>' +
+            '<div id="era-keywords-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+          '</div>' +
+
           // Import from link
           '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
             '<div style="font-weight:700;margin-bottom:6px;">Import from a link</div>' +
@@ -582,7 +589,42 @@
       sel.innerHTML = '<option value="">Select era tag…</option>' +
         tags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
       _arcErasLoaded = true;
+      _arcRenderKeywords(tags);
     } catch (_) {}
+  }
+
+  function _arcRenderKeywords(tags) {
+    var el = document.getElementById('era-keywords-list');
+    if (!el) return;
+    el.innerHTML = tags.map(function(t) {
+      return (
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<span style="font-size:13px;font-weight:600;min-width:110px;flex-shrink:0;">' + escHtml(t.name) + '</span>' +
+          '<input id="kw-' + escHtml(t.id) + '" class="wv-input" ' +
+            'value="' + escHtml((t.keywords || []).join(', ')) + '" ' +
+            'placeholder="keyword1, keyword2…" ' +
+            'style="flex:1;min-width:180px;font-size:13px;padding:7px 10px;">' +
+          '<button class="wv-pill brand" style="padding:6px 14px;font-size:12px;" ' +
+            'onclick="saveEraTagKeywords(\'' + escHtml(t.id) + '\', this)">Save</button>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  async function saveEraTagKeywords(tagId, btn) {
+    var inp = document.getElementById('kw-' + tagId);
+    if (!inp) return;
+    var keywords = inp.value.split(',').map(function(k) { return k.trim(); }).filter(Boolean);
+    var orig = btn.textContent;
+    btn.disabled = true;
+    try {
+      await api('/eratags/' + tagId + '/keywords', { method: 'PATCH', body: JSON.stringify({ keywords: keywords }) });
+      btn.textContent = '✓';
+      setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1500);
+    } catch (err) {
+      btn.textContent = 'Error';
+      setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1500);
+    }
   }
 
   function arcRenderQueue() {
