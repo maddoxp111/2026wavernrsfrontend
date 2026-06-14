@@ -110,6 +110,7 @@
           '<button class="wv-admin-tab"        id="mtab-uploads"       onclick="showModTab(\'uploads\')">Recent Uploads</button>' +
           '<button class="wv-admin-tab"        id="mtab-replace-audio" onclick="showModTab(\'replace-audio\')">Replace Audio</button>' +
           '<button class="wv-admin-tab"        id="mtab-arc"           onclick="showModTab(\'arc\')">Archive</button>' +
+          '<button class="wv-admin-tab"        id="mtab-discord"       onclick="showModTab(\'discord\')">Discord Uploads</button>' +
         '</div>' +
 
         '<div id="mod-alert" style="margin-bottom:12px;"></div>' +
@@ -184,6 +185,13 @@
             '<select id="arc-era" class="wv-input" style="max-width:400px;"><option value="">Loading…</option></select>' +
           '</div>' +
 
+          // Era tag keywords
+          '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
+            '<div style="font-weight:700;margin-bottom:4px;">Era Tag Keywords</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Comma-separated keywords per era tag. When the Discord bot imports a comp, it matches the title against these keywords and assigns the matching tag. If nothing matches, it falls back to <b>Other</b>.</div>' +
+            '<div id="era-keywords-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+          '</div>' +
+
           // Import from link
           '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
             '<div style="font-weight:700;margin-bottom:6px;">Import from a link</div>' +
@@ -220,11 +228,19 @@
           '</div>' +
         '</div>' +
 
+        // Discord Uploads tab
+        '<div id="mod-tab-discord" style="display:none;">' +
+          '<div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:14px;">Bot-triggered imports — auto-refreshes every 10 s</div>' +
+          '<div id="discord-upload-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+        '</div>' +
+
       '</div>';
   }
 
+  var _discordPollInterval = null;
+
   function showModTab(tab) {
-    ['users', 'uploads', 'replace-audio', 'arc'].forEach(function(t) {
+    ['users', 'uploads', 'replace-audio', 'arc', 'discord'].forEach(function(t) {
       var panel = document.getElementById('mod-tab-' + t);
       var btn   = document.getElementById('mtab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -232,6 +248,15 @@
     });
     if (tab === 'uploads') loadUploads();
     if (tab === 'arc') arcLoadEraTags();
+    if (tab === 'discord') {
+      loadDiscordUploads();
+      if (!_discordPollInterval) {
+        _discordPollInterval = setInterval(function() {
+          var panel = document.getElementById('mod-tab-discord');
+          if (panel && panel.style.display !== 'none') loadDiscordUploads();
+        }, 10000);
+      }
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -564,7 +589,42 @@
       sel.innerHTML = '<option value="">Select era tag…</option>' +
         tags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
       _arcErasLoaded = true;
+      _arcRenderKeywords(tags);
     } catch (_) {}
+  }
+
+  function _arcRenderKeywords(tags) {
+    var el = document.getElementById('era-keywords-list');
+    if (!el) return;
+    el.innerHTML = tags.map(function(t) {
+      return (
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+          '<span style="font-size:13px;font-weight:600;min-width:110px;flex-shrink:0;">' + escHtml(t.name) + '</span>' +
+          '<input id="kw-' + escHtml(t.id) + '" class="wv-input" ' +
+            'value="' + escHtml((t.keywords || []).join(', ')) + '" ' +
+            'placeholder="keyword1, keyword2…" ' +
+            'style="flex:1;min-width:180px;font-size:13px;padding:7px 10px;">' +
+          '<button class="wv-pill brand" style="padding:6px 14px;font-size:12px;" ' +
+            'onclick="saveEraTagKeywords(\'' + escHtml(t.id) + '\', this)">Save</button>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  async function saveEraTagKeywords(tagId, btn) {
+    var inp = document.getElementById('kw-' + tagId);
+    if (!inp) return;
+    var keywords = inp.value.split(',').map(function(k) { return k.trim(); }).filter(Boolean);
+    var orig = btn.textContent;
+    btn.disabled = true;
+    try {
+      await api('/eratags/' + tagId + '/keywords', { method: 'PATCH', body: JSON.stringify({ keywords: keywords }) });
+      btn.textContent = '✓';
+      setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1500);
+    } catch (err) {
+      btn.textContent = 'Error';
+      setTimeout(function() { btn.textContent = orig; btn.disabled = false; }, 1500);
+    }
   }
 
   function arcRenderQueue() {
@@ -724,6 +784,60 @@
       _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), '#f87171');
       btn.disabled = false;
     }
+  }
+
+  // ── Discord Uploads tab ───────────────────────────────────────────────────
+  async function loadDiscordUploads() {
+    var el = document.getElementById('discord-upload-list');
+    if (!el) return;
+    var token = localStorage.getItem('token');
+    var r, data;
+    try {
+      r = await fetch(API_BASE + '/discord/active-jobs', { headers: { 'Authorization': 'Bearer ' + token } });
+      data = await r.json();
+    } catch (err) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escHtml(err.message) + '</div>';
+      return;
+    }
+    if (!r.ok) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escHtml((data && data.error) || 'Failed to load') + '</div>';
+      return;
+    }
+
+    var log = data.log || [];
+    var statusColor = { queued: 'var(--text-3)', running: '#facc15', done: '#4ade80', failed: '#f87171' };
+
+    var header = '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Queue: ' +
+      (data.queue_length || 0) + ' pending' + (data.active_job_id ? ' · 1 running' : '') + '</div>';
+
+    if (!log.length) {
+      el.innerHTML = header + '<div style="color:var(--text-3);font-size:14px;padding:8px 0;">No bot-triggered imports yet.</div>';
+      return;
+    }
+
+    el.innerHTML = header + log.map(function(row) {
+      var color = statusColor[row.status] || 'var(--text-2)';
+      var label = (row.status || '').charAt(0).toUpperCase() + (row.status || '').slice(1);
+      var name  = escHtml(row.discord_username || '(unknown)');
+      var url   = escHtml(row.source_url || '');
+      var shortUrl = url.length > 64 ? url.slice(0, 61) + '…' : url;
+      var claimBadge = row.claimed ? ' <span style="font-size:10px;color:#4ade80;font-weight:600;">CLAIMED</span>' : '';
+      return (
+        '<div style="padding:12px 14px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:10px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<span style="font-size:13px;font-weight:600;">@' + name + claimBadge + '</span>' +
+            '<span style="font-size:11px;font-weight:600;color:' + color + ';">' + label + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-top:4px;word-break:break-all;">' + shortUrl + '</div>' +
+          (row.album_id
+            ? '<div style="font-size:12px;margin-top:4px;"><a href="/album.html?id=' + escHtml(row.album_id) + '" style="color:var(--purple-light);">View comp</a></div>'
+            : '') +
+          (row.error_message
+            ? '<div style="font-size:12px;color:#f87171;margin-top:4px;">' + escHtml(String(row.error_message).slice(0, 140)) + '</div>'
+            : '') +
+        '</div>'
+      );
+    }).join('');
   }
 </script>
 </body>
