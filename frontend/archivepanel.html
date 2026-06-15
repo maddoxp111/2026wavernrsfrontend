@@ -112,6 +112,34 @@
           '</div>' +
           '<div id="arc-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
         '</div>' +
+
+        '<div class="wv-card" style="padding:20px 24px;margin-top:20px;border-left:4px solid #a78bfa;">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">MEGA folder bulk import</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">' +
+            'Paste a <b>root MEGA folder</b> whose top-level sub-folders are each one comp. ' +
+            'Every sub-folder is imported as a separate archive comp, sequentially. ' +
+            'Folder names like <em>Artist – Title</em> automatically set the archive artist name — ' +
+            'the fallback artist name below is used when the folder name has no dash separator. ' +
+            'Already-imported folders (by URL) are skipped automatically so you can safely re-run.' +
+          '</div>' +
+          '<div style="margin-bottom:10px;">' +
+            '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Root MEGA folder URL *</label>' +
+            '<input id="arc-mega-bulk-url" class="wv-input" placeholder="https://mega.nz/folder/…#…" style="width:100%;max-width:540px;">' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">' +
+            '<div style="flex:1;min-width:180px;">' +
+              '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Fallback artist name *</label>' +
+              '<input id="arc-mega-bulk-artist" class="wv-input" placeholder="e.g. Various Artists">' +
+            '</div>' +
+            '<div style="flex:1;min-width:150px;">' +
+              '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Era tag *</label>' +
+              '<select id="arc-mega-bulk-era" class="wv-input"><option value="">Loading…</option></select>' +
+            '</div>' +
+          '</div>' +
+          '<button class="wv-pill brand" id="arc-mega-bulk-btn" onclick="startMegaBulkImport()">Import All Comps</button>' +
+          '<div id="arc-mega-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
+          '<div id="arc-mega-bulk-log" style="margin-top:10px;max-height:280px;overflow-y:auto;font-size:12px;color:var(--text-3);font-family:monospace;display:none;"></div>' +
+        '</div>' +
       '</div>';
 
     arcLoadEraTags();
@@ -141,12 +169,17 @@
         sel.innerHTML = '<option value="">Select era tag…</option>' +
           _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
       }
-      // Refresh era selects on any bulk rows created before the tags arrived
+      // Refresh era selects on bulk rows and the MEGA bulk era select
       document.querySelectorAll('.arc-bulk-era').forEach(function(s) {
         var cur = s.value;
         s.innerHTML = _arcEraOptionsHTML();
         s.value = cur;
       });
+      var mbEra = document.getElementById('arc-mega-bulk-era');
+      if (mbEra) {
+        mbEra.innerHTML = '<option value="">Select era tag…</option>' +
+          _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
+      }
     } catch (_) {}
   }
 
@@ -380,6 +413,107 @@
       _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), '#f87171');
       btn.disabled = false;
     }
+  }
+
+  // ── MEGA folder bulk import ──────────────────────────────────────────────────
+  function _mbStatus(msg, color) {
+    var el = document.getElementById('arc-mega-bulk-status');
+    if (!el) return;
+    el.style.display = '';
+    el.style.color = color || 'var(--text-2)';
+    el.textContent = msg;
+  }
+
+  function _mbLog(msg) {
+    var el = document.getElementById('arc-mega-bulk-log');
+    if (!el) return;
+    el.style.display = '';
+    var line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function startMegaBulkImport() {
+    var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
+    var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
+    var era = ((document.getElementById('arc-mega-bulk-era') || {}).value || '').trim();
+
+    if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
+    if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
+    if (!era) { _mbStatus('Era tag is required.', '#f87171'); return; }
+    if (!/mega(\.co)?\.nz\/folder\/[\w-]+#[\w-]+/.test(url)) {
+      _mbStatus('That doesn\'t look like a valid MEGA folder URL (needs the key after #).', '#f87171');
+      return;
+    }
+
+    var btn = document.getElementById('arc-mega-bulk-btn');
+    btn.disabled = true;
+    document.getElementById('arc-mega-bulk-log').innerHTML = '';
+    _mbStatus('Starting…');
+
+    try {
+      var resp = await api('/import/mega-bulk', {
+        method: 'POST',
+        body: JSON.stringify({ url: url, archive_artist_name: artist, era_tag_id: era }),
+      });
+      var jobId = resp.jobId;
+      _mbStatus('Bulk import job started — streaming progress…');
+      _mbLog('Job ' + jobId + ' started');
+
+      // Stream SSE events from the bulk job
+      var token = localStorage.getItem('token');
+      var evtUrl = API_BASE + '/import/jobs/' + jobId + '/events';
+      var response = await fetch(evtUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+
+      while (true) {
+        var result = await reader.read();
+        if (result.done) break;
+        buf += decoder.decode(result.value, { stream: true });
+        var parts = buf.split('\n\n');
+        buf = parts.pop();
+        for (var i = 0; i < parts.length; i++) {
+          var line = parts[i].trim();
+          if (!line.startsWith('data:')) continue;
+          var evt;
+          try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+
+          if (evt.type === 'status') {
+            _mbStatus(evt.message);
+            _mbLog(evt.message);
+          } else if (evt.type === 'comp_start') {
+            var msg = 'Importing ' + evt.index + ' / ' + evt.total + ': ' + evt.name;
+            _mbStatus(msg);
+            _mbLog(msg);
+          } else if (evt.type === 'comp_done') {
+            _mbLog('✓ ' + evt.name + ' (' + evt.imported + ' tracks)');
+          } else if (evt.type === 'comp_failed') {
+            _mbLog('✗ ' + evt.name + ': ' + (evt.error || 'failed'));
+          } else if (evt.type === 'comp_skip') {
+            _mbLog('⏭ ' + evt.name + ' (already imported, skipping)');
+          } else if (evt.type === 'done') {
+            var doneMsg = 'Done — ' + evt.imported + ' comp' + (evt.imported === 1 ? '' : 's') + ' archived' +
+              (evt.failed ? ', ' + evt.failed + ' failed.' : '.');
+            _mbStatus(doneMsg, evt.failed ? '#f87171' : '#4ade80');
+            _mbLog(doneMsg);
+            btn.disabled = false;
+            return;
+          } else if (evt.type === 'error') {
+            _mbStatus('Error: ' + evt.message, '#f87171');
+            _mbLog('Error: ' + evt.message);
+            btn.disabled = false;
+            return;
+          }
+        }
+      }
+      _mbStatus('Connection closed.', '#f87171');
+    } catch (err) {
+      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+    }
+    btn.disabled = false;
   }
 </script>
 </body>
