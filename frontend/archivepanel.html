@@ -181,7 +181,7 @@
   function _arcImportEndpoint(url) {
     if (/^https?:\/\/untitled\.stream\/library\/project\/[A-Za-z0-9_-]+\/?$/.test(url)) return '/import/untitled';
     if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) return '/import/samply';
-    if (/^https?:\/\/mega(\.co)?\.nz\/(folder\/[\w-]+#[\w-]+|#F![\w-]+![\w-]+)\/?$/.test(url)) return '/import/mega';
+    if (/^https?:\/\/mega(\.co)?\.nz\/(folder\/[\w-]+#[\w-]+(\/folder\/[\w-]+)?|#F![\w-]+![\w-]+)\/?$/.test(url)) return '/import/mega';
     return null;
   }
 
@@ -404,66 +404,94 @@
     document.getElementById('arc-mega-bulk-log').innerHTML = '';
     _mbStatus('Starting…');
 
+    var jobId;
     try {
       var resp = await api('/import/mega-bulk', {
         method: 'POST',
         body: JSON.stringify({ url: url, archive_artist_name: artist }),
       });
-      var jobId = resp.jobId;
+      jobId = resp.jobId;
       _mbStatus('Bulk import job started — streaming progress…');
       _mbLog('Job ' + jobId + ' started');
+    } catch (err) {
+      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+      btn.disabled = false;
+      return;
+    }
 
-      // Stream SSE events from the bulk job
-      var token = localStorage.getItem('token');
-      var evtUrl = API_BASE + '/import/jobs/' + jobId + '/events';
+    // The import runs entirely on the server. The SSE stream can drop (idle
+    // proxies, sleep, flaky wifi) without affecting the job — so on a drop we
+    // just reconnect to the same job. The server replays past events on
+    // connect, so a "seen" set keeps the log from doubling up.
+    var seen = {};
+    var token = localStorage.getItem('token');
+    var evtUrl = API_BASE + '/import/jobs/' + jobId + '/events';
+
+    function _logOnce(key, msg) { if (!seen[key]) { seen[key] = 1; _mbLog(msg); } }
+
+    // Returns 'done' | 'error' | 'dropped'
+    async function streamOnce() {
       var response = await fetch(evtUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (response.status === 404) return 'error'; // job expired/gone
       var reader = response.body.getReader();
       var decoder = new TextDecoder();
       var buf = '';
-
       while (true) {
         var result = await reader.read();
-        if (result.done) break;
+        if (result.done) return 'dropped';
         buf += decoder.decode(result.value, { stream: true });
         var parts = buf.split('\n\n');
         buf = parts.pop();
         for (var i = 0; i < parts.length; i++) {
           var line = parts[i].trim();
-          if (!line.startsWith('data:')) continue;
+          if (!line.startsWith('data:')) continue; // skip ': ping' heartbeats
           var evt;
           try { evt = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
 
           if (evt.type === 'status') {
             _mbStatus(evt.message);
-            _mbLog(evt.message);
+            _logOnce('s:' + evt.message, evt.message);
           } else if (evt.type === 'comp_start') {
-            var msg = 'Importing ' + evt.index + ' / ' + evt.total + ': ' + evt.name;
-            _mbStatus(msg);
-            _mbLog(msg);
+            var who = evt.artist ? (evt.name + '  ·  ' + evt.artist) : evt.name;
+            _mbStatus('Importing ' + evt.index + ' / ' + evt.total + ': ' + who);
+            _logOnce('cs:' + evt.index, '▶ ' + evt.index + '/' + evt.total + '  ' + who);
+          } else if (evt.type === 'comp_progress') {
+            _mbStatus('  ↳ ' + evt.name + ' — track ' + evt.i + '/' + evt.n + ': ' + evt.track);
           } else if (evt.type === 'comp_done') {
-            _mbLog('✓ ' + evt.name + ' (' + evt.imported + ' tracks)');
+            _logOnce('cd:' + evt.name, '✓ ' + evt.name + ' (' + evt.imported + ' tracks)');
           } else if (evt.type === 'comp_failed') {
-            _mbLog('✗ ' + evt.name + ': ' + (evt.error || 'failed'));
+            _logOnce('cf:' + evt.name, '✗ ' + evt.name + ': ' + (evt.error || 'failed'));
           } else if (evt.type === 'comp_skip') {
-            _mbLog('⏭ ' + evt.name + ' (already imported, skipping)');
+            _logOnce('ck:' + evt.name, '⏭ ' + evt.name + ' (already imported, skipping)');
           } else if (evt.type === 'done') {
             var doneMsg = 'Done — ' + evt.imported + ' comp' + (evt.imported === 1 ? '' : 's') + ' archived' +
               (evt.failed ? ', ' + evt.failed + ' failed.' : '.');
             _mbStatus(doneMsg, evt.failed ? '#f87171' : '#4ade80');
             _mbLog(doneMsg);
-            btn.disabled = false;
-            return;
+            return 'done';
           } else if (evt.type === 'error') {
             _mbStatus('Error: ' + evt.message, '#f87171');
             _mbLog('Error: ' + evt.message);
-            btn.disabled = false;
-            return;
+            return 'error';
           }
         }
       }
-      _mbStatus('Connection closed.', '#f87171');
-    } catch (err) {
-      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+    }
+
+    var drops = 0;
+    while (true) {
+      var outcome;
+      try { outcome = await streamOnce(); }
+      catch (e) { outcome = 'dropped'; }
+      if (outcome === 'done' || outcome === 'error') break;
+      // dropped — the job is still running on the server; reconnect.
+      drops++;
+      if (drops > 60) {
+        _mbStatus('Lost connection to the progress stream, but the import is still running on the server. Re-run the same URL later to see final results (already-done comps are skipped).', '#facc15');
+        break;
+      }
+      _mbStatus('Reconnecting to progress stream… (' + drops + ')', '#facc15');
+      await new Promise(function(r) { setTimeout(r, 3000); });
     }
     btn.disabled = false;
   }
