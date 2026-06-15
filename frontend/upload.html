@@ -116,7 +116,7 @@
   <div class="modal-overlay" id="delete-comp-modal">
     <div class="modal-box">
       <div class="modal-title">Delete comp?</div>
-      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">This will permanently remove the comp. Individual edits will not be deleted.</p>
+      <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">This will permanently remove the comp and all of its edits.</p>
       <div style="display:flex;gap:10px;justify-content:flex-end;">
         <button class="wv-pill" onclick="closeDeleteCompModal()">Cancel</button>
         <button class="wv-pill" style="background:var(--red);color:white;border-color:transparent;" id="confirm-delete-comp-btn">Delete</button>
@@ -449,7 +449,7 @@
   async function doDelete(){if(!pendingDeleteId)return;try{await api('/tracks/'+pendingDeleteId,{method:'DELETE'});uploads=uploads.filter(u=>!(u.id===pendingDeleteId&&u._type==='track'));closeDeleteModal();renderUploads();}catch(err){alert(err.message);}}
   function confirmDeleteComp(id){pendingDeleteCompId=id;document.getElementById('delete-comp-modal').classList.add('open');document.getElementById('confirm-delete-comp-btn').onclick=doDeleteComp;}
   function closeDeleteCompModal(){document.getElementById('delete-comp-modal').classList.remove('open');pendingDeleteCompId=null;}
-  async function doDeleteComp(){if(!pendingDeleteCompId)return;try{await api('/albums/'+pendingDeleteCompId,{method:'DELETE'});uploads=uploads.filter(u=>!(u.id===pendingDeleteCompId&&u._type==='album'));closeDeleteCompModal();renderUploads();}catch(err){alert(err.message);}}
+  async function doDeleteComp(){if(!pendingDeleteCompId)return;try{await api('/albums/'+pendingDeleteCompId,{method:'DELETE'});uploads=uploads.filter(u=>!(u.id===pendingDeleteCompId&&u._type==='album')&&!(u.album_id===pendingDeleteCompId&&u._type==='track'));closeDeleteCompModal();renderUploads();}catch(err){alert(err.message);}}
 
   // Edit modal handlers
   function openEditTrackModal(track){editingTrackId=track.id;document.getElementById('edit-track-title').value=track.title||'';document.getElementById('edit-track-cover').value=track.cover_url||'';document.getElementById('edit-track-desc').value=track.description||'';api('/eratags').then(tags=>{document.getElementById('edit-track-era').innerHTML='<option value="">No era tag</option>'+tags.map(t=>'<option value="'+t.id+'" '+(track.era_tag_id===t.id?'selected':'')+'>'+escHtml(t.name)+'</option>').join('');}).catch(()=>{});document.getElementById('edit-track-modal').classList.add('open');}
