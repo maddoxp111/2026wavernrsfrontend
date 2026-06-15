@@ -64,10 +64,6 @@
           '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Artist name (display only) *</label>' +
           '<input type="text" id="arc-artist" class="wv-input" placeholder="e.g. Lil Uzi Vert" style="max-width:400px;">' +
         '</div>' +
-        '<div style="margin-bottom:18px;">' +
-          '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Era tag *</label>' +
-          '<select id="arc-era" class="wv-input" style="max-width:400px;"><option value="">Loading…</option></select>' +
-        '</div>' +
 
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Import from link</div>' +
@@ -104,7 +100,7 @@
 
         '<div class="wv-card" style="padding:20px 24px;margin-top:20px;">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Bulk import</div>' +
-          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Queue several comps at once — each row needs an <b>untitled.stream</b>, <b>Samply</b>, or <b>mega.nz folder</b> link, an artist name, and an era tag. Comps upload one at a time with a 5 second pause between each so Internet Archive doesn\'t rate-limit us.</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Queue several comps at once — each row needs an <b>untitled.stream</b>, <b>Samply</b>, or <b>mega.nz folder</b> link and an artist name. Comps upload one at a time with a 5 second pause between each so Internet Archive doesn\'t rate-limit us.</div>' +
           '<div id="arc-bulk-rows"></div>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill" onclick="arcBulkAddRow()">+ Add row</button>' +
@@ -131,10 +127,6 @@
               '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Fallback artist name *</label>' +
               '<input id="arc-mega-bulk-artist" class="wv-input" placeholder="e.g. Various Artists">' +
             '</div>' +
-            '<div style="flex:1;min-width:150px;">' +
-              '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:5px;">Era tag *</label>' +
-              '<select id="arc-mega-bulk-era" class="wv-input"><option value="">Loading…</option></select>' +
-            '</div>' +
           '</div>' +
           '<button class="wv-pill brand" id="arc-mega-bulk-btn" onclick="startMegaBulkImport()">Import All Comps</button>' +
           '<div id="arc-mega-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
@@ -142,7 +134,6 @@
         '</div>' +
       '</div>';
 
-    arcLoadEraTags();
     arcBulkAddRow();
     arcBulkAddRow();
     arcBulkAddRow();
@@ -151,36 +142,6 @@
   function escHtml(s) {
     return String(s == null ? '' : s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  var _arcEraTags = [];
-
-  function _arcEraOptionsHTML() {
-    return '<option value="">Era tag…</option>' +
-      _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
-  }
-
-  async function arcLoadEraTags() {
-    try {
-      var tags = await api('/eratags');
-      _arcEraTags = tags || [];
-      var sel = document.getElementById('arc-era');
-      if (sel) {
-        sel.innerHTML = '<option value="">Select era tag…</option>' +
-          _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
-      }
-      // Refresh era selects on bulk rows and the MEGA bulk era select
-      document.querySelectorAll('.arc-bulk-era').forEach(function(s) {
-        var cur = s.value;
-        s.innerHTML = _arcEraOptionsHTML();
-        s.value = cur;
-      });
-      var mbEra = document.getElementById('arc-mega-bulk-era');
-      if (mbEra) {
-        mbEra.innerHTML = '<option value="">Select era tag…</option>' +
-          _arcEraTags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
-      }
-    } catch (_) {}
   }
 
   function arcRenderQueue() {
@@ -213,10 +174,8 @@
 
   function _arcValidateCommon() {
     var artist = (document.getElementById('arc-artist') || {}).value || '';
-    var era = (document.getElementById('arc-era') || {}).value || '';
     if (!artist.trim()) return { error: 'Artist name is required for archive comps.' };
-    if (!era) return { error: 'Please select an era tag.' };
-    return { artist: artist.trim(), era: era };
+    return { artist: artist.trim() };
   }
 
   function _arcImportEndpoint(url) {
@@ -278,7 +237,7 @@
     _arcStatus('arc-import-status', 'Starting archive import…');
     try {
       var resp = await api(endpoint, { method: 'POST', body: JSON.stringify({
-        url: url, era_tag_id: common.era, archive_artist_name: common.artist,
+        url: url, archive_artist_name: common.artist,
       }) });
       var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcStatus('arc-import-status', msg); });
       var msg = 'Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
@@ -302,7 +261,6 @@
       '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
         '<input class="wv-input arc-bulk-link" placeholder="untitled.stream, samply.app, or mega.nz/folder link" style="flex:2;min-width:220px;padding:8px 12px;">' +
         '<input class="wv-input arc-bulk-artist" placeholder="Artist name" style="flex:1;min-width:130px;padding:8px 12px;">' +
-        '<select class="wv-input arc-bulk-era" style="min-width:130px;padding:8px 12px;">' + _arcEraOptionsHTML() + '</select>' +
         '<button class="wv-icon-circle" title="Remove row" onclick="this.closest(\'.arc-bulk-row\').remove()" style="flex-shrink:0;">✕</button>' +
       '</div>' +
       '<div class="arc-bulk-status" style="margin-top:7px;font-size:12.5px;color:var(--text-3);display:none;"></div>';
@@ -325,14 +283,12 @@
     rows.forEach(function(row) {
       var url = (row.querySelector('.arc-bulk-link') || {}).value || '';
       var artist = (row.querySelector('.arc-bulk-artist') || {}).value || '';
-      var era = (row.querySelector('.arc-bulk-era') || {}).value || '';
       url = url.trim(); artist = artist.trim();
       if (!url && !artist) return; // fully blank row — ignore
       var endpoint = _arcImportEndpoint(url);
       if (!endpoint) { _arcBulkRowStatus(row, _arcBadLinkMessage(url) || 'Not a valid untitled.stream, Samply, or mega.nz folder link.', '#f87171'); hasInvalid = true; return; }
       if (!artist) { _arcBulkRowStatus(row, 'Artist name is required.', '#f87171'); hasInvalid = true; return; }
-      if (!era) { _arcBulkRowStatus(row, 'Pick an era tag.', '#f87171'); hasInvalid = true; return; }
-      jobs.push({ row: row, url: url, artist: artist, era: era, endpoint: endpoint });
+      jobs.push({ row: row, url: url, artist: artist, endpoint: endpoint });
     });
 
     if (hasInvalid) { _arcStatus('arc-bulk-status', 'Fix the highlighted rows, then press Upload All again.', '#f87171'); return; }
@@ -353,7 +309,7 @@
       _arcBulkRowStatus(j.row, 'Starting import…');
       try {
         var resp = await api(j.endpoint, { method: 'POST', body: JSON.stringify({
-          url: j.url, era_tag_id: j.era, archive_artist_name: j.artist,
+          url: j.url, archive_artist_name: j.artist,
         }) });
         var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcBulkRowStatus(j.row, msg); });
         var msg = '✓ Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
@@ -387,7 +343,6 @@
       _arcStatus('arc-upload-status', 'Creating archive comp…');
       var albumForm = new FormData();
       albumForm.append('title', title);
-      albumForm.append('era_tag_id', common.era);
       albumForm.append('is_archive', '1');
       albumForm.append('archive_artist_name', common.artist);
       var desc = ((document.getElementById('arc-desc') || {}).value || '').trim();
@@ -403,7 +358,6 @@
         form.append('title', _arcCleanTitle(files[i].name));
         form.append('album_id', album.id);
         form.append('track_position', String(i));
-        form.append('era_tag_id', common.era);
         await apiUpload('/tracks', form);
       }
 
@@ -437,11 +391,9 @@
   async function startMegaBulkImport() {
     var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
     var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
-    var era = ((document.getElementById('arc-mega-bulk-era') || {}).value || '').trim();
 
     if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
     if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
-    if (!era) { _mbStatus('Era tag is required.', '#f87171'); return; }
     if (!/mega(\.co)?\.nz\/folder\/[\w-]+#[\w-]+/.test(url)) {
       _mbStatus('That doesn\'t look like a valid MEGA folder URL (needs the key after #).', '#f87171');
       return;
@@ -455,7 +407,7 @@
     try {
       var resp = await api('/import/mega-bulk', {
         method: 'POST',
-        body: JSON.stringify({ url: url, archive_artist_name: artist, era_tag_id: era }),
+        body: JSON.stringify({ url: url, archive_artist_name: artist }),
       });
       var jobId = resp.jobId;
       _mbStatus('Bulk import job started — streaming progress…');
