@@ -592,8 +592,12 @@ struct TrackDetailView: View {
     let trackId: String
     @State private var track: Track?
     @State private var error: String?
+    @State private var likeCount = 0
+    @State private var userLiked = false
+    @State private var addToPlaylistTrack: PlayableTrack?
     @EnvironmentObject var player: PlayerManager
     @EnvironmentObject var downloads: DownloadManager
+    @EnvironmentObject var auth: AuthManager
 
     var body: some View {
         ScrollView {
@@ -645,6 +649,36 @@ struct TrackDetailView: View {
                     }
                     .padding(.horizontal, 24)
 
+                    HStack(spacing: 10) {
+                        Button {
+                            Task { await toggleLike() }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: userLiked ? "heart.fill" : "heart")
+                                if likeCount > 0 { Text("\(likeCount)") }
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(Theme.card)
+                            .foregroundColor(userLiked ? .pink : Theme.text)
+                            .clipShape(Capsule())
+                        }
+                        .opacity(auth.isLoggedIn ? 1 : 0.55)
+
+                        Button {
+                            addToPlaylistTrack = PlayableTrack(track: track)
+                        } label: {
+                            Label("Add", systemImage: "plus")
+                                .font(.system(size: 14, weight: .semibold))
+                                .padding(.horizontal, 16).padding(.vertical, 10)
+                                .background(Theme.card)
+                                .foregroundColor(Theme.text)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    RatingStarsView(entityType: "track", entityId: track.id)
+
                     let playable = PlayableTrack(track: track)
                     if downloads.isDownloaded(trackId: track.id) {
                         Label("Available offline", systemImage: "checkmark.circle.fill")
@@ -676,12 +710,38 @@ struct TrackDetailView: View {
         .background(AppBackground())
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: NavTarget.self) { target in navDestination(target) }
+        .sheet(item: $addToPlaylistTrack) { t in
+            AddToPlaylistSheet(trackId: t.id, trackTitle: t.title)
+        }
         .task { await load() }
     }
 
     private func load() async {
-        do { track = try await API.track(id: trackId) }
+        do {
+            let t = try await API.track(id: trackId, token: auth.token)
+            track = t
+            likeCount = t.likeCount ?? 0
+            userLiked = t.userLiked ?? false
+        }
         catch { self.error = "Couldn't load this track." }
+    }
+
+    private func toggleLike() async {
+        guard let token = auth.token, auth.isLoggedIn else { return }
+        // Optimistic flip; reconcile with the server response.
+        let wasLiked = userLiked
+        userLiked.toggle()
+        likeCount += userLiked ? 1 : -1
+        do {
+            let result = try await API.toggleTrackLike(trackId: trackId, token: token)
+            if result.liked != userLiked {
+                userLiked = result.liked
+                likeCount += result.liked ? 1 : -1
+            }
+        } catch {
+            userLiked = wasLiked
+            likeCount += wasLiked ? 1 : -1
+        }
     }
 }
 

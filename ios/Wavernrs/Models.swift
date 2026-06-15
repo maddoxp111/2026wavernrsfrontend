@@ -52,6 +52,8 @@ struct Track: Codable, Identifiable, Hashable {
     let trackPosition: Int?
     let isArchive: Bool?
     let isExclusive: Bool?
+    let likeCount: Int?
+    let userLiked: Bool?
     let artists: Artist?
 
     enum CodingKeys: String, CodingKey {
@@ -64,6 +66,8 @@ struct Track: Codable, Identifiable, Hashable {
         case trackPosition = "track_position"
         case isArchive = "is_archive"
         case isExclusive = "is_exclusive"
+        case likeCount = "like_count"
+        case userLiked = "user_liked"
     }
 
     var artistName: String { artists?.displayName ?? "Unknown" }

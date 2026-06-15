@@ -93,8 +93,8 @@ enum API {
         try await get("albums/\(id)", token: token)
     }
 
-    static func track(id: String) async throws -> Track {
-        try await get("tracks/\(id)")
+    static func track(id: String, token: String? = nil) async throws -> Track {
+        try await get("tracks/\(id)", token: token)
     }
 
     static func search(_ q: String) async throws -> SearchResponse {
@@ -157,6 +157,10 @@ enum API {
 
     static func toggleAlbumLike(albumId: String, token: String) async throws -> LikeStatus {
         try await authedPost("albums/\(albumId)/like", token: token)
+    }
+
+    static func toggleTrackLike(trackId: String, token: String) async throws -> LikeStatus {
+        try await authedPost("tracks/\(trackId)/like", token: token)
     }
 
     static func ratings(entityType: String, entityId: String, token: String?) async throws -> RatingSummary {
