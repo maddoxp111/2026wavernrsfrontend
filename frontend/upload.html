@@ -297,6 +297,23 @@
     return '<option value="">No era tag</option>' + eraTags.map(t => '<option value="'+t.id+'" '+(selectedId==t.id?'selected':'')+'>'+escHtml(t.name)+'</option>').join('');
   }
 
+  async function refreshUploads() {
+    const [allTracks, allComps] = await Promise.all([
+      api('/artists/'+artist.id+'/tracks'),
+      api('/albums/by-artist/'+artist.id).catch(()=>[]),
+    ]);
+    uploads = [
+      ...allTracks.map(t=>({...t,_type:'track'})),
+      ...allComps.map(a=>({...a,_type:'album'})),
+    ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    if (typeof window.setPageBgImage === 'function') {
+      var newestWithCover = uploads.find(function(u){ return u.cover_url; });
+      window.setPageBgImage(newestWithCover ? newestWithCover.cover_url : '');
+    }
+    document.getElementById('uploads-header').textContent = 'Your Uploads (' + uploads.length + ')';
+    renderUploads();
+  }
+
   async function loadPage() {
     try {
       [me, eraTags] = await Promise.all([api('/auth/me'), api('/eratags').catch(()=>[])]);
@@ -304,21 +321,7 @@
       if (!artist) throw new Error('No artist profile. Try logging out and back in.');
       document.getElementById('upload-era-tag').innerHTML = eraTagOptions(null);
       document.getElementById('import-era-tag').innerHTML = '<option value="">Select an era tag…</option>' + eraTags.map(t => '<option value="'+t.id+'">'+escHtml(t.name)+'</option>').join('');
-      const [allTracks, allComps] = await Promise.all([
-        api('/artists/'+artist.id+'/tracks'),
-        api('/albums/by-artist/'+artist.id).catch(()=>[]),
-      ]);
-      uploads = [
-        ...allTracks.map(t=>({...t,_type:'track'})),
-        ...allComps.map(a=>({...a,_type:'album'})),
-      ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-      // Blurred background from the newest upload that has cover art.
-      if (typeof window.setPageBgImage === 'function') {
-        var newestWithCover = uploads.find(function(u){ return u.cover_url; });
-        window.setPageBgImage(newestWithCover ? newestWithCover.cover_url : '');
-      }
-      document.getElementById('uploads-header').textContent = 'Your Uploads (' + uploads.length + ')';
-      renderUploads();
+      await refreshUploads();
     } catch (err) {
       if (err.message.includes('401')) return navigate('/login.html');
       showAlert('alert-container', 'Failed to load: ' + err.message);
@@ -446,10 +449,10 @@
   // Delete handlers
   function confirmDelete(id){pendingDeleteId=id;document.getElementById('delete-modal').classList.add('open');document.getElementById('confirm-delete-btn').onclick=doDelete;}
   function closeDeleteModal(){document.getElementById('delete-modal').classList.remove('open');pendingDeleteId=null;}
-  async function doDelete(){if(!pendingDeleteId)return;try{await api('/tracks/'+pendingDeleteId,{method:'DELETE'});uploads=uploads.filter(u=>!(u.id===pendingDeleteId&&u._type==='track'));closeDeleteModal();renderUploads();}catch(err){alert(err.message);}}
+  async function doDelete(){if(!pendingDeleteId)return;try{await api('/tracks/'+pendingDeleteId,{method:'DELETE'});closeDeleteModal();await refreshUploads();}catch(err){alert(err.message);}}
   function confirmDeleteComp(id){pendingDeleteCompId=id;document.getElementById('delete-comp-modal').classList.add('open');document.getElementById('confirm-delete-comp-btn').onclick=doDeleteComp;}
   function closeDeleteCompModal(){document.getElementById('delete-comp-modal').classList.remove('open');pendingDeleteCompId=null;}
-  async function doDeleteComp(){if(!pendingDeleteCompId)return;try{await api('/albums/'+pendingDeleteCompId,{method:'DELETE'});uploads=uploads.filter(u=>!(u.id===pendingDeleteCompId&&u._type==='album')&&!(u.album_id===pendingDeleteCompId&&u._type==='track'));closeDeleteCompModal();renderUploads();}catch(err){alert(err.message);}}
+  async function doDeleteComp(){if(!pendingDeleteCompId)return;try{await api('/albums/'+pendingDeleteCompId,{method:'DELETE'});closeDeleteCompModal();await refreshUploads();}catch(err){alert(err.message);}}
 
   // Edit modal handlers
   function openEditTrackModal(track){editingTrackId=track.id;document.getElementById('edit-track-title').value=track.title||'';document.getElementById('edit-track-cover').value=track.cover_url||'';document.getElementById('edit-track-desc').value=track.description||'';api('/eratags').then(tags=>{document.getElementById('edit-track-era').innerHTML='<option value="">No era tag</option>'+tags.map(t=>'<option value="'+t.id+'" '+(track.era_tag_id===t.id?'selected':'')+'>'+escHtml(t.name)+'</option>').join('');}).catch(()=>{});document.getElementById('edit-track-modal').classList.add('open');}
