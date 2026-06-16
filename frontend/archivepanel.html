@@ -128,8 +128,10 @@
               '<input id="arc-mega-bulk-artist" class="wv-input" placeholder="e.g. Various Artists">' +
             '</div>' +
           '</div>' +
-          '<button class="wv-pill brand" id="arc-mega-bulk-btn" onclick="startMegaBulkImport()">Import All Comps</button>' +
+          '<button class="wv-pill" id="arc-mega-bulk-btn" onclick="scanMegaBulkFolder()">Scan Folder</button>' +
           '<div id="arc-mega-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
+          '<div id="arc-mega-bulk-queue" style="margin-top:14px;display:none;"></div>' +
+          '<button class="wv-pill brand" id="arc-mega-bulk-start-btn" style="display:none;margin-top:10px;" onclick="startMegaBulkImport()">Start Import</button>' +
           '<div id="arc-mega-bulk-log" style="margin-top:10px;max-height:280px;overflow-y:auto;font-size:12px;color:var(--text-3);font-family:monospace;display:none;"></div>' +
         '</div>' +
       '</div>';
@@ -370,6 +372,9 @@
   }
 
   // ── MEGA folder bulk import ──────────────────────────────────────────────────
+  var _mbQueueFolders = []; // [{ id, name, compCount }] in current order
+  var _mbDragSrcIdx = null;
+
   function _mbStatus(msg, color) {
     var el = document.getElementById('arc-mega-bulk-status');
     if (!el) return;
@@ -388,27 +393,101 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  async function startMegaBulkImport() {
+  function _mbRenderQueue() {
+    var el = document.getElementById('arc-mega-bulk-queue');
+    if (!el) return;
+    if (!_mbQueueFolders.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    el.style.display = '';
+    el.innerHTML =
+      '<div style="font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:8px;user-select:none;">Import order — drag to reorder, × to exclude</div>' +
+      _mbQueueFolders.map(function(f, idx) {
+        return '<div draggable="true" data-idx="' + idx + '" ' +
+          'style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--glass-pill-bg);border:1px solid var(--glass-small-border);border-radius:10px;margin-bottom:6px;cursor:grab;" ' +
+          'ondragstart="window._mbDragStart(event,' + idx + ')" ' +
+          'ondragover="event.preventDefault();event.currentTarget.style.opacity=\'0.6\';" ' +
+          'ondragleave="event.currentTarget.style.opacity=\'1\';" ' +
+          'ondrop="event.currentTarget.style.opacity=\'1\';window._mbDrop(event,' + idx + ')">' +
+          '<span style="color:var(--text-3);font-size:18px;user-select:none;line-height:1;">⠿</span>' +
+          '<span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(f.name) + '</span>' +
+          '<span style="font-size:11px;color:var(--text-3);white-space:nowrap;">' + f.compCount + ' comp' + (f.compCount === 1 ? '' : 's') + '</span>' +
+          '<button onclick="window._mbRemove(' + idx + ')" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:14px;padding:0 2px;line-height:1;">×</button>' +
+        '</div>';
+      }).join('');
+  }
+
+  window._mbDragStart = function(e, idx) { _mbDragSrcIdx = idx; e.dataTransfer.effectAllowed = 'move'; };
+  window._mbDrop = function(e, targetIdx) {
+    e.preventDefault();
+    if (_mbDragSrcIdx === null || _mbDragSrcIdx === targetIdx) return;
+    var moved = _mbQueueFolders.splice(_mbDragSrcIdx, 1)[0];
+    _mbQueueFolders.splice(targetIdx, 0, moved);
+    _mbDragSrcIdx = null;
+    _mbRenderQueue();
+  };
+  window._mbRemove = function(idx) {
+    _mbQueueFolders.splice(idx, 1);
+    _mbRenderQueue();
+    var startBtn = document.getElementById('arc-mega-bulk-start-btn');
+    if (!_mbQueueFolders.length && startBtn) startBtn.style.display = 'none';
+  };
+
+  async function scanMegaBulkFolder() {
     var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
     var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
-
     if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
     if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
     if (!/mega(\.co)?\.nz\/folder\/[\w-]+#[\w-]+/.test(url)) {
       _mbStatus('That doesn\'t look like a valid MEGA folder URL (needs the key after #).', '#f87171');
       return;
     }
+    var btn = document.getElementById('arc-mega-bulk-btn');
+    var startBtn = document.getElementById('arc-mega-bulk-start-btn');
+    btn.disabled = true;
+    if (startBtn) startBtn.style.display = 'none';
+    _mbQueueFolders = [];
+    _mbRenderQueue();
+    _mbStatus('Scanning folder…');
+    try {
+      var resp = await api('/import/mega-bulk/preview', {
+        method: 'POST',
+        body: JSON.stringify({ url: url }),
+      });
+      _mbQueueFolders = resp.folders || [];
+      _mbRenderQueue();
+      if (_mbQueueFolders.length) {
+        _mbStatus('Found ' + _mbQueueFolders.length + ' artist folder' + (_mbQueueFolders.length === 1 ? '' : 's') + ' — reorder if needed, then click Start Import.');
+        if (startBtn) startBtn.style.display = '';
+      } else {
+        _mbStatus('No artist folders found in this MEGA folder.', '#f87171');
+      }
+    } catch (err) {
+      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+    }
+    btn.disabled = false;
+  }
+
+  async function startMegaBulkImport() {
+    var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
+    var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
+
+    if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
+    if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
+    if (!_mbQueueFolders.length) { _mbStatus('Scan the folder first to build the queue.', '#f87171'); return; }
 
     var btn = document.getElementById('arc-mega-bulk-btn');
+    var startBtn = document.getElementById('arc-mega-bulk-start-btn');
     btn.disabled = true;
+    if (startBtn) startBtn.disabled = true;
     document.getElementById('arc-mega-bulk-log').innerHTML = '';
     _mbStatus('Starting…');
+
+    var artistOrder = _mbQueueFolders.map(function(f) { return f.id; });
 
     var jobId;
     try {
       var resp = await api('/import/mega-bulk', {
         method: 'POST',
-        body: JSON.stringify({ url: url, archive_artist_name: artist }),
+        body: JSON.stringify({ url: url, archive_artist_name: artist, artist_order: artistOrder }),
       });
       jobId = resp.jobId;
       _mbStatus('Bulk import job started — streaming progress…');
@@ -494,6 +573,7 @@
       await new Promise(function(r) { setTimeout(r, 3000); });
     }
     btn.disabled = false;
+    if (startBtn) startBtn.disabled = false;
   }
 </script>
 </body>
