@@ -17,39 +17,157 @@
 <script>
 initPlayer();
 
-var _archiveItems = [];
+var _archiveItems = [];   // full dataset, fetched in pages
+var _archiveTotal = 0;
+var _arcQuery = '';
+var _arcEra = '';         // era tag id filter ('' = all)
+var _arcSort = 'newest';
+var _arcSearchTimer = null;
 
 async function initArchive() {
   var view = document.getElementById('view');
   view.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:22px;">' +
+    '<div style="display:flex;flex-direction:column;gap:20px;">' +
     '<div>' +
       '<h1 style="margin:0 0 8px;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Archive</h1>' +
       '<p style="margin:0;font-size:14px;color:var(--text-2);max-width:560px;line-height:1.55;">Comps preserved by the wavernrs and yzyplayer&#39;s team — not by artists on the site, but too good to be lost.</p>' +
     '</div>' +
+    // Toolbar: search + sort + era chips + count
+    '<div style="display:flex;flex-direction:column;gap:10px;">' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
+        '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
+          'style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;font-size:14px;" oninput="arcSearchInput()">' +
+        '<select id="arc-sort" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSortChange()">' +
+          '<option value="newest">Newest first</option>' +
+          '<option value="oldest">Oldest first</option>' +
+          '<option value="title">Title A–Z</option>' +
+          '<option value="artist">Artist A–Z</option>' +
+          '<option value="plays">Most played</option>' +
+        '</select>' +
+        '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
+      '</div>' +
+      '<div id="arc-era-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>' +
+    '</div>' +
     '<div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading the rest of the archive…</div>' +
     '</div>';
   loadArchive();
 }
 
+// Fetch the archive in pages: render the first page immediately so the grid
+// appears fast, then keep pulling the rest in the background (the bot can push
+// the archive into the thousands).
 async function loadArchive() {
   var grid = document.getElementById('archive-grid');
   if (!grid) return;
   try {
-    var items = await api('/archive');
-    _archiveItems = items || [];
+    var first = await api('/archive?limit=500&offset=0');
+    // Tolerate both the old array shape and the new {items,total} shape so a
+    // half-deployed backend/frontend never white-screens the page.
+    var items = Array.isArray(first) ? first : (first.items || []);
+    _archiveTotal = Array.isArray(first) ? items.length : (first.total || items.length);
+    _archiveItems = items;
+
     if (typeof window.setPageBgImage === 'function') {
       var withCover = _archiveItems.filter(function(i){ return i.cover_url; });
       window.setPageBgImage(withCover.length ? withCover[Math.floor(Math.random() * withCover.length)].cover_url : '');
     }
-    if (!_archiveItems.length) {
-      grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>';
-      return;
+
+    renderArchive();
+
+    // Background-fetch remaining pages
+    if (!Array.isArray(first) && _archiveItems.length < _archiveTotal) {
+      var more = document.getElementById('archive-loading-more');
+      if (more) more.style.display = '';
+      var offset = _archiveItems.length;
+      while (offset < _archiveTotal) {
+        var page = await api('/archive?limit=500&offset=' + offset);
+        var pageItems = page.items || [];
+        if (!pageItems.length) break;
+        _archiveItems = _archiveItems.concat(pageItems);
+        offset += pageItems.length;
+        renderArchive();
+      }
+      if (more) more.style.display = 'none';
     }
-    grid.innerHTML = _archiveItems.map(archiveCardHTML).join('');
   } catch (err) {
     grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>';
   }
+}
+
+function arcSearchInput() {
+  clearTimeout(_arcSearchTimer);
+  _arcSearchTimer = setTimeout(function() {
+    _arcQuery = ((document.getElementById('arc-search') || {}).value || '').trim().toLowerCase();
+    renderArchive();
+  }, 150);
+}
+
+function arcSortChange() {
+  _arcSort = (document.getElementById('arc-sort') || {}).value || 'newest';
+  renderArchive();
+}
+
+function arcEraFilter(eraId) {
+  _arcEra = eraId === _arcEra ? '' : eraId; // click again to clear
+  renderArchive();
+}
+
+function _arcFiltered() {
+  var out = _archiveItems;
+  if (_arcQuery) {
+    out = out.filter(function(i) {
+      return (i.title || '').toLowerCase().indexOf(_arcQuery) !== -1 ||
+             (i.archive_artist_name || '').toLowerCase().indexOf(_arcQuery) !== -1;
+    });
+  }
+  if (_arcEra) {
+    out = out.filter(function(i) { return i.era_tags && i.era_tags.id === _arcEra; });
+  }
+  var sorted = out.slice();
+  if (_arcSort === 'newest')      sorted.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  else if (_arcSort === 'oldest') sorted.sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  else if (_arcSort === 'title')  sorted.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
+  else if (_arcSort === 'artist') sorted.sort(function(a, b) { return (a.archive_artist_name || '').localeCompare(b.archive_artist_name || ''); });
+  else if (_arcSort === 'plays')  sorted.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
+  return sorted;
+}
+
+function renderArchive() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid) return;
+
+  // Era chips — rebuilt from whatever eras exist in the data
+  var chipsEl = document.getElementById('arc-era-chips');
+  if (chipsEl) {
+    var eras = {};
+    _archiveItems.forEach(function(i) { if (i.era_tags && i.era_tags.id) eras[i.era_tags.id] = i.era_tags.name; });
+    var ids = Object.keys(eras).sort(function(a, b) { return eras[a].localeCompare(eras[b]); });
+    chipsEl.innerHTML = ids.map(function(id) {
+      var active = id === _arcEra;
+      return '<button class="wv-pill" onclick="arcEraFilter(\'' + escHtml(id) + '\')" ' +
+        'style="font-size:11px;padding:3px 12px;' + (active ? 'background:var(--purple);color:#fff;' : '') + '">' +
+        escHtml(eras[id]) + '</button>';
+    }).join('');
+  }
+
+  var items = _arcFiltered();
+  var countEl = document.getElementById('arc-count');
+  if (countEl) {
+    countEl.textContent = items.length === _archiveItems.length
+      ? _archiveItems.length + ' comp' + (_archiveItems.length !== 1 ? 's' : '')
+      : items.length + ' of ' + _archiveItems.length + ' comps';
+  }
+
+  if (!_archiveItems.length) {
+    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>';
+    return;
+  }
+  if (!items.length) {
+    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Nothing matches your search.</div>';
+    return;
+  }
+  grid.innerHTML = items.map(archiveCardHTML).join('');
 }
 
 function archiveCardHTML(item) {
@@ -60,7 +178,7 @@ function archiveCardHTML(item) {
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
     '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
     '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>' +
-    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(artistName) + (eraName ? ' · ' + escHtml(eraName) : '') + '</div></div>';
