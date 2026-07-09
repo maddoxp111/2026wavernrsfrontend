@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resources — wavernrs</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Standard tracker (artistgrid-style) rows */
+    .tstd-row { display:flex; gap:12px; align-items:flex-start; padding:10px 14px; }
+    .tstd-main { flex:1; min-width:0; }
+    .tstd-sub { font-size:11.5px; color:var(--text-3); white-space:normal; line-height:1.4; margin-top:1px; }
+    .tstd-notes { font-size:12px; color:var(--text-3); margin-top:4px; line-height:1.45; white-space:normal;
+                  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
+    .tstd-notes.open { display:block; -webkit-line-clamp:unset; overflow:visible; }
+    .tstd-meta { display:flex; gap:8px; align-items:center; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; max-width:48%; }
+    .tstd-col { font-size:12px; color:var(--text-3); white-space:nowrap; }
+    .tstd-badge { font-size:10.5px; font-weight:700; padding:2.5px 9px; border-radius:6px; white-space:nowrap; letter-spacing:.02em; }
+    @media (max-width: 720px) {
+      .tstd-col { display:none; }
+      .tstd-meta { max-width:none; }
+    }
+  </style>
 </head>
 <body>
 
@@ -146,9 +162,64 @@
       return total > 0 && imgs / total > 0.15;
     })());
 
+    // Standard tracker-sheet schema (Era / Name / Notes / Length / File Date /
+    // Leak Date / Available Length / Quality / Link(s)) — when detected, rows
+    // render as a proper tracker table with quality/availability badges
+    // instead of the generic list.
+    var findH = function(re) { return headers.find(function(h) { return re.test(String(h).trim()); }) || null; };
+    var std = {
+      era:      findH(/^era\b/i),
+      name:     findH(/^name\b/i),
+      notes:    findH(/^notes?\b/i),
+      length:   findH(/^(track\s*)?length$/i),
+      fileDate: findH(/^file\s*date/i),
+      leakDate: findH(/^leak\s*date/i),
+      avail:    findH(/^available/i),
+      quality:  findH(/^quality/i),
+      links:    findH(/^links?\b|^link\(s\)/i),
+    };
+    var isStd = !!(std.name && std.era && (std.quality || std.avail));
+    if (isStd) {
+      titleKey = std.name;
+      eraKey = std.era;
+      if (std.notes) descKey = std.notes;
+    }
+
     return { titleKey: titleKey, eraKey: eraKey, descKey: descKey,
              imageKey: imageKey, imageKeyIsExplicit: imageKeyIsExplicit,
-             linkKeys: linkKeys, metaKeys: metaKeys, isArtTab: isArtTab };
+             linkKeys: linkKeys, metaKeys: metaKeys, isArtTab: isArtTab,
+             std: isStd ? std : null };
+  }
+
+  // ── Badge colors for the standard tracker ─────────────────────
+  function _badge(text, color) {
+    return '<span class="tstd-badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44;">' + escHtml(text) + '</span>';
+  }
+  function qualityBadge(v) {
+    var s = String(v || '').trim();
+    if (!s) return '';
+    var n = s.toLowerCase();
+    var color = '#a78bfa';
+    if (/high quality|cd quality|lossless/.test(n)) color = '#4ade80';
+    else if (/low quality/.test(n)) color = '#facc15';
+    else if (/recording/.test(n)) color = '#fb923c';
+    else if (/fake/.test(n)) color = '#f87171';
+    else if (/not available|unavailable|n\/a/.test(n)) color = '#9ca3af';
+    return _badge(firstLine(s), color);
+  }
+  function availBadge(v) {
+    var s = String(v || '').trim();
+    if (!s) return '';
+    var n = s.toLowerCase();
+    var color = '#9ca3af';
+    if (/^full/.test(n)) color = '#4ade80';
+    else if (/tagged/.test(n)) color = '#60a5fa';
+    else if (/partial/.test(n)) color = '#facc15';
+    else if (/snippet/.test(n)) color = '#fb923c';
+    else if (/og file/.test(n)) color = '#a78bfa';
+    else if (/stem bounce/.test(n)) color = '#c084fc';
+    else if (/confirmed/.test(n)) color = '#2dd4bf';
+    return _badge(firstLine(s), color);
   }
 
   // ── Era grouping ──────────────────────────────────────────────
@@ -287,7 +358,11 @@
     container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     try {
-      var data = await api('/resources/tracker?tab=' + idx);
+      // Auto-discovered tabs carry a gid (a tab of the tracker sheet itself);
+      // admin-configured tabs are addressed by index.
+      var t = trackerTabs[idx] || {};
+      var q = t.gid ? ('gid=' + encodeURIComponent(t.gid)) : ('tab=' + idx);
+      var data = await api('/resources/tracker?' + q);
       if (data.error) { container.innerHTML = emptyState('Tab unavailable', data.error); return; }
       if (!data.url) { container.innerHTML = emptyState('No sheet configured', 'An admin can connect a Google Sheet in the admin panel.'); return; }
       if (!data.rows || !data.rows.length) { container.innerHTML = emptyState('Tab is empty', 'The connected sheet has no data.'); return; }
@@ -325,7 +400,7 @@
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
       '<input id="tracker-search" placeholder="Search…" value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
       'style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;"></div>';
-    html += '<a href="' + escHtml(activeData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
+    html += '<a href="' + escHtml(activeData.view_url || activeData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
     html += '</div>';
     html += '<div id="tracker-count" style="font-size:12.5px;color:var(--text-3);margin-bottom:14px;"></div>';
     html += '<div id="tracker-rows"></div>';
@@ -365,12 +440,17 @@
 
     if (an.isArtTab) {
       renderArtGrid(filtered, rows, container);
-    } else if (an.eraKey && !q) {
+    } else if (an.eraKey && (an.std || !q)) {
+      // Standard tracker tabs keep their era grouping even while searching —
+      // sections just come pre-opened so the matches are visible.
+      _forceOpenAll = !!q;
       renderEraGroups(filtered, rows, container);
+      _forceOpenAll = false;
     } else {
       renderFlatList(filtered, rows, container);
     }
   }
+  var _forceOpenAll = false;
 
   // ── Art grid ──────────────────────────────────────────────────
   function renderArtGrid(filtered, allRows, container) {
@@ -406,7 +486,7 @@
     var html = '';
     groups.forEach(function(group, gi) {
       var playableCount = group.rows.filter(function(r) { return firstAudio(r); }).length;
-      var isOpen = !!(eraOpenState[group.eraName]);
+      var isOpen = _forceOpenAll || !!(eraOpenState[group.eraName]);
 
       html += '<details class="era-section" id="era-' + gi + '"' + (isOpen ? ' open' : '') +
         ' ontoggle="eraToggled(this,' + gi + ')">';
@@ -477,7 +557,7 @@
     if (!groupRows.length) return '<div style="padding:12px;font-size:13px;color:var(--text-3);">No tracks.</div>';
     return groupRows.map(function(r) {
       var gi = allRows.indexOf(r);
-      return renderOneRow(r, gi, an);
+      return an.std ? renderStdRow(r, gi, an) : renderOneRow(r, gi, an);
     }).join('');
   }
 
@@ -486,13 +566,73 @@
     var an = activeAnalysis;
     var shown = filtered.slice(0, renderLimit);
     var html = '<div class="wv-card" style="padding:8px;">';
-    shown.forEach(function(r) { html += renderOneRow(r, allRows.indexOf(r), an); });
+    shown.forEach(function(r) {
+      var gi = allRows.indexOf(r);
+      html += an.std ? renderStdRow(r, gi, an) : renderOneRow(r, gi, an);
+    });
     html += '</div>';
     if (filtered.length > shown.length) {
       html += '<div style="text-align:center;margin:18px 0 8px;"><button class="btn btn-secondary" onclick="showMoreTracker()">Show more (' + (filtered.length - shown.length) + ' more)</button></div>';
     }
     container.innerHTML = html;
     highlightPlaying();
+  }
+
+  // ── Standard tracker row (artistgrid-style) ───────────────────
+  // Name (bold, with feature/prod sublines) + expandable notes on the left;
+  // length · leak date · availability + quality badges + play/link on the right.
+  function renderStdRow(r, globalIdx, an) {
+    var std = an.std;
+    var nameRaw = String(r[std.name] || '').trim();
+    var nameLines = nameRaw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    var title = nameLines[0] || 'Untitled';
+    var subLines = nameLines.slice(1);
+
+    var audio = firstAudio(r);
+    var notes = std.notes ? String(r[std.notes] || '').trim() : '';
+    var len = std.length ? firstLine(r[std.length]) : '';
+    var leak = std.leakDate ? firstLine(r[std.leakDate]) : '';
+    var fileD = std.fileDate ? firstLine(r[std.fileDate]) : '';
+
+    var html = '<div class="track-row tstd-row" id="trk-row-' + globalIdx + '">';
+
+    html += '<div class="tstd-main">';
+    html += '<div class="track-row-title" style="white-space:normal;">' + escHtml(title) + '</div>';
+    if (subLines.length) {
+      html += '<div class="tstd-sub">' + subLines.map(function(l) { return escHtml(l); }).join('<br>') + '</div>';
+    }
+    if (notes) {
+      html += '<div class="tstd-notes" onclick="this.classList.toggle(\'open\')" title="Click to expand">' + escHtml(notes) + '</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="tstd-meta">';
+    if (len) html += '<span class="tstd-col">' + escHtml(len) + '</span>';
+    if (leak) html += '<span class="tstd-col" title="Leak date">💧 ' + escHtml(leak) + '</span>';
+    else if (fileD) html += '<span class="tstd-col" title="File date">📁 ' + escHtml(fileD) + '</span>';
+    if (std.avail) html += availBadge(r[std.avail]);
+    if (std.quality) html += qualityBadge(r[std.quality]);
+
+    if (audio) {
+      html += '<button class="btn btn-secondary btn-sm" title="Play" onclick="playTrackerRow(' + globalIdx + ')">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;"><path d="M8 5v14l11-7z"/></svg></button>';
+      html += '<a class="btn btn-secondary btn-sm" title="Download" href="' + escHtml(audio) + '" download target="_blank" rel="noopener" style="text-decoration:none;">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></a>';
+    }
+    // Any extra non-audio URLs in the links cell (up to 2)
+    if (std.links) {
+      var urls = String(r[std.links] || '').match(/https?:\/\/\S+/g) || [];
+      var shownLinks = 0;
+      for (var u = 0; u < urls.length && shownLinks < 2; u++) {
+        if (audioUrl(urls[u]) === audio && audio) continue;
+        html += '<a class="btn btn-secondary btn-sm" href="' + escHtml(urls[u]) + '" target="_blank" rel="noopener" style="text-decoration:none;">🔗</a>';
+        shownLinks++;
+      }
+    }
+    html += '</div>';
+
+    html += '</div>';
+    return html;
   }
 
   // ── Single row ────────────────────────────────────────────────
