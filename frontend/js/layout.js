@@ -424,16 +424,18 @@
     var bg = document.getElementById('wv-page-bg');
     if (!bg) return;
     if (url) {
-      // Deliberately a no-op. This used to blur the current cover across
-      // the whole app, which gave every page a different coloured backdrop
-      // and made flat panels look like boxes floating on it. Apple Music
-      // keeps one neutral ground. The function stays because ~20 pages call
-      // it; it simply no longer paints a wallpaper.
-      bg.style.backgroundImage = '';
-      bg.style.filter = '';
+      // The cover wallpaper is the ground the whole design sits on: every
+      // pane above it is translucent, so this tint is what ties the app
+      // together. Scale slightly past the frame so the blur has no edge
+      // falloff, and keep it dark enough that glass stays legible.
+      // Hand the art to CSS as a custom property rather than styling here,
+      // so the blur/brightness treatment can differ per theme — a wallpaper
+      // dimmed for dark mode is unusable under light mode's pale glass.
+      bg.style.setProperty('--wv-art', 'url("' + String(url).replace(/"/g, '%22') + '")');
+      bg.classList.add('has-art');
     } else {
-      bg.style.backgroundImage = '';
-      bg.style.filter = '';
+      bg.style.removeProperty('--wv-art');
+      bg.classList.remove('has-art');
     }
   };
 
