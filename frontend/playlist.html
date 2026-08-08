@@ -223,7 +223,7 @@
 
   async function savePlaylistEdit() {
     var title = document.getElementById('ep-title').value.trim();
-    if (!title) { document.getElementById('ep-alert').innerHTML = '<span style="color:#f87171;">Title is required</span>'; return; }
+    if (!title) { document.getElementById('ep-alert').innerHTML = '<span style="color:var(--red);">Title is required</span>'; return; }
     try {
       var updated = await api('/playlists/' + playlistId, {
         method: 'PUT',
@@ -241,7 +241,7 @@
       document.getElementById('edit-playlist-modal').classList.remove('open');
       renderPlaylist();
     } catch (err) {
-      document.getElementById('ep-alert').innerHTML = '<span style="color:#f87171;">' + escHtml(err.message || 'Save failed') + '</span>';
+      document.getElementById('ep-alert').innerHTML = '<span style="color:var(--red);">' + escHtml(err.message || 'Save failed') + '</span>';
     }
   }
 
@@ -313,7 +313,7 @@
       '</div>';
     } catch (err) {
       if (spinner) spinner.style.display = 'none';
-      resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:#f87171;">Search failed.</div>';
+      resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--red);">Search failed.</div>';
     }
   }
 

@@ -109,7 +109,7 @@
           '<div id="arc-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
         '</div>' +
 
-        '<div class="wv-card" style="padding:20px 24px;margin-top:20px;border-left:4px solid #a78bfa;">' +
+        '<div class="wv-card" style="padding:20px 24px;margin-top:20px;border-left:4px solid var(--purple);">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">MEGA folder bulk import</div>' +
           '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">' +
             'Paste a <b>root MEGA folder</b> whose top-level sub-folders are each one comp. ' +
@@ -229,10 +229,10 @@
 
   async function startArchiveImport() {
     var common = _arcValidateCommon();
-    if (common.error) { _arcStatus('arc-import-status', common.error, '#f87171'); return; }
+    if (common.error) { _arcStatus('arc-import-status', common.error, 'var(--red)'); return; }
     var url = ((document.getElementById('arc-import-url') || {}).value || '').trim();
     var endpoint = _arcImportEndpoint(url);
-    if (!endpoint) { _arcStatus('arc-import-status', _arcBadLinkMessage(url) || 'That doesn\'t look like an untitled.stream, Samply, or mega.nz folder link.', '#f87171'); return; }
+    if (!endpoint) { _arcStatus('arc-import-status', _arcBadLinkMessage(url) || 'That doesn\'t look like an untitled.stream, Samply, or mega.nz folder link.', 'var(--red)'); return; }
 
     var btn = document.getElementById('arc-import-btn');
     btn.disabled = true;
@@ -244,10 +244,10 @@
       var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcStatus('arc-import-status', msg); });
       var msg = 'Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
       if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
-      _arcStatus('arc-import-status', msg + ' Opening…', '#4ade80');
+      _arcStatus('arc-import-status', msg + ' Opening…', 'var(--green)');
       setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
     } catch (err) {
-      _arcStatus('arc-import-status', 'Error: ' + err.message, '#f87171');
+      _arcStatus('arc-import-status', 'Error: ' + err.message, 'var(--red)');
       btn.disabled = false;
     }
   }
@@ -288,13 +288,13 @@
       url = url.trim(); artist = artist.trim();
       if (!url && !artist) return; // fully blank row — ignore
       var endpoint = _arcImportEndpoint(url);
-      if (!endpoint) { _arcBulkRowStatus(row, _arcBadLinkMessage(url) || 'Not a valid untitled.stream, Samply, or mega.nz folder link.', '#f87171'); hasInvalid = true; return; }
-      if (!artist) { _arcBulkRowStatus(row, 'Artist name is required.', '#f87171'); hasInvalid = true; return; }
+      if (!endpoint) { _arcBulkRowStatus(row, _arcBadLinkMessage(url) || 'Not a valid untitled.stream, Samply, or mega.nz folder link.', 'var(--red)'); hasInvalid = true; return; }
+      if (!artist) { _arcBulkRowStatus(row, 'Artist name is required.', 'var(--red)'); hasInvalid = true; return; }
       jobs.push({ row: row, url: url, artist: artist, endpoint: endpoint });
     });
 
-    if (hasInvalid) { _arcStatus('arc-bulk-status', 'Fix the highlighted rows, then press Upload All again.', '#f87171'); return; }
-    if (!jobs.length) { _arcStatus('arc-bulk-status', 'Add at least one comp link.', '#f87171'); return; }
+    if (hasInvalid) { _arcStatus('arc-bulk-status', 'Fix the highlighted rows, then press Upload All again.', 'var(--red)'); return; }
+    if (!jobs.length) { _arcStatus('arc-bulk-status', 'Add at least one comp link.', 'var(--red)'); return; }
 
     var btn = document.getElementById('arc-bulk-btn');
     btn.disabled = true;
@@ -316,28 +316,28 @@
         var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcBulkRowStatus(j.row, msg); });
         var msg = '✓ Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
         if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
-        _arcBulkRowStatus(j.row, msg, '#4ade80');
+        _arcBulkRowStatus(j.row, msg, 'var(--green)');
         done++;
       } catch (err) {
-        _arcBulkRowStatus(j.row, 'Failed: ' + (err.message || 'Import error'), '#f87171');
+        _arcBulkRowStatus(j.row, 'Failed: ' + (err.message || 'Import error'), 'var(--red)');
         failed++;
       }
     }
 
     _arcStatus('arc-bulk-status',
       'Done — ' + done + ' comp' + (done === 1 ? '' : 's') + ' archived' + (failed ? ', ' + failed + ' failed.' : '.'),
-      failed ? '#f87171' : '#4ade80');
+      failed ? 'var(--red)' : 'var(--green)');
     btn.disabled = false;
   }
 
   async function startArchiveUpload() {
     var common = _arcValidateCommon();
-    if (common.error) { _arcStatus('arc-upload-status', common.error, '#f87171'); return; }
+    if (common.error) { _arcStatus('arc-upload-status', common.error, 'var(--red)'); return; }
     var title = ((document.getElementById('arc-title') || {}).value || '').trim();
-    if (!title) { _arcStatus('arc-upload-status', 'Comp title is required.', '#f87171'); return; }
+    if (!title) { _arcStatus('arc-upload-status', 'Comp title is required.', 'var(--red)'); return; }
     var filesInput = document.getElementById('arc-files');
     var files = Array.from((filesInput && filesInput.files) || []);
-    if (!files.length) { _arcStatus('arc-upload-status', 'Add at least one audio file.', '#f87171'); return; }
+    if (!files.length) { _arcStatus('arc-upload-status', 'Add at least one audio file.', 'var(--red)'); return; }
 
     var btn = document.getElementById('arc-upload-btn');
     btn.disabled = true;
@@ -363,10 +363,10 @@
         await apiUpload('/tracks', form);
       }
 
-      _arcStatus('arc-upload-status', '✓ Archive comp uploaded. Opening…', '#4ade80');
+      _arcStatus('arc-upload-status', '✓ Archive comp uploaded. Opening…', 'var(--green)');
       setTimeout(function() { navigate('/album.html?id=' + album.id); }, 900);
     } catch (err) {
-      _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), '#f87171');
+      _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), 'var(--red)');
       btn.disabled = false;
     }
   }
@@ -434,10 +434,10 @@
   async function scanMegaBulkFolder() {
     var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
     var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
-    if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
-    if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
+    if (!url) { _mbStatus('Root MEGA folder URL is required.', 'var(--red)'); return; }
+    if (!artist) { _mbStatus('Fallback artist name is required.', 'var(--red)'); return; }
     if (!/mega(\.co)?\.nz\/folder\/[\w-]+#[\w-]+/.test(url)) {
-      _mbStatus('That doesn\'t look like a valid MEGA folder URL (needs the key after #).', '#f87171');
+      _mbStatus('That doesn\'t look like a valid MEGA folder URL (needs the key after #).', 'var(--red)');
       return;
     }
     var btn = document.getElementById('arc-mega-bulk-btn');
@@ -458,10 +458,10 @@
         _mbStatus('Found ' + _mbQueueFolders.length + ' artist folder' + (_mbQueueFolders.length === 1 ? '' : 's') + ' — reorder if needed, then click Start Import.');
         if (startBtn) startBtn.style.display = '';
       } else {
-        _mbStatus('No artist folders found in this MEGA folder.', '#f87171');
+        _mbStatus('No artist folders found in this MEGA folder.', 'var(--red)');
       }
     } catch (err) {
-      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+      _mbStatus('Error: ' + (err.message || 'Unknown error'), 'var(--red)');
     }
     btn.disabled = false;
   }
@@ -470,9 +470,9 @@
     var url = ((document.getElementById('arc-mega-bulk-url') || {}).value || '').trim();
     var artist = ((document.getElementById('arc-mega-bulk-artist') || {}).value || '').trim();
 
-    if (!url) { _mbStatus('Root MEGA folder URL is required.', '#f87171'); return; }
-    if (!artist) { _mbStatus('Fallback artist name is required.', '#f87171'); return; }
-    if (!_mbQueueFolders.length) { _mbStatus('Scan the folder first to build the queue.', '#f87171'); return; }
+    if (!url) { _mbStatus('Root MEGA folder URL is required.', 'var(--red)'); return; }
+    if (!artist) { _mbStatus('Fallback artist name is required.', 'var(--red)'); return; }
+    if (!_mbQueueFolders.length) { _mbStatus('Scan the folder first to build the queue.', 'var(--red)'); return; }
 
     var btn = document.getElementById('arc-mega-bulk-btn');
     var startBtn = document.getElementById('arc-mega-bulk-start-btn');
@@ -493,7 +493,7 @@
       _mbStatus('Bulk import job started — streaming progress…');
       _mbLog('Job ' + jobId + ' started');
     } catch (err) {
-      _mbStatus('Error: ' + (err.message || 'Unknown error'), '#f87171');
+      _mbStatus('Error: ' + (err.message || 'Unknown error'), 'var(--red)');
       btn.disabled = false;
       return;
     }
@@ -545,11 +545,11 @@
           } else if (evt.type === 'done') {
             var doneMsg = 'Done — ' + evt.imported + ' comp' + (evt.imported === 1 ? '' : 's') + ' archived' +
               (evt.failed ? ', ' + evt.failed + ' failed.' : '.');
-            _mbStatus(doneMsg, evt.failed ? '#f87171' : '#4ade80');
+            _mbStatus(doneMsg, evt.failed ? 'var(--red)' : 'var(--green)');
             _mbLog(doneMsg);
             return 'done';
           } else if (evt.type === 'error') {
-            _mbStatus('Error: ' + evt.message, '#f87171');
+            _mbStatus('Error: ' + evt.message, 'var(--red)');
             _mbLog('Error: ' + evt.message);
             return 'error';
           }
@@ -566,10 +566,10 @@
       // dropped — the job is still running on the server; reconnect.
       drops++;
       if (drops > 60) {
-        _mbStatus('Lost connection to the progress stream, but the import is still running on the server. Re-run the same URL later to see final results (already-done comps are skipped).', '#facc15');
+        _mbStatus('Lost connection to the progress stream, but the import is still running on the server. Re-run the same URL later to see final results (already-done comps are skipped).', 'var(--yellow)');
         break;
       }
-      _mbStatus('Reconnecting to progress stream… (' + drops + ')', '#facc15');
+      _mbStatus('Reconnecting to progress stream… (' + drops + ')', 'var(--yellow)');
       await new Promise(function(r) { setTimeout(r, 3000); });
     }
     btn.disabled = false;

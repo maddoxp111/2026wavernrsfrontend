@@ -22,11 +22,11 @@
     _cs.id = 'comm-styles';
     _cs.textContent = [
       '.comm-post-card{background:var(--surface-2,#18181b);border:1px solid var(--border,#27272a);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}',
-      '.comm-post-card:hover{border-color:var(--purple-light,#a78bfa);background:var(--surface-3,#1c1c1f);}',
+      '.comm-post-card:hover{border-color:var(--purple-light,var(--purple));background:var(--surface-3,#1c1c1f);}',
       '.comm-vote-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:32px;}',
       '.comm-vote-btn{background:none;border:none;cursor:pointer;padding:3px 6px;font-size:14px;color:var(--text-3,#71717a);border-radius:4px;transition:color 0.12s,background 0.12s;line-height:1;}',
-      '.comm-vote-btn.up:hover{color:#8b5cf6;background:rgba(139,92,246,0.1);}',
-      '.comm-vote-btn.down:hover{color:#f87171;background:rgba(248,113,113,0.1);}',
+      '.comm-vote-btn.up:hover{color:var(--purple);background:rgba(139,92,246,0.1);}',
+      '.comm-vote-btn.down:hover{color:var(--red);background:rgba(248,113,113,0.1);}',
       '.comm-vote-score{font-size:13px;font-weight:700;color:var(--text-2,#a1a1aa);min-width:20px;text-align:center;line-height:1.2;}',
       '.comm-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}',
       '.comm-meta-item{font-size:12px;color:var(--text-3,#71717a);display:flex;align-items:center;gap:3px;}',
@@ -37,7 +37,7 @@
       '.comm-reply-btn:hover{color:var(--text,#fafafa);}',
       '.comm-format-bar{display:flex;gap:4px;margin-bottom:6px;padding:4px 0;}',
       '.comm-fmt-btn{background:none;border:1px solid var(--border,#27272a);border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;color:var(--text-2,#a1a1aa);font-family:inherit;transition:border-color 0.12s,color 0.12s;}',
-      '.comm-fmt-btn:hover{border-color:var(--purple-light,#a78bfa);color:var(--purple,#8b5cf6);}',
+      '.comm-fmt-btn:hover{border-color:var(--purple-light,var(--purple));color:var(--purple);}',
     ].join('');
     document.head.appendChild(_cs);
   }
@@ -102,7 +102,7 @@
   }
 
   function avatarHTML(username, profileImageUrl) {
-    var colors = ['#8b5cf6','#06b6d4','#10b981','#f59e0b','#ec4899','#3b82f6'];
+    var colors = ['var(--purple)','#06b6d4','#10b981','var(--orange)','#ec4899','#3b82f6'];
     var idx = (username || '').charCodeAt(0) % colors.length;
     if (profileImageUrl) {
       return '<span class="comm-avatar" style="background:' + colors[idx] + ';overflow:hidden;padding:0;">' +
@@ -202,7 +202,7 @@
             formatBar('np-body') +
             '<textarea id="np-body" class="wv-input" placeholder="Share your thoughts…" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:90px;"></textarea>' +
           '</div>' +
-          '<div id="np-error" style="font-size:13px;color:#f87171;display:none;"></div>' +
+          '<div id="np-error" style="font-size:13px;color:var(--red);display:none;"></div>' +
           '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
             '<button class="wv-pill" onclick="hideNewPostForm()">Cancel</button>' +
             '<button class="wv-pill brand" onclick="submitNewPost()">Post</button>' +
@@ -262,10 +262,10 @@
 
     var actionBtns = '';
     if (isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:#f87171;" title="Delete your post">Delete</button>';
+      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="Delete your post">Delete</button>';
     }
     if (isMod && !isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:#f87171;" title="Mod: take down post">Take down</button>';
+      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="Mod: take down post">Take down</button>';
     }
 
     return (
@@ -434,10 +434,10 @@
     var isOwner = me && me.id === p.user_id;
 
     var modBtn = isMod && !isOwner
-      ? '<button onclick="modTakeDownPost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:#f87171;border-color:#f87171;padding:5px 12px;">Take down</button>'
+      ? '<button onclick="modTakeDownPost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:var(--red);border-color:var(--red);padding:5px 12px;">Take down</button>'
       : '';
     var deleteBtn = isOwner
-      ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:#f87171;border-color:#f87171;padding:5px 12px;">Delete post</button>'
+      ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:var(--red);border-color:var(--red);padding:5px 12px;">Delete post</button>'
       : '';
 
     var commentForm = isLoggedIn()
@@ -445,13 +445,13 @@
           '<div style="font-size:14px;font-weight:600;margin-bottom:10px;">Add a comment</div>' +
           formatBar('top-comment-body') +
           '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="Write something…" style="width:100%;box-sizing:border-box;resize:vertical;min-height:74px;"></textarea>' +
-          '<div id="top-comment-error" style="font-size:12px;color:#f87171;display:none;margin-top:4px;"></div>' +
+          '<div id="top-comment-error" style="font-size:12px;color:var(--red);display:none;margin-top:4px;"></div>' +
           '<div style="display:flex;justify-content:flex-end;margin-top:8px;">' +
             '<button class="wv-pill brand" onclick="submitTopComment()">Comment</button>' +
           '</div>' +
         '</div>'
       : '<div style="margin-bottom:24px;font-size:13px;color:var(--text-2);">' +
-          '<a href="/login.html" style="color:var(--brand,#8b5cf6);">Log in</a> to comment.' +
+          '<a href="/login.html" style="color:var(--brand,var(--purple));">Log in</a> to comment.' +
         '</div>';
 
     view.innerHTML =
@@ -521,15 +521,15 @@
 
       var actionBtns = '';
       if (isLoggedIn()) actionBtns += '<button class="comm-reply-btn" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Reply</button>';
-      if (isOwner) actionBtns += '<button class="comm-reply-btn" style="color:#f87171;" onclick="deleteComment(\'' + escHtml(c.id) + '\')">Delete</button>';
-      if (isMod && !isOwner) actionBtns += '<button class="comm-reply-btn" style="color:#f87171;" onclick="modDeleteComment(\'' + escHtml(c.id) + '\')">Take down</button>';
+      if (isOwner) actionBtns += '<button class="comm-reply-btn" style="color:var(--red);" onclick="deleteComment(\'' + escHtml(c.id) + '\')">Delete</button>';
+      if (isMod && !isOwner) actionBtns += '<button class="comm-reply-btn" style="color:var(--red);" onclick="modDeleteComment(\'' + escHtml(c.id) + '\')">Take down</button>';
 
       var replyForm =
         '<div id="reply-form-' + escHtml(c.id) + '" style="display:none;margin-top:10px;">' +
           formatBar('reply-body-' + c.id) +
           '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" placeholder="Reply…" ' +
             'style="width:100%;box-sizing:border-box;resize:vertical;min-height:56px;font-size:13px;"></textarea>' +
-          '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:#f87171;display:none;margin-top:3px;"></div>' +
+          '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:var(--red);display:none;margin-top:3px;"></div>' +
           '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px;">' +
             '<button class="wv-pill" style="font-size:12px;padding:4px 12px;" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Cancel</button>' +
             '<button class="wv-pill brand" style="font-size:12px;padding:4px 12px;" onclick="submitReply(\'' + escHtml(c.id) + '\')">Reply</button>' +

@@ -3,55 +3,99 @@
    style.css — complete implementation
    ========================================================= */
 
-/* Design Tokens */
-:root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --r-pill: 9999px;
-  --r-xl: 34px;
-  --r-lg: 24px;
-  --r-md: 16px;
-  --r-sm: 10px;
-  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --lg-frost-large: 28px;
-  --lg-frost-medium: 22px;
-  --lg-frost-regular: 18px;
-  --lg-shadow: 0 8px 40px 0 rgba(0,0,0,0.12);
-}
+/* =========================================================
+   Design Tokens — dark-first
 
-/* DARK theme */
-.theme-dark {
-  --text: rgba(255,255,255,0.95);
-  --text-2: rgba(255,255,255,0.62);
-  --text-3: rgba(255,255,255,0.42);
-  --text-4: rgba(255,255,255,0.22);
-  /* backwards compat aliases */
-  --text-secondary: rgba(255,255,255,0.62);
-  --text-tertiary: rgba(255,255,255,0.42);
-  --purple-bg: rgba(165,151,255,0.18);
-  --hair: rgba(255,255,255,0.08);
+   Dark is the product default, so the complete palette lives on
+   :root. .theme-light is a full second palette that previously did
+   not exist at all: every colour token was defined only inside
+   .theme-dark, so "light mode" was the *absence* of dark mode and
+   every var() resolved to nothing. Both blocks now define the same
+   token names, so every component resolves in either theme.
+
+   Modelled on Apple Music dark: neutral ground (no colour wash),
+   flat layered surfaces, translucency reserved for chrome.
+   ========================================================= */
+
+:root, .theme-dark {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+               "Segoe UI Variable", "Segoe UI", Inter, Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Shape — a desktop music app sits far tighter than an iOS widget.
+     Previously 34 / 24 / 16 / 10. */
+  --r-pill: 9999px;
+  --r-xl: 12px;
+  --r-lg: 12px;
+  --r-md: 8px;
+  --r-sm: 6px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* Translucency is chrome-only. The sidebar and the now-playing bar
+     are the only surfaces content passes beneath, so they blur (see
+     --frost-chrome); every other glass tier is flat and the global
+     frost values are zero rather than paying for an invisible blur. */
+  --lg-frost-large: 0px;
+  --lg-frost-medium: 0px;
+  --lg-frost-regular: 0px;
+  --frost-chrome: 20px;
+
+  --lg-shadow: 0 1px 2px rgba(0,0,0,0.55);
+
+  /* ── Text ── */
+  --text: rgba(255,255,255,0.92);
+  --text-1: rgba(255,255,255,0.92);
+  --text-primary: rgba(255,255,255,0.92);
+  --text-2: rgba(255,255,255,0.56);
+  --text-3: rgba(255,255,255,0.34);
+  --text-4: rgba(255,255,255,0.20);
+  --text-secondary: rgba(255,255,255,0.56);
+  --text-tertiary: rgba(255,255,255,0.34);
+
+  /* ── Ground + layered surfaces ──
+     Neutrals carry a faint violet bias rather than being pure grey,
+     so they sit with the accent instead of fighting it. */
+  --page-bg-base: #000000;
+  --page-bg: #000000;
+  --surface: #131218;
+  --surface-1: #131218;
+  --surface-2: #1e1c25;
+  --surface-3: #2a2733;
+
+  --hair: rgba(255,255,255,0.09);
   --hair-strong: rgba(255,255,255,0.16);
-  --page-bg-base: #0a0610;
-  --page-bg: radial-gradient(900px 700px at 14% 12%, rgba(124,80,200,0.55) 0%, transparent 60%),
-             radial-gradient(1000px 800px at 90% 30%, rgba(100,60,180,0.45) 0%, transparent 55%),
-             radial-gradient(1100px 900px at 50% 100%, rgba(80,40,150,0.55) 0%, transparent 60%),
-             linear-gradient(180deg, #120820 0%, #06030b 100%);
-  --glass-large-bg: linear-gradient(rgba(36,36,40,0.66), rgba(36,36,40,0.66));
-  --glass-large-tint: rgba(255,255,255,0.04);
-  --glass-large-border: rgba(255,255,255,0.18);
-  --glass-large-inner-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(255,255,255,0.06);
-  --glass-medium-bg: rgba(48,48,52,0.5);
-  --glass-medium-border: rgba(255,255,255,0.12);
-  --glass-small-bg: rgba(56,56,60,0.62);
-  --glass-small-border: rgba(255,255,255,0.1);
-  --glass-small-shadow: 0 1px 1.5px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
-  --glass-pill-bg: rgba(56,56,60,0.45);
-  --glass-pill-bg-hover: rgba(72,72,76,0.7);
-  --glass-pill-bg-active: rgba(88,88,92,0.85);
-  --brand: #a597ff;
-  --brand-2: #8a7dff;
-  --brand-bg: rgba(165,151,255,0.18);
-  --brand-text: #c0b6ff;
+  --border: rgba(255,255,255,0.12);
+
+  /* ── Glass tiers, now flat ──
+     Names kept so the ~400 existing var() usages keep resolving;
+     only the values changed from translucent to layered greys. */
+  --glass-large-bg: #131218;
+  --glass-large-tint: transparent;
+  --glass-large-border: rgba(255,255,255,0.09);
+  --glass-large-inner-shadow: none;
+  --glass-medium-bg: #1a1922;
+  --glass-medium-border: rgba(255,255,255,0.09);
+  --glass-small-bg: #1e1c25;
+  --glass-small-border: rgba(255,255,255,0.09);
+  --glass-small-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  --glass-pill-bg: #1e1c25;
+  --glass-pill-bg-hover: #2a2733;
+  --glass-pill-bg-active: #343040;
+
+  /* ── Chrome translucency (sidebar + now-playing bar only) ── */
+  --veil: rgba(22,20,28,0.72);
+  --veil-border: rgba(255,255,255,0.10);
+
+  /* ── Accent: wavernrs purple, lifted for a true-black ground ── */
+  --brand: #b3a1ff;
+  --brand-2: #9a86f5;
+  --brand-bg: rgba(179,161,255,0.16);
+  --brand-text: #c9bcff;
+  --purple: #b3a1ff;
+  --purple-light: #c9bcff;
+  --purple-bg: rgba(179,161,255,0.16);
+
+  /* ── Semantic (Apple dark-mode system values) ── */
   --pink: #ff375f;
   --orange: #ff9230;
   --green: #30d158;
@@ -59,7 +103,70 @@
   --yellow: #ffd600;
   --blue: #0a84ff;
   --red: #ff453a;
-  --avatar-bg: #f5f5f5;
+
+  --avatar-bg: #2a2733;
+}
+
+/* LIGHT theme — authored here for the first time. Same token names,
+   re-derived for a light ground: the accent deepens so it keeps its
+   contrast on white, and the semantic colours darken for the same
+   reason (Apple's dark-mode reds and greens are unreadable on white). */
+.theme-light {
+  --lg-shadow: 0 1px 2px rgba(23,21,29,0.10);
+
+  --text: #17151d;
+  --text-1: #17151d;
+  --text-primary: #17151d;
+  --text-2: rgba(23,21,29,0.62);
+  --text-3: rgba(23,21,29,0.42);
+  --text-4: rgba(23,21,29,0.26);
+  --text-secondary: rgba(23,21,29,0.62);
+  --text-tertiary: rgba(23,21,29,0.42);
+
+  --page-bg-base: #f6f5fa;
+  --page-bg: #f6f5fa;
+  --surface: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f1eff7;
+  --surface-3: #e6e3ef;
+
+  --hair: rgba(23,21,29,0.10);
+  --hair-strong: rgba(23,21,29,0.20);
+  --border: rgba(23,21,29,0.14);
+
+  --glass-large-bg: #ffffff;
+  --glass-large-tint: transparent;
+  --glass-large-border: rgba(23,21,29,0.10);
+  --glass-large-inner-shadow: none;
+  --glass-medium-bg: #faf9fc;
+  --glass-medium-border: rgba(23,21,29,0.10);
+  --glass-small-bg: #f1eff7;
+  --glass-small-border: rgba(23,21,29,0.10);
+  --glass-small-shadow: 0 1px 2px rgba(23,21,29,0.08);
+  --glass-pill-bg: #f1eff7;
+  --glass-pill-bg-hover: #e6e3ef;
+  --glass-pill-bg-active: #dbd7e8;
+
+  --veil: rgba(252,251,255,0.78);
+  --veil-border: rgba(23,21,29,0.10);
+
+  --brand: #6244d4;
+  --brand-2: #4f35b8;
+  --brand-bg: rgba(98,68,212,0.12);
+  --brand-text: #4f35b8;
+  --purple: #6244d4;
+  --purple-light: #7b5fe0;
+  --purple-bg: rgba(98,68,212,0.12);
+
+  --pink: #d81b46;
+  --orange: #b5610a;
+  --green: #1d9e46;
+  --teal: #007d87;
+  --yellow: #8a6d00;
+  --blue: #0062cc;
+  --red: #cf2f24;
+
+  --avatar-bg: #e6e3ef;
 }
 
 /* =========================================================
@@ -79,12 +186,16 @@ html, body {
 
 /* body color/bg are only fallbacks — theme is driven by #wv-root class */
 body {
-  color: #111;
-  background: #f6f3ff;
+  color: var(--text);
+  background: var(--page-bg-base);
 }
 body.theme-dark {
-  color: rgba(255,255,255,0.95);
-  background: #0a0610;
+  color: var(--text);
+  background: var(--page-bg-base);
+}
+body.theme-light {
+  color: var(--text);
+  background: var(--page-bg-base);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -177,6 +288,35 @@ img { display: block; }
 #wv-player-slot .player-bar {
   border-radius: var(--r-xl);
   height: 100%;
+}
+
+/* =========================================================
+   Chrome translucency — the ONLY two blurred surfaces.
+
+   Apple Music blurs exactly what content scrolls beneath: the
+   sidebar and the now-playing bar. Every other surface is flat
+   (the glass-* tokens are opaque now), so these two need the
+   veil and blur restated explicitly rather than inheriting it.
+   ========================================================= */
+.wv-sidebar,
+.wv-player-bar,
+#wv-player-slot .player-bar {
+  background: var(--veil);
+  border: 1px solid var(--veil-border);
+  -webkit-backdrop-filter: blur(var(--frost-chrome)) saturate(180%);
+  backdrop-filter: blur(var(--frost-chrome)) saturate(180%);
+  box-shadow: var(--lg-shadow);
+}
+
+/* Without backdrop-filter support the veil is semi-transparent over
+   the page ground, which reads as murky — fall back to the solid
+   surface colour instead. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .wv-sidebar,
+  .wv-player-bar,
+  #wv-player-slot .player-bar {
+    background: var(--surface);
+  }
 }
 
 /* Mobile-only elements — hidden on desktop so they don't create extra grid rows */

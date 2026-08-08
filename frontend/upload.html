@@ -203,11 +203,11 @@
     var eraTagId = document.getElementById('import-era-tag').value;
     var endpoint = _detectImportSource(url);
     if (!endpoint) {
-      _setImportStatus('That doesn\'t look like an untitled.stream or Samply link.', '#f87171');
+      _setImportStatus('That doesn\'t look like an untitled.stream or Samply link.', 'var(--red)');
       return;
     }
     if (!eraTagId) {
-      _setImportStatus('Please select an era tag before importing.', '#f87171');
+      _setImportStatus('Please select an era tag before importing.', 'var(--red)');
       return;
     }
     btn.disabled = true;
@@ -217,7 +217,7 @@
       var resp = await api(endpoint, { method: 'POST', body: JSON.stringify({ url, era_tag_id: eraTagId }) });
       jobId = resp.jobId;
     } catch (err) {
-      _setImportStatus('Could not start import: ' + err.message, '#f87171');
+      _setImportStatus('Could not start import: ' + err.message, 'var(--red)');
       btn.disabled = false;
       return;
     }
@@ -256,7 +256,7 @@
           } else if (evt.type === 'done') {
             var msg = 'Imported ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
             if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
-            _setImportStatus(msg + ' Redirecting…', '#4ade80');
+            _setImportStatus(msg + ' Redirecting…', 'var(--green)');
             setTimeout(function() {
               if (evt.trackId) {
                 navigate('/track.html?id=' + evt.trackId);
@@ -266,16 +266,16 @@
             }, 900);
             return;
           } else if (evt.type === 'error') {
-            _setImportStatus('Error: ' + evt.message, '#f87171');
+            _setImportStatus('Error: ' + evt.message, 'var(--red)');
             btn.disabled = false;
             return;
           }
         }
       }
-      _setImportStatus('Connection closed.', '#f87171');
+      _setImportStatus('Connection closed.', 'var(--red)');
       btn.disabled = false;
     } catch (err) {
-      _setImportStatus('Lost connection to import: ' + err.message, '#f87171');
+      _setImportStatus('Lost connection to import: ' + err.message, 'var(--red)');
       btn.disabled = false;
     }
   }

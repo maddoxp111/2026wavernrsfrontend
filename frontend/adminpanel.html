@@ -22,7 +22,7 @@
       <label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">Description</label>
       <textarea id="edit-modal-desc-input" class="wv-input" rows="3" style="width:100%;resize:vertical;"></textarea>
     </div>
-    <div id="edit-modal-alert" style="margin-bottom:10px;font-size:13px;color:#f87171;"></div>
+    <div id="edit-modal-alert" style="margin-bottom:10px;font-size:13px;color:var(--red);"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveEdit()">Save</button>
@@ -851,8 +851,8 @@
         '<thead><tr><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>' +
         '<tbody>' + users.map(function(u) {
           var status = u.banned
-            ? '<span style="color:#f87171;font-weight:600;font-size:13px;">Banned</span>'
-            : '<span style="color:#4ade80;font-weight:600;font-size:13px;">Active</span>';
+            ? '<span style="color:var(--red);font-weight:600;font-size:13px;">Banned</span>'
+            : '<span style="color:var(--green);font-weight:600;font-size:13px;">Active</span>';
           var actions = u.banned
             ? '<button class="btn btn-secondary btn-sm" onclick="unbanUser(\'' + u.id + '\')">Unban</button>'
             : '<button class="btn btn-secondary btn-sm" onclick="timeoutUser(\'' + u.id + '\')" style="margin-right:6px;">Timeout</button>' +
@@ -1050,13 +1050,13 @@
     var sub = document.getElementById('lock-status-sub');
     var btn = document.getElementById('btn-lock-toggle');
     if (locked) {
-      dot.style.background = '#f87171';
+      dot.style.background = 'var(--red)';
       label.textContent = 'Site is LOCKED';
       sub.textContent = 'Visitors must enter the access password';
       btn.textContent = 'Disable Lockdown';
       btn.className = 'btn btn-danger';
     } else {
-      dot.style.background = '#4ade80';
+      dot.style.background = 'var(--green)';
       label.textContent = 'Site is open';
       sub.textContent = 'All visitors can browse freely';
       btn.textContent = 'Enable Lockdown';
@@ -1064,8 +1064,8 @@
     }
     document.getElementById('lockdown-status').innerHTML =
       passwordSet
-        ? '<span style="color:#4ade80;">✓ Access password is set</span>'
-        : '<span style="color:#fcd34d;">⚠ No access password set — set one before enabling lockdown</span>';
+        ? '<span style="color:var(--green);">✓ Access password is set</span>'
+        : '<span style="color:var(--yellow);">⚠ No access password set — set one before enabling lockdown</span>';
   }
 
   async function toggleSiteLock() {
@@ -1157,7 +1157,7 @@
     try {
       await adminApi('/admin/moderators', { method: 'POST', body: JSON.stringify({ user_id: match.id }) });
       if (inputEl) inputEl.value = '';
-      resultEl.innerHTML = '<span style="color:#4ade80;">&#x2713; ' + escHtml(match.username) + ' added as moderator.</span>';
+      resultEl.innerHTML = '<span style="color:var(--green);">&#x2713; ' + escHtml(match.username) + ' added as moderator.</span>';
       setTimeout(function() { resultEl.innerHTML = ''; }, 3000);
       loadModerators();
     } catch (err) {
@@ -1230,7 +1230,7 @@
     try {
       await adminApi('/admin/archivers', { method: 'POST', body: JSON.stringify({ user_id: match.id }) });
       if (inputEl) inputEl.value = '';
-      resultEl.innerHTML = '<span style="color:#4ade80;">&#x2713; ' + escHtml(match.username) + ' added as archiver.</span>';
+      resultEl.innerHTML = '<span style="color:var(--green);">&#x2713; ' + escHtml(match.username) + ' added as archiver.</span>';
       setTimeout(function() { resultEl.innerHTML = ''; }, 3000);
       loadArchivers();
     } catch (err) {
@@ -1437,7 +1437,7 @@
     if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.style.color = 'var(--text-3)'; }
     try {
       await adminApi('/admin/countdown', { method: 'POST', body: JSON.stringify({ launch_at: launchAt, password: password || null }) });
-      if (statusEl) { statusEl.textContent = '✓ Countdown saved! Launch: ' + new Date(launchAt).toLocaleString(); statusEl.style.color = '#4ade80'; }
+      if (statusEl) { statusEl.textContent = '✓ Countdown saved! Launch: ' + new Date(launchAt).toLocaleString(); statusEl.style.color = 'var(--green)'; }
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
     }
@@ -1452,7 +1452,7 @@
       if (el) el.value = '';
       var pel = document.getElementById('cd-password');
       if (pel) pel.value = '';
-      if (statusEl) { statusEl.textContent = '✓ Countdown disabled.'; statusEl.style.color = '#4ade80'; }
+      if (statusEl) { statusEl.textContent = '✓ Countdown disabled.'; statusEl.style.color = 'var(--green)'; }
     } catch (e) {
       if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
     }
