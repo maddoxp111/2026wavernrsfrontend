@@ -8,13 +8,37 @@ function getUser() {
 }
 function isLoggedIn() { return !!getToken(); }
 
-function logout() {
+function _clearAuthStorage() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   localStorage.removeItem('wv_site_access');
   sessionStorage.removeItem('wv_is_mod');
   sessionStorage.removeItem('mod_reauth_ok');
+}
+
+function logout() {
+  _clearAuthStorage();
   window.location.href = '/login.html';
+}
+
+// Sessions don't expire anymore, but a token can still stop working — one
+// issued before that change (those carry a 30-day expiry), or any token after
+// JWT_SECRET is rotated. When that happens the server tags the 401 with a
+// token_* code. Without this the dead token stayed in localStorage and every
+// page just showed a raw "Invalid token" error forever; instead, clear it and
+// send the user to log in once, which mints a token that never expires.
+function _handleAuthFailure(res, data) {
+  if (res.status !== 401) return;
+  const code = data && data.code;
+  if (!code || String(code).indexOf('token_') !== 0) return; // not a session problem
+  if (!getToken()) return;                                   // nothing to clear
+  _clearAuthStorage();
+  if (typeof updateNav === 'function') { try { updateNav(); } catch (_) {} }
+  // Already on the login page? Just clear — don't bounce in a loop.
+  if (location.pathname.endsWith('/login.html')) return;
+  const reason = code === 'token_expired' ? 'expired' : 'invalid';
+  location.href = '/login.html?session=' + reason +
+    '&next=' + encodeURIComponent(location.pathname + location.search);
 }
 
 async function api(path, options = {}) {
@@ -30,7 +54,10 @@ async function api(path, options = {}) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    _handleAuthFailure(res, data);
+    throw new Error(data.error || `Request failed (${res.status})`);
+  }
   return data;
 }
 
@@ -48,7 +75,10 @@ async function apiUpload(path, formData, method = 'POST') {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+  if (!res.ok) {
+    _handleAuthFailure(res, data);
+    throw new Error(data.error || `Upload failed (${res.status})`);
+  }
   return data;
 }
 

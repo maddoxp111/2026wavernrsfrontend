@@ -65,6 +65,29 @@
     if (el) el.innerHTML = '';
   }
 
+  // Landed here because a stored token stopped working (an old token from
+  // before sessions became permanent, or a rotated server secret). Say so,
+  // and send them back where they were once they're in.
+  (function noteSessionEnd() {
+    var params = new URLSearchParams(location.search);
+    var reason = params.get('session');
+    if (!reason) return;
+    var el = document.getElementById('alert-container');
+    if (el) {
+      el.innerHTML = '<div class="wv-form-error" style="color:var(--text-2);">' +
+        'You were signed out. Log back in — from now on you\'ll stay signed in.' +
+        '</div>';
+    }
+  })();
+
+  // Where to go after a successful login (set when we bounced them here).
+  function _postLoginTarget() {
+    var next = new URLSearchParams(location.search).get('next');
+    // Only same-site paths — never redirect to an absolute/offsite URL.
+    if (next && next.charAt(0) === '/' && next.charAt(1) !== '/') return next;
+    return '/index.html';
+  }
+
   document.getElementById('password').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
@@ -94,7 +117,7 @@
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.removeItem('wv_countdown_bypass');
-      location.href = '/index.html';
+      location.href = _postLoginTarget();
     } catch (err) {
       showAlert('alert-container', err.message);
       btn.textContent = 'Log in';
