@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — your library</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div id="view">
+  <div style="margin-bottom:20px;">
+    <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-0.04em;">Your Library</h1>
+    <p style="margin:0;font-size:14px;color:var(--text-2);">Everything you've liked and made, in one place.</p>
+  </div>
+
+  <div id="lib-tabs" style="display:flex;gap:0;margin-bottom:22px;border-bottom:1px solid var(--hair-strong);flex-wrap:wrap;"></div>
+  <div id="lib-body"><div class="loading"><div class="spinner"></div></div></div>
+</div><!-- /view -->
+
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+  initPlayer();
+
+  var _lib = null;          // { tracks, albums, playlists, counts }
+  var _libTab = 'tracks';   // tracks | albums | playlists | recent
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function _empty(icon, title, desc, cta) {
+    return '<div class="empty-state" style="text-align:center;padding:52px 20px;">' +
+      '<div class="empty-icon" style="font-size:30px;">' + icon + '</div>' +
+      '<div class="empty-title" style="font-size:16px;font-weight:700;margin-top:8px;">' + escHtml(title) + '</div>' +
+      '<div class="empty-desc" style="font-size:13.5px;color:var(--text-3);margin-top:4px;">' + escHtml(desc) + '</div>' +
+      (cta || '') + '</div>';
+  }
+
+  // Recently played is written by the player into localStorage; surfacing it
+  // here means the library covers "what I've been listening to" too.
+  function _recent() {
+    try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); }
+    catch (e) { return []; }
+  }
+
+  async function loadLibrary() {
+    var body = document.getElementById('lib-body');
+    if (!isLoggedIn()) {
+      renderTabs();
+      body.innerHTML = _empty('🔒', 'Sign in to see your library',
+        'Your liked edits, comps, and playlists live here.',
+        '<a href="/login.html" class="btn btn-primary" style="margin-top:16px;">Log in</a>');
+      return;
+    }
+    try {
+      _lib = await api('/library');
+      if (typeof window.setPageBgImage === 'function') {
+        var art = (_lib.albums || []).find(function(a) { return a.cover_url; })
+               || (_lib.tracks || []).find(function(t) { return t.cover_url; });
+        window.setPageBgImage(art ? art.cover_url : '');
+      }
+      renderTabs();
+      renderLib();
+    } catch (err) {
+      renderTabs();
+      body.innerHTML = _empty('⚠️', 'Could not load your library', err.message || 'Try again in a moment.');
+    }
+  }
+
+  function renderTabs() {
+    var c = _lib ? _lib.counts : { tracks: 0, albums: 0, playlists: 0 };
+    var recentCount = _recent().length;
+    var tabs = [
+      ['tracks',    'Liked Edits',  c.tracks],
+      ['albums',    'Liked Comps',  c.albums],
+      ['playlists', 'Playlists',    c.playlists],
+      ['recent',    'Recently Played', recentCount],
+    ];
+    document.getElementById('lib-tabs').innerHTML = tabs.map(function(t) {
+      var active = _libTab === t[0];
+      return '<button class="wv-admin-tab' + (active ? ' active' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' +
+        escHtml(t[1]) + (t[2] ? ' <span style="opacity:.6;">' + t[2] + '</span>' : '') + '</button>';
+    }).join('');
+  }
+
+  window.setLibTab = function(tab) {
+    _libTab = tab;
+    renderTabs();
+    renderLib();
+  };
+
+  function renderLib() {
+    var body = document.getElementById('lib-body');
+    if (!_lib) return;
+    if (_libTab === 'tracks')    return void (body.innerHTML = _renderTracks(_lib.tracks || []));
+    if (_libTab === 'albums')    return void (body.innerHTML = _renderComps(_lib.albums || [], 'liked'));
+    if (_libTab === 'playlists') return void (body.innerHTML = _renderPlaylists(_lib.playlists || []));
+    if (_libTab === 'recent')    return void (body.innerHTML = _renderRecent(_recent()));
+  }
+
+  // ── Liked edits ─────────────────────────────────────────────────────────────
+  function _renderTracks(tracks) {
+    if (!tracks.length) {
+      return _empty('♡', 'No liked edits yet', 'Tap the heart on any edit and it shows up here.');
+    }
+    var playable = tracks.filter(function(t) { return t.ia_url; });
+    var html = '';
+    if (playable.length) {
+      html += '<div style="margin-bottom:14px;"><button class="btn btn-primary" onclick="playLikedAll()">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px;"><path d="M8 5v14l11-7z"/></svg>' +
+        'Play all (' + playable.length + ')</button></div>';
+    }
+    html += '<div class="wv-card" style="padding:8px;">';
+    tracks.forEach(function(t, i) {
+      var artist = (t.artists && t.artists.display_name) || 'Unknown';
+      html += '<div class="track-row" id="lib-trk-' + i + '"' +
+        (t.ia_url ? ' style="cursor:pointer;" onclick="playLiked(' + i + ')"' : '') + '>' +
+        '<div class="track-row-cover">' +
+          (t.cover_url
+            ? '<img src="' + escHtml(t.cover_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" loading="lazy" onerror="this.style.opacity=0">'
+            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>') +
+        '</div>' +
+        '<div class="track-row-info">' +
+          '<div class="track-row-title">' + escHtml(t.title || 'Untitled') + '</div>' +
+          '<div class="track-row-artist">' + escHtml(artist) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">' +
+          '<a class="btn btn-secondary btn-sm" href="/track.html?id=' + escHtml(t.id) + '" ' +
+            'onclick="navigate(\'/track.html?id=' + escHtml(t.id) + '\');return false;" style="text-decoration:none;">Open</a>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function _libTrackObj(t) {
+    return {
+      id: t.id,
+      title: t.title,
+      ia_url: t.ia_url,
+      cover_url: t.cover_url,
+      artist_name: (t.artists && t.artists.display_name) || 'Unknown',
+    };
+  }
+
+  // Load the liked edits into the player queue so next/prev walk the whole
+  // list instead of dead-ending after one track, then start at `startIdx`.
+  function _queueLiked(startIdx) {
+    var playable = (_lib.tracks || []).filter(function(t) { return t.ia_url; });
+    if (!playable.length) return;
+    var idx = Math.max(0, Math.min(startIdx || 0, playable.length - 1));
+    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') {
+      setPlayerQueue(playable.map(_libTrackObj), idx);
+      playQueueIndex(idx);
+    } else {
+      playTrack(_libTrackObj(playable[idx]));
+    }
+  }
+
+  window.playLiked = function(i) {
+    var t = (_lib.tracks || [])[i];
+    if (!t || !t.ia_url) return;
+    // Row index is over all liked tracks; the queue holds only playable ones.
+    var playable = (_lib.tracks || []).filter(function(x) { return x.ia_url; });
+    _queueLiked(playable.findIndex(function(x) { return x.id === t.id; }));
+  };
+
+  window.playLikedAll = function() { _queueLiked(0); };
+
+  // ── Liked comps ─────────────────────────────────────────────────────────────
+  function _renderComps(albums) {
+    if (!albums.length) {
+      return _empty('♡', 'No liked comps yet', 'Like a comp and it lands here.');
+    }
+    return '<div class="wv-comp-grid wv-comp-grid-4" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:20px;">' +
+      albums.map(function(a) {
+        var artist = a.is_archive
+          ? (a.archive_artist_name || 'Unknown')
+          : ((a.artists && a.artists.display_name) || 'Unknown');
+        var bg = coverGradient(a.title || '');
+        return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + escHtml(a.id) + '\')">' +
+          '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
+            (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+          '</div></div>' +
+          '<div class="wv-comp-card-title">' + escHtml(a.title || 'Untitled') + '</div>' +
+          '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  // ── Playlists ───────────────────────────────────────────────────────────────
+  function _renderPlaylists(pls) {
+    if (!pls.length) {
+      return _empty('🎵', 'No playlists yet', 'Build one from any edit\'s menu.',
+        '<a href="/playlists.html" class="btn btn-primary" style="margin-top:16px;" onclick="navigate(\'/playlists.html\');return false;">Go to playlists</a>');
+    }
+    return '<div class="wv-pl-grid">' + pls.map(function(p) {
+      var cnt = p.track_count || 0;
+      var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
+      return '<div class="wv-playlist-card" onclick="navigate(\'/playlist.html?id=' + escHtml(p.id) + '\')">' +
+        '<div class="wv-playlist-cover">🎵</div>' +
+        '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
+        '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  // ── Recently played ─────────────────────────────────────────────────────────
+  function _renderRecent(items) {
+    if (!items.length) {
+      return _empty('🕘', 'Nothing played yet', 'Play something and it shows up here.');
+    }
+    return '<div class="wv-comp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:20px;">' +
+      items.map(function(it) {
+        var href = it._type === 'album' ? '/album.html?id=' + it.id : '/track.html?id=' + it.id;
+        var bg = coverGradient(it.title || '');
+        return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
+          '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
+            (it.cover_url ? '<img src="' + escHtml(it.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+          '</div></div>' +
+          '<div class="wv-comp-card-title">' + escHtml(it.title || 'Untitled') + '</div>' +
+          '<div class="wv-comp-card-artist">' + escHtml(it.artist_name || '') + '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  loadLibrary();
+</script>
+</body>
+</html>

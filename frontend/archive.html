@@ -18,10 +18,12 @@
 initPlayer();
 
 var _archiveItems = [];   // full dataset, fetched in pages
+var _archiveArtists = []; // grouped artist index
 var _archiveTotal = 0;
 var _arcQuery = '';
 var _arcEra = '';         // era tag id filter ('' = all)
 var _arcSort = 'newest';
+var _arcView = 'artists'; // 'artists' | 'comps'
 var _arcSearchTimer = null;
 
 async function initArchive() {
@@ -31,6 +33,11 @@ async function initArchive() {
     '<div>' +
       '<h1 style="margin:0 0 8px;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Archive</h1>' +
       '<p style="margin:0;font-size:14px;color:var(--text-2);max-width:560px;line-height:1.55;">Comps preserved by the wavernrs and yzyplayer&#39;s team — not by artists on the site, but too good to be lost.</p>' +
+    '</div>' +
+    // View toggle: browse by artist, or the flat comp grid
+    '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;align-self:flex-start;">' +
+      '<button class="wv-seg is-active" id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
+      '<button class="wv-seg" id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
     '</div>' +
     // Toolbar: search + sort + era chips + count
     '<div style="display:flex;flex-direction:column;gap:10px;">' +
@@ -51,7 +58,52 @@ async function initArchive() {
     '<div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading the rest of the archive…</div>' +
     '</div>';
+  arcApplyView();
+  loadArtists();
   loadArchive();
+}
+
+// ── Artist index ─────────────────────────────────────────────────────────────
+// The archive is browsed by artist first: with thousands of comps a flat grid
+// is unusable, and "everything by X" is the question people actually have.
+async function loadArtists() {
+  try {
+    var d = await api('/archive/artists?sort=comps');
+    _archiveArtists = (d && d.artists) || [];
+  } catch (e) {
+    _archiveArtists = [];
+  }
+  if (_arcView === 'artists') renderArchive();
+}
+
+function arcSetView(view) {
+  _arcView = view;
+  arcApplyView();
+  renderArchive();
+}
+
+function arcApplyView() {
+  var a = document.getElementById('arc-view-artists');
+  var c = document.getElementById('arc-view-comps');
+  if (a) a.classList.toggle('is-active', _arcView === 'artists');
+  if (c) c.classList.toggle('is-active', _arcView === 'comps');
+  // Sorting and era chips only apply to the comp grid.
+  var sortEl = document.getElementById('arc-sort');
+  if (sortEl) sortEl.style.display = _arcView === 'comps' ? '' : 'none';
+  var chips = document.getElementById('arc-era-chips');
+  if (chips) chips.style.display = _arcView === 'comps' ? '' : 'none';
+  var search = document.getElementById('arc-search');
+  if (search) search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
+}
+
+function artistCardHTML(a) {
+  var bg = coverGradient(a.name || '');
+  return '<div class="wv-comp-card" onclick="navigate(\'/archive-artist.html?a=' + encodeURIComponent(a.slug) + '\')">' +
+    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:50%;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.18);">' +
+    (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
+    '</div></div>' +
+    '<div class="wv-comp-card-title" style="text-align:center;">' + escHtml(a.name) + '</div>' +
+    '<div class="wv-comp-card-artist" style="text-align:center;">' + a.comp_count + ' comp' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
 }
 
 // Fetch the archive in pages: render the first page immediately so the grid
@@ -136,6 +188,35 @@ function _arcFiltered() {
 function renderArchive() {
   var grid = document.getElementById('archive-grid');
   if (!grid) return;
+
+  // ── Artist view ──
+  if (_arcView === 'artists') {
+    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
+    var artists = _archiveArtists;
+    if (_arcQuery) {
+      artists = artists.filter(function(a) {
+        return (a.name || '').toLowerCase().indexOf(_arcQuery) !== -1;
+      });
+    }
+    var cEl = document.getElementById('arc-count');
+    if (cEl) {
+      cEl.textContent = artists.length === _archiveArtists.length
+        ? _archiveArtists.length + ' artist' + (_archiveArtists.length !== 1 ? 's' : '')
+        : artists.length + ' of ' + _archiveArtists.length + ' artists';
+    }
+    if (!_archiveArtists.length) {
+      grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>';
+      return;
+    }
+    if (!artists.length) {
+      grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match your search.</div>';
+      return;
+    }
+    grid.innerHTML = artists.map(artistCardHTML).join('');
+    return;
+  }
+
+  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(168px,1fr))';
 
   // Era chips — rebuilt from whatever eras exist in the data
   var chipsEl = document.getElementById('arc-era-chips');

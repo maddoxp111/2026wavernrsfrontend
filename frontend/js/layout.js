@@ -37,6 +37,8 @@
     if (p.endsWith('/discover.html')) return 'discover';
     if (p.endsWith('/charts.html')) return 'charts';
     if (p.endsWith('/archive.html')) return 'archive';
+    if (p.endsWith('/archive-artist.html')) return 'archive';
+    if (p.endsWith('/library.html')) return 'library';
     if (p.endsWith('/resources.html')) return 'resources';
     if (p.endsWith('/feed.html')) return 'feed';
     if (p.endsWith('/playlists.html')) return 'playlists';
@@ -88,6 +90,7 @@
     html += '<div class="wv-sidebar-label" style="margin-top:12px;">Personal</div>';
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('feed', 'Following', '/feed.html', 'feed');
+    html += navItem('library', 'Library', '/library.html', 'list');
     html += navItem('playlists', 'Playlists', '/playlists.html', 'list');
     html += navItem('profile', 'You', profileHref, 'profile');
     html += '</nav>';

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — archive artist</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <div class="loading"><div class="spinner"></div></div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+initPlayer();
+
+var _aaComps = [];
+var _aaSort = 'newest';
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function initArchiveArtist() {
+  var view = document.getElementById('view');
+  var slug = new URLSearchParams(location.search).get('a');
+  if (!slug) {
+    view.innerHTML = '<div class="wv-empty">No artist specified.</div>';
+    return;
+  }
+
+  var data;
+  try {
+    data = await api('/archive/artists/' + encodeURIComponent(slug));
+  } catch (err) {
+    view.innerHTML = '<div style="padding:48px 0;text-align:center;">' +
+      '<div style="font-size:17px;font-weight:700;margin-bottom:6px;">Artist not found</div>' +
+      '<div style="font-size:13.5px;color:var(--text-3);margin-bottom:16px;">' + escHtml(err.message || '') + '</div>' +
+      '<a href="/archive.html" class="btn btn-secondary" onclick="navigate(\'/archive.html\');return false;">Back to Archive</a></div>';
+    return;
+  }
+
+  _aaComps = data.comps || [];
+  document.title = data.name + ' — wavernrs archive';
+
+  if (typeof window.setPageBgImage === 'function') {
+    var withCover = _aaComps.filter(function(c) { return c.cover_url; });
+    window.setPageBgImage(withCover.length ? withCover[0].cover_url : '');
+  }
+
+  var totalPlays = data.play_count || 0;
+  // Alternate spellings folded into this artist — shown so it's obvious why
+  // comps typed slightly differently all landed on one page.
+  var aliasNote = (data.aliases && data.aliases.length)
+    ? '<div style="font-size:12px;color:var(--text-3);margin-top:8px;">Also credited as ' +
+        data.aliases.slice(0, 6).map(escHtml).join(' · ') + '</div>'
+    : '';
+
+  view.innerHTML =
+    '<div style="padding:8px 0 4px;">' +
+      '<a href="/archive.html" onclick="navigate(\'/archive.html\');return false;" ' +
+        'style="font-size:13px;color:var(--text-3);text-decoration:none;">← Archive</a>' +
+    '</div>' +
+    '<div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin:14px 0 26px;">' +
+      '<div style="width:104px;height:104px;border-radius:50%;overflow:hidden;position:relative;flex-shrink:0;' +
+        'background:' + coverGradient(data.name || '') + ';box-shadow:0 6px 22px rgba(0,0,0,0.22);">' +
+        (_aaComps.length && _aaComps[0].cover_url
+          ? '<img src="' + escHtml(_aaComps[0].cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">'
+          : '') +
+      '</div>' +
+      '<div style="min-width:0;">' +
+        '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:4px;">Archived Artist</div>' +
+        '<h1 style="margin:0;font-size:34px;font-weight:800;letter-spacing:-0.035em;line-height:1.05;">' + escHtml(data.name) + '</h1>' +
+        '<div style="font-size:13.5px;color:var(--text-2);margin-top:8px;">' +
+          data.comp_count + ' comp' + (data.comp_count !== 1 ? 's' : '') +
+          (totalPlays ? ' · ' + totalPlays.toLocaleString() + ' plays' : '') +
+        '</div>' +
+        aliasNote +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">' +
+      '<select id="aa-sort" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="aaSort(this.value)">' +
+        '<option value="newest">Newest first</option>' +
+        '<option value="oldest">Oldest first</option>' +
+        '<option value="title">Title A–Z</option>' +
+        '<option value="plays">Most played</option>' +
+      '</select>' +
+    '</div>' +
+    '<div id="aa-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"></div>';
+
+  renderComps();
+}
+
+function aaSort(v) { _aaSort = v; renderComps(); }
+
+function renderComps() {
+  var grid = document.getElementById('aa-grid');
+  if (!grid) return;
+  var list = _aaComps.slice();
+  if (_aaSort === 'newest')      list.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+  else if (_aaSort === 'oldest') list.sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  else if (_aaSort === 'title')  list.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
+  else if (_aaSort === 'plays')  list.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No comps.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(function(item) {
+    var bg = coverGradient(item.title || '');
+    var eraName = item.era_tags ? item.era_tags.name : null;
+    return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + escHtml(item.id) + '\')">' +
+      '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">' +
+      '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%);pointer-events:none;border-radius:14px;"></div>' +
+      '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>' +
+      (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+      '</div></div>' +
+      '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
+      '<div class="wv-comp-card-artist">' + (eraName ? escHtml(eraName) : '') + '</div></div>';
+  }).join('');
+}
+
+initArchiveArtist();
+</script>
+</body>
+</html>

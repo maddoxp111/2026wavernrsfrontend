@@ -295,6 +295,23 @@ function coverHTML(seed, size, opts) {
   return `<div style="${sizeCSS}border-radius:${r}px;background:${bg};position:relative;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">${gloss}${badgeEl}${labelEl}</div>`;
 }
 
+// Archive comps store a display-only artist name, and the archive groups those
+// names by a normalized key so every spelling lands on one page. This MUST stay
+// in step with backend/utils/artistName.js — if the two drift, links here point
+// at artist pages the server doesn't think exist.
+function archiveArtistSlug(name) {
+  var key = String(name == null ? '' : name)
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')   // drop accent marks
+    .toLowerCase()
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  return key ? key.replace(/ /g, '-') : '';
+}
+
 // Escape HTML helper (shared across pages)
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
