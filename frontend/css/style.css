@@ -2038,3 +2038,82 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
   /* On touch there is no hover — always show remove buttons */
   .wv-queue-remove { opacity: 1; }
 }
+
+/* =========================================================
+   Apple Music shell — edge to edge, one ground
+
+   Two things were making near-black panels read as boxes sitting
+   on a different surface, rather than as the surface itself:
+
+   1. #wv-page-bg wallpapered the current album cover behind the
+      whole app (blur 60px, saturate 1.6). Every gutter therefore
+      showed a coloured, moving backdrop that no flat panel could
+      match. Apple Music has one neutral ground.
+   2. The shell floated its panes — 16px padding, a 14px gap
+      between them, large radii — so those gutters were visible
+      everywhere. Apple Music runs panes to the edge and separates
+      them with hairlines.
+
+   Fixing both is what makes the surface read as Apple Music; the
+   palette was already right.
+   ========================================================= */
+
+#wv-page-bg {
+  background: var(--page-bg-base);
+  background-image: none !important;
+  filter: none !important;
+}
+
+.wv-app { padding: 0; gap: 0; }
+
+.wv-topbar,
+.wv-sidebar,
+.wv-player-bar,
+#wv-player-slot .player-bar {
+  border-radius: 0;
+  border: 0;
+}
+.wv-topbar  { border-bottom: 1px solid var(--hair); }
+.wv-sidebar { border-right: 1px solid var(--hair); }
+.wv-player-bar,
+#wv-player-slot .player-bar { border-top: 1px solid var(--hair); }
+
+@media (max-width: 768px) {
+  /* Chrome runs to the screen edges and stacks: topbar under the
+     status row, tab bar on the bottom edge, mini-player directly
+     above it — no floating pills, no gutters. */
+  .wv-topbar {
+    top: 44px; left: 0; right: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  #wv-content {
+    top: 96px;      /* 44 status + 52 topbar */
+    bottom: 68px;   /* tab bar height */
+    padding: 0 16px;
+  }
+  .wv-app:has(.player-bar:not(.hidden)) #wv-content {
+    bottom: 130px;  /* + 62 mini-player */
+  }
+
+  #wv-player-slot {
+    bottom: 68px;
+    left: 0; right: 0;
+  }
+
+  .wv-mobile-tabs {
+    bottom: 0; left: 0; right: 0;
+    height: 68px;
+    border-radius: 0;
+    border: 0;
+    border-top: 1px solid var(--hair);
+    padding: 0;
+    box-shadow: none;
+    /* The tab bar is chrome, so it keeps its blur — content
+       scrolls beneath it. */
+    background: var(--veil);
+    -webkit-backdrop-filter: blur(var(--frost-chrome)) saturate(180%);
+    backdrop-filter: blur(var(--frost-chrome)) saturate(180%);
+  }
+}

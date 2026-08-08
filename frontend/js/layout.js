@@ -424,10 +424,13 @@
     var bg = document.getElementById('wv-page-bg');
     if (!bg) return;
     if (url) {
-      bg.style.backgroundImage = 'url(' + String(url).replace(/"/g, '%22') + ')';
-      bg.style.backgroundSize = 'cover';
-      bg.style.backgroundPosition = 'center';
-      bg.style.filter = 'blur(60px) brightness(0.35) saturate(1.6)';
+      // Deliberately a no-op. This used to blur the current cover across
+      // the whole app, which gave every page a different coloured backdrop
+      // and made flat panels look like boxes floating on it. Apple Music
+      // keeps one neutral ground. The function stays because ~20 pages call
+      // it; it simply no longer paints a wallpaper.
+      bg.style.backgroundImage = '';
+      bg.style.filter = '';
     } else {
       bg.style.backgroundImage = '';
       bg.style.filter = '';
