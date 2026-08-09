@@ -35,9 +35,9 @@ async function initArchive() {
       '<p style="margin:0;font-size:14px;color:var(--text-2);max-width:560px;line-height:1.55;">Comps preserved by the wavernrs and yzyplayer&#39;s team — not by artists on the site, but too good to be lost.</p>' +
     '</div>' +
     // View toggle: browse by artist, or the flat comp grid
-    '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;align-self:flex-start;">' +
-      '<button class="wv-seg is-active" id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
-      '<button class="wv-seg" id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
+    '<div class="wv-seg" style="align-self:flex-start;">' +
+      '<button class="on" id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
+      '<button id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
     '</div>' +
     // Toolbar: search + sort + era chips + count
     '<div style="display:flex;flex-direction:column;gap:10px;">' +
@@ -53,7 +53,7 @@ async function initArchive() {
         '</select>' +
         '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
       '</div>' +
-      '<div id="arc-era-chips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>' +
+      '<div id="arc-era-chips" class="wv-filters"></div>' +
     '</div>' +
     '<div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading the rest of the archive…</div>' +
@@ -85,8 +85,8 @@ function arcSetView(view) {
 function arcApplyView() {
   var a = document.getElementById('arc-view-artists');
   var c = document.getElementById('arc-view-comps');
-  if (a) a.classList.toggle('is-active', _arcView === 'artists');
-  if (c) c.classList.toggle('is-active', _arcView === 'comps');
+  if (a) a.classList.toggle('on', _arcView === 'artists');
+  if (c) c.classList.toggle('on', _arcView === 'comps');
   // Sorting and era chips only apply to the comp grid.
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = _arcView === 'comps' ? '' : 'none';
@@ -98,12 +98,12 @@ function arcApplyView() {
 
 function artistCardHTML(a) {
   var bg = coverGradient(a.name || '');
-  return '<div class="wv-comp-card" onclick="navigate(\'/archive-artist.html?a=' + encodeURIComponent(a.slug) + '\')">' +
-    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:50%;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.18);">' +
-    (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
-    '</div></div>' +
-    '<div class="wv-comp-card-title" style="text-align:center;">' + escHtml(a.name) + '</div>' +
-    '<div class="wv-comp-card-artist" style="text-align:center;">' + a.comp_count + ' comp' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
+  return '<div class="wv-artist-tile" onclick="navigate(\'/archive-artist.html?a=' + encodeURIComponent(a.slug) + '\')">' +
+    '<div class="av" style="background:' + bg + ';">' +
+      (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') +
+    '</div>' +
+    '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
+    '<div class="wv-artist-meta">' + a.comp_count + ' comp' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
 }
 
 // Fetch the archive in pages: render the first page immediately so the grid
@@ -191,7 +191,7 @@ function renderArchive() {
 
   // ── Artist view ──
   if (_arcView === 'artists') {
-    grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(150px,1fr))';
+    grid.className = 'wv-tile-grid';
     var artists = _archiveArtists;
     if (_arcQuery) {
       artists = artists.filter(function(a) {
@@ -216,7 +216,7 @@ function renderArchive() {
     return;
   }
 
-  grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(168px,1fr))';
+  grid.className = 'wv-tile-grid';
 
   // Era chips — rebuilt from whatever eras exist in the data
   var chipsEl = document.getElementById('arc-era-chips');
@@ -226,9 +226,8 @@ function renderArchive() {
     var ids = Object.keys(eras).sort(function(a, b) { return eras[a].localeCompare(eras[b]); });
     chipsEl.innerHTML = ids.map(function(id) {
       var active = id === _arcEra;
-      return '<button class="wv-pill" onclick="arcEraFilter(\'' + escHtml(id) + '\')" ' +
-        'style="font-size:11px;padding:3px 12px;' + (active ? 'background:var(--purple);color:#fff;' : '') + '">' +
-        escHtml(eras[id]) + '</button>';
+      return '<span class="wv-chip' + (active ? ' acc' : '') + '" onclick="arcEraFilter(\'' + escHtml(id) + '\')">' +
+        escHtml(eras[id]) + '</span>';
     }).join('');
   }
 

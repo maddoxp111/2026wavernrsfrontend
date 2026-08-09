@@ -14,7 +14,7 @@
     <p style="margin:0;font-size:14px;color:var(--text-2);">Everything you've liked and made, in one place.</p>
   </div>
 
-  <div id="lib-tabs" style="display:flex;gap:0;margin-bottom:22px;border-bottom:1px solid var(--hair-strong);flex-wrap:wrap;"></div>
+  <div id="lib-tabs" class="wv-filters"></div>
   <div id="lib-body"><div class="loading"><div class="spinner"></div></div></div>
 </div><!-- /view -->
 
@@ -82,8 +82,8 @@
     ];
     document.getElementById('lib-tabs').innerHTML = tabs.map(function(t) {
       var active = _libTab === t[0];
-      return '<button class="wv-admin-tab' + (active ? ' active' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' +
-        escHtml(t[1]) + (t[2] ? ' <span style="opacity:.6;">' + t[2] + '</span>' : '') + '</button>';
+      return '<span class="wv-chip' + (active ? ' acc' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' +
+        escHtml(t[1]) + (t[2] ? ' ' + t[2] : '') + '</span>';
     }).join('');
   }
 
@@ -110,23 +110,23 @@
     var playable = tracks.filter(function(t) { return t.ia_url; });
     var html = '';
     if (playable.length) {
-      html += '<div style="margin-bottom:14px;"><button class="btn btn-primary" onclick="playLikedAll()">' +
+      html += '<div style="margin-bottom:14px;"><button class="wv-btn-play" onclick="playLikedAll()">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px;"><path d="M8 5v14l11-7z"/></svg>' +
         'Play all (' + playable.length + ')</button></div>';
     }
     html += '<div class="wv-card" style="padding:8px;">';
     tracks.forEach(function(t, i) {
       var artist = (t.artists && t.artists.display_name) || 'Unknown';
-      html += '<div class="track-row" id="lib-trk-' + i + '"' +
+      html += '<div class="wv-trow" id="lib-trk-' + i + '"' +
         (t.ia_url ? ' style="cursor:pointer;" onclick="playLiked(' + i + ')"' : '') + '>' +
-        '<div class="track-row-cover">' +
+        '<div class="wv-trow-art">' +
           (t.cover_url
             ? '<img src="' + escHtml(t.cover_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" loading="lazy" onerror="this.style.opacity=0">'
             : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>') +
         '</div>' +
-        '<div class="track-row-info">' +
-          '<div class="track-row-title">' + escHtml(t.title || 'Untitled') + '</div>' +
-          '<div class="track-row-artist">' + escHtml(artist) + '</div>' +
+        '<div class="wv-trow-main">' +
+          '<div class="wv-trow-title">' + escHtml(t.title || 'Untitled') + '</div>' +
+          '<div class="wv-trow-sub">' + escHtml(artist) + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">' +
           '<a class="btn btn-secondary btn-sm" href="/track.html?id=' + escHtml(t.id) + '" ' +
@@ -177,7 +177,7 @@
     if (!albums.length) {
       return _empty('♡', 'No liked comps yet', 'Like a comp and it lands here.');
     }
-    return '<div class="wv-comp-grid wv-comp-grid-4" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:20px;">' +
+    return '<div class="wv-tile-grid">' +
       albums.map(function(a) {
         var artist = a.is_archive
           ? (a.archive_artist_name || 'Unknown')
@@ -215,7 +215,7 @@
     if (!items.length) {
       return _empty('🕘', 'Nothing played yet', 'Play something and it shows up here.');
     }
-    return '<div class="wv-comp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:20px;">' +
+    return '<div class="wv-tile-grid">' +
       items.map(function(it) {
         var href = it._type === 'album' ? '/album.html?id=' + it.id : '/track.html?id=' + it.id;
         var bg = coverGradient(it.title || '');
