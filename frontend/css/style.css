@@ -2172,3 +2172,206 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
    by a heavier line. */
 .wv-tab-btn svg { width: 24px; height: 24px; opacity: 0.55; transition: opacity 140ms var(--ease), transform 140ms var(--ease); }
 .wv-tab-btn.active svg { opacity: 1; }
+
+/* =========================================================
+   PAGE COMPONENTS — the layouts from the mockups
+
+   One header grammar, one rail, one row. Every page composes
+   from these rather than inventing its own spacing, so the app
+   reads as one product and a fix lands everywhere at once.
+   ========================================================= */
+
+/* ── Page header: art + identity + actions ───────────────── */
+.wv-hero { display: flex; gap: 24px; align-items: flex-end; padding: 4px 0 20px; }
+.wv-hero-art {
+  width: 176px; height: 176px; flex-shrink: 0; border-radius: var(--r-md);
+  position: relative; overflow: hidden; box-shadow: 0 14px 38px rgba(0,0,0,.42);
+}
+.wv-hero-art.round { border-radius: 50%; }
+.wv-hero-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wv-hero-body { flex: 1; min-width: 0; padding-bottom: 4px; }
+.wv-kind {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.wv-hero-title {
+  font-size: clamp(26px, 4vw, 34px); font-weight: 750; letter-spacing: -.035em;
+  line-height: 1.05; margin: 6px 0 4px; text-wrap: balance;
+}
+.wv-hero-sub { font-size: 14px; color: var(--text-2); }
+.wv-hero-sub a, .wv-hero-sub b { color: var(--brand); font-weight: 600; }
+.wv-hero-meta { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
+.wv-hero-actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 15px; }
+
+@media (max-width: 640px) {
+  .wv-hero { flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+  .wv-hero-art { width: min(72vw, 260px); height: min(72vw, 260px); }
+  .wv-hero-actions { justify-content: center; }
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.wv-btn-play, .wv-btn-ghost {
+  border: 0; font-family: inherit; font-weight: 700; font-size: 13.5px;
+  padding: 9px 24px; border-radius: var(--r-pill); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px;
+  transition: filter 140ms var(--ease), transform 100ms var(--ease);
+}
+.wv-btn-play { background: var(--brand); color: #14121c; }
+.theme-light .wv-btn-play { color: #fff; }
+.wv-btn-ghost { background: var(--glass-pill-bg); color: var(--text); }
+.wv-btn-play:hover, .wv-btn-ghost:hover { filter: brightness(1.1); }
+.wv-btn-play:active, .wv-btn-ghost:active { transform: scale(.97); }
+.wv-icon-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--glass-pill-bg); color: var(--text);
+  display: inline-grid; place-items: center; flex-shrink: 0;
+}
+.wv-icon-btn:hover { background: var(--glass-pill-bg-hover); }
+
+/* ── Section head + horizontal rail ──────────────────────── */
+.wv-sec-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin: 26px 0 12px;
+}
+.wv-sec-head h2, .wv-sec-title {
+  font-size: 19px; font-weight: 700; letter-spacing: -.02em; margin: 0;
+}
+.wv-see-all {
+  font-size: 12.5px; font-weight: 600; color: var(--brand); cursor: pointer;
+  background: none; border: 0; font-family: inherit; padding: 0;
+}
+/* Scrolls sideways instead of truncating at four — a section shows
+   everything it has and keeps artwork at a readable size. */
+.wv-rail {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 152px;
+  gap: 16px; overflow-x: auto; overflow-y: hidden;
+  padding-bottom: 6px; scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.wv-rail > * { scroll-snap-align: start; }
+.wv-rail::-webkit-scrollbar { height: 6px; }
+.wv-rail::-webkit-scrollbar-thumb { background: var(--hair-strong); border-radius: 3px; }
+@media (max-width: 640px) { .wv-rail { grid-auto-columns: 132px; gap: 12px; } }
+
+/* ── Rows with status chips ──────────────────────────────── */
+.wv-rows { display: flex; flex-direction: column; }
+.wv-trow {
+  display: flex; align-items: center; gap: 12px; padding: 9px 10px;
+  border-radius: var(--r-sm); cursor: pointer;
+}
+.wv-trow + .wv-trow { border-top: 1px solid var(--hair); }
+.wv-trow:hover { background: var(--surface-2); }
+.wv-trow.playing .wv-trow-title { color: var(--brand); }
+.wv-trow-num {
+  font-size: 12.5px; color: var(--text-3); width: 18px;
+  text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.wv-trow-art { width: 38px; height: 38px; border-radius: var(--r-sm); overflow: hidden; flex-shrink: 0; position: relative; }
+.wv-trow-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wv-trow-main { flex: 1; min-width: 0; }
+.wv-trow-title { font-size: 14px; font-weight: 550; letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-trow-sub { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wv-trow-dur { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+.wv-chip {
+  font-size: 10.5px; font-weight: 700; padding: 2.5px 9px; border-radius: 6px;
+  white-space: nowrap; background: var(--glass-pill-bg); color: var(--text-2); flex-shrink: 0;
+}
+.wv-chip.acc  { background: var(--brand-bg); color: var(--brand); }
+.wv-chip.ok   { background: color-mix(in srgb, var(--green) 18%, transparent);  color: var(--green); }
+.wv-chip.warn { background: color-mix(in srgb, var(--orange) 18%, transparent); color: var(--orange); }
+.wv-chip.bad  { background: color-mix(in srgb, var(--red) 18%, transparent);    color: var(--red); }
+@media (max-width: 640px) { .wv-trow .wv-chip.hide-sm { display: none; } }
+
+/* ── Segmented control + filter chips ────────────────────── */
+.wv-seg { display: inline-flex; background: var(--glass-pill-bg); border-radius: var(--r-pill); padding: 3px; }
+.wv-seg button {
+  font-family: inherit; font-size: 12.5px; font-weight: 600; border: 0; cursor: pointer;
+  padding: 6px 15px; border-radius: var(--r-pill); background: transparent; color: var(--text-2);
+  transition: background 140ms var(--ease), color 140ms var(--ease);
+}
+.wv-seg button.on { background: var(--brand); color: #14121c; }
+.theme-light .wv-seg button.on { color: #fff; }
+.wv-filters { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; margin: 4px 0 16px; }
+.wv-filters .wv-chip { cursor: pointer; padding: 5px 12px; font-size: 11.5px; }
+
+/* ── Circular artist tile ────────────────────────────────── */
+.wv-artist-tile { cursor: pointer; text-align: center; }
+.wv-artist-tile .av {
+  width: 100%; aspect-ratio: 1; border-radius: 50%; position: relative;
+  overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,.28);
+  transition: transform 160ms var(--ease);
+}
+.wv-artist-tile:hover .av { transform: translateY(-3px); }
+.wv-artist-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wv-artist-name { font-size: 13px; font-weight: 600; margin-top: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wv-artist-meta { font-size: 11.5px; color: var(--text-3); }
+
+/* Responsive tile/card grid used by archive, library, search */
+.wv-tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; }
+@media (max-width: 640px) { .wv-tile-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 14px; } }
+
+/* ── Two-column split (charts, search, library) ──────────── */
+.wv-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+@media (max-width: 860px) { .wv-cols2 { grid-template-columns: 1fr; gap: 8px; } }
+.wv-colhead {
+  font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-3); margin: 0 0 8px; padding-bottom: 8px; border-bottom: 1px solid var(--hair);
+}
+
+/* =========================================================
+   TIMED LYRICS — full-screen player
+   ========================================================= */
+.pfs-lyrics { flex: 1; display: flex; flex-direction: column; min-height: 0; width: 100%; }
+.pfs-lyrics-scroll {
+  flex: 1; overflow-y: auto; padding: 12% 22px; min-height: 0;
+  scrollbar-width: none; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+}
+.pfs-lyrics-scroll::-webkit-scrollbar { width: 0; }
+
+/* Unsung lines sit back; the current line steps forward. Weight and
+   colour carry the state — no highlight bar needed. */
+.lyr-line {
+  font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.32;
+  color: var(--text-3); padding: 9px 0; cursor: pointer;
+  transition: color 220ms var(--ease), opacity 220ms var(--ease), transform 220ms var(--ease);
+  transform-origin: left center;
+}
+.lyr-line:hover { color: var(--text-2); }
+.lyr-line.past { color: var(--text-3); opacity: .45; }
+.lyr-line.on { color: var(--text); transform: scale(1.02); }
+.lyr-stamp {
+  font-size: 11px; font-weight: 600; color: var(--brand);
+  font-variant-numeric: tabular-nums; margin-right: 9px; vertical-align: middle;
+}
+@media (max-width: 640px) { .lyr-line { font-size: 19px; } }
+
+.lyr-empty { text-align: center; padding: 40px 10px; }
+.lyr-empty-t { font-size: 16px; font-weight: 700; margin-bottom: 5px; }
+.lyr-empty-d { font-size: 13.5px; color: var(--text-3); line-height: 1.5; }
+
+.pfs-lyrics-tools {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 10px 20px 4px; justify-content: center;
+}
+.lyr-tool {
+  font-family: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer;
+  border: 1px solid var(--glass-small-border); background: var(--glass-pill-bg);
+  color: var(--text); border-radius: var(--r-pill); padding: 7px 15px;
+}
+.lyr-tool:hover { background: var(--glass-pill-bg-hover); }
+.lyr-tool.primary { background: var(--brand); color: #14121c; border-color: transparent; }
+.theme-light .lyr-tool.primary { color: #fff; }
+.lyr-tool:disabled { opacity: .55; cursor: default; }
+.lyr-src { font-size: 11.5px; color: var(--text-3); }
+
+.lyr-edit { padding: 4px 0; }
+.lyr-edit-hint { font-size: 12.5px; color: var(--text-3); margin-bottom: 10px; line-height: 1.5; }
+.lyr-textarea {
+  width: 100%; min-height: 240px; resize: vertical; font-family: inherit;
+  font-size: 15px; line-height: 1.6; padding: 12px 14px; border-radius: var(--r-md);
+  background: var(--glass-small-bg); border: 1px solid var(--glass-small-border); color: var(--text);
+}
+.lyr-textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+#pfs-lyrics-btn.active { color: var(--brand); }

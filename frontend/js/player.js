@@ -154,6 +154,9 @@ function injectPlayer() {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
       </button>
       <span class="pfs-label">Now Playing</span>
+      <button class="player-btn player-icon-btn" id="pfs-lyrics-btn" onclick="toggleLyricsView()" title="Lyrics" style="width:40px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.4" rx="1.2"/><rect x="3" y="10.8" width="13" height="2.4" rx="1.2"/><rect x="3" y="16.6" width="16" height="2.4" rx="1.2"/></svg>
+      </button>
       <button class="player-btn player-icon-btn" id="pfs-queue-btn" onclick="toggleQueuePanel()" title="Up Next" style="width:40px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
       </button>
@@ -162,6 +165,10 @@ function injectPlayer() {
       <div class="pfs-cover" id="pfs-cover">
         <svg width="60" height="60" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
       </div>
+    </div>
+    <div class="pfs-lyrics" id="pfs-lyrics" hidden>
+      <div class="pfs-lyrics-scroll" id="pfs-lyrics-scroll"></div>
+      <div class="pfs-lyrics-tools" id="pfs-lyrics-tools" hidden></div>
     </div>
     <div class="pfs-info">
       <div class="pfs-title" id="pfs-title">—</div>
@@ -450,6 +457,7 @@ function _onTimeUpdate() {
   if (tot) tot.textContent = fmtTime(audio.duration);
   if (pfsEl) pfsEl.textContent = fmtTime(audio.currentTime);
   if (pfsTot) pfsTot.textContent = fmtTime(audio.duration);
+  if (typeof _syncLyrics === 'function') _syncLyrics(audio.currentTime);
   // Update thumb position — CSS uses --pct on .progress-bar::after
   const pb = document.getElementById('progress-bar');
   const pfsPb = document.getElementById('pfs-progress-bar');
@@ -531,6 +539,9 @@ function playTrack(track) {
   // If the iOS unlock fires on the same tap, prevent its .then() from
   // restoring the old empty src over the track we're about to play.
   _iosUnlockPending = false;
+  // A new track means new words — refresh the panel if it's open.
+  if (typeof _lyricsOnTrackChange === 'function') _lyricsOnTrackChange();
+
   audio.src = track.ia_url;
   const p = audio.play();
   if (p) p.catch(() => {});
@@ -654,3 +665,309 @@ document.addEventListener('keydown', function(e) {
     toggleMute();
   }
 });
+
+
+/* =========================================================
+   TIMED LYRICS
+
+   Lines are { t, x } — a timestamp and the words shown at it. The
+   player highlights whichever line the playhead is inside and
+   scrolls it to centre; tapping a line seeks there.
+
+   Artists own the text for their own tracks. Auto-generate
+   transcribes the track's own audio as a starting point, and the
+   sync tool stamps timings by tapping along with playback, which
+   is far quicker than typing timecodes by hand.
+   ========================================================= */
+
+var _lyr = { trackId: null, lines: [], canEdit: false, source: null, idx: -1, open: false, mode: 'view' };
+var _lyrSyncPos = 0;
+
+function _lyrEl(id) { return document.getElementById(id); }
+
+// Which line is playing: last line whose timestamp has passed.
+function _lyrIndexAt(t) {
+  var lines = _lyr.lines, lo = 0, hi = lines.length - 1, best = -1;
+  while (lo <= hi) {
+    var mid = (lo + hi) >> 1;
+    if (lines[mid].t <= t) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+  }
+  return best;
+}
+
+function _syncLyrics(t) {
+  if (!_lyr.open || _lyr.mode !== 'view' || !_lyr.lines.length) return;
+  var i = _lyrIndexAt(t);
+  if (i === _lyr.idx) return;
+  _lyr.idx = i;
+  var scroll = _lyrEl('pfs-lyrics-scroll');
+  if (!scroll) return;
+  scroll.querySelectorAll('.lyr-line').forEach(function (el, n) {
+    el.classList.toggle('on', n === i);
+    el.classList.toggle('past', n < i);
+  });
+  var active = scroll.children[i];
+  if (active) {
+    scroll.scrollTo({
+      top: active.offsetTop - scroll.clientHeight / 2 + active.clientHeight / 2,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    });
+  }
+}
+
+function _renderLyrics() {
+  var scroll = _lyrEl('pfs-lyrics-scroll');
+  var tools = _lyrEl('pfs-lyrics-tools');
+  if (!scroll) return;
+
+  if (_lyr.mode === 'edit') return _renderLyricsEditor();
+
+  if (!_lyr.lines.length) {
+    scroll.innerHTML =
+      '<div class="lyr-empty">' +
+        '<div class="lyr-empty-t">No lyrics yet</div>' +
+        '<div class="lyr-empty-d">' +
+          (_lyr.canEdit
+            ? 'Add them yourself, or generate a first pass from the audio.'
+            : 'The artist hasn\'t added lyrics for this track.') +
+        '</div>' +
+      '</div>';
+  } else {
+    scroll.innerHTML = _lyr.lines.map(function (l, i) {
+      return '<div class="lyr-line" onclick="seekToLyric(' + i + ')">' + escHtml(l.x) + '</div>';
+    }).join('');
+    _lyr.idx = -1;
+    _syncLyrics(audio ? audio.currentTime : 0);
+  }
+
+  if (tools) {
+    if (_lyr.canEdit) {
+      tools.hidden = false;
+      tools.innerHTML =
+        '<button class="lyr-tool" onclick="openLyricsEditor()">' + (_lyr.lines.length ? 'Edit' : 'Add lyrics') + '</button>' +
+        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Auto-generate</button>' +
+        (_lyr.source ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated' : 'artist-provided') + '</span>' : '');
+    } else {
+      tools.hidden = !_lyr.source;
+      tools.innerHTML = _lyr.source
+        ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated — may contain mistakes' : 'artist-provided') + '</span>'
+        : '';
+    }
+  }
+}
+
+window.seekToLyric = function (i) {
+  var l = _lyr.lines[i];
+  if (!l || !audio) return;
+  audio.currentTime = l.t;
+  if (audio.paused) audio.play().catch(function () {});
+};
+
+window.toggleLyricsView = function () {
+  var panel = _lyrEl('pfs-lyrics');
+  var cover = document.querySelector('.pfs-cover-wrap');
+  var btn = _lyrEl('pfs-lyrics-btn');
+  if (!panel) return;
+  _lyr.open = panel.hidden;
+  panel.hidden = !_lyr.open;
+  if (cover) cover.style.display = _lyr.open ? 'none' : '';
+  if (btn) btn.classList.toggle('active', _lyr.open);
+  if (_lyr.open) {
+    _lyr.mode = 'view';
+    loadLyricsForCurrent();
+  }
+};
+
+function loadLyricsForCurrent() {
+  var t = (typeof currentTrack !== 'undefined') ? currentTrack : null;
+  if (!t || !t.id) {
+    _lyr = { trackId: null, lines: [], canEdit: false, source: null, idx: -1, open: _lyr.open, mode: 'view' };
+    return _renderLyrics();
+  }
+  // Already loaded for this track — don't refetch on every open.
+  if (_lyr.trackId === t.id && _lyr.lines.length) return _renderLyrics();
+
+  _lyr.trackId = t.id;
+  _lyr.lines = [];
+  _lyr.idx = -1;
+  var scroll = _lyrEl('pfs-lyrics-scroll');
+  if (scroll) scroll.innerHTML = '<div class="lyr-empty"><div class="lyr-empty-d">Loading…</div></div>';
+
+  var headers = {};
+  var tok = localStorage.getItem('token');
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(t.id), { headers: headers })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d) return;
+      _lyr.lines = d.lines || [];
+      _lyr.canEdit = !!d.can_edit;
+      _lyr.source = d.source;
+      _renderLyrics();
+    })
+    .catch(function () { _renderLyrics(); });
+}
+
+// Reload lyrics when the track changes while the panel is open.
+function _lyricsOnTrackChange() {
+  if (!_lyr.open) { _lyr.trackId = null; return; }
+  _lyr.trackId = null;
+  _lyr.mode = 'view';
+  loadLyricsForCurrent();
+}
+
+/* ── Editor ──────────────────────────────────────────────────
+   Two steps, because they're genuinely different jobs: get the
+   words right, then stamp when each one lands. */
+function _renderLyricsEditor() {
+  var scroll = _lyrEl('pfs-lyrics-scroll');
+  var tools = _lyrEl('pfs-lyrics-tools');
+  var text = _lyr.lines.length ? _lyr.lines.map(function (l) { return l.x; }).join('\n') : (_lyr.plain || '');
+  scroll.innerHTML =
+    '<div class="lyr-edit">' +
+      '<div class="lyr-edit-hint">One line per line. Save, then use <b>Sync</b> to tap the timings in as it plays.</div>' +
+      '<textarea id="lyr-text" class="lyr-textarea" placeholder="Type or paste the lyrics…">' + escHtml(text) + '</textarea>' +
+    '</div>';
+  if (tools) {
+    tools.hidden = false;
+    tools.innerHTML =
+      '<button class="lyr-tool primary" onclick="saveLyricsText()">Save</button>' +
+      '<button class="lyr-tool" onclick="startLyricsSync()">Sync timings</button>' +
+      '<button class="lyr-tool" onclick="cancelLyricsEdit()">Cancel</button>';
+  }
+}
+
+window.openLyricsEditor = function () { _lyr.mode = 'edit'; _renderLyrics(); };
+window.cancelLyricsEdit = function () { _lyr.mode = 'view'; _lyr.trackId = null; loadLyricsForCurrent(); };
+
+function _linesFromTextarea() {
+  var ta = _lyrEl('lyr-text');
+  if (!ta) return [];
+  return ta.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+}
+
+window.saveLyricsText = function () {
+  var texts = _linesFromTextarea();
+  // Keep any timings we already have for lines that didn't change position.
+  var lines = texts.map(function (x, i) {
+    var prev = _lyr.lines[i];
+    return { t: prev ? prev.t : i * 4, x: x };
+  });
+  _persistLyrics(lines, texts.join('\n'));
+};
+
+// Tap-to-sync: play the track and hit the button as each line arrives. Far
+// faster than typing timecodes, and accurate enough because you're listening.
+window.startLyricsSync = function () {
+  var texts = _linesFromTextarea();
+  if (!texts.length) { alert('Add some lines first.'); return; }
+  _lyr.pending = texts.map(function (x) { return { t: null, x: x }; });
+  _lyrSyncPos = 0;
+  _lyr.mode = 'sync';
+  if (audio) { audio.currentTime = 0; audio.play().catch(function () {}); }
+  _renderLyricsSync();
+};
+
+function _renderLyricsSync() {
+  var scroll = _lyrEl('pfs-lyrics-scroll');
+  var tools = _lyrEl('pfs-lyrics-tools');
+  scroll.innerHTML = _lyr.pending.map(function (l, i) {
+    var cls = 'lyr-line' + (i === _lyrSyncPos ? ' on' : (l.t != null ? ' past' : ''));
+    return '<div class="' + cls + '">' + (l.t != null ? '<span class="lyr-stamp">' + fmtTime(l.t) + '</span>' : '') + escHtml(l.x) + '</div>';
+  }).join('');
+  var active = scroll.children[_lyrSyncPos];
+  if (active) scroll.scrollTo({ top: active.offsetTop - scroll.clientHeight / 2, behavior: 'smooth' });
+  if (tools) {
+    tools.hidden = false;
+    tools.innerHTML =
+      '<button class="lyr-tool primary" onclick="stampLyricLine()">Stamp line ' + (_lyrSyncPos + 1) + ' / ' + _lyr.pending.length + '</button>' +
+      '<button class="lyr-tool" onclick="undoLyricStamp()">Undo</button>' +
+      '<button class="lyr-tool" onclick="finishLyricsSync()">Done</button>';
+  }
+}
+
+window.stampLyricLine = function () {
+  if (!_lyr.pending || _lyrSyncPos >= _lyr.pending.length) return;
+  _lyr.pending[_lyrSyncPos].t = audio ? audio.currentTime : 0;
+  _lyrSyncPos++;
+  if (_lyrSyncPos >= _lyr.pending.length) return finishLyricsSync();
+  _renderLyricsSync();
+};
+
+window.undoLyricStamp = function () {
+  if (_lyrSyncPos > 0) {
+    _lyrSyncPos--;
+    _lyr.pending[_lyrSyncPos].t = null;
+    if (audio && _lyrSyncPos > 0 && _lyr.pending[_lyrSyncPos - 1].t != null) {
+      audio.currentTime = _lyr.pending[_lyrSyncPos - 1].t;
+    }
+    _renderLyricsSync();
+  }
+};
+
+window.finishLyricsSync = function () {
+  var lines = (_lyr.pending || []).filter(function (l) { return l.t != null; })
+    .map(function (l) { return { t: l.t, x: l.x }; });
+  if (!lines.length) { _lyr.mode = 'edit'; return _renderLyrics(); }
+  _persistLyrics(lines, (_lyr.pending || []).map(function (l) { return l.x; }).join('\n'));
+};
+
+function _persistLyrics(lines, plain) {
+  var tok = localStorage.getItem('token');
+  if (!tok || !_lyr.trackId) return;
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(_lyr.trackId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({ lines: lines, plain: plain }),
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (res) {
+      if (!res.ok) { alert(res.d.error || 'Could not save lyrics'); return; }
+      _lyr.lines = res.d.lines || lines;
+      _lyr.source = 'manual';
+      _lyr.mode = 'view';
+      _renderLyrics();
+    })
+    .catch(function () { alert('Could not save lyrics'); });
+}
+
+window.autoGenerateLyrics = function (btn) {
+  var tok = localStorage.getItem('token');
+  if (!tok || !_lyr.trackId) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Listening…'; }
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(_lyr.trackId) + '/auto', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + tok },
+  })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        alert(res.d.error || 'Could not start transcription');
+        if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+        return;
+      }
+      var tries = 0;
+      var poll = setInterval(function () {
+        tries++;
+        fetch(API_BASE + '/lyrics/job/' + res.d.id, { headers: { 'Authorization': 'Bearer ' + tok } })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (j) {
+            if (!j) return;
+            if (j.status === 'succeeded') {
+              clearInterval(poll);
+              _lyr.lines = j.lines || [];
+              _lyr.source = 'auto';
+              _lyr.mode = 'view';
+              _renderLyrics();
+            } else if (j.status === 'failed' || tries > 150) {
+              clearInterval(poll);
+              alert(j.error || 'Transcription timed out');
+              if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+            }
+          })
+          .catch(function () {});
+      }, 4000);
+    })
+    .catch(function () {
+      if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+    });
+};
