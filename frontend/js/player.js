@@ -728,7 +728,7 @@ function _renderLyrics() {
         '<div class="lyr-empty-t">No lyrics yet</div>' +
         '<div class="lyr-empty-d">' +
           (_lyr.canEdit
-            ? 'Add them yourself, or generate a first pass from the audio.'
+            ? 'Add them yourself, or check whether the file already has them saved inside it.'
             : 'The artist hasn\'t added lyrics for this track.') +
         '</div>' +
       '</div>';
@@ -745,12 +745,13 @@ function _renderLyrics() {
       tools.hidden = false;
       tools.innerHTML =
         '<button class="lyr-tool" onclick="openLyricsEditor()">' + (_lyr.lines.length ? 'Edit' : 'Add lyrics') + '</button>' +
-        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Auto-generate</button>' +
+        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get lyrics</button>' +
         (_lyr.source ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated' : 'artist-provided') + '</span>' : '');
     } else {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
-        ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated — may contain mistakes' : 'artist-provided') + '</span>'
+        ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated — may contain mistakes'
+            : (_lyr.source === 'embedded' ? 'from the file' : 'artist-provided')) + '</span>'
         : '';
     }
   }
@@ -941,8 +942,20 @@ window.autoGenerateLyrics = function (btn) {
     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
     .then(function (res) {
       if (!res.ok) {
-        alert(res.d.error || 'Could not start transcription');
-        if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+        alert(res.d.error || 'Could not get lyrics');
+        if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
+        return;
+      }
+      // The file already carried them — nothing to wait for.
+      if (res.d.status === 'succeeded') {
+        _lyr.lines = res.d.lines || [];
+        _lyr.source = 'embedded';
+        _lyr.mode = 'view';
+        _renderLyrics();
+        if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
+        if (!res.d.synced) {
+          alert('Found the words saved inside the file, but no timings — use Edit → Sync timings to tap them in.');
+        }
         return;
       }
       var tries = 0;
@@ -961,13 +974,13 @@ window.autoGenerateLyrics = function (btn) {
             } else if (j.status === 'failed' || tries > 150) {
               clearInterval(poll);
               alert(j.error || 'Transcription timed out');
-              if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+              if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
             }
           })
           .catch(function () {});
       }, 4000);
     })
     .catch(function () {
-      if (btn) { btn.disabled = false; btn.textContent = 'Auto-generate'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
     });
 };
