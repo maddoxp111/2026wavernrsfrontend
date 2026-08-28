@@ -145,6 +145,12 @@ var GAMES = [
   { id:'snake',  name:'Snake',       desc:'Don\'t eat yourself',           icon:'🐍', bg:'linear-gradient(140deg,#2f6f6a,#10262b)' },
   { id:'brick',  name:'Breakout',    desc:'Clear every brick',             icon:'🧱', bg:'linear-gradient(140deg,#c0392b,#4a1020)' },
   { id:'mines',  name:'Minesweeper', desc:'Tap to clear, long-press flags',icon:'💣', bg:'linear-gradient(140deg,#7d6ba8,#2b2340)' },
+  { id:'grid',   name:'Gridiron',    desc:'Call plays, throw, score',       icon:'🏈', bg:'linear-gradient(140deg,#2f6f3e,#0d2416)' },
+  { id:'farm',   name:'Farm',        desc:'Plant, water, harvest, upgrade', icon:'🌾', bg:'linear-gradient(140deg,#b8873a,#4a3410)' },
+  { id:'hill',   name:'Hill Racer',  desc:'Gas, brake, don\'t flip',         icon:'🏎️', bg:'linear-gradient(140deg,#c0392b,#3a0f0a)' },
+  { id:'td',     name:'Tower Defense',desc:'Build, upgrade, survive waves', icon:'🗼', bg:'linear-gradient(140deg,#3b6ea5,#0f2033)' },
+  { id:'stack',  name:'Stacks',      desc:'Clear lines, don\'t top out',     icon:'🟦', bg:'linear-gradient(140deg,#7159c4,#241a45)' },
+  { id:'climb',  name:'Sky Climb',   desc:'Bounce up, never look down',     icon:'☁️', bg:'linear-gradient(140deg,#2f8f8f,#0d2a2a)' },
 ];
 function renderGrid() {
   document.getElementById('grid').innerHTML = GAMES.map(function (g) {
@@ -180,7 +186,8 @@ function restart() {
   if (raf) cancelAnimationFrame(raf); raf = null;
   cleanup.forEach(function (f) { f(); }); cleanup = [];
   document.getElementById('gmount').innerHTML = '';
-  ({ pool:pool, t2048:t2048, snake:snake, brick:brick, mines:mines })[active]();
+  ({ pool:pool, t2048:t2048, snake:snake, brick:brick, mines:mines,
+     grid:gridiron, farm:farm, hill:hill, td:towerd, stack:stacks, climb:climb })[active]();
 }
 
 // Canvas sized to its container, backed by devicePixelRatio so it stays sharp.
@@ -578,6 +585,621 @@ function mines() {
   reset();
   setHint('Click to clear. Right-click or long-press to flag.');
 }
+
+/* ── Gridiron — arcade football ──────────────────────────────────────────────
+   Pick a play, receivers run their routes, click one to throw. Catch odds fall
+   off with how close the nearest defender is, so leading an open man matters. */
+function gridiron() {
+  var W = 760, H = 420;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var state, ball, recvs, defs, msg, msgT, phase, playType;
+
+  function reset() {
+    state = { yard: 25, down: 1, toGo: 10, score: 0, opp: 0, clock: 300, drives: 0 };
+    phase = 'call'; msg = ''; msgT = 0; ball = null;
+    recvs = []; defs = [];
+  }
+  reset();
+
+  function snap(type) {
+    playType = type;
+    phase = 'live';
+    ball = null;
+    recvs = [
+      { x: 200, y: 140, t: 0, route: type === 'deep' ? 'go' : 'slant', caught: false },
+      { x: 200, y: 280, t: 0, route: type === 'deep' ? 'post' : 'out',  caught: false },
+    ];
+    defs = recvs.map(function (r, i) {
+      return { x: r.x + 70, y: r.y + (i ? -18 : 18), sp: 1.85 + Math.random() * 0.5 };
+    });
+    if (type === 'run') runPlay();
+  }
+
+  // A run resolves immediately — no throw to aim.
+  function runPlay() {
+    var gain = Math.round(-2 + Math.random() * 11);
+    advance(gain, gain > 0 ? 'Run for ' + gain : 'Stuffed for ' + gain);
+  }
+
+  function advance(gain, text) {
+    state.yard += gain;
+    state.toGo -= gain;
+    state.clock -= 14;
+    if (state.yard >= 100) {
+      state.score += 7; msg = 'TOUCHDOWN'; state.yard = 25; state.down = 1; state.toGo = 10; state.drives++;
+    } else if (state.toGo <= 0) {
+      state.down = 1; state.toGo = 10; msg = text + ' — first down';
+    } else {
+      state.down++;
+      if (state.down > 4) {
+        // Turnover on downs: the other side gets a possession too.
+        state.opp += Math.random() < 0.45 ? 7 : 3;
+        state.yard = 25; state.down = 1; state.toGo = 10; state.drives++;
+        msg = 'Turnover on downs';
+      } else msg = text;
+    }
+    msgT = 90;
+    phase = 'call';
+  }
+
+  function throwTo(r) {
+    if (phase !== 'live' || ball) return;
+    ball = { x: 150, y: H / 2, tx: r.x, ty: r.y, target: r, t: 0 };
+  }
+
+  on(g.c, 'pointerdown', function (e) {
+    if (phase !== 'live' || ball || playType === 'run') return;
+    var p = pos(g.c, e), best = null, bd = 60;
+    recvs.forEach(function (r) {
+      var d = Math.hypot(r.x - p.x, r.y - p.y);
+      if (d < bd) { bd = d; best = r; }
+    });
+    if (best) throwTo(best);
+  });
+  on(document, 'keydown', function (e) {
+    if (phase !== 'call') return;
+    if (e.key === '1') snap('run');
+    if (e.key === '2') snap('short');
+    if (e.key === '3') snap('deep');
+  });
+
+  function step() {
+    if (msgT > 0) msgT--;
+    if (phase !== 'live') return;
+
+    recvs.forEach(function (r) {
+      r.t++;
+      var sp = r.route === 'go' ? 3.4 : 2.6;
+      r.x += sp;
+      if (r.route === 'slant') r.y += r.t > 20 ? -1.5 : 0;
+      if (r.route === 'out')   r.y += r.t > 24 ? 1.7 : 0;
+      if (r.route === 'post')  r.y += r.t > 30 ? -1.9 : 0;
+      r.y = Math.max(30, Math.min(H - 30, r.y));
+    });
+    defs.forEach(function (d, i) {
+      var r = recvs[i];
+      var dx = r.x - d.x, dy = r.y - d.y, m = Math.hypot(dx, dy) || 1;
+      d.x += dx / m * d.sp; d.y += dy / m * d.sp;
+    });
+
+    if (ball) {
+      ball.t++;
+      var r = ball.target;
+      var dx = r.x - ball.x, dy = r.y - ball.y, m = Math.hypot(dx, dy) || 1;
+      ball.x += dx / m * 9; ball.y += dy / m * 9;
+      if (m < 12) {
+        var di = defs.reduce(function (acc, d) { return Math.min(acc, Math.hypot(d.x - r.x, d.y - r.y)); }, 999);
+        // Tight coverage is mostly incomplete, sometimes picked.
+        var odds = Math.max(0.12, Math.min(0.94, di / 70));
+        if (Math.random() < odds) {
+          advance(Math.max(1, Math.round((r.x - 200) / 6) + 3), 'Complete');
+        } else if (Math.random() < 0.18) {
+          state.opp += 3; state.yard = 25; state.down = 1; state.toGo = 10;
+          advance(0, 'INTERCEPTED');
+        } else {
+          advance(0, 'Incomplete');
+        }
+      }
+    }
+    // Nobody open forever — the play dies if it runs too long.
+    if (recvs.length && recvs[0].x > W - 40 && !ball) advance(0, 'Sacked');
+    if (state.clock <= 0) { msg = 'Final: ' + state.score + '–' + state.opp; phase = 'over'; }
+  }
+
+  function draw() {
+    ctx.fillStyle = '#1a5c33'; ctx.fillRect(0, 0, W, H);
+    for (var i = 0; i <= 10; i++) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.beginPath();
+      ctx.moveTo(i * (W / 10), 0); ctx.lineTo(i * (W / 10), H); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.fillRect(state.yard / 100 * W - 2, 0, 4, H);
+
+    if (phase === 'live') {
+      recvs.forEach(function (r) {
+        ctx.beginPath(); ctx.arc(r.x, r.y, 11, 0, 7); ctx.fillStyle = '#c9bcff'; ctx.fill();
+      });
+      defs.forEach(function (d) {
+        ctx.beginPath(); ctx.arc(d.x, d.y, 11, 0, 7); ctx.fillStyle = '#f87171'; ctx.fill();
+      });
+      ctx.beginPath(); ctx.arc(150, H / 2, 11, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+      if (ball) { ctx.beginPath(); ctx.arc(ball.x, ball.y, 6, 0, 7); ctx.fillStyle = '#f2c14e'; ctx.fill(); }
+    }
+
+    if (phase === 'call') {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.font = '700 22px system-ui'; ctx.fillText('Call your play', W / 2, H / 2 - 40);
+      ctx.font = '600 16px system-ui';
+      ctx.fillText('1 — Run     2 — Short pass     3 — Deep pass', W / 2, H / 2);
+      if (msgT > 0) { ctx.fillStyle = '#f2c14e'; ctx.fillText(msg, W / 2, H / 2 + 42); }
+    }
+    if (phase === 'over') {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 24px system-ui';
+      ctx.fillText(msg, W / 2, H / 2);
+    }
+    setScore('You ' + state.score + ' – ' + state.opp + ' · ' +
+             state.down + ' & ' + Math.max(state.toGo, 0) + ' · own ' + Math.round(state.yard));
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Press 1/2/3 to call a play, then click a receiver to throw.');
+}
+
+/* ── Farm ───────────────────────────────────────────────────────────────────
+   Plots move through till → planted → watered → ripe on a timer. Water speeds
+   growth; harvesting ripe crops pays, and the shop makes each cycle worth more. */
+function farm() {
+  var N = 6, plots = [], coins = 20, seed = 0, day = 0;
+  var SEEDS = [
+    { name:'Wheat',   cost:3,  sell:8,   grow:6,  ico:'🌾' },
+    { name:'Corn',    cost:8,  sell:20,  grow:11, ico:'🌽' },
+    { name:'Pumpkin', cost:18, sell:48,  grow:18, ico:'🎃' },
+  ];
+  var host = document.createElement('div');
+  host.innerHTML =
+    '<div id="farm-shop" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>' +
+    '<div id="farm-grid" style="display:grid;grid-template-columns:repeat(' + N + ',1fr);gap:8px;max-width:520px;"></div>';
+  document.getElementById('gmount').appendChild(host);
+
+  for (var i = 0; i < N * N; i++) plots.push({ st:'empty', kind:0, t:0, wet:false });
+
+  function draw() {
+    document.getElementById('farm-shop').innerHTML = SEEDS.map(function (s, i) {
+      return '<span class="wv-chip' + (seed === i ? ' acc' : '') + '" style="cursor:pointer;padding:6px 12px;" onclick="window._farmSeed(' + i + ')">' +
+        s.ico + ' ' + s.name + ' · ' + s.cost + 'c → ' + s.sell + 'c</span>';
+    }).join('');
+    document.getElementById('farm-grid').innerHTML = plots.map(function (p, i) {
+      var face = p.st === 'empty' ? '' : (p.st === 'ripe' ? SEEDS[p.kind].ico : (p.st === 'growing' ? '🌱' : '🟫'));
+      var bg = p.st === 'empty' ? 'var(--glass-pill-bg)' : (p.wet ? '#3f2d18' : '#4a3a22');
+      return '<div class="cell" data-i="' + i + '" style="background:' + bg + ';">' + face + '</div>';
+    }).join('');
+    setScore(coins + ' coins · day ' + day);
+  }
+  window._farmSeed = function (i) { seed = i; draw(); };
+  cleanup.push(function () { delete window._farmSeed; });
+
+  on(host, 'click', function (e) {
+    var el = e.target.closest('.cell'); if (!el) return;
+    var p = plots[+el.dataset.i], s = SEEDS[seed];
+    if (p.st === 'empty') {
+      if (coins < s.cost) return;
+      coins -= s.cost; p.st = 'growing'; p.kind = seed; p.t = 0; p.wet = false;
+    } else if (p.st === 'growing') {
+      p.wet = true;                       // watering halves the remaining wait
+    } else if (p.st === 'ripe') {
+      coins += SEEDS[p.kind].sell; p.st = 'empty';
+    }
+    draw();
+  });
+
+  var acc = 0;
+  (function loop() {
+    acc++;
+    if (acc % 60 === 0) {
+      day++;
+      plots.forEach(function (p) {
+        if (p.st !== 'growing') return;
+        p.t += p.wet ? 2 : 1;
+        p.wet = false;
+        if (p.t >= SEEDS[p.kind].grow) p.st = 'ripe';
+      });
+      draw();
+    }
+    raf = requestAnimationFrame(loop);
+  })();
+  draw();
+  setHint('Pick a seed, click soil to plant, click again to water, click ripe crops to sell.');
+}
+
+/* ── Hill Racer ─────────────────────────────────────────────────────────────
+   Procedural hills from summed sines. The car samples the ground under each
+   wheel and rotates to match the slope; land nose-first and you wreck. */
+function hill() {
+  var W = 760, H = 400;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var car, cam, dead, dist, fuel, gas = 0;
+
+  function ground(x) {
+    return H - 110 + Math.sin(x / 190) * 46 + Math.sin(x / 71) * 17 + Math.sin(x / 33) * 6;
+  }
+  function reset() {
+    car = { x: 90, y: ground(90) - 40, vy: 0, ang: 0, vang: 0, sp: 0 };
+    cam = 0; dead = false; dist = 0; fuel = 100;
+  }
+  reset();
+
+  function press(v) { gas = v; }
+  on(document, 'keydown', function (e) {
+    if (e.key === 'ArrowRight') press(1);
+    if (e.key === 'ArrowLeft') press(-1);
+  });
+  on(document, 'keyup', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') press(0);
+  });
+  on(g.c, 'pointerdown', function (e) { press(pos(g.c, e).x > W / 2 ? 1 : -1); });
+  on(g.c, 'pointerup', function () { press(0); });
+
+  function step() {
+    if (dead) return;
+    car.sp += gas * 0.16;
+    car.sp *= 0.985;
+    car.sp = Math.max(-3.5, Math.min(8.5, car.sp));
+    car.x += car.sp;
+    if (car.x < 40) car.x = 40;
+
+    fuel -= Math.abs(car.sp) * 0.014 + 0.008;
+    if (fuel <= 0) { fuel = 0; dead = true; }
+
+    car.vy += 0.55;
+    car.y += car.vy;
+
+    // Sample either wheel so the body sits along the slope.
+    var gl = ground(car.x - 20), gr = ground(car.x + 20);
+    var target = Math.min(gl, gr) - 22;
+    if (car.y > target) {
+      car.y = target; car.vy = 0;
+      var slope = Math.atan2(gr - gl, 40);
+      car.ang += (slope - car.ang) * 0.24;
+    } else {
+      car.ang += car.vang;
+      car.vang += gas * 0.0022;
+      car.vang *= 0.98;
+    }
+    // Too far past vertical and it's over.
+    if (Math.abs(car.ang) > 1.5) dead = true;
+
+    dist = Math.max(dist, Math.round((car.x - 90) / 12));
+    cam += (car.x - 220 - cam) * 0.1;
+    if (Math.random() < 0.004) fuel = Math.min(100, fuel + 22);
+  }
+
+  function draw() {
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#1b2740'); sky.addColorStop(1, '#0d0c12');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+    ctx.beginPath(); ctx.moveTo(0, H);
+    for (var sx = 0; sx <= W; sx += 6) ctx.lineTo(sx, ground(sx + cam));
+    ctx.lineTo(W, H); ctx.closePath();
+    ctx.fillStyle = '#3d2f1c'; ctx.fill();
+    ctx.strokeStyle = '#6f5a34'; ctx.lineWidth = 3; ctx.stroke();
+
+    ctx.save();
+    ctx.translate(car.x - cam, car.y);
+    ctx.rotate(car.ang);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(-24, -14, 48, 20);
+    ctx.fillStyle = '#1b1b1b';
+    ctx.beginPath(); ctx.arc(-16, 8, 9, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(16, 8, 9, 0, 7); ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(16, 16, 150, 9);
+    ctx.fillStyle = fuel < 25 ? '#f87171' : '#30d158'; ctx.fillRect(16, 16, 150 * fuel / 100, 9);
+
+    if (dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.66)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 22px system-ui';
+      ctx.fillText(fuel <= 0 ? 'Out of fuel' : 'Wrecked', W / 2, H / 2);
+      ctx.font = '500 15px system-ui'; ctx.fillText('Restart to go again — ' + dist + 'm', W / 2, H / 2 + 30);
+    }
+    setScore(dist + 'm · fuel ' + Math.round(fuel) + '%');
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Right arrow / right side to accelerate, left to brake and lean back.');
+}
+
+/* ── Tower Defense ──────────────────────────────────────────────────────────
+   Creeps follow a fixed path; towers shoot the one furthest along in range, so
+   leaks get punished rather than the nearest target soaking every shot. */
+function towerd() {
+  var W = 760, H = 440, S = 40;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var PATH = [[0,3],[5,3],[5,8],[11,8],[11,2],[17,2],[17,6],[19,6]];
+  var pts = [], towers, creeps, shots, gold, lives, wave, spawn, spawned, tick;
+
+  (function buildPath() {
+    for (var i = 0; i < PATH.length - 1; i++) {
+      var a = PATH[i], b = PATH[i+1];
+      var steps = (Math.abs(b[0]-a[0]) + Math.abs(b[1]-a[1])) * 6;
+      for (var s = 0; s < steps; s++) {
+        pts.push({ x: (a[0] + (b[0]-a[0]) * s/steps) * S + S/2,
+                   y: (a[1] + (b[1]-a[1]) * s/steps) * S + S/2 });
+      }
+    }
+  })();
+
+  function reset() {
+    towers = []; creeps = []; shots = [];
+    gold = 90; lives = 12; wave = 0; spawn = 0; spawned = 0; tick = 0;
+    nextWave();
+  }
+  function nextWave() { wave++; spawned = 0; spawn = 0; }
+  function onPath(gx, gy) {
+    return pts.some(function (p) { return Math.abs(p.x - (gx*S+S/2)) < S*0.7 && Math.abs(p.y - (gy*S+S/2)) < S*0.7; });
+  }
+
+  on(g.c, 'pointerdown', function (e) {
+    var p = pos(g.c, e);
+    var gx = Math.floor(p.x / S), gy = Math.floor(p.y / S);
+    var hit = towers.filter(function (t) { return t.gx === gx && t.gy === gy; })[0];
+    if (hit) { if (gold >= 40) { gold -= 40; hit.lvl++; hit.rng += 16; hit.dmg += 9; } return; }
+    if (onPath(gx, gy) || gold < 50) return;
+    gold -= 50;
+    towers.push({ gx:gx, gy:gy, x:gx*S+S/2, y:gy*S+S/2, rng:88, dmg:11, cd:0, lvl:1 });
+  });
+
+  function step() {
+    tick++;
+    if (spawned < 4 + wave * 2) {
+      if (--spawn <= 0) {
+        creeps.push({ i:0, hp: 26 + wave * 15, max: 26 + wave * 15, sp: 0.7 + wave * 0.04 });
+        spawned++; spawn = Math.max(14, 40 - wave);
+      }
+    } else if (!creeps.length) nextWave();
+
+    creeps.forEach(function (c) { c.i += c.sp; });
+    for (var i = creeps.length - 1; i >= 0; i--) {
+      if (creeps[i].i >= pts.length - 1) { creeps.splice(i, 1); lives--; }
+    }
+
+    towers.forEach(function (t) {
+      if (t.cd > 0) { t.cd--; return; }
+      // Target whoever is deepest into the path and still in range.
+      var best = null;
+      creeps.forEach(function (c) {
+        var p = pts[Math.floor(c.i)] || pts[0];
+        if (Math.hypot(p.x - t.x, p.y - t.y) <= t.rng && (!best || c.i > best.i)) best = c;
+      });
+      if (best) { shots.push({ x:t.x, y:t.y, target:best, dmg:t.dmg }); t.cd = 26; }
+    });
+
+    for (var s = shots.length - 1; s >= 0; s--) {
+      var sh = shots[s], p = pts[Math.floor(sh.target.i)] || pts[0];
+      var dx = p.x - sh.x, dy = p.y - sh.y, m = Math.hypot(dx, dy) || 1;
+      sh.x += dx/m * 8; sh.y += dy/m * 8;
+      if (m < 10) {
+        sh.target.hp -= sh.dmg;
+        shots.splice(s, 1);
+        if (sh.target.hp <= 0) {
+          var k = creeps.indexOf(sh.target);
+          if (k >= 0) { creeps.splice(k, 1); gold += 12; }
+        }
+      }
+    }
+    if (lives <= 0) reset();
+  }
+
+  function draw() {
+    ctx.fillStyle = '#101a14'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#4a5a4a'; ctx.lineWidth = S * 0.8; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    pts.forEach(function (p) { ctx.lineTo(p.x, p.y); });
+    ctx.stroke();
+
+    towers.forEach(function (t) {
+      ctx.beginPath(); ctx.arc(t.x, t.y, 14, 0, 7);
+      ctx.fillStyle = ['#b3a1ff','#8a6fe0','#6244d4','#4a2fb0'][Math.min(t.lvl-1,3)]; ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText(t.lvl, t.x, t.y + 4);
+    });
+    creeps.forEach(function (c) {
+      var p = pts[Math.floor(c.i)] || pts[0];
+      ctx.beginPath(); ctx.arc(p.x, p.y, 11, 0, 7); ctx.fillStyle = '#f87171'; ctx.fill();
+      ctx.fillStyle = '#000'; ctx.fillRect(p.x - 12, p.y - 19, 24, 4);
+      ctx.fillStyle = '#30d158'; ctx.fillRect(p.x - 12, p.y - 19, 24 * Math.max(0, c.hp / c.max), 4);
+    });
+    shots.forEach(function (s) {
+      ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fillStyle = '#f2c14e'; ctx.fill();
+    });
+    setScore('Wave ' + wave + ' · ' + gold + 'g · ' + lives + ' lives');
+  }
+  reset();
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Click empty ground to build (50g). Click a tower to upgrade (40g).');
+}
+
+/* ── Stacks ─────────────────────────────────────────────────────────────────
+   Falling tetrominoes. Rotation is tested against the board first and simply
+   refused if it would overlap, which avoids pieces punching through walls. */
+function stacks() {
+  var C = 10, R = 20, S = 22, W = C*S, H = R*S;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var SHAPES = [
+    [[1,1,1,1]], [[1,1],[1,1]], [[0,1,0],[1,1,1]],
+    [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]], [[1,1,0],[0,1,1]], [[0,1,1],[1,1,0]],
+  ];
+  var COLS = ['#2dd4bf','#f2c14e','#c084fc','#3b6ea5','#e07a29','#30d158','#f87171'];
+  var board, piece, score, lines, dead, tick;
+
+  function reset() {
+    board = []; for (var i = 0; i < C*R; i++) board.push(0);
+    score = 0; lines = 0; dead = false; tick = 0; spawnP();
+  }
+  function spawnP() {
+    var n = Math.floor(Math.random() * SHAPES.length);
+    piece = { s: SHAPES[n], c: n + 1, x: 3, y: 0 };
+    if (hits(piece.s, piece.x, piece.y)) dead = true;
+  }
+  function hits(sh, px, py) {
+    for (var y = 0; y < sh.length; y++) for (var x = 0; x < sh[y].length; x++) {
+      if (!sh[y][x]) continue;
+      var nx = px + x, ny = py + y;
+      if (nx < 0 || nx >= C || ny >= R) return true;
+      if (ny >= 0 && board[ny*C + nx]) return true;
+    }
+    return false;
+  }
+  function lock() {
+    piece.s.forEach(function (row, y) {
+      row.forEach(function (v, x) {
+        if (v && piece.y + y >= 0) board[(piece.y+y)*C + piece.x+x] = piece.c;
+      });
+    });
+    for (var y2 = R - 1; y2 >= 0; y2--) {
+      if (board.slice(y2*C, y2*C+C).every(function (v) { return v; })) {
+        board.splice(y2*C, C);
+        for (var k = 0; k < C; k++) board.unshift(0);
+        lines++; score += 100; y2++;
+      }
+    }
+    spawnP();
+  }
+  function rotate() {
+    var s = piece.s, out = [];
+    for (var x = 0; x < s[0].length; x++) {
+      out.push(s.map(function (row) { return row[x]; }).reverse());
+    }
+    if (!hits(out, piece.x, piece.y)) piece.s = out;
+  }
+  function move(dx) { if (!hits(piece.s, piece.x + dx, piece.y)) piece.x += dx; }
+  function drop() {
+    if (!hits(piece.s, piece.x, piece.y + 1)) piece.y++;
+    else lock();
+  }
+  on(document, 'keydown', function (e) {
+    if (dead) return;
+    if (e.key === 'ArrowLeft') { move(-1); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { move(1); e.preventDefault(); }
+    if (e.key === 'ArrowUp') { rotate(); e.preventDefault(); }
+    if (e.key === 'ArrowDown') { drop(); e.preventDefault(); }
+    if (e.key === ' ') { while (!hits(piece.s, piece.x, piece.y + 1)) piece.y++; lock(); e.preventDefault(); }
+  });
+  var sx = 0, sy = 0;
+  on(g.c, 'touchstart', function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
+  on(g.c, 'touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return rotate();
+    if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1);
+    else if (dy > 0) drop();
+  });
+
+  function draw() {
+    ctx.fillStyle = '#0d0c12'; ctx.fillRect(0, 0, W, H);
+    board.forEach(function (v, i) {
+      if (!v) return;
+      ctx.fillStyle = COLS[v-1];
+      ctx.fillRect((i % C)*S + 1, Math.floor(i / C)*S + 1, S-2, S-2);
+    });
+    if (!dead) piece.s.forEach(function (row, y) {
+      row.forEach(function (v, x) {
+        if (!v) return;
+        ctx.fillStyle = COLS[piece.c-1];
+        ctx.fillRect((piece.x+x)*S + 1, (piece.y+y)*S + 1, S-2, S-2);
+      });
+    });
+    if (dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 18px system-ui';
+      ctx.fillText('Topped out', W/2, H/2);
+    }
+    setScore('Score ' + score + ' · ' + lines + ' lines');
+  }
+  reset();
+  (function loop() {
+    tick++;
+    if (!dead && tick % Math.max(8, 30 - lines) === 0) drop();
+    draw();
+    raf = requestAnimationFrame(loop);
+  })();
+  setHint('Arrows to move, up to rotate, space to slam. Swipe on a phone.');
+}
+
+/* ── Sky Climb ──────────────────────────────────────────────────────────────
+   Auto-bouncing climber. The world scrolls only when you pass the midpoint, so
+   height is banked and a bad fall costs you what you actually earned. */
+function climb() {
+  var W = 400, H = 560;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var p, plats, height, dead, tilt = 0;
+
+  function reset() {
+    p = { x: W/2, y: H - 90, vx: 0, vy: -11, r: 13 };
+    plats = [{ x: W/2 - 40, y: H - 50, w: 80 }];
+    for (var i = 1; i < 14; i++) {
+      plats.push({ x: Math.random() * (W - 78), y: H - 50 - i * 46, w: 78 });
+    }
+    height = 0; dead = false;
+  }
+  reset();
+
+  on(document, 'keydown', function (e) {
+    if (e.key === 'ArrowLeft') tilt = -1;
+    if (e.key === 'ArrowRight') tilt = 1;
+  });
+  on(document, 'keyup', function () { tilt = 0; });
+  on(g.c, 'pointerdown', function (e) { tilt = pos(g.c, e).x > W/2 ? 1 : -1; });
+  on(g.c, 'pointerup', function () { tilt = 0; });
+  on(g.c, 'pointermove', function (e) { if (tilt) tilt = pos(g.c, e).x > W/2 ? 1 : -1; });
+
+  function step() {
+    if (dead) return;
+    p.vx += tilt * 0.8; p.vx *= 0.9;
+    p.x += p.vx;
+    if (p.x < -14) p.x = W + 14;
+    if (p.x > W + 14) p.x = -14;
+    p.vy += 0.42; p.y += p.vy;
+
+    // Only land when falling, or you'd snap onto platforms on the way up.
+    if (p.vy > 0) {
+      plats.forEach(function (pl) {
+        if (p.y + p.r > pl.y && p.y + p.r < pl.y + 16 && p.x > pl.x - 4 && p.x < pl.x + pl.w + 4) {
+          p.vy = -11.6;
+        }
+      });
+    }
+    if (p.y < H/2) {
+      var dy = H/2 - p.y;
+      p.y = H/2; height += dy;
+      plats.forEach(function (pl) { pl.y += dy; });
+      plats = plats.filter(function (pl) { return pl.y < H + 30; });
+      while (plats.length < 14) {
+        var top = Math.min.apply(null, plats.map(function (pl) { return pl.y; }));
+        plats.push({ x: Math.random() * (W - 78), y: top - (38 + Math.random() * 26), w: 78 });
+      }
+    }
+    if (p.y > H + 40) dead = true;
+  }
+
+  function draw() {
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#16324a'); sky.addColorStop(1, '#0d0c12');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    plats.forEach(function (pl) {
+      ctx.fillStyle = '#2dd4bf'; ctx.fillRect(pl.x, pl.y, pl.w, 11);
+    });
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fillStyle = '#c9bcff'; ctx.fill();
+    if (dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 20px system-ui';
+      ctx.fillText('Fell — ' + Math.round(height/10) + 'm', W/2, H/2);
+    }
+    setScore(Math.round(height/10) + 'm');
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Left / right arrows, or hold a side of the screen. Bouncing is automatic.');
+}
+
 </script>
 </body>
 </html>
