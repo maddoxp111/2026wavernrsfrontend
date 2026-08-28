@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Everything here is self-contained: the games are drawn on a canvas by
+       this page, so there are no third-party iframes to be refused, no CDN to
+       go down, and nothing to load but this file. */
+    body { margin:0; background:var(--page-bg-base); color:var(--text); font-family:var(--font-sans); }
+    .g-wrap { max-width:1000px; margin:0 auto; padding:26px 18px 60px; }
+
+    /* Code gate */
+    .g-gate { min-height:100vh; display:grid; place-items:center; padding:24px; }
+    .g-gate-card {
+      width:100%; max-width:320px; text-align:center; padding:32px 26px;
+      background:var(--glass-large-bg); border:1px solid var(--glass-large-border);
+      border-radius:var(--r-lg); backdrop-filter:blur(var(--lg-frost-large)) saturate(180%);
+      -webkit-backdrop-filter:blur(var(--lg-frost-large)) saturate(180%);
+    }
+    .g-dots { display:flex; gap:9px; justify-content:center; margin:18px 0 20px; }
+    .g-dot { width:12px; height:12px; border-radius:50%; background:var(--glass-pill-bg); border:1px solid var(--hair-strong); transition:background 140ms; }
+    .g-dot.on { background:var(--brand); border-color:transparent; }
+    .g-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+    .g-key {
+      font-family:inherit; font-size:19px; font-weight:600; padding:14px 0; cursor:pointer;
+      border-radius:var(--r-md); border:1px solid var(--glass-small-border);
+      background:var(--glass-pill-bg); color:var(--text);
+    }
+    .g-key:active { background:var(--glass-pill-bg-active); }
+    .g-key.wide { grid-column:span 2; }
+    .g-err { color:var(--red); font-size:13px; min-height:18px; margin-top:12px; }
+
+    /* Launcher */
+    .g-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:22px; }
+    .g-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:16px; }
+    .g-card {
+      cursor:pointer; border-radius:var(--r-lg); overflow:hidden; text-align:left;
+      background:var(--glass-medium-bg); border:1px solid var(--glass-medium-border);
+      transition:transform 160ms var(--ease);
+    }
+    .g-card:hover { transform:translateY(-3px); }
+    .g-thumb { width:100%; aspect-ratio:4/3; display:grid; place-items:center; font-size:40px; }
+    .g-card-name { font-size:14px; font-weight:650; padding:10px 12px 2px; }
+    .g-card-desc { font-size:11.5px; color:var(--text-3); padding:0 12px 12px; }
+
+    /* Stage */
+    .g-stage { display:none; }
+    .g-stage.on { display:block; }
+    .g-bar { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .g-score { font-size:13px; color:var(--text-2); font-variant-numeric:tabular-nums; }
+    canvas { display:block; width:100%; height:auto; border-radius:var(--r-md); background:#0d0c12; touch-action:none; }
+    .g-hint { font-size:12px; color:var(--text-3); margin-top:10px; }
+    #g2048, #gmines { display:grid; gap:8px; margin:0 auto; touch-action:none; }
+    .cell {
+      display:grid; place-items:center; border-radius:var(--r-sm); font-weight:800;
+      background:var(--glass-pill-bg); aspect-ratio:1; font-size:clamp(14px,4.5vw,26px);
+      user-select:none;
+    }
+    .mcell { font-size:clamp(11px,3.4vw,17px); cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<div id="gate" class="g-gate">
+  <div class="g-gate-card">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">wavernrs</div>
+    <div style="font-size:20px;font-weight:750;letter-spacing:-.02em;margin-top:6px;">Enter code</div>
+    <div class="g-dots" id="dots"></div>
+    <div class="g-pad">
+      <button class="g-key" onclick="tap('1')">1</button><button class="g-key" onclick="tap('2')">2</button><button class="g-key" onclick="tap('3')">3</button>
+      <button class="g-key" onclick="tap('4')">4</button><button class="g-key" onclick="tap('5')">5</button><button class="g-key" onclick="tap('6')">6</button>
+      <button class="g-key" onclick="tap('7')">7</button><button class="g-key" onclick="tap('8')">8</button><button class="g-key" onclick="tap('9')">9</button>
+      <button class="g-key wide" onclick="tap('0')">0</button><button class="g-key" onclick="back()">⌫</button>
+    </div>
+    <div class="g-err" id="gerr"></div>
+  </div>
+</div>
+
+<div id="app" class="g-wrap" style="display:none;">
+  <div id="launcher">
+    <div class="g-head">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">wavernrs</div>
+        <h1 style="margin:4px 0 0;font-size:30px;font-weight:750;letter-spacing:-.035em;">Games</h1>
+      </div>
+      <a href="/index.html" style="font-size:13px;color:var(--text-3);">← back to site</a>
+    </div>
+    <div class="g-grid" id="grid"></div>
+    <p class="g-hint">Everything runs in this page — nothing loads from anywhere else.</p>
+  </div>
+
+  <div id="stage" class="g-stage">
+    <div class="g-bar">
+      <button class="wv-btn-ghost" onclick="closeGame()">← Games</button>
+      <div style="font-weight:700;font-size:15px;" id="gtitle"></div>
+      <div style="flex:1"></div>
+      <div class="g-score" id="gscore"></div>
+      <button class="wv-btn-ghost" onclick="restart()">Restart</button>
+    </div>
+    <div id="gmount"></div>
+    <div class="g-hint" id="ghint"></div>
+  </div>
+</div>
+
+<script>
+/* ── Code gate ─────────────────────────────────────────────────────────────
+   Deliberately light: this only keeps the page from being stumbled into, and
+   the code sits in the markup, so treat it as a doorknob rather than a lock. */
+var CODE = '12341', buf = '';
+function drawDots() {
+  document.getElementById('dots').innerHTML =
+    CODE.split('').map(function (_, i) {
+      return '<div class="g-dot' + (i < buf.length ? ' on' : '') + '"></div>';
+    }).join('');
+}
+function tap(d) {
+  if (buf.length >= CODE.length) return;
+  buf += d; drawDots();
+  if (buf.length === CODE.length) {
+    if (buf === CODE) { try { localStorage.setItem('wv_g', '1'); } catch (e) {} open_(); }
+    else { document.getElementById('gerr').textContent = 'Nope.'; buf = ''; setTimeout(drawDots, 260); }
+  }
+}
+function back() { buf = buf.slice(0, -1); drawDots(); document.getElementById('gerr').textContent = ''; }
+document.addEventListener('keydown', function (e) {
+  if (document.getElementById('gate').style.display === 'none') return;
+  if (/^[0-9]$/.test(e.key)) tap(e.key);
+  if (e.key === 'Backspace') back();
+});
+function open_() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  renderGrid();
+}
+drawDots();
+try { if (localStorage.getItem('wv_g') === '1') open_(); } catch (e) {}
+
+/* ── Launcher ───────────────────────────────────────────────────────────── */
+var GAMES = [
+  { id:'pool',   name:'8-Ball Pool', desc:'Drag to aim, release to break', icon:'🎱', bg:'linear-gradient(140deg,#1b6b45,#0a2a1c)' },
+  { id:'t2048',  name:'2048',        desc:'Swipe or arrows to merge',      icon:'🔢', bg:'linear-gradient(140deg,#b8873a,#3a2708)' },
+  { id:'snake',  name:'Snake',       desc:'Don\'t eat yourself',           icon:'🐍', bg:'linear-gradient(140deg,#2f6f6a,#10262b)' },
+  { id:'brick',  name:'Breakout',    desc:'Clear every brick',             icon:'🧱', bg:'linear-gradient(140deg,#c0392b,#4a1020)' },
+  { id:'mines',  name:'Minesweeper', desc:'Tap to clear, long-press flags',icon:'💣', bg:'linear-gradient(140deg,#7d6ba8,#2b2340)' },
+];
+function renderGrid() {
+  document.getElementById('grid').innerHTML = GAMES.map(function (g) {
+    return '<div class="g-card" onclick="playGame(\'' + g.id + '\')">' +
+      '<div class="g-thumb" style="background:' + g.bg + '">' + g.icon + '</div>' +
+      '<div class="g-card-name">' + g.name + '</div>' +
+      '<div class="g-card-desc">' + g.desc + '</div></div>';
+  }).join('');
+}
+
+var active = null, raf = null, cleanup = [];
+function setScore(s) { document.getElementById('gscore').textContent = s || ''; }
+function setHint(s) { document.getElementById('ghint').textContent = s || ''; }
+function on(el, ev, fn, opt) { el.addEventListener(ev, fn, opt); cleanup.push(function () { el.removeEventListener(ev, fn, opt); }); }
+
+function closeGame() {
+  if (raf) cancelAnimationFrame(raf); raf = null;
+  cleanup.forEach(function (f) { f(); }); cleanup = [];
+  document.getElementById('gmount').innerHTML = '';
+  document.getElementById('stage').classList.remove('on');
+  document.getElementById('launcher').style.display = '';
+  active = null; setScore(''); setHint('');
+}
+function playGame(id) {
+  active = id;
+  document.getElementById('launcher').style.display = 'none';
+  document.getElementById('stage').classList.add('on');
+  document.getElementById('gtitle').textContent = (GAMES.filter(function (g) { return g.id === id; })[0] || {}).name || '';
+  restart();
+}
+function restart() {
+  if (!active) return;
+  if (raf) cancelAnimationFrame(raf); raf = null;
+  cleanup.forEach(function (f) { f(); }); cleanup = [];
+  document.getElementById('gmount').innerHTML = '';
+  ({ pool:pool, t2048:t2048, snake:snake, brick:brick, mines:mines })[active]();
+}
+
+// Canvas sized to its container, backed by devicePixelRatio so it stays sharp.
+function mkCanvas(w, h) {
+  var c = document.createElement('canvas');
+  var mount = document.getElementById('gmount');
+  mount.appendChild(c);
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = w * dpr; c.height = h * dpr;
+  c.style.aspectRatio = w + '/' + h;
+  var ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { c: c, ctx: ctx, w: w, h: h };
+}
+// Canvas coords from a mouse/touch event.
+function pos(c, e) {
+  var r = c.getBoundingClientRect();
+  var p = e.touches && e.touches[0] ? e.touches[0] : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e);
+  return { x: (p.clientX - r.left) / r.width * c.width / (Math.min(window.devicePixelRatio || 1, 2)),
+           y: (p.clientY - r.top) / r.height * c.height / (Math.min(window.devicePixelRatio || 1, 2)) };
+}
+
+/* ── 8-Ball Pool ────────────────────────────────────────────────────────────
+   Equal-mass elastic collisions along the line of centres, with friction each
+   frame. Overlapping balls are pushed apart before the impulse so they can't
+   get stuck inside one another. */
+function pool() {
+  var W = 800, H = 440, R = 11, PR = 21;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var pockets = [{x:22,y:22},{x:W/2,y:16},{x:W-22,y:22},{x:22,y:H-22},{x:W/2,y:H-16},{x:W-22,y:H-22}];
+  var balls = [], potted = 0, shots = 0;
+
+  function reset() {
+    balls = [{ x:210, y:H/2, vx:0, vy:0, c:'#f7f7f2', cue:true }];
+    var cols = ['#f2c14e','#3b6ea5','#c0392b','#7d5ba6','#e07a29','#2f8f4e','#a8322d','#1b1b1b',
+                '#f2c14e','#3b6ea5','#c0392b','#7d5ba6','#e07a29','#2f8f4e','#a8322d'];
+    var i = 0, sx = 520;
+    for (var col = 0; col < 5; col++) {
+      for (var row = 0; row <= col; row++) {
+        balls.push({ x: sx + col * (R * 1.78), y: H/2 - col * R + row * (R * 2.05), vx:0, vy:0, c: cols[i++] });
+      }
+    }
+    potted = 0; shots = 0;
+  }
+  reset();
+
+  var aiming = false, ax = 0, ay = 0;
+  function cue() { return balls[0] && balls[0].cue ? balls[0] : null; }
+  function moving() { return balls.some(function (b) { return Math.abs(b.vx) > 0.04 || Math.abs(b.vy) > 0.04; }); }
+
+  on(g.c, 'pointerdown', function (e) { if (moving() || !cue()) return; aiming = true; var p = pos(g.c, e); ax = p.x; ay = p.y; });
+  on(g.c, 'pointermove', function (e) { if (!aiming) return; var p = pos(g.c, e); ax = p.x; ay = p.y; });
+  on(g.c, 'pointerup', function () {
+    if (!aiming) return; aiming = false;
+    var b = cue(); if (!b) return;
+    var dx = b.x - ax, dy = b.y - ay, d = Math.hypot(dx, dy);
+    if (d < 4) return;
+    var power = Math.min(d / 9, 19);
+    b.vx = dx / d * power; b.vy = dy / d * power; shots++;
+  });
+
+  function step() {
+    for (var i = 0; i < balls.length; i++) {
+      var b = balls[i];
+      b.x += b.vx; b.y += b.vy;
+      b.vx *= 0.988; b.vy *= 0.988;
+      if (Math.abs(b.vx) < 0.04) b.vx = 0;
+      if (Math.abs(b.vy) < 0.04) b.vy = 0;
+      if (b.x < R + 14) { b.x = R + 14; b.vx = -b.vx * 0.86; }
+      if (b.x > W - R - 14) { b.x = W - R - 14; b.vx = -b.vx * 0.86; }
+      if (b.y < R + 14) { b.y = R + 14; b.vy = -b.vy * 0.86; }
+      if (b.y > H - R - 14) { b.y = H - R - 14; b.vy = -b.vy * 0.86; }
+    }
+    for (var a = 0; a < balls.length; a++) {
+      for (var c2 = a + 1; c2 < balls.length; c2++) {
+        var p = balls[a], q = balls[c2];
+        var dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy);
+        if (d === 0 || d >= R * 2) continue;
+        var nx = dx / d, ny = dy / d;
+        // Separate first, or a deep overlap traps them together.
+        var overlap = (R * 2 - d) / 2;
+        p.x -= nx * overlap; p.y -= ny * overlap;
+        q.x += nx * overlap; q.y += ny * overlap;
+        var rel = (q.vx - p.vx) * nx + (q.vy - p.vy) * ny;
+        if (rel > 0) continue;
+        var imp = rel * 0.94;
+        p.vx += imp * nx; p.vy += imp * ny;
+        q.vx -= imp * nx; q.vy -= imp * ny;
+      }
+    }
+    for (var k = balls.length - 1; k >= 0; k--) {
+      for (var pk = 0; pk < pockets.length; pk++) {
+        if (Math.hypot(balls[k].x - pockets[pk].x, balls[k].y - pockets[pk].y) < PR) {
+          if (balls[k].cue) { balls[k].x = 210; balls[k].y = H/2; balls[k].vx = balls[k].vy = 0; }
+          else { balls.splice(k, 1); potted++; }
+          break;
+        }
+      }
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = '#0f5133'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#5a3a1e'; ctx.fillRect(0, 0, W, 14); ctx.fillRect(0, H-14, W, 14);
+    ctx.fillRect(0, 0, 14, H); ctx.fillRect(W-14, 0, 14, H);
+    pockets.forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7); ctx.fillStyle = '#08120c'; ctx.fill();
+    });
+    balls.forEach(function (b) {
+      ctx.beginPath(); ctx.arc(b.x, b.y, R, 0, 7); ctx.fillStyle = b.c; ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x - R*0.3, b.y - R*0.3, R*0.32, 0, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.fill();
+    });
+    var b0 = cue();
+    if (aiming && b0) {
+      ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(ax, ay);
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+      var dx = b0.x - ax, dy = b0.y - ay, d = Math.hypot(dx, dy) || 1;
+      ctx.beginPath(); ctx.moveTo(b0.x, b0.y);
+      ctx.lineTo(b0.x + dx/d * 90, b0.y + dy/d * 90);
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.setLineDash([6,6]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    setScore('Potted ' + potted + '/15 · ' + shots + ' shots');
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Drag back from the cue ball and release — further back is harder.');
+}
+
+/* ── 2048 ─────────────────────────────────────────────────────────────────── */
+function t2048() {
+  var N = 4, grid = [], score = 0;
+  var host = document.createElement('div');
+  host.id = 'g2048';
+  host.style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
+  host.style.maxWidth = '420px';
+  document.getElementById('gmount').appendChild(host);
+
+  var COLORS = { 2:'#3a3550', 4:'#46406a', 8:'#5b4aa0', 16:'#7159c4', 32:'#8a6fe0',
+                 64:'#a487f2', 128:'#c0a6ff', 256:'#d3bcff', 512:'#e2d0ff', 1024:'#efe4ff', 2048:'#fff' };
+  function empty() { var o = []; for (var i=0;i<N*N;i++) if (!grid[i]) o.push(i); return o; }
+  function add() { var e = empty(); if (!e.length) return; grid[e[Math.floor(Math.random()*e.length)]] = Math.random() < 0.9 ? 2 : 4; }
+  function reset() { grid = new Array(N*N).fill(0); score = 0; add(); add(); draw(); }
+
+  function draw() {
+    host.innerHTML = grid.map(function (v) {
+      var bg = v ? (COLORS[v] || '#fff') : 'var(--glass-pill-bg)';
+      var col = v > 256 ? '#221c33' : '#fff';
+      return '<div class="cell" style="background:' + bg + ';color:' + col + ';">' + (v || '') + '</div>';
+    }).join('');
+    setScore('Score ' + score);
+  }
+  // Collapse one line left; every direction reuses this by re-indexing.
+  function slide(line) {
+    var v = line.filter(function (x) { return x; });
+    for (var i = 0; i < v.length - 1; i++) {
+      if (v[i] === v[i+1]) { v[i] *= 2; score += v[i]; v.splice(i+1, 1); }
+    }
+    while (v.length < N) v.push(0);
+    return v;
+  }
+  function move(dir) {
+    var before = grid.join(',');
+    for (var i = 0; i < N; i++) {
+      var line = [];
+      for (var j = 0; j < N; j++) {
+        line.push(dir === 'l' || dir === 'r' ? grid[i*N + (dir === 'r' ? N-1-j : j)]
+                                             : grid[(dir === 'd' ? N-1-j : j)*N + i]);
+      }
+      var out = slide(line);
+      for (var j2 = 0; j2 < N; j2++) {
+        if (dir === 'l' || dir === 'r') grid[i*N + (dir === 'r' ? N-1-j2 : j2)] = out[j2];
+        else grid[(dir === 'd' ? N-1-j2 : j2)*N + i] = out[j2];
+      }
+    }
+    if (grid.join(',') !== before) { add(); draw(); }
+  }
+  on(document, 'keydown', function (e) {
+    var m = { ArrowLeft:'l', ArrowRight:'r', ArrowUp:'u', ArrowDown:'d' }[e.key];
+    if (m) { e.preventDefault(); move(m); }
+  });
+  var sx = 0, sy = 0;
+  on(host, 'touchstart', function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
+  on(host, 'touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'r' : 'l') : (dy > 0 ? 'd' : 'u'));
+  });
+  reset();
+  setHint('Arrow keys, or swipe on a phone.');
+}
+
+/* ── Snake ────────────────────────────────────────────────────────────────── */
+function snake() {
+  var C = 24, S = 18, W = C*S, H = C*S;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var body, dir, next, food, dead, score, tick = 0;
+  function reset() {
+    body = [{x:8,y:12},{x:7,y:12},{x:6,y:12}]; dir = {x:1,y:0}; next = dir;
+    food = { x:16, y:12 }; dead = false; score = 0;
+  }
+  reset();
+  function place() {
+    do { food = { x: Math.floor(Math.random()*C), y: Math.floor(Math.random()*C) }; }
+    while (body.some(function (s) { return s.x === food.x && s.y === food.y; }));
+  }
+  on(document, 'keydown', function (e) {
+    var d = { ArrowLeft:{x:-1,y:0}, ArrowRight:{x:1,y:0}, ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1} }[e.key];
+    // Ignore a straight reversal — it would run the head into the neck.
+    if (d && (d.x !== -dir.x || d.y !== -dir.y)) { e.preventDefault(); next = d; }
+  });
+  var sx = 0, sy = 0;
+  on(g.c, 'touchstart', function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive:true });
+  on(g.c, 'touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+    var d = Math.abs(dx) > Math.abs(dy) ? {x:dx>0?1:-1,y:0} : {x:0,y:dy>0?1:-1};
+    if (d.x !== -dir.x || d.y !== -dir.y) next = d;
+  });
+  function step() {
+    if (dead) return;
+    dir = next;
+    var h = { x: body[0].x + dir.x, y: body[0].y + dir.y };
+    if (h.x < 0 || h.y < 0 || h.x >= C || h.y >= C || body.some(function (s) { return s.x === h.x && s.y === h.y; })) { dead = true; return; }
+    body.unshift(h);
+    if (h.x === food.x && h.y === food.y) { score += 10; place(); } else body.pop();
+  }
+  function draw() {
+    ctx.fillStyle = '#0d0c12'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#30d158';
+    ctx.fillRect(food.x*S+3, food.y*S+3, S-6, S-6);
+    body.forEach(function (s, i) {
+      ctx.fillStyle = i === 0 ? '#c9bcff' : 'rgba(179,161,255,' + Math.max(0.3, 1 - i/body.length) + ')';
+      ctx.fillRect(s.x*S+1, s.y*S+1, S-2, S-2);
+    });
+    if (dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.66)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.font = '600 22px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('Game over — Restart to go again', W/2, H/2);
+    }
+    setScore('Score ' + score);
+  }
+  (function loop() {
+    tick++;
+    if (tick % 6 === 0) step();
+    draw();
+    raf = requestAnimationFrame(loop);
+  })();
+  setHint('Arrow keys, or swipe.');
+}
+
+/* ── Breakout ─────────────────────────────────────────────────────────────── */
+function brick() {
+  var W = 720, H = 460;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var paddle, ball, bricks, score, lives, started;
+  function reset() {
+    paddle = { x: W/2 - 55, w: 110, h: 13 };
+    ball = { x: W/2, y: H - 60, vx: 4.2, vy: -4.6, r: 8 };
+    bricks = [];
+    var cols = ['#c0392b','#e07a29','#f2c14e','#2f8f4e','#3b6ea5'];
+    for (var r = 0; r < 5; r++) {
+      for (var c = 0; c < 10; c++) {
+        bricks.push({ x: 30 + c*66, y: 46 + r*26, w: 58, h: 18, c: cols[r], alive: true });
+      }
+    }
+    score = 0; lives = 3; started = false;
+  }
+  reset();
+  function movePaddle(e) {
+    var p = pos(g.c, e);
+    paddle.x = Math.max(0, Math.min(W - paddle.w, p.x - paddle.w/2));
+    if (!started) ball.x = paddle.x + paddle.w/2;
+  }
+  on(g.c, 'pointermove', movePaddle);
+  on(g.c, 'pointerdown', function (e) { movePaddle(e); started = true; });
+  on(document, 'keydown', function (e) {
+    if (e.key === 'ArrowLeft') paddle.x = Math.max(0, paddle.x - 34);
+    if (e.key === 'ArrowRight') paddle.x = Math.min(W - paddle.w, paddle.x + 34);
+    if (e.key === ' ') { started = true; e.preventDefault(); }
+  });
+  function step() {
+    if (!started) return;
+    ball.x += ball.vx; ball.y += ball.vy;
+    if (ball.x < ball.r || ball.x > W - ball.r) ball.vx = -ball.vx;
+    if (ball.y < ball.r) ball.vy = -ball.vy;
+    var py = H - 30;
+    if (ball.y + ball.r >= py && ball.y < py + paddle.h && ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
+      // Bounce angle depends on where it hits, so the paddle can aim.
+      var rel = (ball.x - (paddle.x + paddle.w/2)) / (paddle.w/2);
+      var sp = Math.hypot(ball.vx, ball.vy);
+      ball.vx = rel * sp * 0.78; ball.vy = -Math.abs(Math.sqrt(Math.max(sp*sp - ball.vx*ball.vx, 4)));
+    }
+    if (ball.y > H) {
+      lives--; started = false;
+      ball = { x: paddle.x + paddle.w/2, y: H - 60, vx: 4.2, vy: -4.6, r: 8 };
+      if (lives <= 0) { reset(); }
+    }
+    bricks.forEach(function (b) {
+      if (!b.alive) return;
+      if (ball.x > b.x - ball.r && ball.x < b.x + b.w + ball.r && ball.y > b.y - ball.r && ball.y < b.y + b.h + ball.r) {
+        b.alive = false; score += 10; ball.vy = -ball.vy;
+      }
+    });
+    if (!bricks.some(function (b) { return b.alive; })) reset();
+  }
+  function draw() {
+    ctx.fillStyle = '#0d0c12'; ctx.fillRect(0, 0, W, H);
+    bricks.forEach(function (b) { if (b.alive) { ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, b.w, b.h); } });
+    ctx.fillStyle = '#c9bcff'; ctx.fillRect(paddle.x, H - 30, paddle.w, paddle.h);
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+    if (!started) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '600 16px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('Click or press space to launch', W/2, H/2);
+    }
+    setScore('Score ' + score + ' · Lives ' + lives);
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Move with the mouse or arrow keys.');
+}
+
+/* ── Minesweeper ──────────────────────────────────────────────────────────── */
+function mines() {
+  var N = 10, MINES = 14, cells = [], over = false, won = false;
+  var host = document.createElement('div');
+  host.id = 'gmines';
+  host.style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
+  host.style.maxWidth = '460px';
+  document.getElementById('gmount').appendChild(host);
+
+  function reset() {
+    cells = []; over = false; won = false;
+    for (var i = 0; i < N*N; i++) cells.push({ mine:false, open:false, flag:false, n:0 });
+    var placed = 0;
+    while (placed < MINES) {
+      var i2 = Math.floor(Math.random()*N*N);
+      if (!cells[i2].mine) { cells[i2].mine = true; placed++; }
+    }
+    for (var i3 = 0; i3 < N*N; i3++) cells[i3].n = neighbours(i3).filter(function (j) { return cells[j].mine; }).length;
+    draw();
+  }
+  function neighbours(i) {
+    var x = i % N, y = Math.floor(i / N), out = [];
+    for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      var nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < N && ny < N) out.push(ny*N + nx);
+    }
+    return out;
+  }
+  // Opening a blank cell cascades to its blank neighbours.
+  function openCell(i) {
+    var c = cells[i];
+    if (c.open || c.flag || over) return;
+    c.open = true;
+    if (c.mine) { over = true; cells.forEach(function (x) { if (x.mine) x.open = true; }); return; }
+    if (c.n === 0) neighbours(i).forEach(openCell);
+  }
+  function check() {
+    won = cells.every(function (c) { return c.mine || c.open; });
+  }
+  function draw() {
+    var NUM = ['', '#60a5fa', '#4ade80', '#f87171', '#c084fc', '#fb923c', '#2dd4bf', '#fff', '#9ca3af'];
+    host.innerHTML = cells.map(function (c, i) {
+      var bg = c.open ? (c.mine ? '#c0392b' : 'var(--surface-2)') : 'var(--glass-pill-bg)';
+      var txt = c.flag && !c.open ? '🚩' : (c.open ? (c.mine ? '💣' : (c.n || '')) : '');
+      var col = c.open && !c.mine ? NUM[c.n] : '#fff';
+      return '<div class="cell mcell" data-i="' + i + '" style="background:' + bg + ';color:' + col + ';">' + txt + '</div>';
+    }).join('');
+    setScore(over ? 'Boom — Restart to try again'
+                  : (won ? 'Cleared!' : 'Mines ' + (MINES - cells.filter(function (c) { return c.flag; }).length)));
+  }
+  var pressTimer = null, longPressed = false;
+  on(host, 'pointerdown', function (e) {
+    var el = e.target.closest('.mcell'); if (!el) return;
+    longPressed = false;
+    // Long-press flags, since a right click isn't available on a phone.
+    pressTimer = setTimeout(function () {
+      longPressed = true;
+      var c = cells[+el.dataset.i];
+      if (!c.open) { c.flag = !c.flag; draw(); }
+    }, 400);
+  });
+  on(host, 'pointerup', function (e) {
+    clearTimeout(pressTimer);
+    var el = e.target.closest('.mcell'); if (!el || longPressed) return;
+    openCell(+el.dataset.i); check(); draw();
+  });
+  on(host, 'pointerleave', function () { clearTimeout(pressTimer); });
+  on(host, 'contextmenu', function (e) {
+    e.preventDefault();
+    var el = e.target.closest('.mcell'); if (!el) return;
+    var c = cells[+el.dataset.i];
+    if (!c.open) { c.flag = !c.flag; draw(); }
+  });
+  reset();
+  setHint('Click to clear. Right-click or long-press to flag.');
+}
+</script>
+</body>
+</html>
