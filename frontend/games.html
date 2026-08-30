@@ -151,6 +151,10 @@ var GAMES = [
   { id:'td',     name:'Tower Defense',desc:'Build, upgrade, survive waves', icon:'🗼', bg:'linear-gradient(140deg,#3b6ea5,#0f2033)' },
   { id:'stack',  name:'Stacks',      desc:'Clear lines, don\'t top out',     icon:'🟦', bg:'linear-gradient(140deg,#7159c4,#241a45)' },
   { id:'climb',  name:'Sky Climb',   desc:'Bounce up, never look down',     icon:'☁️', bg:'linear-gradient(140deg,#2f8f8f,#0d2a2a)' },
+  { id:'race',   name:'Circuit',     desc:'Three laps, four rivals',        icon:'🏁', bg:'linear-gradient(140deg,#8a8f96,#23262b)' },
+  { id:'hoops',  name:'Hoops',       desc:'Drag to shoot before the buzzer',icon:'🏀', bg:'linear-gradient(140deg,#d4560f,#3a1102)' },
+  { id:'pop',    name:'Bubble Pop',  desc:'Match three, clear the board',   icon:'🫧', bg:'linear-gradient(140deg,#3b6ea5,#101d33)' },
+  { id:'dodge',  name:'Dodge',       desc:'Survive the barrage',            icon:'⚡', bg:'linear-gradient(140deg,#a8322d,#2a0a08)' },
 ];
 function renderGrid() {
   document.getElementById('grid').innerHTML = GAMES.map(function (g) {
@@ -187,7 +191,8 @@ function restart() {
   cleanup.forEach(function (f) { f(); }); cleanup = [];
   document.getElementById('gmount').innerHTML = '';
   ({ pool:pool, t2048:t2048, snake:snake, brick:brick, mines:mines,
-     grid:gridiron, farm:farm, hill:hill, td:towerd, stack:stacks, climb:climb })[active]();
+     grid:gridiron, farm:farm, hill:hill, td:towerd, stack:stacks, climb:climb,
+     race:race, hoops:hoops, pop:pop, dodge:dodge })[active]();
 }
 
 // Canvas sized to its container, backed by devicePixelRatio so it stays sharp.
@@ -1198,6 +1203,352 @@ function climb() {
   }
   (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
   setHint('Left / right arrows, or hold a side of the screen. Bouncing is automatic.');
+}
+
+
+/* ── Circuit — top-down racing ───────────────────────────────────────────────
+   The track is a ring between two radii. Off the tarmac the car loses grip and
+   slows hard, so cutting the corner costs more than it saves. */
+function race() {
+  var W = 720, H = 480, CX = W/2, CY = H/2, RO = 205, RI = 105;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var car, ais, keys = {}, laps, best, t0, lastAng, place;
+
+  function onTrack(x, y) {
+    var d = Math.hypot(x - CX, y - CY);
+    return d < RO && d > RI;
+  }
+  function reset() {
+    car = { x: CX, y: CY - (RO + RI) / 2, a: 0, sp: 0 };
+    ais = [0, 1, 2, 3].map(function (i) {
+      return { ang: -0.16 - i * 0.12, r: (RO + RI) / 2 + (i - 1.5) * 15, sp: 0.0125 + Math.random() * 0.0022, lap: 0 };
+    });
+    laps = 0; best = null; t0 = performance.now(); lastAng = -Math.PI / 2; place = 1;
+  }
+  reset();
+
+  on(document, 'keydown', function (e) { keys[e.key] = true; if (e.key.indexOf('Arrow') === 0) e.preventDefault(); });
+  on(document, 'keyup', function (e) { keys[e.key] = false; });
+  var touch = null;
+  on(g.c, 'pointerdown', function (e) { touch = pos(g.c, e); });
+  on(g.c, 'pointermove', function (e) { if (touch) touch = pos(g.c, e); });
+  on(g.c, 'pointerup', function () { touch = null; });
+
+  function step() {
+    var thr = keys.ArrowUp ? 1 : (keys.ArrowDown ? -1 : 0);
+    var turn = (keys.ArrowLeft ? -1 : 0) + (keys.ArrowRight ? 1 : 0);
+    if (touch) {
+      thr = 1;
+      // Steer toward wherever the finger is.
+      var want = Math.atan2(touch.y - car.y, touch.x - car.x);
+      var diff = ((want - car.a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      turn = Math.max(-1, Math.min(1, diff * 2));
+    }
+    car.sp += thr * 0.17;
+    var grip = onTrack(car.x, car.y);
+    car.sp *= grip ? 0.975 : 0.90;
+    car.sp = Math.max(-2.4, Math.min(grip ? 5.6 : 2.2, car.sp));
+    car.a += turn * 0.052 * Math.min(1, Math.abs(car.sp) / 2);
+    car.x += Math.cos(car.a) * car.sp;
+    car.y += Math.sin(car.a) * car.sp;
+
+    // Lap counting: crossing the start line going the right way.
+    var ang = Math.atan2(car.y - CY, car.x - CX);
+    if (lastAng < -Math.PI/2 && ang >= -Math.PI/2 && Math.abs(ang - lastAng) < 1) {
+      laps++;
+      var lap = (performance.now() - t0) / 1000;
+      if (best === null || lap < best) best = lap;
+      t0 = performance.now();
+      if (laps > 3) reset();
+    }
+    lastAng = ang;
+
+    ais.forEach(function (a) { a.ang += a.sp; if (a.ang > Math.PI * 2) { a.ang -= Math.PI * 2; a.lap++; } });
+    place = 1 + ais.filter(function (a) { return a.lap > laps; }).length;
+  }
+
+  function draw() {
+    ctx.fillStyle = '#12331c'; ctx.fillRect(0, 0, W, H);
+    ctx.beginPath(); ctx.arc(CX, CY, RO, 0, 7); ctx.fillStyle = '#2b2e33'; ctx.fill();
+    ctx.beginPath(); ctx.arc(CX, CY, RI, 0, 7); ctx.fillStyle = '#12331c'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(CX, CY - RO); ctx.lineTo(CX, CY - RI); ctx.stroke();
+
+    ais.forEach(function (a, i) {
+      var x = CX + Math.cos(a.ang) * a.r, y = CY + Math.sin(a.ang) * a.r;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a.ang + Math.PI/2);
+      ctx.fillStyle = ['#3b6ea5','#f2c14e','#2f8f4e','#c084fc'][i];
+      ctx.fillRect(-7, -12, 14, 24); ctx.restore();
+    });
+    ctx.save(); ctx.translate(car.x, car.y); ctx.rotate(car.a + Math.PI/2);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(-8, -14, 16, 28);
+    ctx.fillStyle = '#fff'; ctx.fillRect(-8, -14, 16, 5); ctx.restore();
+
+    setScore('Lap ' + Math.min(laps + 1, 3) + '/3 · P' + place + (best ? ' · best ' + best.toFixed(1) + 's' : ''));
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Arrows to drive, or hold anywhere and steer with your finger. Grass kills your speed.');
+}
+
+/* ── Hoops ──────────────────────────────────────────────────────────────────
+   Drag-and-release shooting. The ball only scores falling through the rim from
+   above, so lobbing it in beats firing it flat. */
+function hoops() {
+  var W = 640, H = 460;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var ball, hoop, score, clock, aim, shooting, streak;
+
+  function reset() {
+    ball = { x: 110, y: H - 70, vx: 0, vy: 0, r: 14 };
+    hoop = { x: 470, y: 190, w: 78, dir: 1, sp: 0.9 };
+    score = 0; clock = 60 * 60; aim = null; shooting = false; streak = 0;
+  }
+  reset();
+
+  on(g.c, 'pointerdown', function (e) { if (shooting) return; aim = pos(g.c, e); });
+  on(g.c, 'pointermove', function (e) { if (aim) aim = pos(g.c, e); });
+  on(g.c, 'pointerup', function () {
+    if (!aim || shooting) return;
+    ball.vx = (ball.x - aim.x) * 0.16;
+    ball.vy = (ball.y - aim.y) * 0.16;
+    shooting = true; aim = null;
+  });
+
+  function step() {
+    clock--;
+    if (clock <= 0) { reset(); return; }
+    hoop.x += hoop.dir * hoop.sp;
+    if (hoop.x > W - 110 || hoop.x < W/2 - 40) hoop.dir *= -1;
+
+    if (shooting) {
+      ball.vy += 0.42;
+      ball.x += ball.vx; ball.y += ball.vy;
+      if (ball.x < ball.r || ball.x > W - ball.r) { ball.vx *= -0.7; ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x)); }
+
+      // Through the rim, moving downward, within the hoop's width.
+      if (ball.vy > 0 && ball.y > hoop.y - 6 && ball.y < hoop.y + 12 &&
+          ball.x > hoop.x - hoop.w/2 && ball.x < hoop.x + hoop.w/2) {
+        streak++; score += 2 + Math.min(streak, 5);
+        shooting = false; ball = { x: 110, y: H - 70, vx: 0, vy: 0, r: 14 };
+      }
+      if (ball.y > H + 60) {
+        streak = 0; shooting = false; ball = { x: 110, y: H - 70, vx: 0, vy: 0, r: 14 };
+      }
+    }
+  }
+
+  function draw() {
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#3a2410'); sky.addColorStop(1, '#140c06');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#6b4a24'; ctx.fillRect(0, H - 40, W, 40);
+
+    ctx.fillStyle = '#e8e4dc'; ctx.fillRect(hoop.x + hoop.w/2, hoop.y - 60, 8, 76);
+    ctx.strokeStyle = '#e07a29'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(hoop.x - hoop.w/2, hoop.y); ctx.lineTo(hoop.x + hoop.w/2, hoop.y); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+    for (var i = 0; i <= 6; i++) {
+      var nx = hoop.x - hoop.w/2 + i * (hoop.w/6);
+      ctx.beginPath(); ctx.moveTo(nx, hoop.y); ctx.lineTo(hoop.x, hoop.y + 28); ctx.stroke();
+    }
+
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.fillStyle = '#e07a29'; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, 7); ctx.stroke();
+
+    if (aim) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(aim.x, aim.y); ctx.stroke();
+      // Dotted preview of the arc it would take.
+      var sx = ball.x, sy = ball.y, vx = (ball.x - aim.x) * 0.16, vy = (ball.y - aim.y) * 0.16;
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      for (var t = 0; t < 34; t++) {
+        vy += 0.42; sx += vx; sy += vy;
+        if (t % 3 === 0) { ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, 7); ctx.fill(); }
+      }
+    }
+    setScore('Score ' + score + (streak > 1 ? ' · ' + streak + ' in a row' : '') + ' · ' + Math.ceil(clock/60) + 's');
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Drag back from the ball and release. Consecutive makes are worth more.');
+}
+
+/* ── Bubble Pop ─────────────────────────────────────────────────────────────
+   Shoot into a hex grid; three or more of a colour clear, then anything left
+   unattached to the ceiling drops. */
+function pop() {
+  var COLS = 12, ROWS = 14, R = 20, W = COLS * R * 2, H = 520;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var CLR = ['#f87171','#60a5fa','#f2c14e','#30d158','#c084fc'];
+  var grid, shot, next, angle, score;
+
+  function cellXY(r, c) {
+    return { x: c * R * 2 + R + (r % 2 ? R : 0), y: r * R * 1.74 + R };
+  }
+  function reset() {
+    grid = [];
+    for (var r = 0; r < ROWS; r++) {
+      grid.push([]);
+      for (var c = 0; c < COLS; c++) {
+        grid[r].push(r < 5 ? Math.floor(Math.random() * CLR.length) : -1);
+      }
+    }
+    shot = null; next = Math.floor(Math.random() * CLR.length); angle = -Math.PI/2; score = 0;
+  }
+  reset();
+
+  on(g.c, 'pointermove', function (e) {
+    var p = pos(g.c, e);
+    angle = Math.atan2(p.y - (H - 30), p.x - W/2);
+    // Never aim below horizontal, or the shot just dies at the floor.
+    if (angle > -0.2) angle = -0.2;
+    if (angle < -Math.PI + 0.2) angle = -Math.PI + 0.2;
+  });
+  on(g.c, 'pointerdown', function (e) {
+    var p = pos(g.c, e);
+    angle = Math.atan2(p.y - (H - 30), p.x - W/2);
+    if (angle > -0.2) angle = -0.2;
+    if (angle < -Math.PI + 0.2) angle = -Math.PI + 0.2;
+    if (!shot) shot = { x: W/2, y: H - 30, vx: Math.cos(angle) * 9, vy: Math.sin(angle) * 9, c: next };
+  });
+
+  function neighbours(r, c) {
+    var odd = r % 2;
+    return [[r,c-1],[r,c+1],[r-1,c-(odd?0:1)],[r-1,c+(odd?1:0)],[r+1,c-(odd?0:1)],[r+1,c+(odd?1:0)]]
+      .filter(function (p) { return p[0] >= 0 && p[0] < ROWS && p[1] >= 0 && p[1] < COLS; });
+  }
+  function cluster(r, c, colour, seen) {
+    seen = seen || {};
+    var key = r + ',' + c;
+    if (seen[key] || grid[r][c] !== colour) return [];
+    seen[key] = 1;
+    var out = [[r, c]];
+    neighbours(r, c).forEach(function (n) { out = out.concat(cluster(n[0], n[1], colour, seen)); });
+    return out;
+  }
+  function dropFloating() {
+    var keep = {}, stack = [];
+    for (var c = 0; c < COLS; c++) if (grid[0][c] >= 0) { keep['0,' + c] = 1; stack.push([0, c]); }
+    while (stack.length) {
+      var p = stack.pop();
+      neighbours(p[0], p[1]).forEach(function (n) {
+        var k = n[0] + ',' + n[1];
+        if (!keep[k] && grid[n[0]][n[1]] >= 0) { keep[k] = 1; stack.push(n); }
+      });
+    }
+    for (var r = 0; r < ROWS; r++) for (var c2 = 0; c2 < COLS; c2++) {
+      if (grid[r][c2] >= 0 && !keep[r + ',' + c2]) { grid[r][c2] = -1; score += 15; }
+    }
+  }
+  function settle() {
+    var bestR = 0, bestC = 0, bd = 1e9;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      if (grid[r][c] >= 0) continue;
+      var p = cellXY(r, c), d = Math.hypot(p.x - shot.x, p.y - shot.y);
+      var touching = r === 0 || neighbours(r, c).some(function (n) { return grid[n[0]][n[1]] >= 0; });
+      if (touching && d < bd) { bd = d; bestR = r; bestC = c; }
+    }
+    grid[bestR][bestC] = shot.c;
+    var group = cluster(bestR, bestC, shot.c);
+    if (group.length >= 3) {
+      group.forEach(function (p) { grid[p[0]][p[1]] = -1; });
+      score += group.length * 10;
+      dropFloating();
+    }
+    shot = null;
+    next = Math.floor(Math.random() * CLR.length);
+  }
+
+  function step() {
+    if (!shot) return;
+    shot.x += shot.vx; shot.y += shot.vy;
+    if (shot.x < R || shot.x > W - R) shot.vx *= -1;
+    if (shot.y < R) return settle();
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      if (grid[r][c] < 0) continue;
+      var p = cellXY(r, c);
+      if (Math.hypot(p.x - shot.x, p.y - shot.y) < R * 1.75) return settle();
+    }
+    if (shot.y > H) shot = null;
+  }
+  function draw() {
+    ctx.fillStyle = '#0d0c12'; ctx.fillRect(0, 0, W, H);
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      if (grid[r][c] < 0) continue;
+      var p = cellXY(r, c);
+      ctx.beginPath(); ctx.arc(p.x, p.y, R - 2, 0, 7); ctx.fillStyle = CLR[grid[r][c]]; ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(W/2, H - 30);
+    ctx.lineTo(W/2 + Math.cos(angle) * 70, H - 30 + Math.sin(angle) * 70); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W/2, H - 30, R - 2, 0, 7); ctx.fillStyle = CLR[next]; ctx.fill();
+    if (shot) { ctx.beginPath(); ctx.arc(shot.x, shot.y, R - 2, 0, 7); ctx.fillStyle = CLR[shot.c]; ctx.fill(); }
+    setScore('Score ' + score);
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Aim with the mouse, click to fire. Three of a colour clears.');
+}
+
+/* ── Dodge ──────────────────────────────────────────────────────────────────
+   Survival. Difficulty scales with how long you've lasted, so it always ends —
+   the score is how long you put that off. */
+function dodge() {
+  var W = 640, H = 480;
+  var g = mkCanvas(W, H), ctx = g.ctx;
+  var me, bolts, t, dead, best = 0;
+
+  function reset() { me = { x: W/2, y: H/2, r: 9 }; bolts = []; t = 0; dead = false; }
+  reset();
+
+  on(g.c, 'pointermove', function (e) { var p = pos(g.c, e); me.x = p.x; me.y = p.y; });
+  var keys = {};
+  on(document, 'keydown', function (e) { keys[e.key] = true; if (e.key.indexOf('Arrow') === 0) e.preventDefault(); });
+  on(document, 'keyup', function (e) { keys[e.key] = false; });
+
+  function spawn() {
+    var side = Math.floor(Math.random() * 4);
+    var x = side === 0 ? -10 : side === 1 ? W + 10 : Math.random() * W;
+    var y = side === 2 ? -10 : side === 3 ? H + 10 : Math.random() * H;
+    var sp = 1.9 + t / 2200;
+    var dx = me.x - x, dy = me.y - y, m = Math.hypot(dx, dy) || 1;
+    bolts.push({ x:x, y:y, vx: dx/m*sp, vy: dy/m*sp, r: 5 + Math.random() * 4 });
+  }
+
+  function step() {
+    if (dead) return;
+    t++;
+    if (keys.ArrowLeft) me.x -= 4.5;
+    if (keys.ArrowRight) me.x += 4.5;
+    if (keys.ArrowUp) me.y -= 4.5;
+    if (keys.ArrowDown) me.y += 4.5;
+    me.x = Math.max(me.r, Math.min(W - me.r, me.x));
+    me.y = Math.max(me.r, Math.min(H - me.r, me.y));
+
+    if (t % Math.max(10, 40 - Math.floor(t / 240)) === 0) spawn();
+    bolts.forEach(function (b) { b.x += b.vx; b.y += b.vy; });
+    bolts = bolts.filter(function (b) { return b.x > -40 && b.x < W + 40 && b.y > -40 && b.y < H + 40; });
+    for (var i = 0; i < bolts.length; i++) {
+      if (Math.hypot(bolts[i].x - me.x, bolts[i].y - me.y) < bolts[i].r + me.r) {
+        dead = true; best = Math.max(best, Math.floor(t / 60));
+      }
+    }
+  }
+  function draw() {
+    ctx.fillStyle = '#12080c'; ctx.fillRect(0, 0, W, H);
+    bolts.forEach(function (b) {
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fillStyle = '#f87171'; ctx.fill();
+    });
+    ctx.beginPath(); ctx.arc(me.x, me.y, me.r, 0, 7); ctx.fillStyle = '#c9bcff'; ctx.fill();
+    if (dead) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 22px system-ui';
+      ctx.fillText('Hit — ' + Math.floor(t/60) + 's', W/2, H/2);
+      ctx.font = '500 14px system-ui'; ctx.fillText('Best ' + best + 's · Restart to go again', W/2, H/2 + 28);
+    }
+    setScore(Math.floor(t/60) + 's' + (best ? ' · best ' + best + 's' : ''));
+  }
+  (function loop() { step(); draw(); raf = requestAnimationFrame(loop); })();
+  setHint('Move with the mouse or arrow keys. It gets faster the longer you last.');
 }
 
 </script>
