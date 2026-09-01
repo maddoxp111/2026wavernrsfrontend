@@ -1,5 +1,5 @@
-// WAVERNRS — App Shell (Liquid Glass layout)
-// Translates the claude.ai/design prototype exactly into vanilla HTML/CSS/JS
+// WAVERNRS — App Shell
+// Sidebar (nav + library) | topbar + content, player docked below.
 (function () {
   'use strict';
 
@@ -37,7 +37,8 @@
   function pageId() {
     var p = location.pathname;
     if (p === '/' || p.endsWith('/index.html')) return 'home';
-    if (p.endsWith('/discover.html')) return 'discover';
+    if (p.endsWith('/discover.html')) return 'browse';
+    if (p.endsWith('/browse.html')) return 'browse';
     if (p.endsWith('/charts.html')) return 'charts';
     if (p.endsWith('/archive.html')) return 'archive';
     if (p.endsWith('/archive-artist.html')) return 'archive';
@@ -75,99 +76,155 @@
     var profileHref = getProfileHref();
     var html = '';
 
-    // Logo
-    html += '<div class="wv-sidebar-logo">wavernrs</div>';
+    html += '<a href="/index.html" class="wv-sidebar-logo"><span class="mark">w</span>wavernrs</a>';
 
-    // Main section
-    html += '<div class="wv-sidebar-label">Main</div>';
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('home', 'Home', '/index.html', 'home');
-    html += navItem('community', 'Community', '/community.html', 'community');
-    html += navItem('discover', 'Discover', '/discover.html', 'discover');
+    html += navItem('browse', 'Browse', '/browse.html', 'discover');
     html += navItem('charts', 'Charts', '/charts.html', 'chart');
     html += navItem('archive', 'Archive', '/archive.html', 'archive');
-    html += navItem('resources', 'Resources', '/resources.html', 'resources');
+    html += navItem('community', 'Community', '/community.html', 'community');
+    html += navItem('resources', 'Tracker', '/resources.html', 'resources');
     html += '</nav>';
 
-    // Personal section
-    html += '<div class="wv-sidebar-label" style="margin-top:12px;">Personal</div>';
+    // Your Library — recent + liked, loaded async into #wv-lib-list
+    html += '<div class="wv-lib">';
+    html += '<div class="wv-lib-head">' +
+      '<a href="/library.html">' + icon('list') + '<span>Your Library</span></a>' +
+      (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload.html\')">' + icon('upload') + '</button>' : '') +
+      '</div>';
+    html += '<div class="wv-lib-chips" id="wv-lib-chips">' +
+      '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
+      '<span class="wv-chip" data-k="comps" onclick="window._libFilter(\'comps\')">Comps</span>' +
+      '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
+      '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
+      '</div>';
+    html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
+    html += '</div>';
+
+    html += '<div style="flex:1;min-height:12px;"></div>';
     html += '<nav class="wv-sidebar-nav">';
-    html += navItem('feed', 'Following', '/feed.html', 'feed');
-    html += navItem('library', 'Library', '/library.html', 'list');
-    html += navItem('playlists', 'Playlists', '/playlists.html', 'list');
-    html += navItem('profile', 'You', profileHref, 'profile');
-    html += '</nav>';
-
-    // Manage section (logged in only)
     if (isLoggedIn) {
-      html += '<div class="wv-sidebar-label" style="margin-top:12px;">Manage</div>';
-      html += '<nav class="wv-sidebar-nav">';
-      html += navItem('upload', 'Upload', '/upload.html', 'upload');
+      html += navItem('feed', 'Following', '/feed.html', 'feed');
+      html += navItem('profile', 'Profile', profileHref, 'profile');
       html += navItem('settings', 'Settings', '/settings.html', 'settings');
-      if (isLoggedIn && sessionStorage.getItem('wv_is_mod') === 'true') {
-        html += navItem('modpanel', 'Mod Panel', '/modpanel.html', 'shield');
-      }
-      if (isLoggedIn && sessionStorage.getItem('wv_is_archiver') === 'true') {
-        html += navItem('archivepanel', 'Archive Panel', '/archivepanel.html', 'archive');
-      }
-      html += '</nav>';
+      if (sessionStorage.getItem('wv_is_mod') === 'true') html += navItem('modpanel', 'Mod Panel', '/modpanel.html', 'shield');
+      if (sessionStorage.getItem('wv_is_archiver') === 'true') html += navItem('archivepanel', 'Archive Panel', '/archivepanel.html', 'archive');
     }
-
-    // Footer spacer + About + Discord
-    html += '<div style="flex:1;min-height:16px;"></div>';
-    html += '<nav class="wv-sidebar-nav">';
     html += navItem('about', 'About', '/about.html', 'info');
-    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
+    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
     html += '</nav>';
 
     return html;
   }
 
+  // ── Sidebar library ──────────────────────────────────────────
+  // Recent comes from the player's localStorage log so it works logged
+  // out; comps/edits/playlists come from /api/library when signed in.
+  var _libData = null;
+  var _libKind = 'recent';
+  function _escL(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function _libRecent() {
+    try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (e) { return []; }
+  }
+  function _libRow(it) {
+    var isAlbum = it._type === 'album';
+    var href = it.href || (isAlbum ? '/album.html?id=' + it.id : it._type === 'playlist' ? '/playlist.html?id=' + it.id : '/track.html?id=' + it.id);
+    var sub = it.sub || (isAlbum ? 'Comp' : it._type === 'playlist' ? 'Playlist' : 'Edit') + (it.artist_name ? ' · ' + it.artist_name : '');
+    var art = it.cover_url
+      ? '<img src="' + _escL(it.cover_url) + '" loading="lazy" onerror="this.remove()">'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 18V5l12-2v13M9 9l12-2"/></svg>';
+    return '<div class="wv-lib-row" onclick="navigate(\'' + _escL(href) + '\')">' +
+      '<div class="wv-lib-art' + (it._type === 'playlist' ? '' : '') + '" style="' + (it.cover_url ? '' : 'background:' + (typeof coverGradient === 'function' ? coverGradient(it.title || '') : 'var(--surface-2)')) + '">' + art + '</div>' +
+      '<div class="wv-lib-meta"><div class="wv-lib-t">' + _escL(it.title || 'Untitled') + '</div><div class="wv-lib-s">' + _escL(sub) + '</div></div>' +
+      '</div>';
+  }
+  function _renderLib() {
+    document.querySelectorAll('#wv-lib-list').forEach(function(list) {
+      var items = [];
+      var loggedIn = !!localStorage.getItem('token');
+      if (_libKind === 'recent') {
+        items = _libRecent().filter(function(t) { return t.id; }).slice(0, 30);
+        if (!items.length) {
+          list.innerHTML = '<div class="wv-lib-empty"><b>Nothing played yet</b><p>Play a comp or edit and it shows up here.</p>' +
+            '<a class="btn btn-secondary btn-sm" href="/browse.html" onclick="navigate(\'/browse.html\');return false;">Browse</a></div>';
+          return;
+        }
+      } else {
+        if (!loggedIn) {
+          list.innerHTML = '<div class="wv-lib-empty"><b>Sign in to see your library</b><p>Liked comps, edits and playlists live here.</p>' +
+            '<a class="btn btn-primary btn-sm" href="/login.html">Log in</a></div>';
+          return;
+        }
+        if (!_libData) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">Loading…</div>'; return; }
+        if (_libKind === 'comps') items = (_libData.albums || []).map(function(a) { return { _type: 'album', id: a.id, title: a.title, cover_url: a.cover_url, artist_name: a.is_archive ? a.archive_artist_name : (a.artists && a.artists.display_name) }; });
+        if (_libKind === 'edits') items = (_libData.tracks || []).map(function(t) { return { _type: 'track', id: t.id, title: t.title, cover_url: t.cover_url, artist_name: t.artists && t.artists.display_name }; });
+        if (_libKind === 'playlists') items = (_libData.playlists || []).map(function(p) { return { _type: 'playlist', id: p.id, title: p.title, sub: 'Playlist · ' + (p.track_count || 0) + ' tracks' }; });
+        if (!items.length) {
+          var what = _libKind === 'playlists' ? 'playlists' : 'liked ' + _libKind;
+          list.innerHTML = '<div class="wv-lib-empty"><b>No ' + what + ' yet</b><p>' + (_libKind === 'playlists' ? 'Create one from any edit\'s menu.' : 'Tap the heart on anything and it lands here.') + '</p></div>';
+          return;
+        }
+      }
+      list.innerHTML = items.slice(0, 40).map(_libRow).join('');
+    });
+    document.querySelectorAll('#wv-lib-chips .wv-chip').forEach(function(c) { c.classList.toggle('acc', c.dataset.k === _libKind); });
+  }
+  window._libFilter = function(kind) {
+    _libKind = kind;
+    _renderLib();
+    if (kind !== 'recent' && !_libData && localStorage.getItem('token')) _loadLibData();
+  };
+  function _loadLibData() {
+    var token = localStorage.getItem('token');
+    if (!token) return;
+    fetch((typeof API_BASE !== 'undefined' ? API_BASE : '/api') + '/library', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d) { _libData = d; _renderLib(); } })
+      .catch(function() {});
+  }
+  window.refreshSidebarLibrary = function() { _libData = null; _renderLib(); if (_libKind !== 'recent') _loadLibData(); };
+  // The player appends to recently_played; re-render when it does.
+  window.addEventListener('storage', function(e) { if (e.key === 'recently_played') _renderLib(); });
+  window._sidebarLibRender = _renderLib;
+
   // ── Topbar HTML ───────────────────────────────────────────────
   function buildTopbarHTML() {
-    var theme = 'dark';
     var user = null;
     try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
     var isLoggedIn = !!localStorage.getItem('token');
 
-    // Mobile hamburger + search (hidden on desktop via CSS, shown on mobile)
     var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
-    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search.html\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += '<div class="wv-topbar-nav">' +
+      '<button onclick="history.back()" aria-label="Back" title="Back">‹</button>' +
+      '<button onclick="history.forward()" aria-label="Forward" title="Forward">›</button>' +
+      '</div>';
 
-    // Left: logo (hidden on mobile, shown by mobile CSS with flex-1 center)
-    html += '<a href="/index.html" class="wv-topbar-logo">wavernrs</a>';
-
-    // Mobile center logo (shown only on mobile)
     html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
 
-    // Center: search
     html += '<div class="wv-topbar-search">' +
       '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
       icon('search') +
-      '<input id="wv-search-inp" placeholder="Search" style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;" ' +
+      '<input id="wv-search-inp" placeholder="What do you want to play?" autocomplete="off" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;padding:0;" ' +
       'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q)navSearch(q);}">' +
       '</div></div>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search.html\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
 
-    // Right
     html += '<div class="wv-topbar-right">';
-
     if (isLoggedIn && user) {
-      // Bell
+      html += '<a href="/upload.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload.html\');return false;">Upload</a>';
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
-              '<span id="wv-notif-dot" style="position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--pink);display:none;"></span>' +
+              '<span id="wv-notif-dot" style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--brand);display:none;"></span>' +
               '</button>';
-      // More (opens dropdown)
       html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
-      // Avatar
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
       html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
-      html += '<a href="/login.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;">Log in</a>';
-      html += '<a href="/register.html" class="wv-pill" style="padding:6px 14px;font-size:12.5px;background:var(--avatar-bg);color:var(--page-bg-base);border-color:var(--avatar-bg);">Sign up</a>';
+      html += '<a href="/register.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
+      html += '<a href="/login.html" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
-
-    html += '</div>'; // topbar-right
+    html += '</div>';
     return html;
   }
 
@@ -182,9 +239,9 @@
     var cur = pageId();
     var tabs = [
       { id: 'home', label: 'Home', href: '/index.html', ic: 'home' },
-      { id: 'community', label: 'Community', href: '/community.html', ic: 'community' },
-      { id: 'discover', label: 'Discover', href: '/discover.html', ic: 'discover' },
-      { id: 'profile', label: 'You', href: '/dashboard.html', ic: 'profile' },
+      { id: 'browse', label: 'Browse', href: '/browse.html', ic: 'discover' },
+      { id: 'search', label: 'Search', href: '/search.html', ic: 'search' },
+      { id: 'library', label: 'Library', href: '/library.html', ic: 'list' },
     ];
     return tabs.map(function(t) {
       var active = cur === t.id ? ' active' : '';
@@ -216,12 +273,14 @@
 
     var menu = document.createElement('div');
     menu.id = 'wv-more-menu';
-    menu.className = 'lg-medium';
+    menu.className = '';
     menu.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:14px;padding:6px 0;min-width:170px;z-index:9999;font-size:13px;';
 
+    var isLight = document.body.classList.contains('theme-light');
     var items = [
       ['Profile', function() { navigate('/dashboard.html'); }],
       ['Settings', function() { navigate('/settings.html'); }],
+      [isLight ? 'Dark mode' : 'Light mode', function() { window.setTheme(isLight ? 'dark' : 'light'); }],
       ['Sign out', function() { logout(); }],
     ];
     items.forEach(function(item) {
@@ -364,7 +423,7 @@
 
     var panel = document.createElement('div');
     panel.id = 'wv-notif-panel';
-    panel.className = 'lg-medium';
+    panel.className = '';
     panel.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:16px;width:340px;max-height:480px;z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
 
     panel.innerHTML =
@@ -423,26 +482,42 @@
   // Spotify/Apple-Music look the home hero uses. Pass a falsy url to clear it
   // back to the default gradient. Used by artist/album/charts/you/discover/
   // upload pages so each page's background reflects its content.
-  window.setPageBgImage = function(url) {
-    var bg = document.getElementById('wv-page-bg');
-    if (!bg) return;
-    if (url) {
-      // The cover wallpaper is the ground the whole design sits on: every
-      // pane above it is translucent, so this tint is what ties the app
-      // together. Scale slightly past the frame so the blur has no edge
-      // falloff, and keep it dark enough that glass stays legible.
-      // Hand the art to CSS as a custom property rather than styling here,
-      // so the blur/brightness treatment can differ per theme — a wallpaper
-      // dimmed for dark mode is unusable under light mode's pale glass.
-      bg.style.setProperty('--wv-art', 'url("' + String(url).replace(/"/g, '%22') + '")');
-      bg.classList.add('has-art');
+  // The page wash: sample the artwork's dominant hue and paint the top of
+  // the content column with it. No image is ever drawn as a background.
+  var _washGen = 0;
+  function _applyWash(c) {
+    var root = document.getElementById('wv-root');
+    if (!root) return;
+    var light = document.body.classList.contains('theme-light');
+    var val = c
+      ? (light ? 'hsl(' + c.h1 + ', ' + Math.min(60, c.s1) + '%, 84%)'
+               : 'hsl(' + c.h1 + ', ' + Math.min(55, c.s1) + '%, 24%)')
+      : '';
+    if (val) root.style.setProperty('--wv-wash', val); else root.style.removeProperty('--wv-wash');
+  }
+  window.setPageBgImage = function(url, seed) {
+    var gen = ++_washGen;
+    if (!url) { _applyWash(seed ? coverHues(seed) : null); return; }
+    if (typeof extractCoverHues === 'function') {
+      extractCoverHues(url, seed || url, function(colors) { if (gen === _washGen) _applyWash(colors); });
     } else {
-      bg.style.removeProperty('--wv-art');
-      bg.classList.remove('has-art');
+      _applyWash(typeof coverHues === 'function' ? coverHues(seed || url) : null);
     }
   };
+  // Theme: persisted, applied to body + app root without a reload.
+  window.setTheme = function(t) {
+    t = t === 'light' ? 'light' : 'dark';
+    localStorage.setItem('wv_theme', t);
+    [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
+      if (!el) return;
+      el.classList.remove('theme-light', 'theme-dark');
+      el.classList.add('theme-' + t);
+    });
+    document.querySelectorAll('input[name="wv-theme"]').forEach(function(r) { r.checked = r.value === t; });
+  };
+  window.getTheme = function() { return localStorage.getItem('wv_theme') === 'light' ? 'light' : 'dark'; };
+  window.setPageWash = function(seed) { _washGen++; _applyWash(seed ? coverHues(seed) : null); };
 
-  // ── Build and inject the shell ────────────────────────────────
   function initShell() {
     // Inject favicon once
     if (!document.querySelector('link[rel="icon"]')) {
@@ -458,7 +533,7 @@
       document.head.appendChild(man);
     }
 
-    var theme = 'dark';
+    var theme = localStorage.getItem('wv_theme') === 'light' ? 'light' : 'dark';
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
 
@@ -494,9 +569,8 @@
       // Mobile-only elements (hidden on desktop via CSS)
       '<nav id="wv-mobile-tabs" class="wv-mobile-tabs">' + buildMobileTabsHTML() + '</nav>' +
       '<div id="wv-drawer-overlay" class="wv-drawer-overlay" onclick="window.closeMobileDrawer()"></div>' +
-      '<aside id="wv-drawer" class="wv-drawer lg-large">' +
+      '<aside id="wv-drawer" class="wv-drawer">' +
         buildSidebarHTML() +
-        '<button onclick="window.closeMobileDrawer()" class="wv-icon-circle" style="position:absolute;top:14px;right:-18px;">×</button>' +
       '</aside>';
 
     // Also apply theme class to body so anything appended outside #wv-root
@@ -525,6 +599,8 @@
     };
     checkMobile();
     mq.addListener(checkMobile);
+    _renderLib();
+    if (localStorage.getItem('token')) _loadLibData();
 
     // Close drawer when clicking links inside it
     root.querySelectorAll('#wv-drawer .wv-nav-item, #wv-mobile-tabs .wv-tab-btn').forEach(function(el) {
@@ -631,6 +707,7 @@
     if (drawer) drawer.innerHTML = buildSidebarHTML();
     var tabs = document.getElementById('wv-mobile-tabs');
     if (tabs) tabs.innerHTML = buildMobileTabsHTML();
+    _renderLib();
   };
 
   // ── Site banners ──────────────────────────────────────────────
@@ -682,6 +759,7 @@
         if (sidebar) sidebar.innerHTML = buildSidebarHTML();
         var drawer = document.getElementById('wv-drawer');
         if (drawer) drawer.innerHTML = buildSidebarHTML();
+        _renderLib();
       }
     });
   })();

@@ -527,8 +527,9 @@ function playTrack(track) {
     history = history.filter(h => h.id !== track.id);
   }
   history.unshift(historyEntry);
-  if (history.length > 8) history = history.slice(0, 8);
+  if (history.length > 30) history = history.slice(0, 30);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
 
   // Cancel any pending restore-position listener so it doesn't seek this
   // new track to the previous session's position.

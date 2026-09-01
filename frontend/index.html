@@ -8,7 +8,18 @@
 </head>
 <body>
 <div id="view">
-  <div class="loading"><div class="spinner"></div></div>
+  <div class="wv-home-chips"><span class="wv-skel" style="width:60px;height:32px;border-radius:999px;"></span><span class="wv-skel" style="width:80px;height:32px;border-radius:999px;"></span><span class="wv-skel" style="width:70px;height:32px;border-radius:999px;"></span></div>
+  <div class="wv-quick-grid">
+    <div class="wv-skel" style="height:56px;"></div><div class="wv-skel" style="height:56px;"></div><div class="wv-skel" style="height:56px;"></div><div class="wv-skel" style="height:56px;"></div>
+  </div>
+  <div class="wv-sec-head"><span class="wv-skel" style="width:180px;height:24px;"></span></div>
+  <div class="wv-rail">
+    <div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>
+  </div>
 </div>
 
 <script src="/js/api.js"></script>
@@ -19,369 +30,166 @@
 <script>
 initPlayer();
 
-var _heroItems = [];
-var _heroIdx = 0;
-var _heroTimer = null;
-var _heroGen = 0; // incremented each render to discard stale extractCoverHues callbacks
-var _trendingGlobal = [];
-var _newReleasesGlobal = [];
-var _chartsTab = 'alltime';
-var _chartsDataCache = null;
+// ── State ──────────────────────────────────────────────────────
+var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [] };
+var _homeFilter = 'all';      // all | comps | edits
 var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
+var _allItems = {};           // id -> item, for play buttons
 
+function _greeting() {
+  var h = new Date().getHours();
+  return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+}
+function _recentPlayed() {
+  try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (e) { return []; }
+}
+function _filterItems(items) {
+  if (_homeFilter === 'comps') return items.filter(function(i) { return i._type === 'album'; });
+  if (_homeFilter === 'edits') return items.filter(function(i) { return i._type !== 'album'; });
+  return items;
+}
+
+// ── Load ───────────────────────────────────────────────────────
 async function loadHome() {
   try {
-    var results = await Promise.all([
+    var r = await Promise.all([
       api('/discover'),
       api('/discover/trending').catch(function() { return []; }),
-      api('/charts').catch(function() { return { alltime: [], weekly: [] }; }),
-      getBadgeData().catch(function() { return { verified_artists: [], highlighted_albums: [], exclusive_albums: [] }; }),
+      api('/discover/highlighted').catch(function() { return []; }),
+      api('/charts').catch(function() { return null; }),
+      api('/archive?limit=12').catch(function() { return null; }),
+      getBadgeData().catch(function() { return null; }),
     ]);
-    var discoverData = results[0];
-    var trendingData = results[1];
-    var chartsData = results[2];
-    _badges = results[3] || _badges;
-
-    var recent = discoverData.recent || [];
-    _trendingGlobal = Array.isArray(trendingData) ? trendingData : [];
-    _newReleasesGlobal = recent;
-    _chartsDataCache = chartsData;
-
-    // Hero items: albums first, then supplement with trending to get a good pool
-    var heroAlbums = recent.filter(function(i) { return i._type === 'album'; });
-    var heroPool = heroAlbums.slice(0, 8);
-    if (heroPool.length < 4) {
-      var extra = _trendingGlobal.filter(function(i) {
-        return !heroPool.find(function(h) { return h.id === i.id; });
-      });
-      heroPool = heroPool.concat(extra).slice(0, 8);
-    }
-    if (!heroPool.length) heroPool = recent.slice(0, 8);
-    // Shuffle pool so the featured release is random every page load
-    heroPool = heroPool.slice().sort(function() { return Math.random() - 0.5; });
-    _heroItems = heroPool;
-    _heroIdx = 0;
-
-    // Start auto-rotate every 15s (always, even if only 1 item — wraps around)
-    if (_heroTimer) clearInterval(_heroTimer);
-    _heroTimer = setInterval(function() { heroNav(1); }, 15000);
-    window._pageCleanup.push(function() {
-      clearInterval(_heroTimer); _heroTimer = null;
-      var bg = document.getElementById('wv-page-bg');
-      if (bg) { bg.style.backgroundImage = ''; bg.style.filter = ''; }
-    });
-
-    var view = document.getElementById('view');
-    view.innerHTML =
-      '<div class="wv-home-layout">' +
-        '<div class="wv-home-left" id="home-left"></div>' +
-        '<div class="wv-home-right">' +
-          '<div class="wv-card wv-charts-rail" id="charts-rail"></div>' +
-        '</div>' +
-      '</div>';
-
-    renderHero();
-    renderHomeSections();
-    renderChartsRail();
-  } catch(err) {
+    _home.recent = (r[0] && r[0].recent) || [];
+    _home.trending = Array.isArray(r[1]) ? r[1] : [];
+    _home.highlighted = Array.isArray(r[2]) ? r[2] : [];
+    _home.charts = r[3];
+    _home.archive = r[4] ? (Array.isArray(r[4]) ? r[4] : (r[4].items || [])) : [];
+    _badges = r[5] || _badges;
+    [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
+    renderHome();
+  } catch (err) {
     document.getElementById('view').innerHTML = '<div class="wv-empty">Failed to load: ' + escHtml(String(err.message)) + '</div>';
   }
 }
 
-function renderHero() {
-  var left = document.getElementById('home-left');
-  if (!left || !_heroItems.length) return;
+// ── Render ─────────────────────────────────────────────────────
+function renderHome() {
+  var view = document.getElementById('view');
+  var recent = _recentPlayed().filter(function(t) { return t.id; });
+  var user = null; try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch (e) {}
 
-  var item = _heroItems[_heroIdx];
-  var isAlbum = item._type === 'album';
-  var seed = item.title || '';
-  var artistName = item.artists ? item.artists.display_name : 'Unknown';
-  var eraName = item.era_tag ? item.era_tag.name : (item.genre || '');
-  var trackCount = item.track_count || '';
+  // Wash from what you played last, else the newest comp.
+  var washFrom = (recent[0] && recent[0].cover_url) || ((_home.recent.find(function(i) { return i.cover_url; }) || {}).cover_url) || '';
+  if (typeof window.setPageBgImage === 'function') window.setPageBgImage(washFrom, washFrom || 'wavernrs');
 
-  var tags = [];
-  if (eraName) tags.push(escHtml(eraName));
-  if (trackCount) tags.push(trackCount + ' edits');
-  var tagsHtml = tags.map(function(t) { return '<span class="wv-tag-chip">' + t + '</span>'; }).join('');
-
-  // Always show nav arrows
-  var navHtml = '<div style="display:flex;gap:6px;">' +
-    '<button class="wv-icon-circle" onclick="heroNav(-1)" aria-label="Previous" style="font-size:20px;padding-bottom:1px;">‹</button>' +
-    '<button class="wv-icon-circle" onclick="heroNav(1)" aria-label="Next" style="font-size:20px;padding-bottom:1px;">›</button>' +
+  var html = '';
+  html += '<h1 class="wv-page-title" style="margin-bottom:12px;">' + _greeting() + (user && user.username ? ', ' + escHtml(user.display_name || user.username) : '') + '</h1>';
+  html += '<div class="wv-home-chips">' +
+    chip('all', 'All') + chip('comps', 'Comps') + chip('edits', 'Edits') +
+    '<span class="wv-chip" onclick="navigate(\'/archive.html\')">Archive</span>' +
     '</div>';
 
-  var clickAction = isAlbum
-    ? "navigate('/album.html?id=" + item.id + "')"
-    : "navigate('/track.html?id=" + item.id + "')";
-
-  var coverBg = coverGradient(seed);
-  var myGen = ++_heroGen;
-
-  // Route through the shared helper rather than styling #wv-page-bg here.
-  // Setting background-image and filter inline overrode the themed treatment
-  // in CSS, so the home page — the one screen everyone sees first — was the
-  // only page not using the wallpaper system.
-  if (typeof window.setPageBgImage === 'function') {
-    window.setPageBgImage(item.cover_url || '');
-  }
-
-  var heroHtml =
-    '<div id="hero-card" class="wv-hero">' +
-      '<div class="wv-hero-art" onclick="' + clickAction + '" style="cursor:pointer;background:' + coverBg + ';">' +
-        (isAlbum ? '<div style="position:absolute;top:9px;left:9px;z-index:2;padding:2px 8px;background:rgba(255,255,255,0.22);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-        (item.cover_url ? '<img id="hero-cover-img-' + myGen + '" src="' + escHtml(item.cover_url) + '" style="opacity:0;transition:opacity .25s;" onerror="this.style.opacity=0">' : '') +
-      '</div>' +
-      '<div class="wv-hero-body">' +
-        '<div class="wv-kind">' + (isAlbum ? 'Featured comp' : 'Featured edit') + '</div>' +
-        '<div class="wv-hero-title">' + escHtml(item.title) + '</div>' +
-        '<div class="wv-hero-sub">' +
-          (item.artists && item.artists.id
-            ? '<a onclick="event.stopPropagation();navigate(\'/artist.html?id=' + item.artists.id + '\')" style="cursor:pointer;">' + escHtml(artistName) + '</a>'
-            : '<b>' + escHtml(artistName) + '</b>') +
-          (tags.length ? ' · ' + tags.join(' · ') : '') +
+  // Jump back in — dense 2×4 tile grid, first screen
+  if (recent.length) {
+    html += '<div class="wv-quick-grid">' + recent.slice(0, 8).map(function(t, i) {
+      var href = t._type === 'album' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+      return '<div class="wv-quick-item" onclick="navigate(\'' + href + '\')">' +
+        '<div class="wv-quick-cover" style="background:' + coverGradient(t.title || '') + ';">' +
+          (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') +
         '</div>' +
-        '<div class="wv-hero-actions">' +
-          '<button class="wv-btn-play" onclick="heroPlay()">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play</button>' +
-          '<button class="wv-btn-ghost" onclick="heroPlay()">Shuffle</button>' +
-          '<button class="wv-icon-btn" title="Like">' +
-            '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.7 4.3 13a4.9 4.9 0 0 1 7-6.9l.7.7.7-.7a4.9 4.9 0 0 1 7 6.9Z"/></svg></button>' +
-          '<button class="wv-icon-btn" onclick="heroMore(event)" title="More">' +
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5.6" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18.4" cy="12" r="1.9"/></svg></button>' +
-          '<div style="flex:1"></div>' +
-          '<button class="wv-icon-btn" onclick="heroNav(-1)" aria-label="Previous">‹</button>' +
-          '<button class="wv-icon-btn" onclick="heroNav(1)" aria-label="Next">›</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-
-  // Replace hero in left column (keep sections below)
-  var existing = document.getElementById('hero-card');
-  if (existing) {
-    existing.outerHTML = heroHtml;
-  } else {
-    left.insertAdjacentHTML('afterbegin', heroHtml);
-  }
-
-  // Fade in the visible cover once it loads
-  if (item.cover_url) {
-    var heroImg = document.getElementById('hero-cover-img-' + myGen);
-    if (heroImg) {
-      var _fadeIn = function() { if (myGen === _heroGen) this.style.opacity = '1'; };
-      heroImg.onload = _fadeIn;
-      if (heroImg.complete && heroImg.naturalWidth > 0) _fadeIn.call(heroImg);
-    }
-  }
-}
-
-function heroNav(dir) {
-  _heroIdx = (_heroIdx + dir + _heroItems.length) % _heroItems.length;
-  renderHero();
-}
-
-function heroPlay() {
-  var item = _heroItems[_heroIdx];
-  if (!item) return;
-  if (item._type === 'album') navigate('/album.html?id=' + item.id);
-  else playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
-}
-
-function heroMore(e) {
-  var item = _heroItems[_heroIdx];
-  if (!item || item._type === 'album') return;
-  if (typeof openAddToPlaylist === 'function') {
-    openAddToPlaylist({ id: item.id, title: item.title, ia_url: item.ia_url, cover_url: item.cover_url, artist_name: item.artists ? item.artists.display_name : '' });
-  }
-}
-
-var _recentPlayed = [];
-
-function navigateRecent(idx) {
-  var t = _recentPlayed[idx];
-  if (!t) return;
-  navigate(t._type === 'album' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id);
-}
-
-function playRecent(idx) {
-  var t = _recentPlayed[idx];
-  if (!t) return;
-  if (t._type === 'album') {
-    navigate('/album.html?id=' + t.id);
-  } else {
-    playTrack({ id: t.id, title: t.title, artist_name: t.artist_name || '', ia_url: t.ia_url, cover_url: t.cover_url || '' });
-  }
-}
-
-function renderRecentlyPlayed() {
-  var left = document.getElementById('home-left');
-  if (!left) return;
-  var existing = document.getElementById('home-recent');
-  if (existing) existing.remove();
-
-  try { _recentPlayed = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch(e) { _recentPlayed = []; }
-  // Filter out tracker tracks (no id) and unplayable track entries (no ia_url)
-  _recentPlayed = _recentPlayed.filter(function(t) {
-    return t.id && (t._type === 'album' || t.ia_url);
-  });
-  if (!_recentPlayed.length) return;
-
-  var el = document.createElement('div');
-  el.id = 'home-recent';
-  el.className = 'home-section';
-  el.innerHTML = '<div class="wv-sec-head"><h2 class="wv-sec-title">Continue Listening</h2>' +
-      '<button class="wv-see-all" onclick="navigate(\'/library.html\')">See all</button></div>' +
-    '<div class="wv-rail">' +
-    _recentPlayed.slice(0, 20).map(function(t, i) {
-      var coverBg = (typeof coverGradient === 'function') ? coverGradient(t.title || '') : '#1a1a2e';
-      var isAlbum = t._type === 'album';
-      return '<div class="wv-comp-card" onclick="navigateRecent(' + i + ')">' +
-        '<div class="wv-comp-card-cover">' +
-          '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-            '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
-            (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-            (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
-            '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playRecent(' + i + ')">' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-            '</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="wv-comp-card-title">' + escHtml(t.title || '') + '</div>' +
-        '<div class="wv-comp-card-artist">' + escHtml(t.artist_name || '') + '</div>' +
+        '<div class="wv-quick-title">' + escHtml(t.title || '') + '</div>' +
       '</div>';
     }).join('') + '</div>';
-
-  // Insert before first .home-section so it appears at top of left column (below hero)
-  var firstSection = left.querySelector('.home-section');
-  if (firstSection) left.insertBefore(el, firstSection);
-  else left.appendChild(el);
-}
-
-function renderHomeSections() {
-  var left = document.getElementById('home-left');
-  if (!left) return;
-  left.querySelectorAll('.home-section').forEach(function(el) { el.remove(); });
-
-  renderRecentlyPlayed();
-
-  function railSection(title, items, href) {
-    if (!items || !items.length) return;
-    var el = document.createElement('div');
-    el.className = 'home-section';
-    el.innerHTML =
-      '<div class="wv-sec-head"><h2 class="wv-sec-title">' + escHtml(title) + '</h2>' +
-        (href ? '<button class="wv-see-all" onclick="navigate(\'' + href + '\')">See all</button>' : '') +
-      '</div>' +
-      '<div class="wv-rail">' + items.slice(0, 20).map(compCardHTML).join('') + '</div>';
-    left.appendChild(el);
   }
 
-  railSection('Trending', _trendingGlobal, '/charts.html');
-  railSection('New Releases', _newReleasesGlobal, '/discover.html');
+  var newComps = _home.recent.filter(function(i) { return i._type === 'album'; });
+  var newEdits = _home.recent.filter(function(i) { return i._type !== 'album'; });
+
+  html += rail('Made for you', _filterItems(_home.highlighted), '/browse.html?tab=highlighted');
+  html += rail('Trending now', _filterItems(_home.trending), '/charts.html');
+  if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse.html?tab=recent');
+  if (_homeFilter !== 'comps') html += rail('New edits', newEdits, '/browse.html?tab=recent');
+  html += chartsBlock();
+  html += rail('From the archive', _home.archive.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive.html');
+  html += rail('Recently played', recent.slice(0, 20).map(function(t) {
+    return { id: t.id, _type: t._type, title: t.title, cover_url: t.cover_url, ia_url: t.ia_url, artists: { display_name: t.artist_name } };
+  }), '/library.html');
+
+  view.innerHTML = html;
 }
 
-function compCardHTML(item) {
-  var seed = item.title || '';
-  var isAlbum = item._type === 'album';
-  var artist = item.artists ? item.artists.display_name : 'Unknown';
-  var artistId = item.artists ? item.artists.id : null;
-  var action = isAlbum
-    ? "navigate('/album.html?id=" + item.id + "')"
-    : "navigate('/track.html?id=" + item.id + "')";
-  var coverBg = coverGradient(seed);
+function chip(k, label) {
+  return '<span class="wv-chip' + (_homeFilter === k ? ' acc' : '') + '" onclick="setHomeFilter(\'' + k + '\')">' + label + '</span>';
+}
+window.setHomeFilter = function(k) { _homeFilter = k; renderHome(); };
 
-  var b = _badges || { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
-  var isVerified = artistId && b.verified_artists.indexOf(artistId) !== -1;
-  var isHighlighted = isAlbum ? b.highlighted_albums.indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
-  var isExclusive   = isAlbum ? b.exclusive_albums.indexOf(item.id)   !== -1 : (b.exclusive_tracks   || []).indexOf(item.id) !== -1;
-
-  var titleBadges = '';
-  if (isHighlighted) titleBadges += '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>';
-  if (isExclusive)   titleBadges += '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>';
-  var artistBadge = isVerified ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '';
-
-  return '<div class="wv-comp-card" onclick="' + action + '">' +
-    '<div class="wv-comp-card-cover">' +
-      '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
-        (isAlbum ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>' : '') +
-        (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
-        '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playItem(\'' + item.id + '\',\'' + (item._type||'track') + '\')">' +
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-        '</button>' +
-      '</div>' +
-    '</div>' +
-    '<div class="wv-comp-card-title" style="display:flex;align-items:center;gap:2px;">' + escHtml(item.title) + titleBadges + '</div>' +
-    '<div class="wv-comp-card-artist" style="display:flex;align-items:center;">' + escHtml(artist) + artistBadge + '</div>' +
+function rail(title, items, href) {
+  if (!items || !items.length) return '';
+  return '<div class="home-section">' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'' + href + '\')">' + escHtml(title) + '</h2>' +
+      '<button class="wv-see-all" onclick="navigate(\'' + href + '\')">Show all</button></div>' +
+    '<div class="wv-rail">' + items.slice(0, 20).map(compCardHTML).join('') + '</div>' +
   '</div>';
 }
 
-function playItem(id, type) {
-  if (type === 'album') { navigate('/album.html?id=' + id); return; }
-  var all = _heroItems.concat(_trendingGlobal, _newReleasesGlobal);
-  var item = all.find(function(i) { return i.id === id; });
-  if (item) playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
-  else navigate('/track.html?id=' + id);
+function compCardHTML(item) {
+  var isAlbum = item._type === 'album';
+  var artist = item._archive ? (item.archive_artist_name || item.artist_name || 'Archive')
+             : (item.artists ? (item.artists.display_name || '') : (item.artist_name || 'Unknown'));
+  var artistId = item.artists ? item.artists.id : null;
+  var href = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
+  var b = _badges || {};
+  var isVerified = artistId && (b.verified_artists || []).indexOf(artistId) !== -1;
+  var isHighlighted = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
+  var isExclusive   = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1   : (b.exclusive_tracks || []).indexOf(item.id) !== -1;
+  var badges = (isHighlighted ? '<span class="wv-badge-hl-icon" title="Highlighted">★</span>' : '') +
+               (isExclusive ? '<span class="wv-badge-ex-icon" title="Exclusive">◆</span>' : '');
+  var sub = (isAlbum ? 'Comp' : 'Edit') + ' · ' + escHtml(artist) + (isVerified ? '<span class="wv-verified-icon" title="Verified">✓</span>' : '');
+  _allItems[item.id] = _allItems[item.id] || item;
+  return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
+    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';">' +
+      (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') +
+      '<button class="wv-cover-play-btn" aria-label="Play" onclick="event.stopPropagation();playItem(\'' + item.id + '\')">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg></button>' +
+    '</div></div>' +
+    '<div class="wv-comp-card-title">' + escHtml(item.title || '') + badges + '</div>' +
+    '<div class="wv-comp-card-artist">' + sub + '</div>' +
+  '</div>';
 }
 
-function renderChartsRail() {
-  var rail = document.getElementById('charts-rail');
-  if (!rail) return;
-  var chartsData = _chartsDataCache || {};
-  // API now returns { edits:{alltime,weekly}, comps:{...} } — use edits universe.
-  var edits = chartsData.edits || chartsData; // fall back to old shape gracefully
+window.playItem = function(id) {
+  var item = _allItems[id];
+  if (!item) return;
+  if (item._type === 'album') { navigate('/album.html?id=' + id + '&play=1'); return; }
+  if (!item.ia_url) { navigate('/track.html?id=' + id); return; }
+  playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : (item.artist_name || ''), ia_url: item.ia_url, cover_url: item.cover_url });
+};
 
-  var chartTabs = [
-    { key: 'alltime', label: 'All Time' },
-    { key: 'weekly',  label: 'This Week' },
-  ];
-
-  rail.innerHTML =
-    '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;">' +
-      '<div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;">Top Charts</div>' +
-      '<a href="/charts.html" onclick="navigate(\'/charts.html\');return false;" style="color:var(--text-3);font-size:10.5px;font-weight:600;letter-spacing:0.06em;text-decoration:none;">SHOW ALL</a>' +
-    '</div>' +
-    '<div style="display:flex;gap:6px;margin-bottom:14px;">' +
-      chartTabs.map(function(t) {
-        return '<button class="wv-pill ' + (_chartsTab===t.key?'is-active':'') + '" style="flex:1;justify-content:center;padding:6px 10px;font-size:12px;" onclick="switchChartsTab(\'' + t.key + '\')">' + t.label + '</button>';
-      }).join('') +
-    '</div>' +
-    '<div style="display:flex;flex-direction:column;gap:2px;flex:1;" id="charts-list"></div>';
-
-  var src = _chartsTab === 'weekly' ? (edits.weekly || []) : (edits.alltime || []);
-  var items = src.slice().sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
-  renderChartsListItems(items);
-}
-
-function switchChartsTab(tab) {
-  _chartsTab = tab;
-  renderChartsRail();
-}
-
-function renderChartsListItems(items) {
-  var list = document.getElementById('charts-list');
-  if (!list) return;
-  if (!items || !items.length) {
-    list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:10px 6px;">No data yet</div>';
-    return;
+// Top charts as a compact two-column list — numbers first, like a chart.
+function chartsBlock() {
+  var c = _home.charts; if (!c) return '';
+  var edits = (c.edits || c).alltime || [];
+  var comps = (c.comps || {}).alltime || [];
+  if (!edits.length && !comps.length) return '';
+  function col(title, list, kind) {
+    if (!list.length) return '';
+    var top = list.slice().sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); }).slice(0, 5);
+    return '<div><div class="wv-colhead">' + title + '</div>' + top.map(function(t, i) {
+      var href = kind === 'comp' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+      var artist = t.artists ? t.artists.display_name : (t.archive_artist_name || '');
+      return '<div class="wv-trow" onclick="navigate(\'' + href + '\')">' +
+        '<div class="wv-trow-num">' + (i + 1) + '</div>' +
+        '<div class="wv-trow-art" style="background:' + coverGradient(t.title || '') + ';">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="wv-trow-main"><div class="wv-trow-title">' + escHtml(t.title || '') + '</div><div class="wv-trow-sub">' + escHtml(artist || '') + '</div></div>' +
+        '<div class="wv-trow-dur">' + fmtNum(t.play_count || 0) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
   }
-  list.innerHTML = items.slice(0, 20).map(function(t, i) {
-    var seed = t.title || '';
-    var artist = t.artists ? t.artists.display_name : 'Unknown';
-    var dest = t.album_id ? "navigate('/track.html?id=" + t.id + "')" : (t._type === 'album' ? "navigate('/album.html?id=" + t.id + "')" : "navigate('/track.html?id=" + t.id + "')");
-    var streams = (t.play_count || 0).toLocaleString();
-    return '<div class="wv-charts-rail-row" onclick="' + dest + '">' +
-      '<span style="font-size:14px;color:var(--text-3);width:18px;text-align:center;flex-shrink:0;">' + (i+1) + '</span>' +
-      '<div style="width:36px;height:36px;border-radius:6px;background:' + coverGradient(seed) + ';position:relative;overflow:hidden;flex-shrink:0;">' +
-        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.2) 0%,transparent 45%);"></div>' +
-        (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
-      '</div>' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(t.title) + '</div>' +
-        '<div style="font-size:11.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist) + '</div>' +
-      '</div>' +
-      '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;flex-shrink:0;text-align:right;">' + streams + '<br><span style="font-size:10px;letter-spacing:0.03em;">streams</span></div>' +
-    '</div>';
-  }).join('');
+  return '<div class="home-section">' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/charts.html\')">Top charts</h2><button class="wv-see-all" onclick="navigate(\'/charts.html\')">Show all</button></div>' +
+    '<div class="wv-cols2">' + col('Edits · all time', edits, 'edit') + col('Comps · all time', comps, 'comp') + '</div>' +
+  '</div>';
 }
 
 loadHome();

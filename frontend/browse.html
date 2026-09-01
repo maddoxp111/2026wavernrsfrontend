@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — browse</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view"><div class="loading"><div class="spinner"></div></div></div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script src="/js/playlists.js"></script>
+<script>
+initPlayer();
+var _p = new URLSearchParams(location.search);
+var _tab = _p.get('tab') || '';          // '' | recent | trending | highlighted | comps | edits
+var _era = _p.get('era') || '';
+var _eras = [];
+var _items = [];
+var _badges = {};
+getBadgeData().then(function(b) { _badges = b || {}; }).catch(function() {});
+
+// Fixed categories, each with a colour and a destination or in-page tab.
+var CATS = [
+  { k: 'recent',      l: 'New releases', h: 262 },
+  { k: 'trending',    l: 'Trending',     h: 16 },
+  { k: 'highlighted', l: 'Highlighted',  h: 42 },
+  { k: 'comps',       l: 'Comps',        h: 200 },
+  { k: 'edits',       l: 'Edits',        h: 330 },
+  { href: '/charts.html',    l: 'Charts',    h: 150 },
+  { href: '/archive.html',   l: 'Archive',   h: 220 },
+  { href: '/community.html', l: 'Community', h: 95 },
+  { href: '/resources.html', l: 'Tracker',   h: 300 },
+];
+
+function tileBg(h) { return 'linear-gradient(135deg, hsl(' + h + ',55%,42%), hsl(' + ((h + 40) % 360) + ',60%,26%))'; }
+
+async function init() {
+  if (typeof window.setPageWash === 'function') window.setPageWash('browse');
+  try { _eras = await api('/eratags'); } catch (e) { _eras = []; }
+  if (_tab || _era) return renderList();
+  renderIndex();
+}
+
+function renderIndex() {
+  var view = document.getElementById('view');
+  var html = '<h1 class="wv-page-title">Browse all</h1>';
+  html += '<div class="wv-browse-grid">';
+  CATS.forEach(function(c, i) {
+    var go = c.href ? "navigate('" + c.href + "')" : "go('tab','" + c.k + "')";
+    html += '<div class="wv-browse-tile' + (i === 0 ? ' wide' : '') + '" style="background:' + tileBg(c.h) + ';" onclick="' + go + '"><span>' + escHtml(c.l) + '</span><div class="fake" style="background:' + tileBg((c.h + 180) % 360) + ';"></div></div>';
+  });
+  html += '</div>';
+  if (_eras.length) {
+    html += '<div class="wv-sec-head"><h2 class="wv-sec-title">Eras</h2></div>';
+    html += '<div class="wv-browse-grid">' + _eras.map(function(t) {
+      var c = coverHues(t.name || '');
+      return '<div class="wv-browse-tile" style="background:' + tileBg(c.h1) + ';" onclick="go(\'era\',\'' + escHtml(t.id) + '\')"><span>' + escHtml(t.name) + '</span><div class="fake" style="background:' + tileBg(c.h2) + ';"></div></div>';
+    }).join('') + '</div>';
+  }
+  view.innerHTML = html;
+}
+
+window.go = function(kind, v) {
+  var u = new URL(location.href);
+  u.searchParams.delete('tab'); u.searchParams.delete('era');
+  u.searchParams.set(kind, v);
+  history.pushState(null, '', u);
+  _tab = kind === 'tab' ? v : ''; _era = kind === 'era' ? v : '';
+  renderList();
+};
+
+async function renderList() {
+  var view = document.getElementById('view');
+  var eraObj = _era ? _eras.find(function(t) { return String(t.id) === String(_era); }) : null;
+  var title = eraObj ? eraObj.name : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[_tab] || 'Browse');
+  view.innerHTML =
+    '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse.html\')">‹ Browse</button></div>' +
+    '<h1 class="wv-page-title">' + escHtml(title) + '</h1>' +
+    '<div class="wv-filters" id="era-chips"></div>' +
+    '<div class="wv-tile-grid" id="grid">' + '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>'.repeat(8) + '</div>';
+  if (_eras.length) {
+    document.getElementById('era-chips').innerHTML =
+      '<span class="wv-chip' + (!_era ? ' acc' : '') + '" onclick="go(\'tab\',\'' + (_tab || 'recent') + '\')">All</span>' +
+      _eras.map(function(t) { return '<span class="wv-chip' + (String(t.id) === String(_era) ? ' acc' : '') + '" onclick="go(\'era\',\'' + escHtml(t.id) + '\')">' + escHtml(t.name) + '</span>'; }).join('');
+  }
+  try {
+    var items = [];
+    if (_era) { items = await api('/discover/era/' + encodeURIComponent(_era)); }
+    else if (_tab === 'trending') items = await api('/discover/trending');
+    else if (_tab === 'highlighted') items = await api('/discover/highlighted');
+    else { var d = await api('/discover'); items = d.recent || []; }
+    if (_tab === 'comps') items = items.filter(function(i) { return i._type === 'album'; });
+    if (_tab === 'edits') items = items.filter(function(i) { return i._type !== 'album'; });
+    _items = Array.isArray(items) ? items : [];
+    var withCover = _items.find(function(i) { return i.cover_url; });
+    if (typeof window.setPageBgImage === 'function') window.setPageBgImage(withCover ? withCover.cover_url : '', title);
+    var grid = document.getElementById('grid');
+    grid.innerHTML = _items.length ? _items.map(card).join('') : '<div class="wv-empty" style="grid-column:1/-1;">Nothing here yet</div>';
+  } catch (err) {
+    document.getElementById('grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>';
+  }
+}
+
+function card(item) {
+  var isAlbum = item._type === 'album';
+  var artist = item.artists ? item.artists.display_name : 'Unknown';
+  var href = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
+  var b = _badges || {};
+  var hl = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
+  var ex = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1 : (b.exclusive_tracks || []).indexOf(item.id) !== -1;
+  var ver = item.artists && (b.verified_artists || []).indexOf(item.artists.id) !== -1;
+  return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
+    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';">' +
+      (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') +
+      '<button class="wv-cover-play-btn" aria-label="Play" onclick="event.stopPropagation();play(\'' + item.id + '\')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg></button>' +
+    '</div></div>' +
+    '<div class="wv-comp-card-title">' + escHtml(item.title || '') + (hl ? '<span class="wv-badge-hl-icon">★</span>' : '') + (ex ? '<span class="wv-badge-ex-icon">◆</span>' : '') + '</div>' +
+    '<div class="wv-comp-card-artist">' + (isAlbum ? 'Comp' : 'Edit') + ' · ' + escHtml(artist) + (ver ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +
+  '</div>';
+}
+window.play = function(id) {
+  var it = _items.find(function(i) { return i.id === id; }); if (!it) return;
+  if (it._type === 'album') return navigate('/album.html?id=' + id + '&play=1');
+  playTrack({ id: it.id, title: it.title, artist_name: it.artists ? it.artists.display_name : '', ia_url: it.ia_url, cover_url: it.cover_url });
+};
+init();
+</script>
+</body>
+</html>

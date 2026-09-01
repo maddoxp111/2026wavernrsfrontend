@@ -9,7 +9,7 @@
 <body>
 
 <div id="view">
-<div class="container" style="max-width:760px;">
+<div class="container" style="max-width:1100px;">
   <div id="album-container">
     <div class="loading"><div class="spinner"></div></div>
   </div>
@@ -46,7 +46,8 @@
       albumTracks = (album.album_tracks || []).sort((a, b) => a.position - b.position);
       document.title = `${album.title} — wavernrs stream`;
       await renderAlbum();
-      loadAlbumComments();
+      if (new URLSearchParams(location.search).get('play') === '1' && albumTracks.length) { try { playAll(); } catch (_) {} }
+    loadAlbumComments();
       loadMoreLikeThis();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
     } catch (err) {
@@ -106,7 +107,6 @@
         ${freshBanner}
         <div class="wv-hero">
           <div class="wv-hero-art" style="background:${coverBg};">
-            <div style="position:absolute;top:10px;left:10px;z-index:2;padding:2px 8px;background:rgba(255,255,255,0.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>
             ${coverInner}
           </div>
           <div class="wv-hero-body">
@@ -129,20 +129,16 @@
               <button class="wv-icon-btn" id="like-btn" onclick="toggleLike()" title="Like">${album.user_liked ? '♥' : '♡'}</button>
               <div id="rating-widget">${ratingPlaceholder}</div>
             </div>
-            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="playAll()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                Play All
-              </button>
-              <a href="${API_BASE}/albums/${albumId}/download" class="btn btn-secondary" id="download-comp-btn">
+            <div class="wv-hero-actions" style="margin-top:10px;">
+              <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost" id="download-comp-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                 Download Zip
               </a>
-              <button class="btn btn-secondary" id="share-btn" onclick="copyLink()">
+              <button class="wv-btn-ghost" id="share-btn" onclick="copyLink()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
               </button>
-              ${album.is_archive && album.source_url ? `<a href="${escHtml(album.source_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+              ${album.is_archive && album.source_url ? `<a href="${escHtml(album.source_url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
                 Direct Link
               </a>` : ''}
