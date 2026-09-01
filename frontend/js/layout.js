@@ -206,7 +206,8 @@
       '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
       icon('search') +
       '<input id="wv-search-inp" placeholder="What do you want to play?" autocomplete="off" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;padding:0;" ' +
-      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q)navSearch(q);}">' +
+      'oninput="window._topbarSuggest(this)" onfocus="window._topbarSuggest(this)" ' +
+      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q){document.getElementById(\'wv-suggest\')&&document.getElementById(\'wv-suggest\').remove();navSearch(q);}}">' +
       '</div></div>';
     html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search.html\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
 
@@ -227,6 +228,44 @@
     html += '</div>';
     return html;
   }
+
+  // ── Topbar live search ───────────────────────────────────────
+  // Debounced /api/search as you type; Enter still goes to the full page.
+  var _sugTimer = null, _sugSeq = 0;
+  function _closeSuggest() { var el = document.getElementById('wv-suggest'); if (el) el.remove(); }
+  function _sugRow(href, art, title, sub, round) {
+    return '<a class="wv-sug-row" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' +
+      '<div class="wv-lib-art' + (round ? ' round' : '') + '" style="width:36px;height:36px;' + (art ? '' : 'background:' + coverGradient(title)) + '">' + (art ? '<img src="' + _escL(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="wv-lib-meta"><div class="wv-lib-t">' + _escL(title) + '</div><div class="wv-lib-s">' + _escL(sub) + '</div></div></a>';
+  }
+  window._topbarSuggest = function(inp) {
+    var q = (inp.value || '').trim();
+    clearTimeout(_sugTimer);
+    if (q.length < 2) { _closeSuggest(); return; }
+    _sugTimer = setTimeout(function() {
+      var seq = ++_sugSeq;
+      fetch((typeof API_BASE !== 'undefined' ? API_BASE : '/api') + '/search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
+          if (!d || seq !== _sugSeq || document.activeElement !== inp) return;
+          var rows = [];
+          (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist.html?id=' + a.id, a.profile_image_url, a.display_name, 'Artist', true)); });
+          (d.albums || []).slice(0, 4).forEach(function(a) { rows.push(_sugRow('/album.html?id=' + a.id, a.cover_url, a.title, 'Comp · ' + (a.artists ? a.artists.display_name : ''))); });
+          (d.tracks || []).slice(0, 4).forEach(function(t) { rows.push(_sugRow('/track.html?id=' + t.id, t.cover_url || (t.albums && t.albums.cover_url), t.title, 'Edit · ' + (t.artists ? t.artists.display_name : ''))); });
+          (d.archived || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/album.html?id=' + a.id, a.cover_url, a.title, 'Archive · ' + (a.archive_artist_name || ''))); });
+          var el = document.getElementById('wv-suggest');
+          if (!el) {
+            el = document.createElement('div'); el.id = 'wv-suggest';
+            var wrap = inp.closest('.wv-topbar-search'); (wrap || document.body).appendChild(el);
+          }
+          el.innerHTML = (rows.length ? rows.join('') : '<div class="wv-lib-s" style="padding:12px 14px;">No matches</div>') +
+            '<a class="wv-sug-all" href="/search.html?q=' + encodeURIComponent(q) + '" onclick="navSearch(' + JSON.stringify(q).replace(/"/g, '&quot;') + ');return false;">See all results for “' + _escL(q) + '”</a>';
+        }).catch(function() {});
+    }, 180);
+  };
+  document.addEventListener('click', function(e) { if (!e.target.closest('#wv-suggest') && !e.target.closest('.wv-topbar-search')) _closeSuggest(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _closeSuggest(); });
+  window.addEventListener('popstate', _closeSuggest);
 
   // ── Shared helper: resolve the current user's public profile URL ──
   function getProfileHref() {
