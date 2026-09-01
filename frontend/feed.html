@@ -26,7 +26,7 @@ async function initFeed() {
   var view = document.getElementById('view');
   view.innerHTML =
     '<div style="display:flex;flex-direction:column;gap:32px;padding-bottom:40px;">' +
-    '<h1 style="margin:0;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Following</h1>' +
+    '<h1 class="wv-page-title">Following</h1>' +
     '<div id="feed-sections"><div class="loading"><div class="spinner"></div></div></div>' +
     '</div>';
   loadFeed();
@@ -91,7 +91,7 @@ function renderArtistSection(artist, items) {
     pfpInner + '</div>';
 
   var header =
-    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;cursor:pointer;" onclick="navigate(\'/artist.html?id=' + artistId + '\')">' +
+    '<div class="wv-sec-head" style="justify-content:flex-start;gap:12px;cursor:pointer;" onclick="navigate(\'/artist.html?id=' + artistId + '\')">' +
     pfpHtml +
     '<div>' +
       '<div style="font-size:17px;font-weight:700;letter-spacing:-0.02em;color:var(--text);">' + name + '</div>' +
@@ -101,9 +101,7 @@ function renderArtistSection(artist, items) {
 
   var cards = items.slice(0, 10).map(feedCardHTML).join('');
   var scrollRow =
-    '<div style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;">' +
-    '<style>.feed-scroll::-webkit-scrollbar{display:none}</style>' +
-    cards + '</div>';
+    '<div class="wv-rail">' + cards + '</div>';
 
   return '<div style="display:flex;flex-direction:column;">' + header + scrollRow + '</div>';
 }
@@ -118,21 +116,22 @@ function feedCardHTML(item) {
     ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
     : '';
   var compBadge = isAlbum
-    ? '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">comp</div>'
+    ? ''
     : '';
   var playBtn = !isAlbum
     ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playFeedItem(\'' + item.id + '\')">' +
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
       '</button>'
     : '';
-  return '<div class="wv-comp-card" onclick="' + action + '" style="flex-shrink:0;width:160px;">' +
+  return '<div class="wv-comp-card" onclick="' + action + '">' +
     '<div class="wv-comp-card-cover">' +
       '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-        '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:14px;"></div>' +
+        '' +
         compBadge + coverImg + playBtn +
       '</div>' +
     '</div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
+    '<div class="wv-comp-card-artist">' + (isAlbum ? 'Comp' : 'Edit') + '</div>' +
   '</div>';
 }
 

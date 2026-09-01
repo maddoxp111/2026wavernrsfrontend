@@ -87,22 +87,21 @@
     if (typeof window.setPageBgImage === 'function') window.setPageBgImage(firstCover);
     var coverHtml = firstCover
       ? '<img src="' + escHtml(firstCover) + '" alt="cover" style="width:100%;height:100%;object-fit:cover;">'
-      : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:60px;">🎵</div>';
+      : '';
 
     var ownerHtml = owner.username
       ? 'by <a href="#" style="color:var(--text-secondary);font-weight:500;">' + escHtml(owner.username) + '</a>'
       : '';
 
     var privacyBadge = playlist.is_public ? '' :
-      '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);border:1px solid var(--border);' +
-      'border-radius:4px;font-size:11px;padding:2px 8px;color:var(--text-secondary);margin-left:8px;">🔒 Private</span>';
+      '';
 
     var actionBtns = '';
     if (isOwner) {
-      actionBtns = '<button class="wv-pill" onclick="openEditModal()" style="margin-right:8px;">' +
+      actionBtns = '<button class="wv-btn-ghost" onclick="openEditModal()">' +
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit' +
         '</button>' +
-        '<button class="wv-pill" onclick="deletePlaylist()">' +
+        '<button class="wv-btn-ghost" onclick="deletePlaylist()">' +
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete' +
         '</button>';
     }
@@ -150,18 +149,18 @@
       : '';
 
     document.getElementById('playlist-container').innerHTML =
-      '<div style="padding:32px 0;">' +
-        '<div class="playlist-header">' +
-          '<div class="playlist-cover">' + coverHtml + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-tertiary);margin-bottom:6px;">Playlist</div>' +
-            '<div style="font-size:28px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px;">' + escHtml(playlist.title) + privacyBadge + '</div>' +
-            '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:4px;">' + ownerHtml + '</div>' +
-            (playlist.description ? '<p style="margin:8px 0;font-size:14px;color:var(--text-secondary);line-height:1.6;">' + escHtml(playlist.description) + '</p>' : '') +
-            '<div style="font-size:13px;color:var(--text-tertiary);margin-bottom:16px;">' + tracks.length + ' track' + (tracks.length !== 1 ? 's' : '') + '</div>' +
-            '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
-              '<button class="wv-pill" onclick="playAll()">' +
-                '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Play All' +
+      '<div style="padding:8px 0 0;">' +
+        '<div class="wv-hero">' +
+          '<div class="wv-hero-art" style="background:' + coverGradient(playlist.title || '') + ';">' + coverHtml + '</div>' +
+          '<div class="wv-hero-body">' +
+            '<div class="wv-kind">Playlist' + (playlist.is_public ? '' : ' · Private') + '</div>' +
+            '<div class="wv-hero-title">' + escHtml(playlist.title) + '</div>' +
+            '<div class="wv-hero-sub">' + ownerHtml + '</div>' +
+            (playlist.description ? '<div class="wv-hero-meta" style="max-width:640px;line-height:1.5;">' + escHtml(playlist.description) + '</div>' : '') +
+            '<div class="wv-hero-meta">' + tracks.length + ' track' + (tracks.length !== 1 ? 's' : '') + '</div>' +
+            '<div class="wv-hero-actions">' +
+              '<button class="wv-btn-play" onclick="playAll()">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play' +
               '</button>' +
               actionBtns +
             '</div>' +

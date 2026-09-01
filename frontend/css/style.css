@@ -374,8 +374,11 @@ img { display: block; }
   padding-top: 10px;
   border-top: 1px solid var(--chrome-border);
   display: flex; flex-direction: column; gap: 2px;
-  min-height: 0;
+  flex-shrink: 0;
 }
+/* Nothing in the sidebar may shrink: when the library is long the
+   whole column scrolls instead of rows spilling over the nav below. */
+.wv-sidebar > *, .wv-drawer > * { flex-shrink: 0; }
 .wv-lib-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 12px 8px;
@@ -2092,3 +2095,13 @@ input:focus, textarea:focus, select:focus { border-color: var(--text); backgroun
 .wv-sug-row:hover { background: var(--surface-3); }
 .wv-sug-all { display: block; padding: 10px 8px 6px; font-size: 12.5px; font-weight: 700; color: var(--text-2); border-top: 1px solid var(--hair); margin-top: 4px; }
 .wv-sug-all:hover { color: var(--text); }
+
+/* ── Dashboard (You) layout + modals ───────────────────────── */
+.dashboard-grid { display: grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start; }
+.dashboard-sidebar { position: sticky; top: 0; }
+@media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } .dashboard-sidebar { position: static; } }
+.modal {
+  background: var(--elevated); border-radius: var(--r-lg); padding: 24px;
+  width: 100%; max-width: 440px; box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
