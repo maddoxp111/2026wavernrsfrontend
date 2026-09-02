@@ -28,6 +28,8 @@
     more:      '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.6" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18.4" cy="12" r="1.9"/></svg>',
     sun:       '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.7a1.2 1.2 0 0 1 1.2 1.2v1.5a1.2 1.2 0 0 1-2.4 0V2.9A1.2 1.2 0 0 1 12 1.7Zm0 16.4a1.2 1.2 0 0 1 1.2 1.2v1.5a1.2 1.2 0 0 1-2.4 0v-1.5a1.2 1.2 0 0 1 1.2-1.2ZM1.7 12a1.2 1.2 0 0 1 1.2-1.2h1.5a1.2 1.2 0 0 1 0 2.4H2.9A1.2 1.2 0 0 1 1.7 12Zm16.4 0a1.2 1.2 0 0 1 1.2-1.2h1.5a1.2 1.2 0 0 1 0 2.4h-1.5a1.2 1.2 0 0 1-1.2-1.2ZM4.76 4.76a1.2 1.2 0 0 1 1.7 0l1.06 1.06a1.2 1.2 0 0 1-1.7 1.7L4.76 6.46a1.2 1.2 0 0 1 0-1.7Zm11.72 11.72a1.2 1.2 0 0 1 1.7 0l1.06 1.06a1.2 1.2 0 0 1-1.7 1.7l-1.06-1.06a1.2 1.2 0 0 1 0-1.7Zm2.76-11.72a1.2 1.2 0 0 1 0 1.7l-1.06 1.06a1.2 1.2 0 0 1-1.7-1.7l1.06-1.06a1.2 1.2 0 0 1 1.7 0ZM7.52 16.48a1.2 1.2 0 0 1 0 1.7l-1.06 1.06a1.2 1.2 0 1 1-1.7-1.7l1.06-1.06a1.2 1.2 0 0 1 1.7 0Z"/></svg>',
     moon:      '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.4 14.15A8.65 8.65 0 0 1 9.85 3.6a8.95 8.95 0 1 0 10.55 10.55Z"/></svg>',
+    plus:      '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7Z"/></svg>',
+    history:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 3a9 9 0 1 1-8.66 11.3l1.94-.5A7 7 0 1 0 8.5 6.5L11 9H4V2l2.6 2.6A9 9 0 0 1 13 3Zm-1 4h2v5.2l3.6 2.1-1 1.7L12 13.4Z"/></svg>',
     discord:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>',
   };
 
@@ -39,6 +41,9 @@
     if (p === '/' || p.endsWith('/index.html')) return 'home';
     if (p.endsWith('/discover.html')) return 'browse';
     if (p.endsWith('/browse.html')) return 'browse';
+    if (p.endsWith('/artists.html')) return 'artists';
+    if (p.endsWith('/stats.html')) return 'stats';
+    if (p.endsWith('/history.html')) return 'library';
     if (p.endsWith('/charts.html')) return 'charts';
     if (p.endsWith('/archive.html')) return 'archive';
     if (p.endsWith('/archive-artist.html')) return 'archive';
@@ -71,50 +76,57 @@
   }
 
   // ── Sidebar HTML ─────────────────────────────────────────────
+  // Two panels on a black gutter: navigation on top, the library below.
+  // Account links live in a compact footer so the library gets the height.
   function buildSidebarHTML() {
     var isLoggedIn = !!localStorage.getItem('token');
     var profileHref = getProfileHref();
     var html = '';
 
+    html += '<div class="wv-panel wv-panel-nav">';
     html += '<a href="/index.html" class="wv-sidebar-logo"><span class="mark">w</span>wavernrs</a>';
-
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('home', 'Home', '/index.html', 'home');
     html += navItem('browse', 'Browse', '/browse.html', 'discover');
     html += navItem('charts', 'Charts', '/charts.html', 'chart');
+    html += navItem('artists', 'Artists', '/artists.html', 'profile');
     html += navItem('archive', 'Archive', '/archive.html', 'archive');
     html += navItem('community', 'Community', '/community.html', 'community');
     html += navItem('resources', 'Tracker', '/resources.html', 'resources');
     html += '</nav>';
+    html += '</div>';
 
-    // Your Library — recent + liked, loaded async into #wv-lib-list
-    html += '<div class="wv-lib">';
+    html += '<div class="wv-panel wv-lib">';
     html += '<div class="wv-lib-head">' +
-      '<a href="/library.html">' + icon('list') + '<span>Your Library</span></a>' +
-      (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload.html\')">' + icon('upload') + '</button>' : '') +
-      '</div>';
+      '<a href="/library.html" onclick="navigate(\'/library.html\');return false;">' + icon('list') + '<span>Your Library</span></a>' +
+      '<div class="wv-lib-tools">' +
+        '<button class="wv-lib-add" title="History" onclick="navigate(\'/history.html\')">' + icon('history') + '</button>' +
+        (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload.html\')">' + icon('plus') + '</button>' : '') +
+      '</div></div>';
     html += '<div class="wv-lib-chips" id="wv-lib-chips">' +
       '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
       '<span class="wv-chip" data-k="comps" onclick="window._libFilter(\'comps\')">Comps</span>' +
       '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
       '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
       '</div>';
+    html += '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="Search in your library" oninput="window._libSearch(this.value)"></div>';
     html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
     html += '</div>';
 
-    html += '<div style="flex:1;min-height:12px;"></div>';
-    html += '<nav class="wv-sidebar-nav">';
+    html += '<div class="wv-side-foot">';
     if (isLoggedIn) {
-      html += navItem('feed', 'Following', '/feed.html', 'feed');
-      html += navItem('profile', 'Profile', profileHref, 'profile');
-      html += navItem('settings', 'Settings', '/settings.html', 'settings');
-      if (sessionStorage.getItem('wv_is_mod') === 'true') html += navItem('modpanel', 'Mod Panel', '/modpanel.html', 'shield');
-      if (sessionStorage.getItem('wv_is_archiver') === 'true') html += navItem('archivepanel', 'Archive Panel', '/archivepanel.html', 'archive');
+      html += '<a href="/feed.html" data-page="feed">Following</a>';
+      html += '<a href="' + profileHref + '" data-page="profile">Profile</a>';
+      html += '<a href="/settings.html" data-page="settings">Settings</a>';
+      if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel.html" data-page="modpanel">Mod panel</a>';
+      if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel.html" data-page="archivepanel">Archive panel</a>';
+    } else {
+      html += '<a href="/login.html">Log in</a><a href="/register.html">Sign up</a>';
     }
-    html += navItem('about', 'About', '/about.html', 'info');
-    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener" class="wv-nav-item">' + icon('discord') + '<span>Discord</span></a>';
-    html += '</nav>';
-
+    html += '<a href="/stats.html" data-page="stats">Stats</a>';
+    html += '<a href="/about.html" data-page="about">About</a>';
+    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener">Discord</a>';
+    html += '</div>';
     return html;
   }
 
@@ -123,6 +135,7 @@
   // out; comps/edits/playlists come from /api/library when signed in.
   var _libData = null;
   var _libKind = 'recent';
+  var _libQuery = '';
   function _escL(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function _libRecent() {
     try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (e) { return []; }
@@ -166,10 +179,16 @@
           return;
         }
       }
-      list.innerHTML = items.slice(0, 40).map(_libRow).join('');
+      if (_libQuery) {
+        var q = _libQuery.toLowerCase();
+        items = items.filter(function(it) { return String(it.title || '').toLowerCase().indexOf(q) !== -1 || String(it.artist_name || '').toLowerCase().indexOf(q) !== -1; });
+        if (!items.length) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">No matches</div>'; return; }
+      }
+      list.innerHTML = items.slice(0, 60).map(_libRow).join('');
     });
     document.querySelectorAll('#wv-lib-chips .wv-chip').forEach(function(c) { c.classList.toggle('acc', c.dataset.k === _libKind); });
   }
+  window._libSearch = function(q) { _libQuery = q || ''; _renderLib(); };
   window._libFilter = function(kind) {
     _libKind = kind;
     _renderLib();
@@ -297,6 +316,9 @@
     });
     document.querySelectorAll('.wv-tab-btn[data-page]').forEach(function(el) {
       el.classList.toggle('active', el.dataset.page === cur);
+    });
+    document.querySelectorAll('.wv-side-foot a[data-page]').forEach(function(el) {
+      el.classList.toggle('is-active', el.dataset.page === cur);
     });
   }
   window._updateNavActive = updateActive;

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — artists</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <h1 class="wv-page-title">Artists</h1>
+  <div class="wv-toolbar">
+    <input class="wv-input" id="ar-q" placeholder="Find an artist" oninput="renderArtists()">
+    <div class="wv-seg" id="ar-sort">
+      <button class="on" data-s="plays" onclick="setArtistSort('plays')">Most played</button>
+      <button data-s="followers" onclick="setArtistSort('followers')">Most followed</button>
+      <button data-s="uploads" onclick="setArtistSort('uploads')">Most uploads</button>
+      <button data-s="latest" onclick="setArtistSort('latest')">Newest</button>
+    </div>
+    <span id="ar-count" style="font-size:12.5px;color:var(--text-3);"></span>
+  </div>
+  <div class="wv-tile-grid" id="ar-grid">
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+    <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
+  </div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+initPlayer();
+var _artists = [];
+var _arSort = 'plays';
+var _badges = {};
+getBadgeData().then(function(b) { _badges = b || {}; renderArtists(); }).catch(function() {});
+if (typeof window.setPageWash === 'function') window.setPageWash('artists');
+
+window.setArtistSort = function(s) {
+  _arSort = s;
+  document.querySelectorAll('#ar-sort button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); });
+  renderArtists();
+};
+
+async function loadArtists() {
+  try {
+    var d = await api('/stats/artists');
+    _artists = d.items || [];
+    renderArtists();
+  } catch (e) {
+    document.getElementById('ar-grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load artists: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+window.renderArtists = function() {
+  var grid = document.getElementById('ar-grid'); if (!grid || !_artists.length) return;
+  var q = (document.getElementById('ar-q').value || '').trim().toLowerCase();
+  var list = _artists.filter(function(a) { return !q || String(a.display_name || '').toLowerCase().indexOf(q) !== -1; });
+  list.sort(function(a, b) {
+    if (_arSort === 'latest') return String(b.latest || b.created_at || '').localeCompare(String(a.latest || a.created_at || ''));
+    return (b[_arSort] || 0) - (a[_arSort] || 0) || (b.plays || 0) - (a.plays || 0);
+  });
+  document.getElementById('ar-count').textContent = list.length + ' artist' + (list.length === 1 ? '' : 's');
+  if (!list.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match</div>'; return; }
+  var ver = (_badges.verified_artists || []);
+  grid.innerHTML = list.map(function(a) {
+    var img = a.profile_image_url || a.cover;
+    var meta = _arSort === 'followers' ? fmtNum(a.followers || 0) + ' followers'
+             : _arSort === 'uploads' ? (a.uploads || 0) + ' upload' + (a.uploads === 1 ? '' : 's')
+             : fmtNum(a.plays || 0) + ' plays';
+    return '<div class="wv-artist-tile" onclick="navigate(\'/artist.html?id=' + escHtml(a.id) + '\')">' +
+      '<div class="av" style="background:' + coverGradient(a.display_name || '') + ';">' +
+        (img ? '<img src="' + escHtml(img) + '" loading="lazy" onerror="this.remove()">' : '') +
+      '</div>' +
+      '<div class="wv-artist-name">' + escHtml(a.display_name || 'Unknown') + (ver.indexOf(a.id) !== -1 ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +
+      '<div class="wv-artist-meta">' + meta + '</div>' +
+    '</div>';
+  }).join('');
+};
+loadArtists();
+</script>
+</body>
+</html>

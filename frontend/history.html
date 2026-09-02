@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — history</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <div class="wv-sec-head" style="margin-top:0"><h1 class="wv-page-title" style="margin:6px 0">Listening history</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="wv-btn-play" onclick="playHistory()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play all</button>
+      <button class="wv-btn-ghost" onclick="clearHistory()">Clear</button>
+    </div>
+  </div>
+  <p class="wv-page-sub">Everything you have played on this device, newest first. It stays in your browser.</p>
+  <div id="hi-body"></div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+initPlayer();
+if (typeof window.setPageWash === 'function') window.setPageWash('history');
+function _hist() { try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (e) { return []; } }
+function renderHistory() {
+  var items = _hist().filter(function(t) { return t.id; });
+  var el = document.getElementById('hi-body');
+  if (!items.length) {
+    el.innerHTML = '<div class="wv-empty" style="padding:60px 0;"><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Nothing here yet</div>Play something and it will show up here.<div style="margin-top:16px;"><button class="wv-btn-play" onclick="navigate(\'/browse.html\')">Browse</button></div></div>';
+    return;
+  }
+  var first = items.find(function(t) { return t.cover_url; });
+  if (first && typeof window.setPageBgImage === 'function') window.setPageBgImage(first.cover_url, first.title);
+  el.innerHTML = '<div class="wv-rows">' + items.map(function(t, i) {
+    var isAlbum = t._type === 'album';
+    var href = isAlbum ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+    return '<div class="wv-trow" onclick="navigate(\'' + href + '\')">' +
+      '<div class="wv-trow-num">' + (i + 1) + '</div>' +
+      '<div class="wv-trow-art" style="background:' + coverGradient(t.title || '') + ';">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="wv-trow-main"><div class="wv-trow-title">' + escHtml(t.title || 'Untitled') + '</div><div class="wv-trow-sub">' + (isAlbum ? 'Comp' : 'Edit') + (t.artist_name ? ' · ' + escHtml(t.artist_name) : '') + '</div></div>' +
+      (t.ia_url ? '<button class="wv-icon-btn" title="Play" onclick="event.stopPropagation();playHistoryAt(' + i + ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg></button>' : '<span class="wv-chip hide-sm">Comp</span>') +
+    '</div>';
+  }).join('') + '</div>';
+}
+function _playable() { return _hist().filter(function(t) { return t.id && t.ia_url && t._type !== 'album'; }); }
+window.playHistoryAt = function(i) {
+  var all = _hist().filter(function(t) { return t.id; }); var t = all[i]; if (!t || !t.ia_url) return;
+  var list = _playable(); var idx = list.findIndex(function(x) { return x.id === t.id; });
+  setPlayerQueue(list, idx); playQueueIndex(idx);
+};
+window.playHistory = function() { var list = _playable(); if (!list.length) return; setPlayerQueue(list, 0); playQueueIndex(0); };
+window.clearHistory = function() {
+  if (!confirm('Clear your listening history on this device?')) return;
+  localStorage.removeItem('recently_played'); renderHistory();
+  if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
+};
+renderHistory();
+</script>
+</body>
+</html>

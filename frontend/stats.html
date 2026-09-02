@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — stats</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="view">
+  <h1 class="wv-page-title">Stats</h1>
+  <p class="wv-page-sub">The whole site, in numbers. Refreshes every minute.</p>
+  <div id="st-body"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+<script src="/js/api.js"></script>
+<script src="/js/layout.js"></script>
+<script src="/js/player.js"></script>
+<script src="/js/router.js"></script>
+<script>
+initPlayer();
+if (typeof window.setPageWash === 'function') window.setPageWash('stats');
+function tile(k, v, d) { return '<div class="wv-stat-tile"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (d ? '<div class="d">' + d + '</div>' : '') + '</div>'; }
+function bars(rows, key, label) {
+  var max = Math.max.apply(null, rows.map(function(r) { return r[key] || 0; }).concat([1]));
+  return rows.map(function(r) {
+    return '<div class="wv-bar-row"' + (r.href ? ' style="cursor:pointer" onclick="navigate(\'' + r.href + '\')"' : '') + '>' +
+      '<div class="n">' + escHtml(r.name) + '</div>' +
+      '<div class="b"><i style="width:' + Math.max(2, Math.round((r[key] || 0) / max * 100)) + '%"></i></div>' +
+      '<div class="c">' + fmtNum(r[key] || 0) + (label ? ' ' + label : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+async function loadStats() {
+  var el = document.getElementById('st-body');
+  try {
+    var d = await api('/stats');
+    var t = d.totals || {};
+    var html = '<div class="wv-stat-grid">' +
+      tile('Plays', fmtNum(t.plays || 0), 'across every edit and comp') +
+      tile('Edits', fmtNum(t.edits || 0)) +
+      tile('Comps', fmtNum(t.comps || 0)) +
+      tile('Archive comps', fmtNum(t.archive_comps || 0)) +
+      tile('Artists', fmtNum(t.artists || 0)) +
+      tile('Likes', fmtNum(t.likes || 0)) +
+      tile('Follows', fmtNum(t.follows || 0)) +
+      tile('New this week', fmtNum(t.new_this_week || 0), 'edits and comps') +
+      '</div>';
+    html += '<div class="wv-cols2">';
+    html += '<div><div class="wv-sec-head" style="margin-top:0"><h2 class="wv-sec-title" onclick="navigate(\'/artists.html\')">Top artists</h2><button class="wv-see-all" onclick="navigate(\'/artists.html\')">All artists</button></div>' +
+      bars((d.top_artists || []).map(function(a) { return { name: a.display_name, plays: a.plays, href: '/artist.html?id=' + a.id }; }), 'plays', 'plays') + '</div>';
+    html += '<div><div class="wv-sec-head" style="margin-top:0"><h2 class="wv-sec-title" onclick="navigate(\'/browse.html\')">Eras by plays</h2><button class="wv-see-all" onclick="navigate(\'/browse.html\')">Browse</button></div>' +
+      bars((d.eras || []).slice(0, 12).map(function(e) { return { name: e.name, plays: e.plays, href: '/browse.html?era=' + e.id }; }), 'plays', 'plays') + '</div>';
+    html += '</div>';
+    html += '<div style="margin-top:28px;"><div class="wv-sec-head"><h2 class="wv-sec-title">Releases per era</h2></div>' +
+      bars((d.eras || []).slice().sort(function(a, b) { return b.releases - a.releases; }).slice(0, 12).map(function(e) { return { name: e.name, releases: e.releases, href: '/browse.html?era=' + e.id }; }), 'releases') + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-3);margin-top:22px;">Updated ' + (d.generated_at ? timeAgo(d.generated_at) : 'just now') + '</div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div class="wv-empty">Could not load stats: ' + escHtml(e.message) + '</div>';
+  }
+}
+loadStats();
+</script>
+</body>
+</html>

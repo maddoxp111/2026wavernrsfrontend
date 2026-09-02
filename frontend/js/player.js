@@ -65,6 +65,107 @@ function _unlockIOS() {
   document.removeEventListener('touchstart', _unlockIOS);
 }
 
+function _heartIcon(on) {
+  return on
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.1 3.9 13a5.2 5.2 0 0 1 7.35-7.35l.75.75.75-.75A5.2 5.2 0 0 1 20.1 13Z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.3 4.6 12.9a4.6 4.6 0 0 1 6.5-6.5l.9.9.9-.9a4.6 4.6 0 0 1 6.5 6.5Z"/></svg>';
+}
+
+// ── Like / add / speed / sleep timer ─────────────────────────────────────
+var _liked = false;
+function _setLikeUI(on) {
+  _liked = !!on;
+  ['player-like-btn', 'pfs-like-btn'].forEach(id => {
+    const b = document.getElementById(id); if (!b) return;
+    b.innerHTML = _heartIcon(_liked); b.classList.toggle('player-liked', _liked);
+  });
+}
+function _refreshLike() {
+  _setLikeUI(false);
+  if (!currentTrack || !currentTrack.id || !localStorage.getItem('token') || typeof api !== 'function') return;
+  const id = currentTrack.id;
+  api('/tracks/' + id).then(t => { if (currentTrack && currentTrack.id === id) _setLikeUI(t && t.user_liked); }).catch(() => {});
+}
+function toggleCurrentLike() {
+  if (!currentTrack || !currentTrack.id) return;
+  if (!localStorage.getItem('token')) { location.assign('/login.html?next=' + encodeURIComponent(location.pathname + location.search)); return; }
+  _setLikeUI(!_liked);
+  api('/tracks/' + currentTrack.id + '/like', { method: 'POST' }).then(r => { _setLikeUI(r && r.liked); if (typeof window.refreshSidebarLibrary === 'function') window.refreshSidebarLibrary(); }).catch(() => _setLikeUI(!_liked));
+}
+function addCurrentToPlaylist() {
+  if (!currentTrack || !currentTrack.id) return;
+  if (typeof openAddToPlaylist === 'function') openAddToPlaylist(currentTrack);
+}
+function goToCurrentTrack() {
+  if (!currentTrack || !currentTrack.id) return;
+  closeFullPlayer();
+  navigate(currentTrack._album_id ? '/album.html?id=' + currentTrack._album_id : '/track.html?id=' + currentTrack.id);
+}
+function goToCurrentArtist() {
+  if (!currentTrack) return;
+  const aid = currentTrack.artist_id || (currentTrack.artists && currentTrack.artists.id);
+  if (!aid) return goToCurrentTrack();
+  closeFullPlayer(); navigate('/artist.html?id=' + aid);
+}
+function shareCurrent() {
+  if (!currentTrack || !currentTrack.id) return;
+  const url = location.origin + (currentTrack._album_id ? '/album.html?id=' + currentTrack._album_id : '/track.html?id=' + currentTrack.id);
+  if (navigator.share) navigator.share({ title: currentTrack.title, url }).catch(() => {});
+  else navigator.clipboard.writeText(url).then(() => { if (typeof showAlert === 'function') showAlert('Link copied', 'success'); }).catch(() => {});
+}
+
+const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+function _closeSheet() { document.querySelectorAll('.wv-sheet, .wv-sheet-overlay').forEach(el => el.remove()); }
+function _sheet(title, opts, current, onPick) {
+  _closeSheet();
+  const ov = document.createElement('div'); ov.className = 'wv-sheet-overlay'; ov.onclick = _closeSheet;
+  const sh = document.createElement('div'); sh.className = 'wv-sheet';
+  sh.innerHTML = '<div class="wv-sheet-title">' + title + '</div><div class="wv-sheet-opts">' +
+    opts.map(o => '<button class="' + (o.v === current ? 'on' : '') + '" data-v="' + o.v + '">' + o.l + '</button>').join('') + '</div>';
+  sh.querySelectorAll('button').forEach(b => b.onclick = () => { onPick(b.dataset.v); _closeSheet(); });
+  document.body.appendChild(ov); document.body.appendChild(sh);
+}
+function setPlaybackSpeed(v) {
+  v = parseFloat(v) || 1;
+  if (audio) audio.playbackRate = v;
+  localStorage.setItem('wv_speed', String(v));
+  document.querySelectorAll('#player-speed-btn, #pfs-speed-lbl').forEach(el => { el.textContent = v + '×'; });
+  document.querySelectorAll('#player-speed-btn, #pfs-speed-btn').forEach(el => el.classList.toggle('on', v !== 1));
+}
+function openSpeedSheet() {
+  const cur = audio ? audio.playbackRate : 1;
+  _sheet('Playback speed', SPEEDS.map(v => ({ v, l: v + '×' })), cur, setPlaybackSpeed);
+}
+var _sleepAt = 0, _sleepTimer = null;
+function _tickSleep() {
+  const left = _sleepAt - Date.now();
+  const badge = id => document.getElementById(id);
+  if (left <= 0) {
+    clearInterval(_sleepTimer); _sleepTimer = null; _sleepAt = 0;
+    pausePlayer();
+    document.querySelectorAll('#player-timer-btn, #pfs-timer-btn').forEach(el => el.classList.remove('on'));
+    ['player-timer-badge', 'pfs-timer-lbl'].forEach(id => { const el = badge(id); if (el) el.textContent = id === 'pfs-timer-lbl' ? 'Timer' : ''; });
+    return;
+  }
+  const m = Math.ceil(left / 60000);
+  const b = badge('player-timer-badge'); if (b) { b.textContent = m + 'm'; b.style.display = ''; }
+  const l = badge('pfs-timer-lbl'); if (l) l.textContent = m + 'm';
+}
+function setSleepTimer(min) {
+  min = parseInt(min, 10) || 0;
+  clearInterval(_sleepTimer); _sleepTimer = null;
+  document.querySelectorAll('#player-timer-btn, #pfs-timer-btn').forEach(el => el.classList.toggle('on', min > 0));
+  if (!min) { _sleepAt = 0; const b = document.getElementById('player-timer-badge'); if (b) { b.textContent = ''; b.style.display = 'none'; } const l = document.getElementById('pfs-timer-lbl'); if (l) l.textContent = 'Timer'; return; }
+  _sleepAt = Date.now() + min * 60000;
+  _sleepTimer = setInterval(_tickSleep, 5000); _tickSleep();
+}
+function openTimerSheet() {
+  const left = _sleepAt ? Math.ceil((_sleepAt - Date.now()) / 60000) : 0;
+  _sheet('Sleep timer' + (left ? ' · ' + left + ' min left' : ''),
+    [{ v: 0, l: 'Off' }, { v: 15, l: '15 min' }, { v: 30, l: '30 min' }, { v: 45, l: '45 min' }, { v: 60, l: '1 hour' }, { v: 90, l: '1.5 hours' }],
+    left ? null : 0, setSleepTimer);
+}
+
 function injectPlayer() {
   document.getElementById('bottom-shell')?.remove();
   document.getElementById('player-fullscreen')?.remove();
@@ -76,17 +177,24 @@ function injectPlayer() {
   bar.innerHTML = `
     <!-- Desktop left -->
     <div class="player-track" id="player-track-info">
-      <div class="player-cover" id="player-cover">
+      <div class="player-cover" id="player-cover" onclick="openFullPlayer()" title="Now playing">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
       </div>
       <div class="player-track-text">
-        <div class="player-title" id="player-title">—</div>
+        <div class="player-title" id="player-title" onclick="goToCurrentTrack()">—</div>
         <div class="player-artist" id="player-artist">—</div>
+      </div>
+      <div class="player-track-actions">
+        <button class="player-btn player-icon-btn" id="player-like-btn" onclick="toggleCurrentLike()" title="Like">${_heartIcon(false)}</button>
+        <button class="player-btn player-icon-btn" onclick="addCurrentToPlaylist()" title="Add to playlist">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7Z"/></svg>
+        </button>
       </div>
     </div>
     <!-- Desktop center: controls + progress -->
     <div class="player-center">
       <div class="player-controls">
+        <span id="player-timer-badge" class="player-timer-badge" style="display:none"></span>
         <button class="player-btn player-icon-btn" id="player-shuffle-btn" onclick="toggleShuffle()" title="Shuffle">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         </button>
@@ -114,12 +222,22 @@ function injectPlayer() {
         <span class="player-time" id="time-total">0:00</span>
       </div>
     </div>
-    <!-- Desktop right: volume -->
+    <!-- Desktop right: tools + volume -->
     <div class="player-volume">
+      <button class="player-btn player-icon-btn" id="player-lyrics-btn" onclick="openFullPlayer(true)" title="Lyrics">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.4" rx="1.2"/><rect x="3" y="10.8" width="13" height="2.4" rx="1.2"/><rect x="3" y="16.6" width="16" height="2.4" rx="1.2"/></svg>
+      </button>
+      <button class="player-btn player-icon-btn player-speed" id="player-speed-btn" onclick="openSpeedSheet()" title="Playback speed">1×</button>
+      <button class="player-btn player-icon-btn player-timer" id="player-timer-btn" onclick="openTimerSheet()" title="Sleep timer">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3h2v5.3l3.8 2.2-1 1.7L11 13.2Z"/></svg>
+      </button>
       <button class="player-btn player-icon-btn" onclick="toggleMute()" id="vol-icon-btn" title="Volume">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
       </button>
       <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.02" value="0.8">
+      <button class="player-btn player-icon-btn" onclick="openFullPlayer()" title="Full screen">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v2H6v4H4Zm10 0h6v6h-2V6h-4ZM4 14h2v4h4v2H4Zm14 0h2v6h-6v-2h4Z"/></svg>
+      </button>
     </div>
     <!-- Mobile mini (shown instead on small screens) -->
     <div class="player-mini" id="player-mini" onclick="openFullPlayer()">
@@ -149,61 +267,83 @@ function injectPlayer() {
   const fs = document.createElement('div');
   fs.id = 'player-fullscreen';
   fs.innerHTML = `
-    <div class="pfs-header">
-      <button class="pfs-close" onclick="closeFullPlayer()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-      </button>
-      <span class="pfs-label">Now Playing</span>
-      <button class="player-btn player-icon-btn" id="pfs-lyrics-btn" onclick="toggleLyricsView()" title="Lyrics" style="width:40px;">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.4" rx="1.2"/><rect x="3" y="10.8" width="13" height="2.4" rx="1.2"/><rect x="3" y="16.6" width="16" height="2.4" rx="1.2"/></svg>
-      </button>
-      <button class="player-btn player-icon-btn" id="pfs-queue-btn" onclick="toggleQueuePanel()" title="Up Next" style="width:40px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
-      </button>
-    </div>
-    <div class="pfs-cover-wrap">
-      <div class="pfs-cover" id="pfs-cover">
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    <div class="pfs-wrap">
+      <div class="pfs-header">
+        <button class="pfs-close" onclick="closeFullPlayer()" aria-label="Close">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+        </button>
+        <div class="pfs-head-mid"><div class="pfs-label">Now playing</div><div class="pfs-context" id="pfs-context">wavernrs</div></div>
+        <button class="pfs-more" onclick="shareCurrent()" aria-label="Share" title="Share">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.1a2.9 2.9 0 0 0-2 .8l-7.1-4.1a3 3 0 0 0 0-1.6L16 7.1a2.9 2.9 0 1 0-.9-1.5L8 9.7a2.9 2.9 0 1 0 0 4.6l7.1 4.2a2.9 2.9 0 1 0 2.9-2.4Z"/></svg>
+        </button>
       </div>
-    </div>
-    <div class="pfs-lyrics" id="pfs-lyrics" hidden>
-      <div class="pfs-lyrics-scroll" id="pfs-lyrics-scroll"></div>
-      <div class="pfs-lyrics-tools" id="pfs-lyrics-tools" hidden></div>
-    </div>
-    <div class="pfs-info">
-      <div class="pfs-title" id="pfs-title">—</div>
-      <div class="pfs-artist" id="pfs-artist">—</div>
-    </div>
-    <div class="pfs-progress">
-      <div class="progress-bar pfs-bar" id="pfs-progress-bar">
-        <div class="progress-fill" id="pfs-fill"></div>
+      <div class="pfs-body">
+        <div class="pfs-stage">
+          <div class="pfs-cover-wrap">
+            <div class="pfs-cover" id="pfs-cover" ondblclick="togglePlay()">
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            </div>
+          </div>
+          <div class="pfs-lyrics" id="pfs-lyrics" hidden>
+            <div class="pfs-lyrics-scroll" id="pfs-lyrics-scroll"></div>
+            <div class="pfs-lyrics-tools" id="pfs-lyrics-tools" hidden></div>
+          </div>
+        </div>
+        <div class="pfs-right">
+          <div class="pfs-info">
+            <div class="pfs-info-text">
+              <div class="pfs-title" id="pfs-title" onclick="goToCurrentTrack()">—</div>
+              <div class="pfs-artist" id="pfs-artist" onclick="goToCurrentArtist()">—</div>
+            </div>
+            <div class="pfs-info-actions">
+              <button class="player-btn player-icon-btn" id="pfs-like-btn" onclick="toggleCurrentLike()" title="Like">${_heartIcon(false)}</button>
+              <button class="player-btn player-icon-btn" onclick="addCurrentToPlaylist()" title="Add to playlist">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="pfs-progress">
+            <div class="progress-bar pfs-bar" id="pfs-progress-bar"><div class="progress-fill" id="pfs-fill"></div></div>
+            <div class="pfs-times"><span id="pfs-elapsed">0:00</span><span id="pfs-total">0:00</span></div>
+          </div>
+          <div class="pfs-controls">
+            <button class="player-btn player-icon-btn pfs-btn" id="pfs-shuffle" onclick="toggleShuffle()" title="Shuffle">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+            </button>
+            <button class="player-btn player-icon-btn pfs-btn" onclick="skipPrev()" title="Previous">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            </button>
+            <button class="player-btn player-btn-play pfs-play-btn" onclick="togglePlay()" id="pfs-play-btn">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="player-btn player-icon-btn pfs-btn" onclick="skipNext()" title="Next">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+            <button class="player-btn player-icon-btn pfs-btn" id="pfs-repeat" onclick="toggleRepeat()" title="Repeat">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            </button>
+          </div>
+          <div class="pfs-toolbar">
+            <button class="pfs-tool" id="pfs-lyrics-btn" onclick="toggleLyricsView()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.4" rx="1.2"/><rect x="3" y="10.8" width="13" height="2.4" rx="1.2"/><rect x="3" y="16.6" width="16" height="2.4" rx="1.2"/></svg><span>Lyrics</span>
+            </button>
+            <button class="pfs-tool" id="pfs-queue-btn" onclick="toggleQueuePanel()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg><span>Queue</span>
+            </button>
+            <button class="pfs-tool" id="pfs-speed-btn" onclick="openSpeedSheet()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4a9 9 0 0 0-7.8 13.5l1.7-1A7 7 0 1 1 18.1 16.5l1.7 1A9 9 0 0 0 12 4Zm0 5-3.2 6.3A2 2 0 1 0 12 17a2 2 0 0 0 .5-.1l3.4-6Z"/></svg><span id="pfs-speed-lbl">1×</span>
+            </button>
+            <button class="pfs-tool" id="pfs-timer-btn" onclick="openTimerSheet()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3h2v5.3l3.8 2.2-1 1.7L11 13.2Z"/></svg><span id="pfs-timer-lbl">Timer</span>
+            </button>
+          </div>
+          <div class="pfs-volume">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
+            <input type="range" class="volume-slider pfs-vol-slider" id="pfs-volume" min="0" max="1" step="0.02" value="0.8">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+          </div>
+        </div>
       </div>
-      <div class="pfs-times">
-        <span id="pfs-elapsed">0:00</span>
-        <span id="pfs-total">0:00</span>
-      </div>
-    </div>
-    <div class="pfs-controls">
-      <button class="player-btn player-icon-btn pfs-btn" id="pfs-shuffle" onclick="toggleShuffle()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
-      </button>
-      <button class="player-btn player-icon-btn pfs-btn" onclick="skipPrev()">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-      </button>
-      <button class="player-btn player-btn-play pfs-play-btn" onclick="togglePlay()" id="pfs-play-btn">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      </button>
-      <button class="player-btn player-icon-btn pfs-btn" onclick="skipNext()">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-      </button>
-      <button class="player-btn player-icon-btn pfs-btn" id="pfs-repeat" onclick="toggleRepeat()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-      </button>
-    </div>
-    <div class="pfs-volume">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5zm11-1.5v3c.51-.37.89-.86 1.1-1.5-.21-.64-.59-1.13-1.1-1.5z"/></svg>
-      <input type="range" class="volume-slider pfs-vol-slider" id="pfs-volume" min="0" max="1" step="0.02" value="0.8">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
     </div>
   `;
   document.body.appendChild(fs);
@@ -346,9 +486,24 @@ function skipNext() {
   document.dispatchEvent(new CustomEvent('playerSkipNext'));
 }
 
-function openFullPlayer() {
+function openFullPlayer(withLyrics) {
   const fs = document.getElementById('player-fullscreen');
-  if (fs) { fs.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  if (!fs) return;
+  fs.classList.add('open'); document.body.style.overflow = 'hidden';
+  fs.className = fs.className.replace(/theme-\w+/g, '') + ' ' + (document.body.classList.contains('theme-light') ? 'theme-light' : 'theme-dark');
+  _paintFsWash();
+  if (withLyrics === true && !_lyr.open && typeof toggleLyricsView === 'function') toggleLyricsView();
+}
+function _paintFsWash() {
+  const fs = document.getElementById('player-fullscreen');
+  if (!fs || !currentTrack) return;
+  const seed = currentTrack.title || '';
+  const apply = c => {
+    const light = document.body.classList.contains('theme-light');
+    fs.style.setProperty('--wv-wash', light ? 'hsl(' + c.h1 + ',' + Math.min(60, c.s1) + '%,82%)' : 'hsl(' + c.h1 + ',' + Math.min(55, c.s1) + '%,26%)');
+  };
+  if (currentTrack.cover_url && typeof extractCoverHues === 'function') extractCoverHues(currentTrack.cover_url, seed, apply);
+  else if (typeof coverHues === 'function') apply(coverHues(seed));
 }
 
 function closeFullPlayer() {
@@ -364,6 +519,8 @@ function initPlayer() {
   audio = new Audio();
   audio.volume = 0.8;
   audio.loop = _repeat;
+  setPlaybackSpeed(parseFloat(localStorage.getItem('wv_speed')) || 1);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { _closeSheet(); const f = document.getElementById('player-fullscreen'); if (f && f.classList.contains('open')) closeFullPlayer(); } });
 
   document.addEventListener('touchstart', _unlockIOS, { once: true, passive: true });
 
@@ -578,7 +735,7 @@ function _renderAll(track) {
 
   // Gradient cover (design uses color gradients seeded by track title)
   const bg = (typeof coverGradient === 'function') ? coverGradient(seed) : '#333';
-  const gloss = '<div aria-hidden style="position:absolute;inset:0;background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0) 45%),radial-gradient(80% 80% at 80% 90%,rgba(0,0,0,0.28) 0%,rgba(0,0,0,0) 60%);pointer-events:none;border-radius:inherit;"></div>';
+  const gloss = '';
   const imgOver = cover ? `<img src="${_esc(cover)}" alt="cover" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.style.opacity=0">` : '';
   const coverHtml = `<div style="position:absolute;inset:0;background:${bg};border-radius:inherit;overflow:hidden;">${gloss}${imgOver}</div>`;
   const largeCoverHtml = coverHtml;
@@ -606,6 +763,11 @@ function _renderAll(track) {
   if (pfsTitle) pfsTitle.textContent = title;
   if (pfsArtist) pfsArtist.textContent = artist;
   if (pfsCover) { pfsCover.style.background = bg; pfsCover.style.position = 'relative'; pfsCover.innerHTML = largeCoverHtml; }
+  const ctx = document.getElementById('pfs-context');
+  if (ctx) ctx.textContent = track._album_title ? 'From ' + track._album_title : (artist !== '—' ? artist : 'wavernrs');
+  _refreshLike();
+  const fsEl = document.getElementById('player-fullscreen');
+  if (fsEl && fsEl.classList.contains('open')) _paintFsWash();
 }
 
 function togglePlay() {
