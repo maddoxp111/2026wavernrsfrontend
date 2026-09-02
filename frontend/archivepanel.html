@@ -134,11 +134,105 @@
           '<button class="wv-pill brand" id="arc-mega-bulk-start-btn" style="display:none;margin-top:10px;" onclick="startMegaBulkImport()">Start Import</button>' +
           '<div id="arc-mega-bulk-log" style="margin-top:10px;max-height:280px;overflow-y:auto;font-size:12px;color:var(--text-3);font-family:monospace;display:none;"></div>' +
         '</div>' +
+
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-audit-card">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Audit the archive</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Checks every archive comp for duplicate tracks inside one comp, missing audio, empty comps, blank or format-looking artist names, and titles that still carry a format tag. Run it after a bulk import.</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button class="wv-pill" onclick="runArchiveAudit()">Run audit</button>' +
+            '<button class="wv-pill" id="arc-fix-dupes-btn" style="display:none;" onclick="fixArchiveDuplicates()">Delete duplicate tracks</button>' +
+          '</div>' +
+          '<div id="arc-audit-status" style="margin-top:10px;font-size:13px;display:none;"></div>' +
+          '<div id="arc-audit-out" style="margin-top:12px;"></div>' +
+        '</div>' +
+
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--red);">' +
+          '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Reset the archive</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Deletes <b>every</b> archive comp and its tracks. Cannot be undone. Files already on Internet Archive are not touched. Use this before re-importing a whole collection from MEGA.</div>' +
+          '<div id="arc-wipe-preview" style="font-size:13px;margin-bottom:10px;color:var(--text-2);">Loading count…</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+            '<input id="arc-wipe-confirm" class="wv-input" placeholder="Type WIPE ARCHIVE" style="max-width:240px;">' +
+            '<button class="wv-pill" style="background:var(--red);color:#fff;" onclick="runArchiveWipe()">Wipe archive</button>' +
+          '</div>' +
+          '<div id="arc-wipe-status" style="margin-top:10px;font-size:13px;display:none;"></div>' +
+        '</div>' +
       '</div>';
 
     arcBulkAddRow();
     arcBulkAddRow();
     arcBulkAddRow();
+    loadWipePreview();
+  }
+
+  // ── Audit ────────────────────────────────────────────────────────────────
+  var _auditIssueIds = [];
+  var ISSUE_LABEL = { empty: 'Empty comp', duplicate_tracks: 'Duplicate tracks', missing_audio: 'Missing audio', no_cover: 'No cover', no_artist: 'No artist', artist_looks_like_format: 'Artist looks like a format tag', title_needs_cleanup: 'Title needs cleanup', untitled_tracks: 'Untitled tracks' };
+  window.runArchiveAudit = async function() {
+    _arcStatus('arc-audit-status', 'Scanning every archive comp…');
+    var out = document.getElementById('arc-audit-out'); out.innerHTML = '';
+    try {
+      var d = await api('/archive/audit');
+      var bad = d.comps.filter(function(c) { return c.issues.length; });
+      _auditIssueIds = bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
+      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues', d.with_issues ? 'var(--orange)' : 'var(--green)');
+      document.getElementById('arc-fix-dupes-btn').style.display = _auditIssueIds.length ? '' : 'none';
+      if (!bad.length) { out.innerHTML = '<div style="font-size:13px;color:var(--green);">Everything checks out.</div>'; return; }
+      out.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
+        Object.keys(d.counts).map(function(k) { return '<span class="wv-chip">' + escHtml(ISSUE_LABEL[k] || k) + ' ' + d.counts[k] + '</span>'; }).join('') + '</div>' +
+        '<div style="max-height:420px;overflow:auto;">' + bad.map(function(c) {
+          return '<div style="padding:9px 0;border-top:1px solid var(--hair);font-size:13px;">' +
+            '<a href="/album.html?id=' + escHtml(c.id) + '" style="font-weight:700;">' + escHtml(c.title || 'Untitled') + '</a>' +
+            '<span style="color:var(--text-3);"> · ' + escHtml(c.artist || 'no artist') + ' · ' + c.track_count + ' tracks</span>' +
+            '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">' + c.issues.map(function(i) { return '<span class="wv-chip warn">' + escHtml(ISSUE_LABEL[i] || i) + '</span>'; }).join('') + '</div>' +
+            (c.duplicates.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Dupes: ' + c.duplicates.map(function(x) { return escHtml(x.title); }).join(', ') + '</div>' : '') +
+            (c.missing_audio.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">No audio: ' + c.missing_audio.map(escHtml).join(', ') + '</div>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+    } catch (e) { _arcStatus('arc-audit-status', 'Audit failed: ' + (e.message || e), 'var(--red)'); }
+  };
+  window.fixArchiveDuplicates = async function() {
+    if (!_auditIssueIds.length) return;
+    if (!confirm('Delete the duplicate copies in ' + _auditIssueIds.length + ' comp(s)? The first copy of each track is kept.')) return;
+    try {
+      var r = await api('/archive/audit/fix-duplicates', { method: 'POST', body: JSON.stringify({ album_ids: _auditIssueIds }) });
+      _arcStatus('arc-audit-status', 'Deleted ' + r.deleted + ' duplicate track(s). Re-running audit…', 'var(--green)');
+      runArchiveAudit();
+    } catch (e) { _arcStatus('arc-audit-status', 'Fix failed: ' + (e.message || e), 'var(--red)'); }
+  };
+
+  // ── Wipe ─────────────────────────────────────────────────────────────────
+  var _wipePoll = null;
+  async function loadWipePreview() {
+    var el = document.getElementById('arc-wipe-preview'); if (!el) return;
+    try {
+      var d = await api('/archive/wipe/preview');
+      el.textContent = 'Currently ' + d.albums + ' archive comp' + (d.albums === 1 ? '' : 's') + ' and ' + d.tracks + ' tracks.';
+      if (d.running) pollWipe();
+    } catch (e) { el.textContent = 'Could not count the archive: ' + (e.message || e); }
+  }
+  window.runArchiveWipe = async function() {
+    var phrase = (document.getElementById('arc-wipe-confirm') || {}).value || '';
+    if (phrase !== 'WIPE ARCHIVE') { _arcStatus('arc-wipe-status', 'Type WIPE ARCHIVE exactly to confirm.', 'var(--red)'); return; }
+    if (!confirm('This deletes every archive comp. There is no undo. Continue?')) return;
+    try {
+      var r = await api('/archive/wipe', { method: 'POST', body: JSON.stringify({ confirm: phrase }) });
+      _arcStatus('arc-wipe-status', 'Wiping ' + r.total + ' comps…', 'var(--orange)');
+      document.getElementById('arc-wipe-confirm').value = '';
+      pollWipe();
+    } catch (e) { _arcStatus('arc-wipe-status', 'Wipe failed: ' + (e.message || e), 'var(--red)'); }
+  };
+  function pollWipe() {
+    clearInterval(_wipePoll);
+    _wipePoll = setInterval(async function() {
+      try {
+        var w = await api('/archive/wipe/status');
+        if (w.status === 'running') { _arcStatus('arc-wipe-status', 'Wiping… ' + w.done + ' of ' + w.total + ' deleted' + (w.failed ? ', ' + w.failed + ' failed' : ''), 'var(--orange)'); return; }
+        clearInterval(_wipePoll);
+        if (w.status === 'done') _arcStatus('arc-wipe-status', 'Done. ' + w.done + ' comps deleted' + (w.failed ? ', ' + w.failed + ' failed: ' + w.errors.map(function(e) { return e.error; }).join('; ') : '') + '. Now paste the MEGA link above and start the bulk import.', w.failed ? 'var(--orange)' : 'var(--green)');
+        else if (w.status === 'error') _arcStatus('arc-wipe-status', 'Wipe error: ' + (w.errors[0] && w.errors[0].error), 'var(--red)');
+        loadWipePreview();
+      } catch (e) {}
+    }, 2000);
   }
 
   function escHtml(s) {
