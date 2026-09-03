@@ -135,6 +135,31 @@
           '<div id="arc-mega-bulk-log" style="margin-top:10px;max-height:280px;overflow-y:auto;font-size:12px;color:var(--text-3);font-family:monospace;display:none;"></div>' +
         '</div>' +
 
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-discord-card">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
+            '<div><div style="font-size:14px;font-weight:700;">Discord servers</div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Every server the bot is in. It reads every channel it can see, imports each untitled.stream / Samply / MEGA link it finds, and never posts anything. Add it with <b>View Channels</b> and <b>Read Message History</b> only.</div></div>' +
+            '<div style="display:flex;gap:6px;align-items:center;">' +
+              '<span id="dc-bot-state" class="wv-chip">…</span>' +
+              '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcGlobal(\'stop\')">Stop queue</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcGlobal(\'resume\')">Resume</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcLoad()">↻</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="dc-queue" style="font-size:12.5px;color:var(--text-2);margin:8px 0 12px;"></div>' +
+          '<div id="dc-servers" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
+          '<div id="dc-log-wrap" style="margin-top:14px;display:none;">' +
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">' +
+              '<div style="font-size:13px;font-weight:700;" id="dc-log-title">Imports</div>' +
+              '<div class="wv-seg" id="dc-log-filter">' +
+                '<button class="on" data-s="" onclick="dcFilter(\'\')">All</button><button data-s="running" onclick="dcFilter(\'running\')">Running</button><button data-s="queued" onclick="dcFilter(\'queued\')">Queued</button><button data-s="done" onclick="dcFilter(\'done\')">Done</button><button data-s="failed" onclick="dcFilter(\'failed\')">Failed</button>' +
+              '</div>' +
+              '<input class="wv-input" id="dc-log-q" placeholder="Search links" style="max-width:220px;padding:6px 12px;font-size:12.5px;" oninput="dcLogDebounce()">' +
+            '</div>' +
+            '<div id="dc-log" style="display:flex;flex-direction:column;gap:4px;max-height:520px;overflow:auto;"></div>' +
+          '</div>' +
+        '</div>' +
+
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-audit-card">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Audit the archive</div>' +
           '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Checks every archive comp for duplicate tracks inside one comp, missing audio, empty comps, blank or format-looking artist names, and titles that still carry a format tag. Run it after a bulk import.</div>' +
@@ -162,7 +187,116 @@
     arcBulkAddRow();
     arcBulkAddRow();
     loadWipePreview();
+    dcLoad();
+    if (!window._dcPoll) window._dcPoll = setInterval(function() { if (document.getElementById('dc-servers')) dcLoad(true); }, 15000);
   }
+
+  // ── Discord servers panel ────────────────────────────────────────────────
+  var _dc = { guild: null, status: '', q: '', data: null };
+  function _dcTime(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return 'just now'; if (d < 3600) return Math.floor(d / 60) + 'm ago'; if (d < 86400) return Math.floor(d / 3600) + 'h ago'; return Math.floor(d / 86400) + 'd ago'; }
+  function _pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
+  window.dcLoad = async function(quiet) {
+    try {
+      var d = await api('/discord/servers');
+      _dc.data = d;
+      var st = document.getElementById('dc-bot-state');
+      if (st) { st.textContent = d.online ? 'Online · ' + (d.bot || 'bot') : 'Bot offline'; st.className = 'wv-chip ' + (d.online ? 'ok' : 'bad'); }
+      var q = d.queue || {};
+      var qEl = document.getElementById('dc-queue');
+      if (qEl) qEl.innerHTML = (q.stopped ? '<span class="wv-chip bad">Queue stopped</span> ' : '') +
+        (q.currentSourceUrl ? 'Importing now: <a href="' + escHtml(q.currentSourceUrl) + '" target="_blank" rel="noopener">' + escHtml(q.currentSourceUrl.replace(/^https?:\/\//, '')) + '</a> · ' : 'Idle · ') +
+        (q.queueLength || 0) + ' waiting';
+      dcRenderServers(d.guilds || []);
+      if (_dc.guild) dcLoadLog();
+    } catch (e) { if (!quiet) { var el = document.getElementById('dc-servers'); if (el) el.innerHTML = '<div style="font-size:13px;color:var(--red);">Could not load: ' + escHtml(e.message || e) + '</div>'; } }
+  };
+  function dcRenderServers(guilds) {
+    var el = document.getElementById('dc-servers'); if (!el) return;
+    if (!guilds.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">The bot is not in any server yet.</div>'; return; }
+    el.innerHTML = guilds.map(function(g) {
+      var c = g.counts || {};
+      var sc = g.scan;
+      var scanHtml = '';
+      if (sc && sc.status === 'running') {
+        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Scanning history · ' + sc.channelsDone + '/' + sc.channelsTotal + ' channels · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.currentChannel ? ' · ' + escHtml(sc.currentChannel) : '') + '</div>' +
+          '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden;"><div style="height:100%;width:' + _pct(sc.channelsDone, sc.channelsTotal) + '%;background:var(--brand);"></div></div>';
+      } else if (sc) {
+        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-3);">Last scan ' + escHtml(sc.status) + ' ' + _dcTime(sc.finishedAt) + ' · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.channelsSkipped ? ' · ' + sc.channelsSkipped + ' unreadable channels' : '') + '</div>';
+      }
+      var perm = g.gone ? '<span class="wv-chip">Bot removed</span>'
+        : g.read_only ? '<span class="wv-chip ok">Read-only ✓</span>'
+        : g.can_send ? '<span class="wv-chip warn">Can send messages</span>' : '<span class="wv-chip warn">Limited access</span>';
+      var watch = g.gone ? '' : (g.watched ? '<span class="wv-chip acc">Watching all channels</span>' : (g.channel_rows ? '<span class="wv-chip">Watching ' + g.channel_rows + ' channel(s)</span>' : '<span class="wv-chip bad">Paused</span>'));
+      var pct = c.total ? _pct(c.done, c.total) : 0;
+      return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
+        '<div style="display:flex;gap:12px;align-items:center;">' +
+          '<div style="width:44px;height:44px;border-radius:12px;background:var(--surface-3);overflow:hidden;flex-shrink:0;display:grid;place-items:center;font-weight:800;">' + (g.icon ? '<img src="' + escHtml(g.icon) + '" style="width:100%;height:100%;object-fit:cover;">' : escHtml((g.name || '?').charAt(0))) + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(g.name) + '</div>' +
+            '<div style="font-size:12px;color:var(--text-3);">' + (g.member_count ? g.member_count.toLocaleString() + ' members · ' : '') + (g.channels_readable != null ? g.channels_readable + '/' + g.channels_total + ' channels readable · ' : '') + (g.joined_at ? 'joined ' + _dcTime(g.joined_at) : '') + '</div>' +
+            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' + perm + watch + '</div>' +
+          '</div>' +
+          '<div style="text-align:right;flex-shrink:0;">' +
+            '<div style="font-size:22px;font-weight:900;letter-spacing:-.02em;">' + (c.done || 0) + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> / ' + (c.total || 0) + '</span></div>' +
+            '<div style="font-size:11px;color:var(--text-3);">comps imported · ' + (c.tracks || 0) + ' tracks</div>' +
+          '</div>' +
+        '</div>' +
+        (c.total ? '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:10px;overflow:hidden;display:flex;"><div style="width:' + _pct(c.done, c.total) + '%;background:var(--green);"></div><div style="width:' + _pct(c.running + c.queued, c.total) + '%;background:var(--brand);"></div><div style="width:' + _pct(c.failed, c.total) + '%;background:var(--red);"></div></div>' +
+          '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">' + (c.done || 0) + ' done · ' + ((c.queued || 0) + (c.running || 0)) + ' pending · ' + (c.failed || 0) + ' failed' + (c.deleted ? ' · ' + c.deleted + ' removed' : '') + '</div>' : '') +
+        scanHtml +
+        (g.gone ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+          (sc && sc.status === 'running'
+            ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
+            : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
+          (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
+                     : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
+          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
+        '</div>') +
+      '</div>';
+    }).join('');
+  }
+  window.dcAct = async function(gid, action) {
+    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); }
+    catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.dcLeave = async function(gid, name) {
+    if (!confirm('Leave "' + name + '"? The bot stops reading it; imported comps stay.')) return;
+    dcAct(gid, 'leave');
+  };
+  window.dcGlobal = async function(a) { try { await api('/discord/' + a, { method: 'POST' }); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
+  window.dcShowLog = function(gid, name) {
+    _dc.guild = gid; document.getElementById('dc-log-wrap').style.display = '';
+    document.getElementById('dc-log-title').textContent = 'Imports from ' + name;
+    dcLoadLog(); if (_dc.data) dcRenderServers(_dc.data.guilds || []);
+    document.getElementById('dc-log-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  window.dcFilter = function(s) { _dc.status = s; document.querySelectorAll('#dc-log-filter button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); }); dcLoadLog(); };
+  var _dcT = null; window.dcLogDebounce = function() { clearTimeout(_dcT); _dcT = setTimeout(function() { _dc.q = document.getElementById('dc-log-q').value.trim(); dcLoadLog(); }, 300); };
+  async function dcLoadLog() {
+    var el = document.getElementById('dc-log'); if (!el || !_dc.guild) return;
+    try {
+      var d = await api('/discord/active-jobs?limit=300&guild=' + encodeURIComponent(_dc.guild) + (_dc.status ? '&status=' + _dc.status : '') + (_dc.q ? '&q=' + encodeURIComponent(_dc.q) : ''));
+      var rows = d.log || [];
+      if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">Nothing here.</div>'; return; }
+      el.innerHTML = rows.map(function(r) {
+        var col = { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
+        var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
+        return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
+          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(r.status) + '</span>' +
+          '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
+          '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
+            '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
+          (r.album_id ? '<a class="wv-see-all" href="/album.html?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
+          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
+        '</div>';
+      }).join('');
+    } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
+  }
+  window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
+  window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
   // ── Audit ────────────────────────────────────────────────────────────────
   var _auditIssueIds = [];
