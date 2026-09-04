@@ -663,9 +663,18 @@
     _renderLib();
     if (localStorage.getItem('token')) _loadLibData();
 
-    // Close drawer when clicking links inside it
-    root.querySelectorAll('#wv-drawer .wv-nav-item, #wv-mobile-tabs .wv-tab-btn').forEach(function(el) {
-      el.addEventListener('click', function() { window.closeMobileDrawer(); });
+    // Close the drawer when a link inside it is tapped. Delegated at the
+    // drawer level: its contents are rebuilt on login/logout and after
+    // library loads, which used to drop per-link handlers and leave the
+    // drawer sitting open over the new page.
+    ['wv-drawer', 'wv-mobile-tabs'].forEach(function(id) {
+      var host = document.getElementById(id);
+      if (!host) return;
+      host.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href], .wv-tab-btn');
+        if (!link) return;
+        window.closeMobileDrawer();
+      });
     });
 
     // ── Site lockdown check ───────────────────────────────────────
@@ -923,7 +932,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609042139';
+  s.src = '/js/playlists.js?v=202609042150';
   document.head.appendChild(s);
 })();
 
@@ -931,7 +940,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609042139';
+  s.src = '/js/ratings.js?v=202609042150';
   document.head.appendChild(s);
 })();
 

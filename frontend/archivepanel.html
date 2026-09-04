@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609042139">
+  <link rel="stylesheet" href="/css/style.css?v=202609042150">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609042139"></script>
-<script src="/js/layout.js?v=202609042139"></script>
-<script src="/js/player.js?v=202609042139"></script>
-<script src="/js/router.js?v=202609042139"></script>
+<script src="/js/api.js?v=202609042150"></script>
+<script src="/js/layout.js?v=202609042150"></script>
+<script src="/js/player.js?v=202609042150"></script>
+<script src="/js/router.js?v=202609042150"></script>
 <script>
   initPlayer();
 
@@ -182,10 +182,12 @@
               '<span id="dc-bot-state" class="wv-chip">…</span>' +
               '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcGlobal(\'stop\')">Stop queue</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcGlobal(\'resume\')">Resume</button>' +
+              '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="dcRetryWorking()" title="Checks every failed link (Discord and Reddit). Links that still load are queued again; links that were taken down are marked gone.">Retry links that still work</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcLoad()">↻</button>' +
             '</div>' +
           '</div>' +
           '<div id="dc-queue" style="font-size:12.5px;color:var(--text-2);margin:8px 0 12px;"></div>' +
+          '<div id="dc-sweep" style="display:none;font-size:12.5px;color:var(--text-2);margin:-4px 0 12px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);"></div>' +
           '<div id="dc-servers" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
           '<div id="dc-log-wrap" style="margin-top:14px;display:none;">' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">' +
@@ -458,6 +460,27 @@
   }
   window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
+  var _sweepTimer = null;
+  window.dcRetryWorking = async function() {
+    try { await api('/discord/retry-working', { method: 'POST' }); } catch (e) { alert(e.message || 'Failed'); return; }
+    dcSweepPoll();
+  };
+  window.dcSweepCancel = async function() { try { await api('/discord/retry-working/cancel', { method: 'POST' }); } catch (e) {} dcSweepPoll(); };
+  async function dcSweepPoll() {
+    clearTimeout(_sweepTimer);
+    var el = document.getElementById('dc-sweep'); if (!el) return;
+    var st; try { st = await api('/discord/retry-working'); } catch (e) { return; }
+    if (st.status === 'idle') { el.style.display = 'none'; return; }
+    el.style.display = '';
+    var pct = st.total ? Math.round(st.checked / st.total * 100) : 0;
+    el.innerHTML = '<b>' + (st.status === 'running' ? 'Checking failed links… ' + pct + '%' : st.status === 'done' ? 'Link check finished' : 'Link check cancelled') + '</b> · ' +
+      st.checked.toLocaleString() + ' of ' + st.total.toLocaleString() + ' checked · <span style="color:var(--green);">' + st.alive.toLocaleString() + ' still work, queued again</span> · ' +
+      st.dead.toLocaleString() + ' gone · ' + st.unknown.toLocaleString() + ' unclear, left as failed · ' + st.skipped.toLocaleString() + ' skipped (no audio / duplicates)' +
+      (st.status === 'running' ? ' <button class="wv-see-all" onclick="dcSweepCancel()">Stop</button>' : '');
+    if (st.status === 'running') _sweepTimer = setTimeout(dcSweepPoll, 4000);
+    else dcLoad();
+  }
+  dcSweepPoll();
   window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
   // ── Audit ────────────────────────────────────────────────────────────────
