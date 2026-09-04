@@ -827,6 +827,49 @@
 })();
 
 // ── Marquee: scroll overflowing titles on hover ──────────────────────────────
+// ── Image CDN: every remote <img> on the site is served resized as webp ──
+// Templates keep writing the original URL; this rewrites the src to a
+// wsrv.nl URL sized to the box the image is rendered in (times device pixel
+// ratio). If the CDN fails for an image it falls back to the original once.
+(function () {
+  if (typeof window.wvImg !== 'function') return;
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  function sizeFor(img) {
+    var w = img.getAttribute('width') || img.dataset.size;
+    if (w && !isNaN(+w)) return +w * DPR;
+    var r = img.getBoundingClientRect();
+    var px = Math.max(r.width, r.height);
+    if (!px) {
+      var p = img.parentElement; var pr = p ? p.getBoundingClientRect() : null;
+      px = pr ? Math.max(pr.width, pr.height) : 0;
+    }
+    return (px || 320) * DPR;
+  }
+  function apply(img) {
+    if (img._wvCdn) return;
+    var src = img.getAttribute('src') || '';
+    if (!/^https?:\/\//i.test(src) || /^https?:\/\/wsrv\.nl\//i.test(src)) return;
+    try { if (new URL(src).origin === location.origin) return; } catch (_) { return; }
+    img._wvCdn = true;
+    img.dataset.wvOrig = src;
+    img.src = window.wvImg(src, sizeFor(img));
+    if (!img.getAttribute('loading')) img.loading = 'lazy';
+    if (!img.getAttribute('decoding')) img.decoding = 'async';
+    img.addEventListener('error', function onErr() {
+      img.removeEventListener('error', onErr);
+      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) img.src = img.dataset.wvOrig;
+    });
+  }
+  function scan(root) { (root.querySelectorAll ? root.querySelectorAll('img[src]') : []).forEach(apply); if (root.tagName === 'IMG') apply(root); }
+  new MutationObserver(function (ms) {
+    ms.forEach(function (m) {
+      if (m.type === 'attributes') { m.target._wvCdn = false; apply(m.target); return; }
+      m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  scan(document);
+})();
+
 (function () {
   var SEL = '.wv-track-title,.track-row-title,.wv-comp-card-title,.scroll-card-title,.wv-card-title';
   function apply(el) {

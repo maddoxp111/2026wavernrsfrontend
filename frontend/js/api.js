@@ -271,10 +271,34 @@ function _circularMeanHue(hues) {
 
 // Render a cover art div — seed = title string, size = px number, opts = { label, badge, radius, pct }
 // pct=true makes it 100% × 100% (for use inside a padding-top:100% wrapper)
+// ── Image CDN ──────────────────────────────────────────────────────────────
+// Every cover is a full-size upload on Internet Archive, which redirects and
+// serves slowly. wsrv.nl fetches it once, resizes it, converts to webp and
+// caches it on a real CDN. Only remote http(s) images are wrapped; our own
+// files, data: URIs and already-wrapped URLs pass through untouched.
+const WV_IMG_STEPS = [64, 96, 128, 160, 240, 320, 480, 640, 960, 1280];
+function wvImgSize(px) {
+  const want = Math.max(32, Math.ceil(px || 0));
+  for (const s of WV_IMG_STEPS) if (s >= want) return s;
+  return 1280;
+}
+function wvImg(url, w, opts) {
+  opts = opts || {};
+  const u = String(url || '').trim();
+  if (!/^https?:\/\//i.test(u)) return u;
+  if (/^https?:\/\/wsrv\.nl\//i.test(u)) return u;
+  try { if (new URL(u).origin === location.origin) return u; } catch (_) { return u; }
+  const size = wvImgSize(w || 320);
+  let q = 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + size + (opts.square === false ? '' : '&h=' + size + '&fit=cover') + '&output=webp&q=' + (opts.q || 82) + '&il';
+  return q;
+}
+window.wvImg = wvImg;
+window.wvImgSize = wvImgSize;
+
 function coverHTML(seed, size, opts) {
   opts = opts || {};
   const bg = opts.coverUrl
-    ? `url('${opts.coverUrl}') center/cover no-repeat, ${coverGradient(seed)}`
+    ? `url('${wvImg(opts.coverUrl, opts.pct ? 480 : (size * (window.devicePixelRatio || 1)))}') center/cover no-repeat, ${coverGradient(seed)}`
     : coverGradient(seed);
   const isPct = opts.pct;
   const r = opts.radius != null ? opts.radius : (size >= 180 ? 18 : size >= 80 ? 12 : 8);
