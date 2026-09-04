@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609041832">
+  <link rel="stylesheet" href="/css/style.css?v=202609041844">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609041832"></script>
-<script src="/js/layout.js?v=202609041832"></script>
-<script src="/js/player.js?v=202609041832"></script>
-<script src="/js/router.js?v=202609041832"></script>
+<script src="/js/api.js?v=202609041844"></script>
+<script src="/js/layout.js?v=202609041844"></script>
+<script src="/js/player.js?v=202609041844"></script>
+<script src="/js/router.js?v=202609041844"></script>
 <script>
   initPlayer();
 
@@ -272,10 +272,10 @@
       var d = await api('/import/overview');
       var set = function(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v; };
       set('ov-total', (d.total_remaining || 0).toLocaleString());
-      set('ov-eta', d.total_remaining ? 'about ' + _fmtEta(d.eta_min).replace('~', '') + ' left · ' + _rate(d, d.links.rate_per_min, 'links') + ' overall' : 'nothing pending');
+      set('ov-eta', d.total_remaining ? 'about ' + _fmtEta(d.eta_min).replace('~', '') + ' left · ' + _rate(d, d.links.rate_per_min, 'links') + ' overall' + (d.links.stalled ? ' · <span style="color:var(--orange);">' + d.links.stalled.toLocaleString() + ' MEGA links stalled, not counted</span>' : '') : 'nothing pending');
       var megaKnown = d.mega.folder_total > 0;
       set('ov-mega', (megaKnown ? d.mega.remaining.toLocaleString() : '…') + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
-      set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' : 'shards restarting · ') + _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + _fmtEta(d.mega.eta_min));
+      set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' : 'shards restarting · ') + (d.mega.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + (d.mega.tracks_last_30m || 0) + ' tracks in 30 min · ' + _fmtEta(d.mega.eta_min)));
       set('ov-discord', d.links.discord.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       set('ov-reddit', d.links.reddit.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       var LABEL = { rvideo: 'Reddit videos', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA links', gdrive: 'Google Drive', other: 'Other' };
@@ -283,7 +283,7 @@
         var sx = (d.links.sources || {})[k]; if (!sx) return '';
         if (!sx.remaining) return 'queue empty';
         var mix = Object.keys(sx.by_type || {}).sort(function(a, b) { return sx.by_type[b] - sx.by_type[a]; }).slice(0, 3).map(function(t) { return sx.by_type[t].toLocaleString() + ' ' + (LABEL[t] || t); }).join(', ');
-        return mix + ' · ' + (sx.eta_min != null ? _fmtEta(sx.eta_min) + ' for this source' : (d.measuring ? 'measuring (just restarted)' : 'no completions yet in the last 30 min'));
+        return mix + ' · ' + (sx.eta_min != null ? _fmtEta(sx.eta_min) + ' for this source' : (d.measuring ? 'measuring (just restarted)' : 'no completions yet in the last 30 min')) + (sx.stalled ? ' <span style="color:var(--orange);">(not counting ' + sx.stalled.toLocaleString() + ' stalled MEGA links)</span>' : '');
       };
       set('ov-discord-sub', srcSub('discord')); set('ov-reddit-sub', srcSub('reddit'));
       var mem = d.memory || {};
@@ -297,9 +297,9 @@
         var t = bt[k];
         return '<div style="background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;"><div style="font-weight:700;">' + escHtml(LABEL[k] || k) + '</div>' +
           '<div style="font-size:20px;font-weight:900;letter-spacing:-.02em;">' + (t.remaining || 0).toLocaleString() + '<span style="font-size:11px;color:var(--text-3);font-weight:600;"> left</span></div>' +
-          '<div style="font-size:12px;color:var(--text-3);">' + (t.done_last_30m || 0) + ' done in 30 min · ' + _rate(d, t.rate_per_min || 0, '') .replace(' /min', '/min') + ' · ' + (t.remaining ? _fmtEta(t.eta_min) : 'done') + '</div></div>';
+          '<div style="font-size:12px;color:var(--text-3);">' + (t.done_last_30m || 0) + ' done in 30 min · ' + (t.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, t.rate_per_min || 0, '') .replace(' /min', '/min') + ' · ' + (t.remaining ? _fmtEta(t.eta_min) : 'done')) + '</div></div>';
       });
-      if (d.mega && d.mega.folder_total) typeRows.unshift('<div style="background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;"><div style="font-weight:700;">MEGA folder (Ye comps)</div><div style="font-size:20px;font-weight:900;letter-spacing:-.02em;">' + d.mega.remaining.toLocaleString() + '<span style="font-size:11px;color:var(--text-3);font-weight:600;"> comps left</span></div><div style="font-size:12px;color:var(--text-3);">' + d.mega.imported + ' / ' + d.mega.folder_total + ' · ' + (d.mega.done_last_30m || 0) + ' done in 30 min · ' + _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + _fmtEta(d.mega.eta_min) + '</div></div>');
+      if (d.mega && d.mega.folder_total) typeRows.unshift('<div style="background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;"><div style="font-weight:700;">MEGA folder (Ye comps)</div><div style="font-size:20px;font-weight:900;letter-spacing:-.02em;">' + d.mega.remaining.toLocaleString() + '<span style="font-size:11px;color:var(--text-3);font-weight:600;"> comps left</span></div><div style="font-size:12px;color:var(--text-3);">' + d.mega.imported + ' / ' + d.mega.folder_total + ' · ' + (d.mega.done_last_30m || 0) + ' done in 30 min · ' + (d.mega.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + _fmtEta(d.mega.eta_min)) + '</div></div>');
       set('ov-types', typeRows.join('') || '<span style="color:var(--text-3);">Nothing pending</span>');
       var rec = d.recent_done || [];
       set('ov-recent', rec.length ? rec.slice(0, 12).map(function(r) {
