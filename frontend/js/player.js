@@ -929,8 +929,8 @@ function _renderLyrics() {
         '<div class="lyr-empty-t">No lyrics yet</div>' +
         '<div class="lyr-empty-d">' +
           (_lyr.canEdit
-            ? 'Add them yourself, or check whether the file already has them saved inside it.'
-            : 'The artist hasn\'t added lyrics for this track.') +
+            ? 'Generate them from the audio — it takes about a minute.'
+            : 'Lyrics haven\'t been generated for this track yet.') +
         '</div>' +
       '</div>';
   } else {
@@ -945,8 +945,7 @@ function _renderLyrics() {
     if (_lyr.canEdit) {
       tools.hidden = false;
       tools.innerHTML =
-        '<button class="lyr-tool" onclick="openLyricsEditor()">' + (_lyr.lines.length ? 'Edit' : 'Add lyrics') + '</button>' +
-        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get lyrics</button>' +
+        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">' + (_lyr.lines.length ? 'Regenerate' : 'Get lyrics') + '</button>' +
         (_lyr.source ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated' : 'artist-provided') + '</span>' : '');
     } else {
       tools.hidden = !_lyr.source;
