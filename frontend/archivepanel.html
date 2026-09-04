@@ -332,11 +332,13 @@
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album.html?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
           (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="Move to the front of the queue and start now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
     } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
   }
+  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
@@ -475,11 +477,13 @@
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album.html?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
           (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="Move to the front of the queue and start now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
     } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
   }
+  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
@@ -618,11 +622,13 @@
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album.html?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
           (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="Move to the front of the queue and start now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
     } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
   }
+  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
@@ -761,11 +767,13 @@
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album.html?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
           (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="Move to the front of the queue and start now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
     } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
   }
+  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
   window.dcDel = async function(id) { if (!confirm('Remove this log entry? If the link is posted again it will be imported as new.')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
