@@ -942,11 +942,9 @@ function _renderLyrics() {
   }
 
   if (tools) {
-    if (_lyr.canEdit) {
+    if (_lyr.canEdit && !_lyr.lines.length) {
       tools.hidden = false;
-      tools.innerHTML =
-        '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">' + (_lyr.lines.length ? 'Regenerate' : 'Get lyrics') + '</button>' +
-        (_lyr.source ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated' : 'artist-provided') + '</span>' : '');
+      tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get lyrics</button>';
     } else {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
