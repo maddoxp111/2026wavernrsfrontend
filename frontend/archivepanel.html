@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609042150">
+  <link rel="stylesheet" href="/css/style.css?v=202609042155">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609042150"></script>
-<script src="/js/layout.js?v=202609042150"></script>
-<script src="/js/player.js?v=202609042150"></script>
-<script src="/js/router.js?v=202609042150"></script>
+<script src="/js/api.js?v=202609042155"></script>
+<script src="/js/layout.js?v=202609042155"></script>
+<script src="/js/player.js?v=202609042155"></script>
+<script src="/js/router.js?v=202609042155"></script>
 <script>
   initPlayer();
 
@@ -344,7 +344,7 @@
             (sc && sc.status === 'running' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'scan/cancel\')">Cancel scan</button>' : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'scan\')">Scan full history</button>') +
             (s.enabled ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'disable\')">Pause</button>' : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'enable\')">Watch new posts</button>') +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'poll\')">Check now</button>' +
-            (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + s.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+            (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + s.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + s.id + '\',\'r/' + s.sub + '\')">View imports</button>' +
           '</div>' +
         '</div>';
@@ -412,7 +412,7 @@
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
         '</div>') +
@@ -420,7 +420,7 @@
     }).join('');
   }
   window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); }
+    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
     catch (e) { alert(e.message || 'Failed'); }
   };
   window.dcLeave = async function(gid, name) {
@@ -473,7 +473,8 @@
     if (st.status === 'idle') { el.style.display = 'none'; return; }
     el.style.display = '';
     var pct = st.total ? Math.round(st.checked / st.total * 100) : 0;
-    el.innerHTML = '<b>' + (st.status === 'running' ? 'Checking failed links… ' + pct + '%' : st.status === 'done' ? 'Link check finished' : 'Link check cancelled') + '</b> · ' +
+    var scope = st.scope && st.scope !== 'all' ? (/^reddit:/.test(st.scope) ? 'r/' + st.scope.slice(7) : 'this server') : 'every source';
+    el.innerHTML = '<b>' + (st.status === 'running' ? 'Checking failed links from ' + scope + '… ' + pct + '%' : st.status === 'done' ? 'Link check finished' : 'Link check cancelled') + '</b> · ' +
       st.checked.toLocaleString() + ' of ' + st.total.toLocaleString() + ' checked · <span style="color:var(--green);">' + st.alive.toLocaleString() + ' still work, queued again</span> · ' +
       st.dead.toLocaleString() + ' gone · ' + st.unknown.toLocaleString() + ' unclear, left as failed · ' + st.skipped.toLocaleString() + ' skipped (no audio / duplicates)' +
       (st.status === 'running' ? ' <button class="wv-see-all" onclick="dcSweepCancel()">Stop</button>' : '');
@@ -578,7 +579,7 @@
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
         '</div>') +
@@ -586,7 +587,7 @@
     }).join('');
   }
   window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); }
+    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
     catch (e) { alert(e.message || 'Failed'); }
   };
   window.dcLeave = async function(gid, name) {
@@ -723,7 +724,7 @@
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
         '</div>') +
@@ -731,7 +732,7 @@
     }).join('');
   }
   window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); }
+    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
     catch (e) { alert(e.message || 'Failed'); }
   };
   window.dcLeave = async function(gid, name) {
@@ -868,7 +869,7 @@
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
         '</div>') +
@@ -876,7 +877,7 @@
     }).join('');
   }
   window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); }
+    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
     catch (e) { alert(e.message || 'Failed'); }
   };
   window.dcLeave = async function(gid, name) {
