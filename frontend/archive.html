@@ -4,30 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609042000">
+  <link rel="stylesheet" href="/css/style.css?v=202609042002">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609042000"></script>
-<script src="/js/layout.js?v=202609042000"></script>
-<script src="/js/player.js?v=202609042000"></script>
-<script src="/js/router.js?v=202609042000"></script>
+<script src="/js/api.js?v=202609042002"></script>
+<script src="/js/layout.js?v=202609042002"></script>
+<script src="/js/player.js?v=202609042002"></script>
+<script src="/js/router.js?v=202609042002"></script>
 <script>
 initPlayer();
 
-var _archiveItems = [];   // full dataset, fetched in pages
-var _archiveArtists = []; // grouped artist index
+// The archive is thousands of comps. The grid asks the server for one page at
+// a time (sorted and searched there) and pulls the next page as the reader
+// scrolls, so a phone never downloads or draws more than it is looking at.
+var _archiveArtists = []; // grouped artist index (one request, drawn in chunks)
 var _archiveTotal = 0;
 var _arcQuery = '';
-var _arcEra = '';         // era tag id filter ('' = all)
 var _arcSort = 'newest';
-var _arcView = 'comps'; // 'comps' | 'artists' — the flat grid opens first
-var _arcShown = 0;        // cards currently in the DOM (the grid fills as you scroll)
-var _ARC_CHUNK = 48;
-var _arcObserver = null;
+var _arcView = 'comps';   // 'comps' | 'artists' — the flat grid opens first
 var _arcSearchTimer = null;
+var _ARC_PAGE = 60;
+var _arcItems = [];       // comps fetched so far for the current query/sort
+var _arcLoading = false;
+var _arcDone = false;
+var _arcGen = 0;          // bumps when the query/sort changes so stale pages are dropped
+var _arcShownArtists = 0;
+var _arcObserver = null;
 
 async function initArchive() {
   var view = document.getElementById('view');
@@ -37,39 +42,97 @@ async function initArchive() {
       '<h1 style="margin:0 0 8px;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Archive</h1>' +
       '<p style="margin:0;font-size:14px;color:var(--text-2);max-width:560px;line-height:1.55;">Comps preserved by the wavernrs team — not by artists on the site, but too good to be lost.</p>' +
     '</div>' +
-    // View toggle: browse by artist, or the flat comp grid
     '<div class="wv-seg" style="align-self:flex-start;">' +
       '<button class="on" id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
       '<button id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
     '</div>' +
-    // Toolbar: search + sort + era chips + count
-    '<div style="display:flex;flex-direction:column;gap:10px;">' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
-        '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
-          'style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;font-size:14px;" oninput="arcSearchInput()">' +
-        '<select id="arc-sort" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSortChange()">' +
-          '<option value="newest">Newest first</option>' +
-          '<option value="oldest">Oldest first</option>' +
-          '<option value="title">Title A–Z</option>' +
-          '<option value="artist">Artist A–Z</option>' +
-          '<option value="plays">Most played</option>' +
-        '</select>' +
-        '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
-      '</div>' +
-      '<div id="arc-era-chips" class="wv-filters"></div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
+      '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
+        'style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;font-size:14px;" oninput="arcSearchInput()">' +
+      '<select id="arc-sort" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSortChange()">' +
+        '<option value="newest">Newest first</option>' +
+        '<option value="oldest">Oldest first</option>' +
+        '<option value="title">Title A–Z</option>' +
+        '<option value="artist">Artist A–Z</option>' +
+        '<option value="plays">Most played</option>' +
+      '</select>' +
+      '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
     '</div>' +
-    '<div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div id="archive-grid" class="wv-tile-grid"><div class="loading"><div class="spinner"></div></div></div>' +
     '<div id="archive-sentinel" style="height:1px;"></div>' +
-    '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading the rest of the archive…</div>' +
+    '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading more…</div>' +
     '</div>';
   arcApplyView();
+  _arcWatchSentinel();
+  arcReload();
   loadArtists();
-  loadArchive();
+}
+
+// ── Comps: paged from the server ─────────────────────────────────────────────
+function arcReload() {
+  _arcGen++;
+  _arcItems = []; _arcDone = false; _arcLoading = false; _archiveTotal = 0;
+  var grid = document.getElementById('archive-grid');
+  if (grid && _arcView === 'comps') grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  arcLoadMore();
+}
+
+async function arcLoadMore() {
+  if (_arcView !== 'comps' || _arcLoading || _arcDone) return;
+  _arcLoading = true;
+  var gen = _arcGen;
+  var more = document.getElementById('archive-loading-more');
+  if (more && _arcItems.length) more.style.display = '';
+  try {
+    var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) +
+      (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
+    var page = await api(url);
+    if (gen !== _arcGen) return; // the query changed while this was in flight
+    var items = Array.isArray(page) ? page : (page.items || []);
+    _archiveTotal = Array.isArray(page) ? items.length : (page.total || 0);
+    var first = _arcItems.length === 0;
+    _arcItems = _arcItems.concat(items);
+    _arcDone = !items.length || _arcItems.length >= _archiveTotal;
+    var grid = document.getElementById('archive-grid');
+    if (!grid) return;
+    if (first) {
+      if (!_arcItems.length) {
+        grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">' + (_arcQuery ? 'Nothing matches your search.' : 'No archived comps yet.') + '</div>';
+      } else {
+        grid.innerHTML = items.map(archiveCardHTML).join('');
+        if (typeof window.setPageBgImage === 'function') {
+          var withCover = items.filter(function(i) { return i.cover_url; });
+          window.setPageBgImage(withCover.length ? withCover[Math.floor(Math.random() * withCover.length)].cover_url : '');
+        }
+      }
+    } else if (items.length) {
+      grid.insertAdjacentHTML('beforeend', items.map(archiveCardHTML).join(''));
+    }
+    var countEl = document.getElementById('arc-count');
+    if (countEl) countEl.textContent = _archiveTotal.toLocaleString() + ' comp' + (_archiveTotal !== 1 ? 's' : '') + (_arcQuery ? ' match' : '');
+  } catch (err) {
+    if (gen !== _arcGen) return;
+    var g = document.getElementById('archive-grid');
+    if (g && !_arcItems.length) g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>';
+  } finally {
+    if (gen === _arcGen) { _arcLoading = false; if (more) more.style.display = 'none'; }
+  }
+}
+
+function arcSearchInput() {
+  clearTimeout(_arcSearchTimer);
+  _arcSearchTimer = setTimeout(function() {
+    _arcQuery = ((document.getElementById('arc-search') || {}).value || '').trim();
+    if (_arcView === 'comps') arcReload(); else renderArtists();
+  }, 250);
+}
+
+function arcSortChange() {
+  _arcSort = (document.getElementById('arc-sort') || {}).value || 'newest';
+  arcReload();
 }
 
 // ── Artist index ─────────────────────────────────────────────────────────────
-// The archive is browsed by artist first: with thousands of comps a flat grid
-// is unusable, and "everything by X" is the question people actually have.
 async function loadArtists() {
   try {
     var d = await api('/archive/artists?sort=comps');
@@ -77,13 +140,45 @@ async function loadArtists() {
   } catch (e) {
     _archiveArtists = [];
   }
-  if (_arcView === 'artists') renderArchive();
+  if (_arcView === 'artists') renderArtists();
 }
 
+var _arcArtistList = [];
+function renderArtists() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid) return;
+  var q = _arcQuery.toLowerCase();
+  var artists = q ? _archiveArtists.filter(function(a) { return (a.name || '').toLowerCase().indexOf(q) !== -1; }) : _archiveArtists;
+  var cEl = document.getElementById('arc-count');
+  if (cEl) cEl.textContent = artists.length === _archiveArtists.length
+    ? _archiveArtists.length + ' artist' + (_archiveArtists.length !== 1 ? 's' : '')
+    : artists.length + ' of ' + _archiveArtists.length + ' artists';
+  if (!_archiveArtists.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>'; return; }
+  if (!artists.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match your search.</div>'; return; }
+  _arcArtistList = artists;
+  _arcShownArtists = Math.min(_ARC_PAGE, artists.length);
+  grid.innerHTML = artists.slice(0, _arcShownArtists).map(artistCardHTML).join('');
+}
+function _arcMoreArtists() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid || _arcShownArtists >= _arcArtistList.length) return;
+  var next = _arcArtistList.slice(_arcShownArtists, _arcShownArtists + _ARC_PAGE);
+  grid.insertAdjacentHTML('beforeend', next.map(artistCardHTML).join(''));
+  _arcShownArtists += next.length;
+}
+
+// ── View toggle ──────────────────────────────────────────────────────────────
 function arcSetView(view) {
+  if (view === _arcView) return;
   _arcView = view;
   arcApplyView();
-  renderArchive();
+  if (view === 'artists') renderArtists();
+  else if (_arcItems.length) {
+    var grid = document.getElementById('archive-grid');
+    if (grid) grid.innerHTML = _arcItems.map(archiveCardHTML).join('');
+    var countEl = document.getElementById('arc-count');
+    if (countEl) countEl.textContent = _archiveTotal.toLocaleString() + ' comps';
+  } else arcReload();
 }
 
 function arcApplyView() {
@@ -91,214 +186,45 @@ function arcApplyView() {
   var c = document.getElementById('arc-view-comps');
   if (a) a.classList.toggle('on', _arcView === 'artists');
   if (c) c.classList.toggle('on', _arcView === 'comps');
-  // Sorting and era chips only apply to the comp grid.
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = _arcView === 'comps' ? '' : 'none';
-  var chips = document.getElementById('arc-era-chips');
-  if (chips) chips.style.display = _arcView === 'comps' ? '' : 'none';
   var search = document.getElementById('arc-search');
   if (search) search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
 }
 
-function artistCardHTML(a) {
-  var bg = coverGradient(a.name || '');
-  return '<div class="wv-artist-tile" onclick="navigate(\'/archive-artist.html?a=' + encodeURIComponent(a.slug) + '\')">' +
-    '<div class="av" style="background:' + bg + ';">' +
-      (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') +
-    '</div>' +
-    '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
-    '<div class="wv-artist-meta">' + a.comp_count + ' comp' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
-}
-
-// Fetch the archive in pages: render the first page immediately so the grid
-// appears fast, then keep pulling the rest in the background (the bot can push
-// the archive into the thousands).
-async function loadArchive() {
-  var grid = document.getElementById('archive-grid');
-  if (!grid) return;
-  try {
-    var first = await api('/archive?limit=500&offset=0');
-    // Tolerate both the old array shape and the new {items,total} shape so a
-    // half-deployed backend/frontend never white-screens the page.
-    var items = Array.isArray(first) ? first : (first.items || []);
-    _archiveTotal = Array.isArray(first) ? items.length : (first.total || items.length);
-    _archiveItems = items;
-
-    if (typeof window.setPageBgImage === 'function') {
-      var withCover = _archiveItems.filter(function(i){ return i.cover_url; });
-      window.setPageBgImage(withCover.length ? withCover[Math.floor(Math.random() * withCover.length)].cover_url : '');
-    }
-
-    renderArchive();
-
-    // Background-fetch remaining pages
-    if (!Array.isArray(first) && _archiveItems.length < _archiveTotal) {
-      var more = document.getElementById('archive-loading-more');
-      if (more) more.style.display = '';
-      var offset = _archiveItems.length;
-      while (offset < _archiveTotal) {
-        var page = await api('/archive?limit=500&offset=' + offset);
-        var pageItems = page.items || [];
-        if (!pageItems.length) break;
-        _archiveItems = _archiveItems.concat(pageItems);
-        offset += pageItems.length;
-        renderArchive(true);
-      }
-      if (more) more.style.display = 'none';
-    }
-  } catch (err) {
-    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>';
-  }
-}
-
-function arcSearchInput() {
-  clearTimeout(_arcSearchTimer);
-  _arcSearchTimer = setTimeout(function() {
-    _arcQuery = ((document.getElementById('arc-search') || {}).value || '').trim().toLowerCase();
-    renderArchive();
-  }, 150);
-}
-
-function arcSortChange() {
-  _arcSort = (document.getElementById('arc-sort') || {}).value || 'newest';
-  renderArchive();
-}
-
-function arcEraFilter(eraId) {
-  _arcEra = eraId === _arcEra ? '' : eraId; // click again to clear
-  renderArchive();
-}
-
-function _arcFiltered() {
-  var out = _archiveItems;
-  if (_arcQuery) {
-    out = out.filter(function(i) {
-      return (i.title || '').toLowerCase().indexOf(_arcQuery) !== -1 ||
-             (i.archive_artist_name || '').toLowerCase().indexOf(_arcQuery) !== -1;
-    });
-  }
-  if (_arcEra) {
-    out = out.filter(function(i) { return i.era_tags && i.era_tags.id === _arcEra; });
-  }
-  var sorted = out.slice();
-  var ts = function(i) { if (i._ts == null) i._ts = Date.parse(i.created_at) || 0; return i._ts; };
-  if (_arcSort === 'newest')      sorted.sort(function(a, b) { return ts(b) - ts(a); });
-  else if (_arcSort === 'oldest') sorted.sort(function(a, b) { return ts(a) - ts(b); });
-  else if (_arcSort === 'title')  sorted.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
-  else if (_arcSort === 'artist') sorted.sort(function(a, b) { return (a.archive_artist_name || '').localeCompare(b.archive_artist_name || ''); });
-  else if (_arcSort === 'plays')  sorted.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
-  return sorted;
-}
-
-// keepShown: a background page arrived — keep however many cards are on
-// screen instead of resetting to the first chunk under the reader.
-function renderArchive(keepShown) {
-  var grid = document.getElementById('archive-grid');
-  if (!grid) return;
-  if (!keepShown) _arcShown = 0;
-
-  // ── Artist view ──
-  if (_arcView === 'artists') {
-    grid.className = 'wv-tile-grid';
-    var artists = _archiveArtists;
-    if (_arcQuery) {
-      artists = artists.filter(function(a) {
-        return (a.name || '').toLowerCase().indexOf(_arcQuery) !== -1;
-      });
-    }
-    var cEl = document.getElementById('arc-count');
-    if (cEl) {
-      cEl.textContent = artists.length === _archiveArtists.length
-        ? _archiveArtists.length + ' artist' + (_archiveArtists.length !== 1 ? 's' : '')
-        : artists.length + ' of ' + _archiveArtists.length + ' artists';
-    }
-    if (!_archiveArtists.length) {
-      grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>';
-      return;
-    }
-    if (!artists.length) {
-      grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match your search.</div>';
-      return;
-    }
-    _arcCurrent = artists;
-    var na = Math.max(_ARC_CHUNK, Math.min(_arcShown, artists.length));
-    grid.innerHTML = artists.slice(0, na).map(artistCardHTML).join('');
-    _arcShown = na;
-    _arcWatchSentinel();
-    return;
-  }
-
-  grid.className = 'wv-tile-grid';
-
-  // Era chips — rebuilt from whatever eras exist in the data
-  var chipsEl = document.getElementById('arc-era-chips');
-  if (chipsEl) {
-    var eras = {};
-    _archiveItems.forEach(function(i) { if (i.era_tags && i.era_tags.id) eras[i.era_tags.id] = i.era_tags.name; });
-    var ids = Object.keys(eras).sort(function(a, b) { return eras[a].localeCompare(eras[b]); });
-    chipsEl.innerHTML = ids.map(function(id) {
-      var active = id === _arcEra;
-      return '<span class="wv-chip' + (active ? ' acc' : '') + '" onclick="arcEraFilter(\'' + escHtml(id) + '\')">' +
-        escHtml(eras[id]) + '</span>';
-    }).join('');
-  }
-
-  var items = _arcFiltered();
-  var countEl = document.getElementById('arc-count');
-  if (countEl) {
-    countEl.textContent = items.length === _archiveItems.length
-      ? _archiveItems.length + ' comp' + (_archiveItems.length !== 1 ? 's' : '')
-      : items.length + ' of ' + _archiveItems.length + ' comps';
-  }
-
-  if (!_archiveItems.length) {
-    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>';
-    return;
-  }
-  if (!items.length) {
-    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Nothing matches your search.</div>';
-    return;
-  }
-  // Thousands of cards at once locks up a phone for seconds (and makes the
-  // drawer stutter on every page). Draw a screenful and add more as the
-  // reader scrolls near the bottom.
-  _arcCurrent = items;
-  var n = Math.max(_ARC_CHUNK, Math.min(_arcShown, items.length));
-  grid.innerHTML = items.slice(0, n).map(archiveCardHTML).join('');
-  _arcShown = n;
-  _arcWatchSentinel();
-}
-var _arcCurrent = [];
-function _arcAppendChunk() {
-  var grid = document.getElementById('archive-grid');
-  if (!grid || _arcShown >= _arcCurrent.length) return;
-  var next = _arcCurrent.slice(_arcShown, _arcShown + _ARC_CHUNK);
-  grid.insertAdjacentHTML('beforeend', next.map(_arcView === 'artists' ? artistCardHTML : archiveCardHTML).join(''));
-  _arcShown += next.length;
-}
+// Near the bottom: next server page for comps, next chunk of tiles for artists.
 function _arcWatchSentinel() {
   var el = document.getElementById('archive-sentinel');
   if (!el || !('IntersectionObserver' in window)) return;
   if (_arcObserver) _arcObserver.disconnect();
   _arcObserver = new IntersectionObserver(function(entries) {
-    if (entries.some(function(e) { return e.isIntersecting; })) _arcAppendChunk();
+    if (!entries.some(function(e) { return e.isIntersecting; })) return;
+    if (_arcView === 'comps') arcLoadMore(); else _arcMoreArtists();
   }, { rootMargin: '900px 0px' });
   _arcObserver.observe(el);
 }
 (window._pageCleanup || []).push(function() { if (_arcObserver) _arcObserver.disconnect(); });
 
+function artistCardHTML(a) {
+  var bg = coverGradient(a.name || '');
+  return '<div class="wv-artist-tile" onclick="navigate(\'/archive-artist.html?a=' + encodeURIComponent(a.slug) + '\')">' +
+    '<div class="av" style="background:' + bg + ';">' +
+      (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" decoding="async" onerror="this.style.opacity=0">' : '') +
+    '</div>' +
+    '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
+    '<div class="wv-artist-meta">' + a.comp_count + ' comp' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
+}
+
 function archiveCardHTML(item) {
   var bg = coverGradient(item.title || '');
   var artistName = item.archive_artist_name || 'Unknown';
-  var eraName = item.era_tags ? item.era_tags.name : null;
   return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + item.id + '\')">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-    '' +
     '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>' +
     (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
-    '<div class="wv-comp-card-artist">' + escHtml(artistName) + (eraName ? ' · ' + escHtml(eraName) : '') + '</div></div>';
+    '<div class="wv-comp-card-artist">' + escHtml(artistName) + '</div></div>';
 }
 
 function escHtml(s) {
