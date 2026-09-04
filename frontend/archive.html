@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609041844">
+  <link rel="stylesheet" href="/css/style.css?v=202609042000">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609041844"></script>
-<script src="/js/layout.js?v=202609041844"></script>
-<script src="/js/player.js?v=202609041844"></script>
-<script src="/js/router.js?v=202609041844"></script>
+<script src="/js/api.js?v=202609042000"></script>
+<script src="/js/layout.js?v=202609042000"></script>
+<script src="/js/player.js?v=202609042000"></script>
+<script src="/js/router.js?v=202609042000"></script>
 <script>
 initPlayer();
 
@@ -23,7 +23,10 @@ var _archiveTotal = 0;
 var _arcQuery = '';
 var _arcEra = '';         // era tag id filter ('' = all)
 var _arcSort = 'newest';
-var _arcView = 'artists'; // 'artists' | 'comps'
+var _arcView = 'comps'; // 'comps' | 'artists' — the flat grid opens first
+var _arcShown = 0;        // cards currently in the DOM (the grid fills as you scroll)
+var _ARC_CHUNK = 48;
+var _arcObserver = null;
 var _arcSearchTimer = null;
 
 async function initArchive() {
@@ -36,8 +39,8 @@ async function initArchive() {
     '</div>' +
     // View toggle: browse by artist, or the flat comp grid
     '<div class="wv-seg" style="align-self:flex-start;">' +
-      '<button class="on" id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
-      '<button id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
+      '<button class="on" id="arc-view-comps" onclick="arcSetView(\'comps\')">All Comps</button>' +
+      '<button id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
     '</div>' +
     // Toolbar: search + sort + era chips + count
     '<div style="display:flex;flex-direction:column;gap:10px;">' +
@@ -56,6 +59,7 @@ async function initArchive() {
       '<div id="arc-era-chips" class="wv-filters"></div>' +
     '</div>' +
     '<div id="archive-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:22px;"><div class="loading"><div class="spinner"></div></div></div>' +
+    '<div id="archive-sentinel" style="height:1px;"></div>' +
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading the rest of the archive…</div>' +
     '</div>';
   arcApplyView();
@@ -138,7 +142,7 @@ async function loadArchive() {
         if (!pageItems.length) break;
         _archiveItems = _archiveItems.concat(pageItems);
         offset += pageItems.length;
-        renderArchive();
+        renderArchive(true);
       }
       if (more) more.style.display = 'none';
     }
@@ -177,17 +181,21 @@ function _arcFiltered() {
     out = out.filter(function(i) { return i.era_tags && i.era_tags.id === _arcEra; });
   }
   var sorted = out.slice();
-  if (_arcSort === 'newest')      sorted.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
-  else if (_arcSort === 'oldest') sorted.sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  var ts = function(i) { if (i._ts == null) i._ts = Date.parse(i.created_at) || 0; return i._ts; };
+  if (_arcSort === 'newest')      sorted.sort(function(a, b) { return ts(b) - ts(a); });
+  else if (_arcSort === 'oldest') sorted.sort(function(a, b) { return ts(a) - ts(b); });
   else if (_arcSort === 'title')  sorted.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
   else if (_arcSort === 'artist') sorted.sort(function(a, b) { return (a.archive_artist_name || '').localeCompare(b.archive_artist_name || ''); });
   else if (_arcSort === 'plays')  sorted.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
   return sorted;
 }
 
-function renderArchive() {
+// keepShown: a background page arrived — keep however many cards are on
+// screen instead of resetting to the first chunk under the reader.
+function renderArchive(keepShown) {
   var grid = document.getElementById('archive-grid');
   if (!grid) return;
+  if (!keepShown) _arcShown = 0;
 
   // ── Artist view ──
   if (_arcView === 'artists') {
@@ -212,7 +220,11 @@ function renderArchive() {
       grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match your search.</div>';
       return;
     }
-    grid.innerHTML = artists.map(artistCardHTML).join('');
+    _arcCurrent = artists;
+    var na = Math.max(_ARC_CHUNK, Math.min(_arcShown, artists.length));
+    grid.innerHTML = artists.slice(0, na).map(artistCardHTML).join('');
+    _arcShown = na;
+    _arcWatchSentinel();
     return;
   }
 
@@ -247,8 +259,33 @@ function renderArchive() {
     grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Nothing matches your search.</div>';
     return;
   }
-  grid.innerHTML = items.map(archiveCardHTML).join('');
+  // Thousands of cards at once locks up a phone for seconds (and makes the
+  // drawer stutter on every page). Draw a screenful and add more as the
+  // reader scrolls near the bottom.
+  _arcCurrent = items;
+  var n = Math.max(_ARC_CHUNK, Math.min(_arcShown, items.length));
+  grid.innerHTML = items.slice(0, n).map(archiveCardHTML).join('');
+  _arcShown = n;
+  _arcWatchSentinel();
 }
+var _arcCurrent = [];
+function _arcAppendChunk() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid || _arcShown >= _arcCurrent.length) return;
+  var next = _arcCurrent.slice(_arcShown, _arcShown + _ARC_CHUNK);
+  grid.insertAdjacentHTML('beforeend', next.map(_arcView === 'artists' ? artistCardHTML : archiveCardHTML).join(''));
+  _arcShown += next.length;
+}
+function _arcWatchSentinel() {
+  var el = document.getElementById('archive-sentinel');
+  if (!el || !('IntersectionObserver' in window)) return;
+  if (_arcObserver) _arcObserver.disconnect();
+  _arcObserver = new IntersectionObserver(function(entries) {
+    if (entries.some(function(e) { return e.isIntersecting; })) _arcAppendChunk();
+  }, { rootMargin: '900px 0px' });
+  _arcObserver.observe(el);
+}
+(window._pageCleanup || []).push(function() { if (_arcObserver) _arcObserver.disconnect(); });
 
 function archiveCardHTML(item) {
   var bg = coverGradient(item.title || '');
@@ -258,7 +295,7 @@ function archiveCardHTML(item) {
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
     '' +
     '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>' +
-    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(artistName) + (eraName ? ' · ' + escHtml(eraName) : '') + '</div></div>';
