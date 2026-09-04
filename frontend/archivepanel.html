@@ -257,8 +257,9 @@
       var set = function(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v; };
       set('ov-total', (d.total_remaining || 0).toLocaleString());
       set('ov-eta', d.total_remaining ? 'about ' + _fmtEta(d.eta_min).replace('~', '') + ' left' : 'nothing pending');
-      set('ov-mega', d.mega.remaining.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
-      set('ov-mega-sub', d.mega.running ? d.mega.running + ' shards · ' + d.mega.rate_per_min + ' comps/min · ' + _fmtEta(d.mega.eta_min) : 'no run active');
+      var megaKnown = d.mega.folder_total > 0;
+      set('ov-mega', (megaKnown ? d.mega.remaining.toLocaleString() : '…') + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
+      set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' + d.mega.rate_per_min + ' comps/min · ' + _fmtEta(d.mega.eta_min) : 'shards restarting'));
       set('ov-discord', d.links.discord.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       set('ov-reddit', d.links.reddit.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       var linkSub = d.links.rate_per_min + ' links/min · ' + _fmtEta(d.links.eta_min) + ' for the whole queue';
