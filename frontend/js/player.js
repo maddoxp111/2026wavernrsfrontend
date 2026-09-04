@@ -285,7 +285,7 @@ function injectPlayer() {
             </div>
           </div>
           <div class="pfs-lyrics" id="pfs-lyrics" hidden>
-            <div class="pfs-lyrics-scroll" id="pfs-lyrics-scroll"></div>
+            <div class="pfs-lyrics-mask"><div class="pfs-lyrics-scroll" id="pfs-lyrics-scroll"></div></div>
             <div class="pfs-lyrics-tools" id="pfs-lyrics-tools" hidden></div>
           </div>
         </div>
