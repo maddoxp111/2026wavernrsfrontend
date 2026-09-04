@@ -921,11 +921,13 @@ function _syncWords(t) {
 // Ten ticks a second is plenty for word timing and a fraction of the work
 // of a per-frame loop, which was enough to make Safari on a phone crash.
 function _lyrLoop() {
-  _lyrTimer = 0;
-  if (!_lyr.open || _lyr.mode !== 'view' || !audio || audio.paused) return;
+  if (!_lyr.open || _lyr.mode !== 'view' || !audio || audio.paused) { _lyrTimer = 0; return; }
+  // Re-arm BEFORE syncing: _syncLyrics calls _lyrStartLoop, and with the
+  // timer cleared first every tick spawned a second loop. That doubled
+  // each tick and took Safari down within a second of opening lyrics.
+  _lyrTimer = setTimeout(_lyrLoop, 100);
   _syncLyrics(audio.currentTime);
   _syncWords(audio.currentTime);
-  _lyrTimer = setTimeout(_lyrLoop, 100);
 }
 function _lyrStartLoop() { if (!_lyrTimer) _lyrTimer = setTimeout(_lyrLoop, 100); }
 
