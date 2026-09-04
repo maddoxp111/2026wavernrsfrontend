@@ -1876,7 +1876,13 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
 /* The fade mask sits on the panel, not the scroller: Safari mis-renders a
    mask on an overflow:auto element (content freezes or clips as it scrolls),
    which made the lyrics look stuck on iPhones. */
-.pfs-lyrics-mask { flex: 1; min-height: 0; display: flex; flex-direction: column; -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent); }
+/* The fade mask is desktop-only: on iOS a masked scrolling region becomes a
+   large GPU layer that Safari gives up on (page reloads). Phones get a
+   plain edge. */
+.pfs-lyrics-mask { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+@media (min-width: 769px) and (hover: hover) {
+  .pfs-lyrics-mask { -webkit-mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(180deg, transparent, #000 10%, #000 90%, transparent); }
+}
 .pfs-lyrics-scroll {
   flex: 1; overflow-y: auto; padding: 12% 22px; min-height: 0;
   scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
@@ -1888,17 +1894,17 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
 .lyr-line {
   font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1.32;
   color: var(--text-3); padding: 9px 0; cursor: pointer;
-  transition: color 220ms var(--ease), opacity 220ms var(--ease), transform 220ms var(--ease);
-  transform-origin: left center;
+  transition: color 220ms var(--ease), opacity 220ms var(--ease);
 }
 .lyr-line:hover { color: var(--text-2); }
 .lyr-line.past { color: var(--text-3); opacity: .45; }
-.lyr-line.on { color: var(--text); transform: scale(1.02); }
+.lyr-line.on { color: var(--text); }
 /* Karaoke words: inside the live line, sung words are bright, the word being
    sung glows, the rest waits dim. Other lines keep their line-level colour. */
-.lyr-line.has-w.on .lyr-w { color: var(--text-3); transition: color 120ms var(--ease), text-shadow 120ms var(--ease); }
+.lyr-line.has-w.on .lyr-w { color: var(--text-3); transition: color 120ms var(--ease); }
 .lyr-line.has-w.on .lyr-w.past { color: var(--text); }
-.lyr-line.has-w.on .lyr-w.on { color: var(--text); text-shadow: 0 0 18px rgba(255,255,255,.45); }
+.lyr-line.has-w.on .lyr-w.on { color: var(--text); }
+@media (min-width: 769px) and (hover: hover) { .lyr-line.has-w.on .lyr-w.on { text-shadow: 0 0 18px rgba(255,255,255,.45); } }
 .theme-light .lyr-line.has-w.on .lyr-w.on { text-shadow: none; color: var(--brand); }
 .lyr-stamp {
   font-size: 11px; font-weight: 600; color: var(--brand);

@@ -899,34 +899,42 @@ function _lyrIndexAt(t) {
 // Word-by-word highlight. timeupdate only fires a few times a second, so
 // while lyrics are open and playing a frame loop moves the highlight across
 // the current line's words between those events.
-var _lyrRaf = 0, _lyrWordPos = -1, _lyrWordEl = null;
+var _lyrTimer = 0, _lyrWordPos = -1, _lyrWordEl = null, _lyrSpans = null;
 function _syncWords(t) {
   var i = _lyr.idx; if (i < 0) return;
   var line = _lyr.lines[i]; if (!line || !line.w) return;
   var scroll = _lyrEl('pfs-lyrics-scroll'); if (!scroll) return;
   var el = scroll.children[i]; if (!el) return;
-  var spans = el.querySelectorAll('.lyr-w'); if (!spans.length) return;
+  if (el !== _lyrWordEl) { _lyrWordEl = el; _lyrSpans = el.querySelectorAll('.lyr-w'); _lyrWordPos = -1; }
+  var spans = _lyrSpans; if (!spans || !spans.length) return;
   var pos = -1;
   for (var k = 0; k < line.w.length; k++) { if (line.w[k].t <= t + 0.08) pos = k; else break; }
-  if (pos === _lyrWordPos && el === _lyrWordEl) return;
-  _lyrWordPos = pos; _lyrWordEl = el;
-  spans.forEach(function (sp, k) { sp.classList.toggle('past', k < pos); sp.classList.toggle('on', k === pos); });
+  if (pos === _lyrWordPos) return;
+  // Only the spans whose state changed get touched: a phone repaints far
+  // less when the class flips on one or two words instead of the whole line.
+  var from = Math.min(_lyrWordPos, pos), to = Math.max(_lyrWordPos, pos);
+  for (var j = Math.max(0, from); j <= to && j < spans.length; j++) {
+    spans[j].classList.toggle('past', j < pos); spans[j].classList.toggle('on', j === pos);
+  }
+  _lyrWordPos = pos;
 }
+// Ten ticks a second is plenty for word timing and a fraction of the work
+// of a per-frame loop, which was enough to make Safari on a phone crash.
 function _lyrLoop() {
-  _lyrRaf = 0;
+  _lyrTimer = 0;
   if (!_lyr.open || _lyr.mode !== 'view' || !audio || audio.paused) return;
   _syncLyrics(audio.currentTime);
   _syncWords(audio.currentTime);
-  _lyrRaf = requestAnimationFrame(_lyrLoop);
+  _lyrTimer = setTimeout(_lyrLoop, 100);
 }
-function _lyrStartLoop() { if (!_lyrRaf) _lyrRaf = requestAnimationFrame(_lyrLoop); }
+function _lyrStartLoop() { if (!_lyrTimer) _lyrTimer = setTimeout(_lyrLoop, 100); }
 
 function _syncLyrics(t) {
   if (!_lyr.open || _lyr.mode !== 'view' || !_lyr.lines.length) return;
   _lyrStartLoop();
   var i = _lyrIndexAt(t);
   if (i === _lyr.idx) { _syncWords(t); return; }
-  _lyrWordPos = -1; _lyrWordEl = null;
+  _lyrWordPos = -1; _lyrWordEl = null; _lyrSpans = null;
   _lyr.idx = i;
   var scroll = _lyrEl('pfs-lyrics-scroll');
   if (!scroll) return;
