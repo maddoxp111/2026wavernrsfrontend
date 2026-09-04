@@ -524,6 +524,13 @@ function initPlayer() {
 
   document.addEventListener('touchstart', _unlockIOS, { once: true, passive: true });
 
+  // Resume after the host app paused us in the background (see _wantPlaying).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !_wantPlaying || !audio || !audio.paused || !audio.src || audio.ended) return;
+    audio.play().catch(() => {});
+  });
+  _renderInAppHint();
+
   // Save playback state before navigating away
   window.addEventListener('pagehide', () => {
     if (audio && currentTrack && audio.src) {
@@ -584,6 +591,7 @@ function initPlayer() {
   audio.addEventListener('loadedmetadata', _onTimeUpdate);
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
+    if (!(_pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1)) _wantPlaying = false;
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
     // Auto-advance: prefer the global queue; fall back to the legacy event for
     // pages (e.g. resources/tracker) that manage their own list.
@@ -701,6 +709,7 @@ function playTrack(track) {
   if (typeof _lyricsOnTrackChange === 'function') _lyricsOnTrackChange();
 
   audio.src = track.ia_url;
+  _wantPlaying = true;
   const p = audio.play();
   if (p) p.catch(() => {});
 
@@ -718,8 +727,8 @@ function playTrack(track) {
       artist: track.artist_name || track.artists?.display_name || '',
       artwork: track.cover_url ? [{ src: track.cover_url, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
-    navigator.mediaSession.setActionHandler('play', () => audio.play());
-    navigator.mediaSession.setActionHandler('pause', () => audio.pause());
+    navigator.mediaSession.setActionHandler('play', () => { _wantPlaying = true; audio.play(); });
+    navigator.mediaSession.setActionHandler('pause', () => { _wantPlaying = false; audio.pause(); });
     navigator.mediaSession.setActionHandler('previoustrack', () => skipPrev());
     navigator.mediaSession.setActionHandler('nexttrack', () => skipNext());
     navigator.mediaSession.setActionHandler('seekbackward', e => { audio.currentTime -= e.seekOffset || 10; });
@@ -770,14 +779,43 @@ function _renderAll(track) {
   if (fsEl && fsEl.classList.contains('open')) _paintFsWash();
 }
 
+// Whether the listener wants sound. In-app browsers (Discord, Instagram,
+// Facebook) and some Android WebViews pause media the moment the app leaves
+// the foreground and never resume it. When the page comes back and this is
+// still true but the element is paused, playback picks up where it stopped.
+let _wantPlaying = false;
 function togglePlay() {
   if (!audio) return;
-  if (audio.paused) audio.play().catch(console.error);
-  else audio.pause();
+  if (audio.paused) { _wantPlaying = true; audio.play().catch(console.error); }
+  else { _wantPlaying = false; audio.pause(); }
 }
 
 function pausePlayer() {
+  _wantPlaying = false;
   if (audio && !audio.paused) audio.pause();
+}
+
+function _isInAppBrowser() {
+  const ua = navigator.userAgent || '';
+  if (/FBAN|FBAV|Instagram|Discord|Snapchat|Twitter|Line\/|MicroMessenger/i.test(ua)) return true;
+  if (/; wv\)/.test(ua)) return true;                       // Android WebView
+  const ios = /iPhone|iPad|iPod/.test(ua);
+  return ios && !/Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua); // iOS in-app WKWebView drops the Safari token
+}
+function _renderInAppHint() {
+  if (!_isInAppBrowser() || localStorage.getItem('wv_inapp_hint') === 'off') return;
+  const wrap = document.querySelector('.pfs-header');
+  if (!wrap || document.getElementById('pfs-inapp')) return;
+  const href = location.href;
+  const android = /Android/i.test(navigator.userAgent);
+  const open = android
+    ? 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=https;action=android.intent.action.VIEW;end'
+    : href;
+  const el = document.createElement('div');
+  el.className = 'pfs-inapp'; el.id = 'pfs-inapp';
+  el.innerHTML = '<span>You\'re in another app\'s browser, which stops music when you switch away. <a href="' + open + '" target="_blank" rel="noopener">Open in your browser</a> to keep playing in the background.</span>' +
+    '<button aria-label="Dismiss" onclick="localStorage.setItem(\'wv_inapp_hint\',\'off\');this.parentNode.remove()">×</button>';
+  wrap.insertAdjacentElement('afterend', el);
 }
 
 function _setPlayBtns(playing) {
