@@ -896,10 +896,37 @@ function _lyrIndexAt(t) {
   return best;
 }
 
+// Word-by-word highlight. timeupdate only fires a few times a second, so
+// while lyrics are open and playing a frame loop moves the highlight across
+// the current line's words between those events.
+var _lyrRaf = 0, _lyrWordPos = -1, _lyrWordEl = null;
+function _syncWords(t) {
+  var i = _lyr.idx; if (i < 0) return;
+  var line = _lyr.lines[i]; if (!line || !line.w) return;
+  var scroll = _lyrEl('pfs-lyrics-scroll'); if (!scroll) return;
+  var el = scroll.children[i]; if (!el) return;
+  var spans = el.querySelectorAll('.lyr-w'); if (!spans.length) return;
+  var pos = -1;
+  for (var k = 0; k < line.w.length; k++) { if (line.w[k].t <= t + 0.08) pos = k; else break; }
+  if (pos === _lyrWordPos && el === _lyrWordEl) return;
+  _lyrWordPos = pos; _lyrWordEl = el;
+  spans.forEach(function (sp, k) { sp.classList.toggle('past', k < pos); sp.classList.toggle('on', k === pos); });
+}
+function _lyrLoop() {
+  _lyrRaf = 0;
+  if (!_lyr.open || _lyr.mode !== 'view' || !audio || audio.paused) return;
+  _syncLyrics(audio.currentTime);
+  _syncWords(audio.currentTime);
+  _lyrRaf = requestAnimationFrame(_lyrLoop);
+}
+function _lyrStartLoop() { if (!_lyrRaf) _lyrRaf = requestAnimationFrame(_lyrLoop); }
+
 function _syncLyrics(t) {
   if (!_lyr.open || _lyr.mode !== 'view' || !_lyr.lines.length) return;
+  _lyrStartLoop();
   var i = _lyrIndexAt(t);
-  if (i === _lyr.idx) return;
+  if (i === _lyr.idx) { _syncWords(t); return; }
+  _lyrWordPos = -1; _lyrWordEl = null;
   _lyr.idx = i;
   var scroll = _lyrEl('pfs-lyrics-scroll');
   if (!scroll) return;
@@ -935,16 +962,20 @@ function _renderLyrics() {
       '</div>';
   } else {
     scroll.innerHTML = _lyr.lines.map(function (l, i) {
-      return '<div class="lyr-line" onclick="seekToLyric(' + i + ')">' + escHtml(l.x) + '</div>';
+      var inner = (l.w && l.w.length)
+        ? l.w.map(function (w, k) { return '<span class="lyr-w" data-k="' + k + '">' + escHtml(w.x) + '</span>'; }).join(' ')
+        : escHtml(l.x);
+      return '<div class="lyr-line' + (l.w && l.w.length ? ' has-w' : '') + '" onclick="seekToLyric(' + i + ')">' + inner + '</div>';
     }).join('');
     _lyr.idx = -1;
     _syncLyrics(audio ? audio.currentTime : 0);
   }
 
   if (tools) {
-    if (_lyr.canEdit && !_lyr.lines.length) {
+    var hasWords = _lyr.lines.some(function (l) { return l.w && l.w.length; });
+    if (_lyr.canEdit && (!_lyr.lines.length || (_lyr.source === 'auto' && !hasWords))) {
       tools.hidden = false;
-      tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get lyrics</button>';
+      tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">' + (_lyr.lines.length ? 'Get word timing' : 'Get lyrics') + '</button>';
     } else {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
