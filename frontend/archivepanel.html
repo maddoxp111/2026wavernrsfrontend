@@ -51,6 +51,13 @@
         '<h1 style="font-size:28px;font-weight:800;margin:0 0 4px;">Archive Panel</h1>' +
         '<p style="font-size:14px;color:var(--text-2);margin:0 0 28px;line-height:1.55;">Upload archive comps — great releases by artists not on wavernrs, preserved for the community.</p>' +
 
+        '<div class="wv-card" id="arc-overview" style="padding:18px 22px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">' +
+          '<div><div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Comps left, all imports</div><div id="ov-total" style="font-size:30px;font-weight:900;letter-spacing:-.03em;">…</div><div id="ov-eta" style="font-size:12.5px;color:var(--text-2);">estimating</div></div>' +
+          '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">MEGA</div><div id="ov-mega" style="font-size:22px;font-weight:800;">…</div><div id="ov-mega-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
+          '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Discord</div><div id="ov-discord" style="font-size:22px;font-weight:800;">…</div><div id="ov-discord-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
+          '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Reddit</div><div id="ov-reddit" style="font-size:22px;font-weight:800;">…</div><div id="ov-reddit-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
+        '</div>' +
+
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
           '<div style="font-size:13px;font-weight:700;color:var(--purple-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Archive uploads</div>' +
           '<p style="margin:0;font-size:14px;color:var(--text-2);line-height:1.6;">' +
@@ -144,6 +151,14 @@
           '<div id="mj-list" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
         '</div>' +
 
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-reddit-card">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
+            '<div><div style="font-size:14px;font-weight:700;">Reddit</div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Every post and comment of a subreddit, full history, plus a poll for new ones every 10 minutes. Links hidden in base64 are decoded. Comps are filed in the archive under the Reddit username.</div></div>' +
+          '</div>' +
+          '<div id="rd-list" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
+        '</div>' +
+
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-discord-card">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Discord servers</div>' +
@@ -185,7 +200,8 @@
     arcBulkAddRow();
     arcBulkAddRow();
     arcBulkAddRow();
-    loadMegaJobs();
+    loadMegaJobs(); loadOverview(); rdLoad();
+    if (!window._ovPoll) window._ovPoll = setInterval(function() { if (document.getElementById('ov-total')) { loadOverview(); rdLoad(true); } }, 15000);
     if (!window._mjPoll) window._mjPoll = setInterval(function() { if (document.getElementById('mj-list')) loadMegaJobs(true); }, 5000);
     dcLoad();
     if (!window._dcPoll) window._dcPoll = setInterval(function() { if (document.getElementById('dc-servers')) dcLoad(true); }, 15000);
@@ -232,6 +248,53 @@
     } catch (e) { if (!quiet) el.innerHTML = '<div style="font-size:13px;color:var(--red);">Could not load: ' + escHtml(e.message || e) + '</div>'; }
   };
   window.cancelMegaJob = async function(id) { if (!confirm('Stop this run after the current track? Finished comps stay; a later run resumes the rest.')) return; try { await api('/import/jobs/' + id + '/cancel', { method: 'POST' }); loadMegaJobs(true); } catch (e) { alert(e.message || 'Failed'); } };
+
+  // ── Overview + Reddit ───────────────────────────────────────────────────
+  function _fmtEta(min) { if (min == null) return 'estimating'; if (min < 1) return 'under a minute'; if (min < 60) return '~' + min + ' min'; var h = Math.floor(min / 60), m = min % 60; return '~' + h + 'h ' + (m ? m + 'm' : ''); }
+  window.loadOverview = async function() {
+    try {
+      var d = await api('/import/overview');
+      var set = function(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v; };
+      set('ov-total', (d.total_remaining || 0).toLocaleString());
+      set('ov-eta', d.total_remaining ? 'about ' + _fmtEta(d.eta_min).replace('~', '') + ' left' : 'nothing pending');
+      set('ov-mega', d.mega.remaining.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
+      set('ov-mega-sub', d.mega.running ? d.mega.running + ' shards · ' + d.mega.rate_per_min + ' comps/min · ' + _fmtEta(d.mega.eta_min) : 'no run active');
+      set('ov-discord', d.links.discord.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
+      set('ov-reddit', d.links.reddit.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
+      var linkSub = d.links.rate_per_min + ' links/min · ' + _fmtEta(d.links.eta_min) + ' for the whole queue';
+      set('ov-discord-sub', linkSub); set('ov-reddit-sub', 'shares the link queue');
+    } catch (e) {}
+  };
+  window.rdLoad = async function(quiet) {
+    var el = document.getElementById('rd-list'); if (!el) return;
+    try {
+      var d = await api('/reddit/sources');
+      el.innerHTML = (d.sources || []).map(function(s) {
+        var c = s.counts || {}, sc = s.scan;
+        var scanHtml = sc && sc.status === 'running'
+          ? '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Scanning full history · ' + escHtml(sc.phase) + ' · ' + sc.posts.toLocaleString() + ' posts · ' + sc.comments.toLocaleString() + ' comments · ' + sc.links + ' links' + (sc.cursor ? ' · up to ' + sc.cursor.slice(0, 10) : '') + '</div>'
+          : (sc ? '<div style="margin-top:8px;font-size:12px;color:var(--text-3);">Last scan ' + escHtml(sc.status) + (sc.finishedAt ? ' ' + _dcTime(sc.finishedAt) : '') + ' · ' + sc.posts.toLocaleString() + ' posts · ' + sc.comments.toLocaleString() + ' comments · ' + sc.links + ' links' + (sc.lastPollAt ? ' · polled ' + _dcTime(sc.lastPollAt) : '') + '</div>' : '');
+        return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
+          '<div style="display:flex;gap:12px;align-items:center;">' +
+            '<div style="width:44px;height:44px;border-radius:12px;background:#ff4500;color:#fff;display:grid;place-items:center;font-weight:900;flex-shrink:0;">r/</div>' +
+            '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:800;">r/' + escHtml(s.sub) + '</div>' +
+              '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' + (s.enabled ? '<span class="wv-chip acc">Watching new posts</span>' : '<span class="wv-chip bad">Paused</span>') + '</div></div>' +
+            '<div style="text-align:right;flex-shrink:0;"><div style="font-size:22px;font-weight:900;letter-spacing:-.02em;">' + (c.done || 0) + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> / ' + (c.total || 0) + '</span></div><div style="font-size:11px;color:var(--text-3);">comps imported · ' + (c.tracks || 0) + ' tracks</div></div>' +
+          '</div>' +
+          (c.total ? '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:10px;overflow:hidden;display:flex;"><div style="width:' + _pct(c.done, c.total) + '%;background:var(--green);"></div><div style="width:' + _pct(c.running + c.queued, c.total) + '%;background:var(--brand);"></div><div style="width:' + _pct(c.failed, c.total) + '%;background:var(--red);"></div></div><div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">' + (c.done || 0) + ' done · ' + ((c.queued || 0) + (c.running || 0)) + ' pending · ' + (c.failed || 0) + ' failed</div>' : '') +
+          scanHtml +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+            (sc && sc.status === 'running' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'scan/cancel\')">Cancel scan</button>' : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'scan\')">Scan full history</button>') +
+            (s.enabled ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'disable\')">Pause</button>' : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'enable\')">Watch new posts</button>') +
+            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="rdAct(\'' + s.sub + '\',\'poll\')">Check now</button>' +
+            (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + s.id + '\',\'retry-failed\')">Retry ' + c.failed + ' failed</button>' : '') +
+            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + s.id + '\',\'r/' + s.sub + '\')">View imports</button>' +
+          '</div>' +
+        '</div>';
+      }).join('') || '<div style="font-size:13px;color:var(--text-3);">No subreddit configured (REDDIT_SUBREDDITS).</div>';
+    } catch (e) { if (!quiet) el.innerHTML = '<div style="font-size:13px;color:var(--red);">Could not load: ' + escHtml(e.message || e) + '</div>'; }
+  };
+  window.rdAct = async function(sub, action) { try { await api('/reddit/' + encodeURIComponent(sub) + '/' + action, { method: 'POST' }); rdLoad(true); loadOverview(); } catch (e) { alert(e.message || 'Failed'); } };
 
   // ── Discord servers panel ────────────────────────────────────────────────
   var _dc = { guild: null, status: '', q: '', data: null };
