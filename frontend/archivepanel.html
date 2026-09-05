@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609051937">
+  <link rel="stylesheet" href="/css/style.css?v=202609051938">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609051937"></script>
-<script src="/js/layout.js?v=202609051937"></script>
-<script src="/js/player.js?v=202609051937"></script>
-<script src="/js/router.js?v=202609051937"></script>
+<script src="/js/api.js?v=202609051938"></script>
+<script src="/js/layout.js?v=202609051938"></script>
+<script src="/js/player.js?v=202609051938"></script>
+<script src="/js/router.js?v=202609051938"></script>
 <script>
   initPlayer();
 
@@ -1368,8 +1368,8 @@
     list.innerHTML = _mg.items.length ? _mg.items.map(function(a) {
       var acct = a.artists ? a.artists.display_name : '—';
       return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
-        '<input type="checkbox" ' + (_mg.sel[a.id] ? 'checked' : '') + ' onchange="mgToggle(\'' + a.id + '\', this.checked)" style="flex-shrink:0;">' + _mgCover(a.cover_url) +
-        '<div style="flex:1;min-width:0;cursor:pointer;" onclick="mgOpen(\'' + a.id + '\')"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div>' +
+        '<input type="checkbox" ' + (_mg.sel[a.id] ? 'checked' : '') + ' onchange="mgToggle(\'' + a.id + '\', this.checked)" style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);">' + _mgCover(a.cover_url) +
+        '<div style="flex:1 1 auto;min-width:0;cursor:pointer;" onclick="mgOpen(\'' + a.id + '\')"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div>' +
         '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + a.track_count + ' tracks · account: ' + escHtml(acct) + (a.is_archive ? '' : ' · <span style="color:var(--orange);">not archive</span>') + ' · ' + String(a.created_at || '').slice(0, 10) + '</div></div>' +
         '<button class="wv-see-all" onclick="mgOpen(\'' + a.id + '\')">Edit</button>' +
         '<a class="wv-see-all" href="/album.html?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()">Open</a></div>';
@@ -1407,10 +1407,10 @@
   window.mgOpen = async function(id) {
     var ed = document.getElementById('mg-editor'); if (!ed) return;
     _mg.editing = id; ed.style.display = ''; ed.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    ed.style.cssText = 'display:block;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.55);padding:24px;overflow:auto;';
     var a; try { a = await api('/archive-manage/comps/' + id); } catch (e) { ed.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
     var acct = a.artists ? a.artists.display_name : '—';
-    ed.innerHTML = '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:16px;">' +
+    ed.innerHTML = '<div style="background:var(--elevated, var(--surface));border-radius:var(--r-lg);padding:18px;max-width:860px;margin:0 auto 90px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;"><div style="font-size:14px;font-weight:700;">Editing comp</div><button class="wv-see-all" onclick="mgCloseEditor()">Close</button></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
         '<div style="flex:0 0 auto;text-align:center;">' + (a.cover_url ? '<img id="mg-cover-img" src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.cover_url, 160) : a.cover_url) + '" style="width:120px;height:120px;border-radius:10px;object-fit:cover;">' : '<div style="width:120px;height:120px;border-radius:10px;background:var(--surface-3);"></div>') +
@@ -1420,7 +1420,7 @@
           '<label style="font-size:11.5px;color:var(--text-3);">Artist name (as shown in the archive)<input id="mg-f-artist" class="wv-input" value="' + escHtml(a.archive_artist_name || '') + '" style="width:100%;padding:8px 10px;font-size:13.5px;"></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Description<textarea id="mg-f-desc" class="wv-input" style="width:100%;min-height:56px;padding:8px 10px;font-size:13px;">' + escHtml(a.description || '') + '</textarea></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Source link<input id="mg-f-src" class="wv-input" value="' + escHtml(a.source_url || '') + '" style="width:100%;padding:8px 10px;font-size:12.5px;"></label>' +
-          '<div style="font-size:12px;color:var(--text-2);">Account: <b>' + escHtml(acct) + '</b> · <button class="wv-see-all" onclick="mgMoveAccount(\'' + a.id + '\')">Move to another account</button> · <label style="cursor:pointer;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + '> archive comp (untick to make it a normal comp on the account)</label></div>' +
+          '<div style="font-size:12px;color:var(--text-2);">Account: <b>' + escHtml(acct) + '</b> · <button class="wv-see-all" onclick="mgMoveAccount(\'' + a.id + '\')">Move to another account</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="mgSave(\'' + a.id + '\')">Save changes</button>' +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\')">Merge this into another comp…</button>' +
@@ -1432,14 +1432,16 @@
       '<div id="mg-tracks" style="display:flex;flex-direction:column;gap:3px;">' + a.tracks.map(function(t, i) {
         return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;background:var(--surface-3);" data-tid="' + t.id + '">' +
           '<span style="font-size:11px;color:var(--text-3);width:22px;text-align:right;">' + (i + 1) + '</span>' +
-          '<input class="wv-input mg-t-title" value="' + escHtml(t.title) + '" style="flex:1;min-width:0;padding:5px 8px;font-size:12.5px;" onchange="mgTrackTitle(\'' + t.id + '\', this.value)">' +
+          '<input class="wv-input mg-t-title" value="' + escHtml(t.title) + '" style="flex:1 1 auto;width:auto;min-width:0;padding:5px 8px;font-size:12.5px;" onchange="mgTrackTitle(\'' + t.id + '\', this.value)">' +
           '<button class="wv-see-all" title="Move up" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',-1)">▲</button><button class="wv-see-all" title="Move down" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',1)">▼</button>' +
           '<button class="wv-see-all" title="Move to another comp" onclick="mgTrackToComp(\'' + t.id + '\')">→ comp</button>' +
           '<button class="wv-see-all" style="color:var(--red);" onclick="mgTrackDelete(\'' + a.id + '\',\'' + t.id + '\')">✕</button></div>';
       }).join('') + '</div>' +
     '</div>';
   };
-  window.mgCloseEditor = function() { _mg.editing = null; var ed = document.getElementById('mg-editor'); if (ed) { ed.style.display = 'none'; ed.innerHTML = ''; } };
+  window.mgCloseEditor = function() { _mg.editing = null; var ed = document.getElementById('mg-editor'); if (ed) { ed.style.cssText = 'display:none;'; ed.innerHTML = ''; } };
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && _mg.editing) mgCloseEditor(); });
+  (function() { var ed = document.getElementById('mg-editor'); if (ed) ed.addEventListener('click', function(e) { if (e.target === ed) mgCloseEditor(); }); })();
   window.mgSave = async function(id) {
     var body = { title: document.getElementById('mg-f-title').value, archive_artist_name: document.getElementById('mg-f-artist').value, description: document.getElementById('mg-f-desc').value, source_url: document.getElementById('mg-f-src').value, is_archive: document.getElementById('mg-f-arch').checked };
     try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify(body) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Save failed'); }
@@ -1476,7 +1478,7 @@
     list.innerHTML = _mg.artists.length ? _mg.artists.map(function(g) {
       var sp = Object.keys(g.spellings); var acc = Object.keys(g.accounts);
       return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
-        '<input type="checkbox" ' + (_mg.asel[g.key] ? 'checked' : '') + ' onchange="mgAToggle(\'' + escHtml(g.key) + '\', this.checked)">' +
+        '<input type="checkbox" ' + (_mg.asel[g.key] ? 'checked' : '') + ' onchange="mgAToggle(\'' + escHtml(g.key) + '\', this.checked)" style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);">' +
         '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;">' + escHtml(g.name) + ' <span style="font-size:11.5px;color:var(--text-3);font-weight:500;">' + g.comps + ' comp' + (g.comps === 1 ? '' : 's') + '</span></div>' +
         '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (sp.length > 1 ? 'spellings: ' + sp.map(escHtml).join(', ') + ' · ' : '') + 'account: ' + (acc.length ? acc.map(escHtml).join(', ') : '—') + '</div></div>' +
         '<button class="wv-see-all" onclick="mgArtistRename(\'' + escHtml(g.key) + '\')">Rename</button>' +
