@@ -208,6 +208,10 @@ function extractCoverHues(coverUrl, seed, callback) {
 
   var img = new Image();
   img.crossOrigin = 'anonymous';
+  // Read pixels through the image CDN: R2 and Internet Archive send no CORS
+  // header, which taints the canvas and silently fell back to a hue hashed
+  // from the title (a purple cover came out green). The CDN allows any origin.
+  var src = typeof wvImg === 'function' ? wvImg(coverUrl, 64) : coverUrl;
   img.onload = function() {
     try {
       var SIZE = 48;
@@ -255,7 +259,7 @@ function extractCoverHues(coverUrl, seed, callback) {
     }
   };
   img.onerror = function() { callback(coverHues(seed), false); };
-  img.src = coverUrl;
+  img.src = src;
 }
 
 function _circularMeanHue(hues) {

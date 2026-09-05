@@ -498,8 +498,11 @@ function _paintFsWash() {
   const fs = document.getElementById('player-fullscreen');
   if (!fs || !currentTrack) return;
   const seed = currentTrack.title || '';
-  const apply = c => {
+  const apply = (c, fromImage) => {
     const light = document.body.classList.contains('theme-light');
+    // No real pixels (no cover, or it could not be read): keep the site's
+    // own colours rather than paint a hue guessed from the title.
+    if (fromImage === false) { ['--wv-wash', '--fs-accent', '--fs-accent-soft'].forEach(v => fs.style.removeProperty(v)); return; }
     fs.style.setProperty('--wv-wash', light ? 'hsl(' + c.h1 + ',' + Math.min(60, c.s1) + '%,82%)' : 'hsl(' + c.h1 + ',' + Math.min(55, c.s1) + '%,26%)');
     // The player's accent follows the cover too: a vivid, readable tint of
     // the dominant hue (kept saturated and bright enough to sit on the wash).
@@ -508,7 +511,7 @@ function _paintFsWash() {
     fs.style.setProperty('--fs-accent-soft', light ? 'hsla(' + c.h1 + ',' + sat + '%,38%,.14)' : 'hsla(' + c.h1 + ',' + sat + '%,68%,.16)');
   };
   if (currentTrack.cover_url && typeof extractCoverHues === 'function') extractCoverHues(currentTrack.cover_url, seed, apply);
-  else if (typeof coverHues === 'function') apply(coverHues(seed));
+  else apply(null, false);
 }
 
 function closeFullPlayer() {
