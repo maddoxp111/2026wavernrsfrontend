@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609051842">
+  <link rel="stylesheet" href="/css/style.css?v=202609051856">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609051842"></script>
-<script src="/js/layout.js?v=202609051842"></script>
-<script src="/js/player.js?v=202609051842"></script>
-<script src="/js/router.js?v=202609051842"></script>
+<script src="/js/api.js?v=202609051856"></script>
+<script src="/js/layout.js?v=202609051856"></script>
+<script src="/js/player.js?v=202609051856"></script>
+<script src="/js/router.js?v=202609051856"></script>
 <script>
   initPlayer();
 
@@ -189,7 +189,7 @@
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-discord-card">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Discord servers</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">Every server the bot is in. It reads every channel it can see, imports each untitled.stream / Samply / MEGA link it finds, and never posts anything. Add it with <b>View Channels</b> and <b>Read Message History</b> only.</div></div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Every server the bot is in. It reads every channel it can see, imports each untitled.stream / Samply / MEGA / Drive link and every audio file posted directly (forum threads become one comp each), and never posts anything. Add it with <b>View Channels</b> and <b>Read Message History</b> only.</div></div>' +
             '<div style="display:flex;gap:6px;align-items:center;">' +
               '<span id="dc-bot-state" class="wv-chip">…</span>' +
               '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcGlobal(\'stop\')">Stop queue</button>' +
@@ -330,7 +330,7 @@
       set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' : 'shards restarting · ') + (d.mega.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + (d.mega.tracks_last_30m || 0) + ' tracks in 30 min · ' + _fmtEta(d.mega.eta_min)));
       set('ov-discord', d.links.discord.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       set('ov-reddit', d.links.reddit.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
-      var LABEL = { rvideo: 'Reddit videos', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA links', gdrive: 'Google Drive', other: 'Other' };
+      var LABEL = { rvideo: 'Reddit videos', dfiles: 'Discord files', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA links', gdrive: 'Google Drive', other: 'Other' };
       var srcSub = function(k) {
         var sx = (d.links.sources || {})[k]; if (!sx) return '';
         if (!sx.remaining) return 'queue empty';
