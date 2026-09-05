@@ -501,6 +501,11 @@ function _paintFsWash() {
   const apply = c => {
     const light = document.body.classList.contains('theme-light');
     fs.style.setProperty('--wv-wash', light ? 'hsl(' + c.h1 + ',' + Math.min(60, c.s1) + '%,82%)' : 'hsl(' + c.h1 + ',' + Math.min(55, c.s1) + '%,26%)');
+    // The player's accent follows the cover too: a vivid, readable tint of
+    // the dominant hue (kept saturated and bright enough to sit on the wash).
+    const sat = Math.max(55, Math.min(85, c.s1 + 15));
+    fs.style.setProperty('--fs-accent', light ? 'hsl(' + c.h1 + ',' + sat + '%,38%)' : 'hsl(' + c.h1 + ',' + sat + '%,68%)');
+    fs.style.setProperty('--fs-accent-soft', light ? 'hsla(' + c.h1 + ',' + sat + '%,38%,.14)' : 'hsla(' + c.h1 + ',' + sat + '%,68%,.16)');
   };
   if (currentTrack.cover_url && typeof extractCoverHues === 'function') extractCoverHues(currentTrack.cover_url, seed, apply);
   else if (typeof coverHues === 'function') apply(coverHues(seed));
