@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609051831">
+  <link rel="stylesheet" href="/css/style.css?v=202609051842">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609051831"></script>
-<script src="/js/layout.js?v=202609051831"></script>
-<script src="/js/player.js?v=202609051831"></script>
-<script src="/js/router.js?v=202609051831"></script>
+<script src="/js/api.js?v=202609051842"></script>
+<script src="/js/layout.js?v=202609051842"></script>
+<script src="/js/player.js?v=202609051842"></script>
+<script src="/js/router.js?v=202609051842"></script>
 <script>
   initPlayer();
 
@@ -460,6 +460,7 @@
           (sc && sc.status === 'running'
             ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
           (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
@@ -469,6 +470,18 @@
       '</div>';
     }).join('');
   }
+  window.dcChannels = async function(gid) {
+    var wrap = document.getElementById('dc-log-wrap'); if (!wrap) return;
+    wrap.style.display = ''; wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>'; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      var d = await api('/discord/servers/' + gid + '/channels');
+      var bad = d.channels.filter(function(c) { return !c.readable; }), ok = d.channels.filter(function(c) { return c.readable; });
+      var row = function(c) { return '<div style="display:flex;gap:8px;align-items:center;padding:4px 8px;border-radius:8px;background:var(--surface-2);font-size:12.5px;"><span style="color:var(--text-3);width:90px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(c.category || '') + '</span><b style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">#' + escHtml(c.name) + '</b><span style="color:var(--text-3);">' + c.type + '</span>' + (c.readable ? '<span class="wv-chip acc">readable</span>' : '<span class="wv-chip bad">needs ' + escHtml(c.missing.join(' + ')) + '</span>') + '</div>'; };
+      wrap.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">' + escHtml(d.guild) + ' — channels</div><button class="wv-see-all" onclick="document.getElementById(\'dc-log-wrap\').style.display=\'none\'">Close</button></div>' +
+        (bad.length ? '<div style="font-size:12px;color:var(--text-2);margin-bottom:6px;">The bot cannot read <b>' + bad.length + '</b> channel' + (bad.length === 1 ? '' : 's') + '. A server admin fixes this by giving the bot\'s role <b>View Channel</b> and <b>Read Message History</b> on those channels (or their category), then press <b>Scan all history</b>.</div>' : '<div style="font-size:12px;color:var(--text-2);margin-bottom:6px;">The bot can read every channel.</div>') +
+        '<div style="display:flex;flex-direction:column;gap:3px;">' + bad.map(row).join('') + (bad.length && ok.length ? '<div style="font-size:11px;color:var(--text-3);margin:8px 0 2px;">Readable</div>' : '') + ok.map(row).join('') + '</div>';
+    } catch (e) { wrap.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; }
+  };
   window.dcAct = async function(gid, action) {
     try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
     catch (e) { alert(e.message || 'Failed'); }
@@ -627,6 +640,7 @@
           (sc && sc.status === 'running'
             ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
           (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
@@ -772,6 +786,7 @@
           (sc && sc.status === 'running'
             ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
           (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
@@ -917,6 +932,7 @@
           (sc && sc.status === 'running'
             ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
             : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
           (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
                      : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
           (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="Checks each failed link; the ones that still load are queued again, the rest are marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
