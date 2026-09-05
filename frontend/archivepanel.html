@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609051824">
+  <link rel="stylesheet" href="/css/style.css?v=202609051831">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609051824"></script>
-<script src="/js/layout.js?v=202609051824"></script>
-<script src="/js/player.js?v=202609051824"></script>
-<script src="/js/router.js?v=202609051824"></script>
+<script src="/js/api.js?v=202609051831"></script>
+<script src="/js/layout.js?v=202609051831"></script>
+<script src="/js/player.js?v=202609051831"></script>
+<script src="/js/router.js?v=202609051831"></script>
 <script>
   initPlayer();
 
@@ -213,6 +213,44 @@
           '</div>' +
         '</div>' +
 
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-manage-card">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+            '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, artist name, description, cover, tracks, which account it sits under. Merge comps. Rename and merge archive artists. Select several for bulk actions.</div></div>' +
+            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button></div>' +
+          '</div>' +
+          '<div id="mg-comps">' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
+              '<input id="mg-q" class="wv-input" placeholder="Search comps by title or artist…" style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgSearchInput()">' +
+              '<select id="mg-sort" class="wv-input" style="width:auto;padding:8px 10px;font-size:13px;" onchange="mgLoad()"><option value="newest">Newest</option><option value="title">Title A–Z</option><option value="artist">Artist A–Z</option></select>' +
+              '<span id="mg-count" style="font-size:12px;color:var(--text-3);"></span>' +
+            '</div>' +
+            '<div id="mg-bulk" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:12.5px;">' +
+              '<b id="mg-selcount">0 selected</b>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulk(\'set_artist\')">Set artist name</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulk(\'assign_account\')">Move to account</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkMerge()">Merge into one</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;color:var(--red);" onclick="mgBulk(\'delete\')">Delete</button>' +
+              '<button class="wv-see-all" onclick="mgClearSel()">Clear</button>' +
+            '</div>' +
+            '<div id="mg-list" style="display:flex;flex-direction:column;gap:4px;"></div>' +
+            '<div style="margin-top:8px;"><button class="wv-see-all" id="mg-more" style="display:none;" onclick="mgLoad(true)">Load more</button></div>' +
+          '</div>' +
+          '<div id="mg-artists" style="display:none;">' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
+              '<input id="mg-aq" class="wv-input" placeholder="Search archive artists…" style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgArtistsInput()">' +
+              '<span id="mg-acount" style="font-size:12px;color:var(--text-3);"></span>' +
+            '</div>' +
+            '<div id="mg-abulk" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:12.5px;">' +
+              '<b id="mg-aselcount">0 selected</b>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgArtistMerge()">Merge / rename to…</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgArtistAssign()">Put under an account</button>' +
+              '<button class="wv-see-all" onclick="mgAClearSel()">Clear</button>' +
+            '</div>' +
+            '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
+          '</div>' +
+          '<div id="mg-editor" style="display:none;margin-top:14px;"></div>' +
+        '</div>' +
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-audit-card">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">Audit the archive</div>' +
           '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Checks every archive comp for duplicate tracks inside one comp, missing audio, empty comps, blank or format-looking artist names, and titles that still carry a format tag. Run it after a bulk import.</div>' +
@@ -1290,6 +1328,154 @@
     btn.disabled = false;
     if (startBtn) startBtn.disabled = false;
   }
+
+  // ── Manage the archive ──────────────────────────────────────────────────
+  var _mg = { items: [], total: 0, sel: {}, timer: null, artists: [], asel: {}, atimer: null, editing: null };
+  function _mgCover(u) { return u ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(u, 48) : u) + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;" loading="lazy">' : '<div style="width:36px;height:36px;border-radius:6px;background:var(--surface-3);flex-shrink:0;"></div>'; }
+  window.mgTab = function(t) {
+    document.getElementById('mg-comps').style.display = t === 'comps' ? '' : 'none';
+    document.getElementById('mg-artists').style.display = t === 'artists' ? '' : 'none';
+    document.getElementById('mg-tab-comps').classList.toggle('on', t === 'comps');
+    document.getElementById('mg-tab-artists').classList.toggle('on', t === 'artists');
+    if (t === 'artists' && !_mg.artists.length) mgArtistsLoad();
+  };
+  window.mgSearchInput = function() { clearTimeout(_mg.timer); _mg.timer = setTimeout(function() { mgLoad(); }, 250); };
+  window.mgLoad = async function(more) {
+    var list = document.getElementById('mg-list'); if (!list) return;
+    var q = (document.getElementById('mg-q') || {}).value || '', sort = (document.getElementById('mg-sort') || {}).value || 'newest';
+    if (!more) { _mg.items = []; list.innerHTML = '<div class="loading"><div class="spinner"></div></div>'; }
+    try {
+      var d = await api('/archive-manage/comps?limit=40&offset=' + _mg.items.length + '&sort=' + sort + (q ? '&q=' + encodeURIComponent(q) : ''));
+      _mg.items = _mg.items.concat(d.items || []); _mg.total = d.total || 0;
+    } catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    document.getElementById('mg-count').textContent = _mg.total.toLocaleString() + ' comp' + (_mg.total === 1 ? '' : 's');
+    list.innerHTML = _mg.items.length ? _mg.items.map(function(a) {
+      var acct = a.artists ? a.artists.display_name : '—';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
+        '<input type="checkbox" ' + (_mg.sel[a.id] ? 'checked' : '') + ' onchange="mgToggle(\'' + a.id + '\', this.checked)" style="flex-shrink:0;">' + _mgCover(a.cover_url) +
+        '<div style="flex:1;min-width:0;cursor:pointer;" onclick="mgOpen(\'' + a.id + '\')"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + a.track_count + ' tracks · account: ' + escHtml(acct) + (a.is_archive ? '' : ' · <span style="color:var(--orange);">not archive</span>') + ' · ' + String(a.created_at || '').slice(0, 10) + '</div></div>' +
+        '<button class="wv-see-all" onclick="mgOpen(\'' + a.id + '\')">Edit</button>' +
+        '<a class="wv-see-all" href="/album.html?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()">Open</a></div>';
+    }).join('') : '<div class="wv-empty">Nothing matches.</div>';
+    document.getElementById('mg-more').style.display = _mg.items.length < _mg.total ? '' : 'none';
+    mgSelRender();
+  };
+  window.mgToggle = function(id, on) { if (on) _mg.sel[id] = true; else delete _mg.sel[id]; mgSelRender(); };
+  window.mgClearSel = function() { _mg.sel = {}; mgLoad(); };
+  function mgSelRender() { var n = Object.keys(_mg.sel).length; var b = document.getElementById('mg-bulk'); if (b) b.style.display = n ? 'flex' : 'none'; var c = document.getElementById('mg-selcount'); if (c) c.textContent = n + ' selected'; }
+  async function _mgPickAccount() {
+    var q = prompt('Account to move to — type part of the artist name:'); if (!q) return null;
+    var d = await api('/archive-manage/accounts?q=' + encodeURIComponent(q));
+    var list = d.accounts || []; if (!list.length) { alert('No account matches "' + q + '"'); return null; }
+    var pick = prompt(list.map(function(a, i) { return (i + 1) + '. ' + a.display_name + (a.users && a.users.username ? ' (@' + a.users.username + ')' : ''); }).join('\n') + '\n\nNumber:');
+    var idx = parseInt(pick, 10) - 1; return list[idx] || null;
+  }
+  window.mgBulk = async function(action) {
+    var ids = Object.keys(_mg.sel); if (!ids.length) return;
+    var value;
+    if (action === 'delete') { if (!confirm('Delete ' + ids.length + ' comp(s) and all their tracks? This cannot be undone.')) return; }
+    if (action === 'set_artist') { value = prompt('New artist name for ' + ids.length + ' comp(s):'); if (!value) return; }
+    if (action === 'assign_account') { var acc = await _mgPickAccount(); if (!acc) return; value = acc.id; }
+    try { var r = await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: action, value: value }) }); _mg.sel = {}; mgLoad(); if (_mg.editing && ids.indexOf(_mg.editing) >= 0) mgCloseEditor(); }
+    catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.mgBulkMerge = async function() {
+    var ids = Object.keys(_mg.sel); if (ids.length < 2) { alert('Select at least two comps.'); return; }
+    var items = ids.map(function(id) { return _mg.items.find(function(a) { return a.id === id; }) || { id: id, title: id }; });
+    var pick = prompt('Merge into which one? All other tracks move into it and the rest are deleted.\n\n' + items.map(function(a, i) { return (i + 1) + '. ' + a.title; }).join('\n') + '\n\nNumber:');
+    var into = items[parseInt(pick, 10) - 1]; if (!into) return;
+    try { for (var i = 0; i < items.length; i++) if (items[i].id !== into.id) await api('/archive-manage/comps/merge', { method: 'POST', body: JSON.stringify({ from_id: items[i].id, into_id: into.id }) }); _mg.sel = {}; mgLoad(); mgOpen(into.id); }
+    catch (e) { alert(e.message || 'Merge failed'); }
+  };
+  window.mgOpen = async function(id) {
+    var ed = document.getElementById('mg-editor'); if (!ed) return;
+    _mg.editing = id; ed.style.display = ''; ed.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    ed.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var a; try { a = await api('/archive-manage/comps/' + id); } catch (e) { ed.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    var acct = a.artists ? a.artists.display_name : '—';
+    ed.innerHTML = '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;"><div style="font-size:14px;font-weight:700;">Editing comp</div><button class="wv-see-all" onclick="mgCloseEditor()">Close</button></div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
+        '<div style="flex:0 0 auto;text-align:center;">' + (a.cover_url ? '<img id="mg-cover-img" src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.cover_url, 160) : a.cover_url) + '" style="width:120px;height:120px;border-radius:10px;object-fit:cover;">' : '<div style="width:120px;height:120px;border-radius:10px;background:var(--surface-3);"></div>') +
+          '<div style="margin-top:6px;"><label class="wv-see-all" style="cursor:pointer;">Change cover<input type="file" accept="image/*" style="display:none;" onchange="mgCover(\'' + a.id + '\', this)"></label></div></div>' +
+        '<div style="flex:1;min-width:240px;display:grid;gap:8px;">' +
+          '<label style="font-size:11.5px;color:var(--text-3);">Title<input id="mg-f-title" class="wv-input" value="' + escHtml(a.title) + '" style="width:100%;padding:8px 10px;font-size:13.5px;"></label>' +
+          '<label style="font-size:11.5px;color:var(--text-3);">Artist name (as shown in the archive)<input id="mg-f-artist" class="wv-input" value="' + escHtml(a.archive_artist_name || '') + '" style="width:100%;padding:8px 10px;font-size:13.5px;"></label>' +
+          '<label style="font-size:11.5px;color:var(--text-3);">Description<textarea id="mg-f-desc" class="wv-input" style="width:100%;min-height:56px;padding:8px 10px;font-size:13px;">' + escHtml(a.description || '') + '</textarea></label>' +
+          '<label style="font-size:11.5px;color:var(--text-3);">Source link<input id="mg-f-src" class="wv-input" value="' + escHtml(a.source_url || '') + '" style="width:100%;padding:8px 10px;font-size:12.5px;"></label>' +
+          '<div style="font-size:12px;color:var(--text-2);">Account: <b>' + escHtml(acct) + '</b> · <button class="wv-see-all" onclick="mgMoveAccount(\'' + a.id + '\')">Move to another account</button> · <label style="cursor:pointer;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + '> archive comp (untick to make it a normal comp on the account)</label></div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' +
+            '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="mgSave(\'' + a.id + '\')">Save changes</button>' +
+            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\')">Merge this into another comp…</button>' +
+            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="mgDelete(\'' + a.id + '\')">Delete comp</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:12.5px;font-weight:700;margin:14px 0 6px;">Tracks (' + a.tracks.length + ')</div>' +
+      '<div id="mg-tracks" style="display:flex;flex-direction:column;gap:3px;">' + a.tracks.map(function(t, i) {
+        return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;background:var(--surface-3);" data-tid="' + t.id + '">' +
+          '<span style="font-size:11px;color:var(--text-3);width:22px;text-align:right;">' + (i + 1) + '</span>' +
+          '<input class="wv-input mg-t-title" value="' + escHtml(t.title) + '" style="flex:1;min-width:0;padding:5px 8px;font-size:12.5px;" onchange="mgTrackTitle(\'' + t.id + '\', this.value)">' +
+          '<button class="wv-see-all" title="Move up" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',-1)">▲</button><button class="wv-see-all" title="Move down" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',1)">▼</button>' +
+          '<button class="wv-see-all" title="Move to another comp" onclick="mgTrackToComp(\'' + t.id + '\')">→ comp</button>' +
+          '<button class="wv-see-all" style="color:var(--red);" onclick="mgTrackDelete(\'' + a.id + '\',\'' + t.id + '\')">✕</button></div>';
+      }).join('') + '</div>' +
+    '</div>';
+  };
+  window.mgCloseEditor = function() { _mg.editing = null; var ed = document.getElementById('mg-editor'); if (ed) { ed.style.display = 'none'; ed.innerHTML = ''; } };
+  window.mgSave = async function(id) {
+    var body = { title: document.getElementById('mg-f-title').value, archive_artist_name: document.getElementById('mg-f-artist').value, description: document.getElementById('mg-f-desc').value, source_url: document.getElementById('mg-f-src').value, is_archive: document.getElementById('mg-f-arch').checked };
+    try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify(body) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Save failed'); }
+  };
+  window.mgMoveAccount = async function(id) { var acc = await _mgPickAccount(); if (!acc) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ artist_id: acc.id }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgDelete = async function(id) { if (!confirm('Delete this comp and all its tracks? This cannot be undone.')) return; try { await api('/archive-manage/comps/' + id, { method: 'DELETE' }); mgCloseEditor(); mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
+  async function _mgPickComp(label) {
+    var q = prompt(label + ' — type part of the comp title:'); if (!q) return null;
+    var d = await api('/archive-manage/comps?limit=15&q=' + encodeURIComponent(q));
+    var list = (d.items || []).filter(function(a) { return a.id !== _mg.editing; }); if (!list.length) { alert('No comp matches "' + q + '"'); return null; }
+    var pick = prompt(list.map(function(a, i) { return (i + 1) + '. ' + a.title + ' — ' + (a.archive_artist_name || '') + ' (' + a.track_count + ' tracks)'; }).join('\n') + '\n\nNumber:');
+    return list[parseInt(pick, 10) - 1] || null;
+  }
+  window.mgMergeInto = async function(id) { var into = await _mgPickComp('Merge into which comp?'); if (!into) return; if (!confirm('Move every track of this comp into "' + into.title + '" and delete this one?')) return; try { await api('/archive-manage/comps/merge', { method: 'POST', body: JSON.stringify({ from_id: id, into_id: into.id }) }); mgLoad(); mgOpen(into.id); } catch (e) { alert(e.message || 'Merge failed'); } };
+  window.mgCover = async function(id, input) { var f = input.files && input.files[0]; if (!f) return; var fd = new FormData(); fd.append('cover', f); try { await apiUpload('/archive-manage/comps/' + id + '/cover', fd); mgOpen(id); mgLoad(); } catch (e) { alert(e.message || 'Upload failed'); } };
+  window.mgTrackTitle = async function(tid, v) { try { await api('/archive-manage/tracks/' + tid, { method: 'PATCH', body: JSON.stringify({ title: v }) }); } catch (e) { alert(e.message || 'Rename failed'); } };
+  window.mgTrackDelete = async function(aid, tid) { if (!confirm('Delete this track?')) return; try { await api('/archive-manage/tracks/' + tid, { method: 'DELETE' }); mgOpen(aid); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgTrackMove = async function(aid, tid, dir) {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#mg-tracks [data-tid]')); var ids = rows.map(function(r) { return r.getAttribute('data-tid'); });
+    var i = ids.indexOf(tid), j = i + dir; if (i < 0 || j < 0 || j >= ids.length) return;
+    ids.splice(i, 1); ids.splice(j, 0, tid);
+    try { await api('/archive-manage/comps/' + aid + '/tracklist', { method: 'PUT', body: JSON.stringify({ tracks: ids.map(function(x, k) { return { track_id: x, position: k }; }) }) }); mgOpen(aid); } catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.mgTrackToComp = async function(tid) { var into = await _mgPickComp('Move this track to which comp?'); if (!into) return; try { await api('/archive-manage/tracks/move', { method: 'POST', body: JSON.stringify({ track_ids: [tid], to_album_id: into.id }) }); mgOpen(_mg.editing); } catch (e) { alert(e.message || 'Failed'); } };
+
+  // Artists tab
+  window.mgArtistsInput = function() { clearTimeout(_mg.atimer); _mg.atimer = setTimeout(mgArtistsLoad, 250); };
+  window.mgArtistsLoad = async function() {
+    var list = document.getElementById('mg-alist'); if (!list) return;
+    var q = (document.getElementById('mg-aq') || {}).value || '';
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try { var d = await api('/archive-manage/artists' + (q ? '?q=' + encodeURIComponent(q) : '')); _mg.artists = d.artists || []; document.getElementById('mg-acount').textContent = (d.total || 0).toLocaleString() + ' archive artists'; }
+    catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    list.innerHTML = _mg.artists.length ? _mg.artists.map(function(g) {
+      var sp = Object.keys(g.spellings); var acc = Object.keys(g.accounts);
+      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
+        '<input type="checkbox" ' + (_mg.asel[g.key] ? 'checked' : '') + ' onchange="mgAToggle(\'' + escHtml(g.key) + '\', this.checked)">' +
+        '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;">' + escHtml(g.name) + ' <span style="font-size:11.5px;color:var(--text-3);font-weight:500;">' + g.comps + ' comp' + (g.comps === 1 ? '' : 's') + '</span></div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (sp.length > 1 ? 'spellings: ' + sp.map(escHtml).join(', ') + ' · ' : '') + 'account: ' + (acc.length ? acc.map(escHtml).join(', ') : '—') + '</div></div>' +
+        '<button class="wv-see-all" onclick="mgArtistRename(\'' + escHtml(g.key) + '\')">Rename</button>' +
+        '<button class="wv-see-all" onclick="document.getElementById(\'mg-q\').value=' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ';mgTab(\'comps\');mgLoad();">Comps</button></div>';
+    }).join('') : '<div class="wv-empty">No artists match.</div>';
+    mgASelRender();
+  };
+  window.mgAToggle = function(k, on) { if (on) _mg.asel[k] = true; else delete _mg.asel[k]; mgASelRender(); };
+  window.mgAClearSel = function() { _mg.asel = {}; mgArtistsLoad(); };
+  function mgASelRender() { var n = Object.keys(_mg.asel).length; var b = document.getElementById('mg-abulk'); if (b) b.style.display = n ? 'flex' : 'none'; var c = document.getElementById('mg-aselcount'); if (c) c.textContent = n + ' selected'; }
+  function _mgSelSpellings() { var out = []; Object.keys(_mg.asel).forEach(function(k) { var g = _mg.artists.find(function(x) { return x.key === k; }); if (g) out = out.concat(Object.keys(g.spellings)); }); return out; }
+  window.mgArtistRename = async function(key) { var g = _mg.artists.find(function(x) { return x.key === key; }); if (!g) return; var to = prompt('Rename "' + g.name + '" (' + g.comps + ' comps) to:', g.name); if (!to || to === g.name) return; try { var r = await api('/archive-manage/artists/rename', { method: 'POST', body: JSON.stringify({ from: Object.keys(g.spellings), to: to }) }); mgArtistsLoad(); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgArtistMerge = async function() { var from = _mgSelSpellings(); if (!from.length) return; var to = prompt('Merge ' + Object.keys(_mg.asel).length + ' artist(s) into one name. Every comp under them will show this name:', from[0]); if (!to) return; try { var r = await api('/archive-manage/artists/rename', { method: 'POST', body: JSON.stringify({ from: from, to: to }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.updated + ' comps now under "' + r.to + '"'); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgArtistAssign = async function() { var names = _mgSelSpellings(); if (!names.length) return; var acc = await _mgPickAccount(); if (!acc) return; try { var r = await api('/archive-manage/artists/assign', { method: 'POST', body: JSON.stringify({ names: names, artist_id: acc.id }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.comps + ' comps moved under ' + acc.display_name); } catch (e) { alert(e.message || 'Failed'); } };
+  mgLoad();
 </script>
 </body>
 </html>
