@@ -1405,12 +1405,16 @@
   };
   window.mgOpen = async function(id) {
     var ed = document.getElementById('mg-editor'); if (!ed) return;
-    _mg.editing = id; ed.style.display = ''; ed.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    ed.style.cssText = 'display:block;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.55);padding:24px;overflow:auto;';
+    _mg.editing = id; ed.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    // Lives on <body> while open: inside the scrolling content column a fixed overlay is clipped to that column.
+    if (ed.parentNode !== document.body) document.body.appendChild(ed);
+    ed.style.cssText = 'display:block;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);padding:24px 16px;overflow:auto;';
+    ed.onclick = function(e) { if (e.target === ed) mgCloseEditor(); };
+    document.body.style.overflow = 'hidden';
     var a; try { a = await api('/archive-manage/comps/' + id); } catch (e) { ed.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
     var acct = a.artists ? a.artists.display_name : '—';
-    ed.innerHTML = '<div style="background:var(--elevated, var(--surface));border-radius:var(--r-lg);padding:18px;max-width:860px;margin:0 auto 90px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;"><div style="font-size:14px;font-weight:700;">Editing comp</div><button class="wv-see-all" onclick="mgCloseEditor()">Close</button></div>' +
+    ed.innerHTML = '<div style="background:var(--elevated, var(--surface));border-radius:var(--r-lg);padding:0 18px 18px;max-width:860px;margin:0 auto 90px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
+      '<div style="position:sticky;top:0;z-index:2;background:var(--elevated, var(--surface));display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0 10px;margin-bottom:6px;"><div style="font-size:14px;font-weight:700;">Editing comp</div><button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgCloseEditor()">✕ Close</button></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
         '<div style="flex:0 0 auto;text-align:center;">' + (a.cover_url ? '<img id="mg-cover-img" src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.cover_url, 160) : a.cover_url) + '" style="width:120px;height:120px;border-radius:10px;object-fit:cover;">' : '<div style="width:120px;height:120px;border-radius:10px;background:var(--surface-3);"></div>') +
           '<div style="margin-top:6px;"><label class="wv-see-all" style="cursor:pointer;">Change cover<input type="file" accept="image/*" style="display:none;" onchange="mgCover(\'' + a.id + '\', this)"></label></div></div>' +
@@ -1438,9 +1442,9 @@
       }).join('') + '</div>' +
     '</div>';
   };
-  window.mgCloseEditor = function() { _mg.editing = null; var ed = document.getElementById('mg-editor'); if (ed) { ed.style.cssText = 'display:none;'; ed.innerHTML = ''; } };
+  window.mgCloseEditor = function() { _mg.editing = null; document.body.style.overflow = ''; var ed = document.getElementById('mg-editor'); if (ed) { ed.style.cssText = 'display:none;'; ed.innerHTML = ''; } };
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && _mg.editing) mgCloseEditor(); });
-  (function() { var ed = document.getElementById('mg-editor'); if (ed) ed.addEventListener('click', function(e) { if (e.target === ed) mgCloseEditor(); }); })();
+
   window.mgSave = async function(id) {
     var body = { title: document.getElementById('mg-f-title').value, archive_artist_name: document.getElementById('mg-f-artist').value, description: document.getElementById('mg-f-desc').value, source_url: document.getElementById('mg-f-src').value, is_archive: document.getElementById('mg-f-arch').checked };
     try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify(body) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Save failed'); }
