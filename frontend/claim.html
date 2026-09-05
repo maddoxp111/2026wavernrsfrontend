@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — claim your comps</title>
+  <link rel="stylesheet" href="/css/style.css?v=202609052037">
+</head>
+<body>
+
+<div id="view">
+  <div style="max-width:680px;">
+    <div class="scroll-section-title" style="margin-bottom:6px;">Claim your comps</div>
+    <div style="color:var(--text-2);font-size:14px;line-height:1.6;margin-bottom:24px;">The archive preserves comps from Reddit, Discord, untitled.stream, Samply and MEGA. If some of them are yours, here is how to get them under your name, on your account, or taken down.</div>
+
+    <div class="wv-card" style="padding:24px;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">1. Connect Discord — comps you posted move to you automatically</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.7;">
+        Comps the bot imported from your Discord posts are tied to your Discord account. Open <a href="/settings.html" style="color:var(--brand);font-weight:600;">Settings</a>, connect Discord, and every comp posted from that Discord account moves onto your wavernrs profile on the spot. Nothing to fill in.
+      </div>
+    </div>
+
+    <div class="wv-card" style="padding:24px;margin-bottom:16px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">2. Everything else — send a claim</div>
+      <div style="font-size:14px;color:var(--text-2);line-height:1.7;margin-bottom:12px;">
+        For comps that came from Reddit, untitled.stream, Samply or MEGA, or that are listed under a name that isn't yours, use the form below. It goes straight to the archive team. Use it when:
+      </div>
+      <ul style="font-size:14px;color:var(--text-2);line-height:1.8;margin:0 0 12px 18px;padding:0;">
+        <li><b style="color:var(--text);">Wrong name.</b> Your comps show under a username or spelling you don't want. Tell us what to call the profile.</li>
+        <li><b style="color:var(--text);">Move to my account.</b> You want the comps on your wavernrs account so they show as your own uploads.</li>
+        <li><b style="color:var(--text);">Someone posted my comp as theirs.</b> A comp in the archive is yours but credited to someone else. We move it to you and note the correction.</li>
+        <li><b style="color:var(--text);">Take it down.</b> You made it and don't want it archived.</li>
+      </ul>
+      <div style="font-size:13px;color:var(--text-3);line-height:1.6;">Proof matters most. The best proof is a link to the original post, project, or upload from an account we can see is yours, a screenshot of the project in your untitled.stream or Samply library, or a message from the account that originally posted it. Claims without proof are declined.</div>
+    </div>
+
+    <div class="wv-card" style="padding:24px;margin-bottom:16px;" id="claim-form-card">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Claim form</div>
+      <div id="claim-login" style="display:none;font-size:14px;color:var(--text-2);">You need an account so we know where to put the comps. <a href="/login.html" style="color:var(--brand);font-weight:600;">Log in</a> or <a href="/register.html" style="color:var(--brand);font-weight:600;">sign up</a>, then come back here.</div>
+      <form id="claim-form" style="display:none;flex-direction:column;gap:14px;" onsubmit="return submitClaim(event)">
+        <label style="font-size:12.5px;color:var(--text-3);display:block;">What is this about?
+          <select id="cf-type" class="wv-input" style="margin-top:6px;">
+            <option value="rename">Wrong name — rename the profile my comps are under</option>
+            <option value="transfer">Move these comps to my wavernrs account</option>
+            <option value="stolen">Someone posted my comp as theirs</option>
+            <option value="remove">Take my comp down</option>
+            <option value="other">Something else</option>
+          </select></label>
+        <label style="font-size:12.5px;color:var(--text-3);display:block;">Links to the comps on wavernrs (one per line — open the comp and copy the address)
+          <textarea id="cf-links" class="wv-input" required style="margin-top:6px;min-height:80px;" placeholder="https://www.wavernrs.com/album.html?id=…"></textarea></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <label style="font-size:12.5px;color:var(--text-3);display:block;">Name they're listed under now
+            <input id="cf-listed" class="wv-input" style="margin-top:6px;" placeholder="u/someone"></label>
+          <label style="font-size:12.5px;color:var(--text-3);display:block;">Name you want (for renames)
+            <input id="cf-wanted" class="wv-input" style="margin-top:6px;" placeholder="Your artist name"></label>
+        </div>
+        <label style="font-size:12.5px;color:var(--text-3);display:block;">Proof it's yours (links, screenshots, original posts)
+          <textarea id="cf-proof" class="wv-input" required style="margin-top:6px;min-height:100px;" placeholder="Link to the original Reddit post / untitled project / Discord message from your account, screenshot links, anything that shows you made it."></textarea></label>
+        <label style="font-size:12.5px;color:var(--text-3);display:block;">Anything else we should know
+          <textarea id="cf-message" class="wv-input" style="margin-top:6px;min-height:60px;"></textarea></label>
+        <label style="font-size:12.5px;color:var(--text-3);display:block;">How to reach you if we have questions (Discord / Reddit / email)
+          <input id="cf-contact" class="wv-input" style="margin-top:6px;" placeholder="discord: name / u/name / email"></label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button type="submit" class="wv-pill brand" id="cf-submit" style="padding:10px 18px;font-weight:700;">Send claim</button>
+          <span id="cf-status" style="font-size:13px;color:var(--text-2);"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="wv-card" style="padding:24px;margin-bottom:20px;" id="claim-mine" style="display:none;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">Your claims</div>
+      <div id="claim-mine-list" style="font-size:13.5px;color:var(--text-2);">—</div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=202609052037"></script>
+<script src="/js/layout.js?v=202609052037"></script>
+<script src="/js/player.js?v=202609052037"></script>
+<script src="/js/router.js?v=202609052037"></script>
+<script>
+  initPlayer();
+  function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  var LABELS = { rename: 'Rename', transfer: 'Move to my account', stolen: 'Posted by someone else', remove: 'Take down', other: 'Other' };
+  async function loadMine() {
+    var card = document.getElementById('claim-mine'), list = document.getElementById('claim-mine-list');
+    try {
+      var d = await api('/claims/mine');
+      if (!d.claims.length) { card.style.display = 'none'; return; }
+      card.style.display = '';
+      list.innerHTML = d.claims.map(function(c) {
+        var st = c.status === 'approved' ? '<span class="wv-chip acc">approved</span>' : c.status === 'rejected' ? '<span class="wv-chip bad">declined</span>' : '<span class="wv-chip">under review</span>';
+        return '<div style="padding:10px 0;border-bottom:1px solid var(--hair, rgba(255,255,255,0.08));"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><b style="color:var(--text);">' + escHtml(LABELS[c.claim_type] || c.claim_type) + '</b> ' + st + ' <span style="color:var(--text-3);font-size:12px;">' + new Date(c.created_at).toLocaleDateString() + '</span></div>' +
+          '<div style="font-size:12.5px;color:var(--text-3);white-space:pre-wrap;margin-top:4px;">' + escHtml(c.comp_links.split('\n').slice(0, 3).join('\n')) + '</div>' +
+          (c.staff_note ? '<div style="font-size:13px;margin-top:6px;">Archive team: ' + escHtml(c.staff_note) + '</div>' : '') + '</div>';
+      }).join('');
+    } catch (e) { card.style.display = 'none'; }
+  }
+  window.submitClaim = async function(ev) {
+    ev.preventDefault();
+    var btn = document.getElementById('cf-submit'), st = document.getElementById('cf-status');
+    btn.disabled = true; st.textContent = 'Sending…';
+    try {
+      await api('/claims', { method: 'POST', body: JSON.stringify({
+        claim_type: document.getElementById('cf-type').value, comp_links: document.getElementById('cf-links').value, listed_as: document.getElementById('cf-listed').value,
+        wanted_name: document.getElementById('cf-wanted').value, proof: document.getElementById('cf-proof').value, message: document.getElementById('cf-message').value, contact: document.getElementById('cf-contact').value,
+      }) });
+      st.textContent = 'Sent. The archive team reviews claims by hand; you can check the status here.';
+      document.getElementById('claim-form').reset();
+      loadMine();
+    } catch (e) { st.textContent = e.message || 'Could not send'; }
+    btn.disabled = false;
+    return false;
+  };
+  (function() {
+    if (isLoggedIn()) { document.getElementById('claim-form').style.display = 'flex'; loadMine(); }
+    else document.getElementById('claim-login').style.display = '';
+  })();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609052012">
+  <link rel="stylesheet" href="/css/style.css?v=202609052037">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609052012"></script>
-<script src="/js/layout.js?v=202609052012"></script>
-<script src="/js/player.js?v=202609052012"></script>
-<script src="/js/router.js?v=202609052012"></script>
+<script src="/js/api.js?v=202609052037"></script>
+<script src="/js/layout.js?v=202609052037"></script>
+<script src="/js/player.js?v=202609052037"></script>
+<script src="/js/router.js?v=202609052037"></script>
 <script>
   initPlayer();
 
@@ -213,6 +213,14 @@
           '</div>' +
         '</div>' +
 
+        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-claims-card">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
+            '<div><div style="font-size:14px;font-weight:700;">Comp claims</div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Sent from the Claim your comps page. Check the proof, fix the comps with the manager below, then approve or decline with a note the person can see.</div></div>' +
+            '<div class="wv-seg"><button class="on" id="cl-tab-open" onclick="clLoad(\'open\')">Open</button><button id="cl-tab-approved" onclick="clLoad(\'approved\')">Approved</button><button id="cl-tab-rejected" onclick="clLoad(\'rejected\')">Declined</button></div>' +
+          '</div>' +
+          '<div id="cl-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
+        '</div>' +
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-manage-card">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
@@ -1508,6 +1516,61 @@
   window.mgArtistMerge = async function() { var from = _mgSelSpellings(); if (!from.length) return; var to = prompt('Merge ' + Object.keys(_mg.asel).length + ' artist(s) into one name. Every comp under them will show this name:', from[0]); if (!to) return; try { var r = await api('/archive-manage/artists/rename', { method: 'POST', body: JSON.stringify({ from: from, to: to }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.updated + ' comps now under "' + r.to + '"'); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgArtistAssign = async function() { var names = _mgSelSpellings(); if (!names.length) return; var acc = await _mgPickAccount(); if (!acc) return; try { var r = await api('/archive-manage/artists/assign', { method: 'POST', body: JSON.stringify({ names: names, artist_id: acc.id }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.comps + ' comps moved under ' + acc.display_name); } catch (e) { alert(e.message || 'Failed'); } };
   mgLoad();
+
+  // ── Comp claims ──────────────────────────────────────────────────────────
+  var CL_LABEL = { rename: 'Wrong name — rename', transfer: 'Move to their account', stolen: 'Posted by someone else', remove: 'Take down', other: 'Other' };
+  window.clLoad = async function(status) {
+    status = status || 'open';
+    ['open', 'approved', 'rejected'].forEach(function(t) { var b = document.getElementById('cl-tab-' + t); if (b) b.classList.toggle('on', t === status); });
+    var list = document.getElementById('cl-list'); if (!list) return;
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    var d; try { d = await api('/claims?status=' + status); } catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    var c = d.counts || {};
+    var ob = document.getElementById('cl-tab-open'); if (ob) ob.textContent = 'Open' + (c.open ? ' (' + c.open + ')' : '');
+    if (!d.claims.length) { list.innerHTML = '<div class="wv-empty">No ' + (status === 'open' ? 'open' : status) + ' claims.</div>'; return; }
+    list.innerHTML = d.claims.map(function(k) {
+      var links = String(k.comp_links || '').split(/\s+/).filter(Boolean);
+      return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;" id="cl-' + k.id + '">' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;"><b>' + escHtml(CL_LABEL[k.claim_type] || k.claim_type) + '</b><span class="wv-chip">' + escHtml(k.username || 'user') + '</span><span style="font-size:12px;color:var(--text-3);">' + new Date(k.created_at).toLocaleString() + '</span>' + (k.status !== 'open' ? '<span class="wv-chip ' + (k.status === 'approved' ? 'acc' : 'bad') + '">' + k.status + '</span>' : '') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--text-2);display:grid;gap:4px;">' +
+          '<div><span style="color:var(--text-3);">Comps:</span> ' + links.map(function(u) { return /^https?:/.test(u) ? '<a href="' + escHtml(u) + '" target="_blank" style="color:var(--brand);">' + escHtml(u.replace(/^https?:\/\/(www\.)?/, '')) + '</a>' : escHtml(u); }).join(' · ') + '</div>' +
+          (k.listed_as ? '<div><span style="color:var(--text-3);">Listed as:</span> ' + escHtml(k.listed_as) + (k.wanted_name ? ' → <b>' + escHtml(k.wanted_name) + '</b>' : '') + '</div>' : (k.wanted_name ? '<div><span style="color:var(--text-3);">Wants:</span> <b>' + escHtml(k.wanted_name) + '</b></div>' : '')) +
+          '<div><span style="color:var(--text-3);">Proof:</span> <span style="white-space:pre-wrap;">' + escHtml(k.proof) + '</span></div>' +
+          (k.message ? '<div><span style="color:var(--text-3);">Note:</span> <span style="white-space:pre-wrap;">' + escHtml(k.message) + '</span></div>' : '') +
+          (k.contact ? '<div><span style="color:var(--text-3);">Contact:</span> ' + escHtml(k.contact) + '</div>' : '') +
+          (k.staff_note ? '<div><span style="color:var(--text-3);">Staff note:</span> ' + escHtml(k.staff_note) + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clOpenComps(\'' + k.id + '\')">Open these comps in the manager</button>' +
+          (k.claim_type === 'transfer' || k.claim_type === 'stolen' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clTransfer(\'' + k.id + '\')">Move comps to their account</button>' : '') +
+          (k.status !== 'approved' ? '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clSet(\'' + k.id + '\',\'approved\')">Approve</button>' : '') +
+          (k.status !== 'rejected' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="clSet(\'' + k.id + '\',\'rejected\')">Decline</button>' : '') +
+          (k.status !== 'open' ? '<button class="wv-see-all" onclick="clSet(\'' + k.id + '\',\'open\')">Reopen</button>' : '') +
+        '</div></div>';
+    }).join('');
+  };
+  window.clSet = async function(id, status) {
+    var note = prompt(status === 'approved' ? 'Note for the person (what you did):' : status === 'rejected' ? 'Why it was declined (they will see this):' : 'Note:', '');
+    if (note === null) return;
+    try { await api('/claims/' + id, { method: 'PATCH', body: JSON.stringify({ status: status, staff_note: note }) }); clLoad(status === 'open' ? 'open' : 'open'); } catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.clOpenComps = async function(id) {
+    try { var d = await api('/claims/' + id + '/comps'); if (!d.comps.length) { alert('None of the pasted links point at a comp on the site.'); return; }
+      document.getElementById('mg-q').value = d.comps[0].title; mgTab('comps'); mgLoad(); document.getElementById('arc-manage-card').scrollIntoView({ behavior: 'smooth' }); if (d.comps.length === 1) mgOpen(d.comps[0].id);
+    } catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.clTransfer = async function(id) {
+    try {
+      var d = await api('/claims/' + id + '/comps');
+      if (!d.comps.length) { alert('None of the pasted links point at a comp on the site.'); return; }
+      if (!d.claimant_artist) { alert('This user has no artist profile yet — they need to set one up before comps can be moved to them.'); return; }
+      if (!confirm('Move ' + d.comps.length + ' comp(s) to ' + d.claimant_artist.display_name + '\'s account as their own uploads?')) return;
+      await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: d.comps.map(function(c) { return c.id; }), action: 'assign_account', value: d.claimant_artist.id }) });
+      for (var i = 0; i < d.comps.length; i++) await api('/archive-manage/comps/' + d.comps[i].id, { method: 'PATCH', body: JSON.stringify({ is_archive: false, archive_artist_name: d.claimant_artist.display_name }) });
+      alert('Moved. Now approve the claim with a note.'); mgLoad();
+    } catch (e) { alert(e.message || 'Failed'); }
+  };
+  clLoad('open');
 </script>
 </body>
 </html>
