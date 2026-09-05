@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609052037">
+  <link rel="stylesheet" href="/css/style.css?v=202609052221">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609052037"></script>
-<script src="/js/layout.js?v=202609052037"></script>
-<script src="/js/player.js?v=202609052037"></script>
-<script src="/js/router.js?v=202609052037"></script>
+<script src="/js/api.js?v=202609052221"></script>
+<script src="/js/layout.js?v=202609052221"></script>
+<script src="/js/player.js?v=202609052221"></script>
+<script src="/js/router.js?v=202609052221"></script>
 <script>
   initPlayer();
 
@@ -1535,7 +1535,7 @@
         '<div style="font-size:12.5px;color:var(--text-2);display:grid;gap:4px;">' +
           '<div><span style="color:var(--text-3);">Comps:</span> ' + links.map(function(u) { return /^https?:/.test(u) ? '<a href="' + escHtml(u) + '" target="_blank" style="color:var(--brand);">' + escHtml(u.replace(/^https?:\/\/(www\.)?/, '')) + '</a>' : escHtml(u); }).join(' · ') + '</div>' +
           (k.listed_as ? '<div><span style="color:var(--text-3);">Listed as:</span> ' + escHtml(k.listed_as) + (k.wanted_name ? ' → <b>' + escHtml(k.wanted_name) + '</b>' : '') + '</div>' : (k.wanted_name ? '<div><span style="color:var(--text-3);">Wants:</span> <b>' + escHtml(k.wanted_name) + '</b></div>' : '')) +
-          '<div><span style="color:var(--text-3);">Proof:</span> <span style="white-space:pre-wrap;">' + escHtml(k.proof) + '</span></div>' +
+          '<div><span style="color:var(--text-3);">Proof:</span> <span style="white-space:pre-wrap;">' + escHtml(k.proof).replace(/https?:\/\/\S+/g, function(u) { return /\.(jpe?g|png|webp|gif)(\?|$)/i.test(u) ? '<a href="' + u + '" target="_blank"><img src="' + u + '" style="max-width:160px;max-height:120px;border-radius:8px;vertical-align:middle;margin:2px 4px 2px 0;"></a>' : '<a href="' + u + '" target="_blank" style="color:var(--brand);">' + u + '</a>'; }) + '</span></div>' +
           (k.message ? '<div><span style="color:var(--text-3);">Note:</span> <span style="white-space:pre-wrap;">' + escHtml(k.message) + '</span></div>' : '') +
           (k.contact ? '<div><span style="color:var(--text-3);">Contact:</span> ' + escHtml(k.contact) + '</div>' : '') +
           (k.staff_note ? '<div><span style="color:var(--text-3);">Staff note:</span> ' + escHtml(k.staff_note) + '</div>' : '') +

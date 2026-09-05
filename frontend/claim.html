@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — claim your comps</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609052037">
+  <link rel="stylesheet" href="/css/style.css?v=202609052221">
 </head>
 <body>
 
@@ -14,9 +14,9 @@
     <div style="color:var(--text-2);font-size:14px;line-height:1.6;margin-bottom:24px;">The archive preserves comps from Reddit, Discord, untitled.stream, Samply and MEGA. If some of them are yours, here is how to get them under your name, on your account, or taken down.</div>
 
     <div class="wv-card" style="padding:24px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">1. Connect Discord — comps you posted move to you automatically</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">1. Connect Reddit or Discord — your comps move to you automatically</div>
       <div style="font-size:14px;color:var(--text-2);line-height:1.7;">
-        Comps the bot imported from your Discord posts are tied to your Discord account. Open <a href="/settings.html" style="color:var(--brand);font-weight:600;">Settings</a>, connect Discord, and every comp posted from that Discord account moves onto your wavernrs profile on the spot. Nothing to fill in.
+        Comps imported from Reddit are filed under your u/ name; comps from Discord are tied to your Discord account. Open <a href="/settings.html" style="color:var(--brand);font-weight:600;">Settings</a>, connect Reddit and/or Discord, and every comp and edit the archive has under those names moves onto your wavernrs profile on the spot. Nothing to fill in.
       </div>
     </div>
 
@@ -55,7 +55,14 @@
             <input id="cf-wanted" class="wv-input" style="margin-top:6px;" placeholder="Your artist name"></label>
         </div>
         <label style="font-size:12.5px;color:var(--text-3);display:block;">Proof it's yours (links, screenshots, original posts)
-          <textarea id="cf-proof" class="wv-input" required style="margin-top:6px;min-height:100px;" placeholder="Link to the original Reddit post / untitled project / Discord message from your account, screenshot links, anything that shows you made it."></textarea></label>
+          <textarea id="cf-proof" class="wv-input" style="margin-top:6px;min-height:100px;" placeholder="Link to the original Reddit post / untitled project / Discord message from your account, screenshot links, anything that shows you made it."></textarea></label>
+        <div style="font-size:12.5px;color:var(--text-3);">Photos or videos as proof (screenshots of your library, a screen recording — up to 100 MB each)
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+            <label class="wv-pill" style="cursor:pointer;font-size:12.5px;padding:7px 14px;">Add photo / video<input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" multiple style="display:none;width:auto;" onchange="uploadProof(this)"></label>
+            <span id="cf-upload-status" style="font-size:12.5px;"></span>
+          </div>
+          <div id="cf-files" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+        </div>
         <label style="font-size:12.5px;color:var(--text-3);display:block;">Anything else we should know
           <textarea id="cf-message" class="wv-input" style="margin-top:6px;min-height:60px;"></textarea></label>
         <label style="font-size:12.5px;color:var(--text-3);display:block;">How to reach you if we have questions (Discord / Reddit / email)
@@ -74,10 +81,10 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=202609052037"></script>
-<script src="/js/layout.js?v=202609052037"></script>
-<script src="/js/player.js?v=202609052037"></script>
-<script src="/js/router.js?v=202609052037"></script>
+<script src="/js/api.js?v=202609052221"></script>
+<script src="/js/layout.js?v=202609052221"></script>
+<script src="/js/player.js?v=202609052221"></script>
+<script src="/js/router.js?v=202609052221"></script>
 <script>
   initPlayer();
   function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -96,17 +103,34 @@
       }).join('');
     } catch (e) { card.style.display = 'none'; }
   }
+  var _proofFiles = [];
+  window.uploadProof = async function(input) {
+    var st = document.getElementById('cf-upload-status'), list = document.getElementById('cf-files');
+    for (var i = 0; i < input.files.length; i++) {
+      var f = input.files[i];
+      st.textContent = 'Uploading ' + f.name + '…';
+      try {
+        var fd = new FormData(); fd.append('file', f);
+        var r = await apiUpload('/claims/upload', fd);
+        _proofFiles.push(r);
+        list.insertAdjacentHTML('beforeend', r.type === 'image' ? '<a href="' + escHtml(r.url) + '" target="_blank"><img src="' + escHtml(r.url) + '" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"></a>' : '<a href="' + escHtml(r.url) + '" target="_blank" class="wv-chip">video ' + (_proofFiles.length) + '</a>');
+        st.textContent = 'Added.';
+      } catch (e) { st.textContent = e.message || 'Upload failed'; }
+    }
+    input.value = '';
+  };
   window.submitClaim = async function(ev) {
     ev.preventDefault();
     var btn = document.getElementById('cf-submit'), st = document.getElementById('cf-status');
     btn.disabled = true; st.textContent = 'Sending…';
+    if (!document.getElementById('cf-proof').value.trim() && !_proofFiles.length) { st.textContent = 'Add some proof: links, or a photo / video.'; btn.disabled = false; return false; }
     try {
       await api('/claims', { method: 'POST', body: JSON.stringify({
         claim_type: document.getElementById('cf-type').value, comp_links: document.getElementById('cf-links').value, listed_as: document.getElementById('cf-listed').value,
-        wanted_name: document.getElementById('cf-wanted').value, proof: document.getElementById('cf-proof').value, message: document.getElementById('cf-message').value, contact: document.getElementById('cf-contact').value,
+        wanted_name: document.getElementById('cf-wanted').value, proof: document.getElementById('cf-proof').value + (_proofFiles.length ? '\n\nFiles:\n' + _proofFiles.map(function(f) { return f.url; }).join('\n') : ''), message: document.getElementById('cf-message').value, contact: document.getElementById('cf-contact').value,
       }) });
       st.textContent = 'Sent. The archive team reviews claims by hand; you can check the status here.';
-      document.getElementById('claim-form').reset();
+      document.getElementById('claim-form').reset(); _proofFiles = []; document.getElementById('cf-files').innerHTML = '';
       loadMine();
     } catch (e) { st.textContent = e.message || 'Could not send'; }
     btn.disabled = false;
