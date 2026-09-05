@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609051958">
+  <link rel="stylesheet" href="/css/style.css?v=202609052000">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609051958"></script>
-<script src="/js/layout.js?v=202609051958"></script>
-<script src="/js/player.js?v=202609051958"></script>
-<script src="/js/router.js?v=202609051958"></script>
+<script src="/js/api.js?v=202609052000"></script>
+<script src="/js/layout.js?v=202609052000"></script>
+<script src="/js/player.js?v=202609052000"></script>
+<script src="/js/router.js?v=202609052000"></script>
 <script>
   initPlayer();
 
@@ -216,7 +216,7 @@
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-manage-card">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, artist name, description, cover, tracks, which account it sits under. Merge comps. Rename and merge archive artists. Select several for bulk actions.</div></div>' +
+            '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, profile it belongs to, description, cover, tracks. Move comps between profiles, merge comps, rename and merge profiles. Select several for bulk actions.</div></div>' +
             '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button></div>' +
           '</div>' +
           '<div id="mg-comps">' +
@@ -228,7 +228,7 @@
             '<div id="mg-bulk" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:12.5px;">' +
               '<b id="mg-selcount">0 selected</b>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulk(\'set_artist\')">Set artist name</button>' +
-              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulk(\'assign_account\')">Move to account</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkProfile()">Move to profile</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkMerge()">Merge into one</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;color:var(--red);" onclick="mgBulk(\'delete\')">Delete</button>' +
               '<button class="wv-see-all" onclick="mgClearSel()">Clear</button>' +
@@ -244,7 +244,6 @@
             '<div id="mg-abulk" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:12.5px;">' +
               '<b id="mg-aselcount">0 selected</b>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgArtistMerge()">Merge / rename to…</button>' +
-              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgArtistAssign()">Put under an account</button>' +
               '<button class="wv-see-all" onclick="mgAClearSel()">Clear</button>' +
             '</div>' +
             '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
@@ -1370,7 +1369,7 @@
       return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
         '<input type="checkbox" ' + (_mg.sel[a.id] ? 'checked' : '') + ' onchange="mgToggle(\'' + a.id + '\', this.checked)" style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);">' + _mgCover(a.cover_url) +
         '<div style="flex:1 1 auto;min-width:0;cursor:pointer;" onclick="mgOpen(\'' + a.id + '\')"><div style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div>' +
-        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + a.track_count + ' tracks · account: ' + escHtml(acct) + (a.is_archive ? '' : ' · <span style="color:var(--orange);">not archive</span>') + ' · ' + String(a.created_at || '').slice(0, 10) + '</div></div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + a.track_count + ' tracks' + (a.is_archive ? '' : ' · <span style="color:var(--orange);">not archive</span>') + ' · ' + String(a.created_at || '').slice(0, 10) + '</div></div>' +
         '<button class="wv-see-all" onclick="mgOpen(\'' + a.id + '\')">Edit</button>' +
         '<a class="wv-see-all" href="/album.html?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()">Open</a></div>';
     }).join('') : '<div class="wv-empty">Nothing matches.</div>';
@@ -1420,7 +1419,7 @@
           '<label style="font-size:11.5px;color:var(--text-3);">Artist name (as shown in the archive)<input id="mg-f-artist" class="wv-input" value="' + escHtml(a.archive_artist_name || '') + '" style="width:100%;padding:8px 10px;font-size:13.5px;"></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Description<textarea id="mg-f-desc" class="wv-input" style="width:100%;min-height:56px;padding:8px 10px;font-size:13px;">' + escHtml(a.description || '') + '</textarea></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Source link<input id="mg-f-src" class="wv-input" value="' + escHtml(a.source_url || '') + '" style="width:100%;padding:8px 10px;font-size:12.5px;"></label>' +
-          '<div style="font-size:12px;color:var(--text-2);">Account: <b>' + escHtml(acct) + '</b> · <button class="wv-see-all" onclick="mgMoveAccount(\'' + a.id + '\')">Move to another account</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
+          '<div style="font-size:12px;color:var(--text-2);">Profile: <b>' + escHtml(a.archive_artist_name || 'Unknown') + '</b> · <button class="wv-see-all" onclick="mgMoveProfile(\'' + a.id + '\')">Move to another profile</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="mgSave(\'' + a.id + '\')">Save changes</button>' +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\')">Merge this into another comp…</button>' +
@@ -1446,6 +1445,17 @@
     var body = { title: document.getElementById('mg-f-title').value, archive_artist_name: document.getElementById('mg-f-artist').value, description: document.getElementById('mg-f-desc').value, source_url: document.getElementById('mg-f-src').value, is_archive: document.getElementById('mg-f-arch').checked };
     try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify(body) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Save failed'); }
   };
+  async function _mgPickProfile() {
+    var q = prompt('Profile to move to — type part of the archive artist name (or a brand-new name to create one):'); if (!q) return null;
+    var d = await api('/archive-manage/artists?q=' + encodeURIComponent(q));
+    var list = d.artists || [];
+    if (!list.length) return confirm('No existing profile matches "' + q + '". Create it?') ? q : null;
+    var pick = prompt(list.slice(0, 20).map(function(g, i) { return (i + 1) + '. ' + g.name + ' (' + g.comps + ' comps)'; }).join('\n') + '\n0. Create a new profile called "' + q + '"\n\nNumber:');
+    if (pick === '0') return q;
+    var g = list[parseInt(pick, 10) - 1]; return g ? g.name : null;
+  }
+  window.mgMoveProfile = async function(id) { var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ archive_artist_name: name }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgBulkProfile = async function() { var ids = Object.keys(_mg.sel); if (!ids.length) return; var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: 'set_artist', value: name }) }); _mg.sel = {}; mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgMoveAccount = async function(id) { var acc = await _mgPickAccount(); if (!acc) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ artist_id: acc.id }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgDelete = async function(id) { if (!confirm('Delete this comp and all its tracks? This cannot be undone.')) return; try { await api('/archive-manage/comps/' + id, { method: 'DELETE' }); mgCloseEditor(); mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   async function _mgPickComp(label) {
@@ -1480,7 +1490,7 @@
       return '<div style="display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:var(--r-md);background:var(--surface-2);">' +
         '<input type="checkbox" ' + (_mg.asel[g.key] ? 'checked' : '') + ' onchange="mgAToggle(\'' + escHtml(g.key) + '\', this.checked)" style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);">' +
         '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;">' + escHtml(g.name) + ' <span style="font-size:11.5px;color:var(--text-3);font-weight:500;">' + g.comps + ' comp' + (g.comps === 1 ? '' : 's') + '</span></div>' +
-        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (sp.length > 1 ? 'spellings: ' + sp.map(escHtml).join(', ') + ' · ' : '') + 'account: ' + (acc.length ? acc.map(escHtml).join(', ') : '—') + '</div></div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (sp.length > 1 ? 'spellings: ' + sp.map(escHtml).join(', ') : '') + '</div></div>' +
         '<button class="wv-see-all" onclick="mgArtistRename(\'' + escHtml(g.key) + '\')">Rename</button>' +
         '<button class="wv-see-all" onclick="document.getElementById(\'mg-q\').value=' + JSON.stringify(g.name).replace(/"/g, '&quot;') + ';mgTab(\'comps\');mgLoad();">Comps</button></div>';
     }).join('') : '<div class="wv-empty">No artists match.</div>';
