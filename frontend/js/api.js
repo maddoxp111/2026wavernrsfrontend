@@ -412,7 +412,9 @@ async function renderSiteBanners() {
   banners.forEach(b => {
     const el = document.createElement('div');
     el.className = `site-banner ${b.type || 'info'}`;
-    el.textContent = b.message;
+    // Links in a banner become real links; everything else stays escaped text.
+    const esc = t => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    el.innerHTML = esc(b.message).replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)]/g, u => `<a href="${u}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;font-weight:600;">${u.replace(/^https?:\/\/(www\.)?/, '')}</a>`);
     container.appendChild(el);
   });
   document.body.insertBefore(container, document.body.firstChild);

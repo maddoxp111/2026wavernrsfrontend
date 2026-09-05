@@ -932,7 +932,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609052221';
+  s.src = '/js/playlists.js?v=202609052251';
   document.head.appendChild(s);
 })();
 
@@ -940,7 +940,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609052221';
+  s.src = '/js/ratings.js?v=202609052251';
   document.head.appendChild(s);
 })();
 
