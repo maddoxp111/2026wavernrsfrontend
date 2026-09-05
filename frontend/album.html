@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609052006">
+  <link rel="stylesheet" href="/css/style.css?v=202609052012">
 </head>
 <body>
 
@@ -16,13 +16,23 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=202609052006"></script>
-<script src="/js/layout.js?v=202609052006"></script>
-<script src="/js/player.js?v=202609052006"></script>
-<script src="/js/router.js?v=202609052006"></script>
-<script src="/js/playlists.js?v=202609052006"></script>
-<script src="/js/ratings.js?v=202609052006"></script>
+<script src="/js/api.js?v=202609052012"></script>
+<script src="/js/layout.js?v=202609052012"></script>
+<script src="/js/player.js?v=202609052012"></script>
+<script src="/js/router.js?v=202609052012"></script>
+<script src="/js/playlists.js?v=202609052012"></script>
+<script src="/js/ratings.js?v=202609052012"></script>
 <script>
+  // The comp's own date: for uploads the upload date; for archive comps the
+  // date the source gave (Reddit post, last edit on untitled/Samply, file
+  // time on MEGA, Discord message), or N/A when the source had none.
+  function compDateLabel(album) {
+    var d = album.is_archive ? album.original_date : (album.original_date || album.created_at);
+    if (!d) return 'N/A';
+    var dt = new Date(d); if (isNaN(dt)) return 'N/A';
+    return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
   initPlayer();
 
   var albumId = new URLSearchParams(location.search).get('id');
@@ -118,7 +128,7 @@
                 ? `<a href="/archive-artist.html?a=${encodeURIComponent(archiveArtistSlug(album.archive_artist_name || 'Unknown'))}">${escHtml(album.archive_artist_name || 'Unknown')}</a>`
                 : `<a href="/artist.html?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>`}
             </div>
-            <div class="wv-hero-meta">${eraName ? escHtml(eraName) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''}</div>
+            <div class="wv-hero-meta">${eraName ? escHtml(eraName) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
             <div class="wv-hero-actions">
               <button class="wv-btn-play" onclick="playAll()">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play
