@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609061754">
+  <link rel="stylesheet" href="/css/style.css?v=202609062251">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609061754"></script>
-<script src="/js/layout.js?v=202609061754"></script>
-<script src="/js/player.js?v=202609061754"></script>
-<script src="/js/router.js?v=202609061754"></script>
+<script src="/js/api.js?v=202609062251"></script>
+<script src="/js/layout.js?v=202609062251"></script>
+<script src="/js/player.js?v=202609062251"></script>
+<script src="/js/router.js?v=202609062251"></script>
 <script>
   initPlayer();
 
@@ -183,6 +183,7 @@
             '<div><div style="font-size:14px;font-weight:700;">Reddit</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Every post and comment of a subreddit, full history, plus a poll for new ones every 10 minutes. Links hidden in base64 are decoded. Comps are filed in the archive under the Reddit username.</div></div>' +
           '</div>' +
+          '<div id="rd-sweep" style="display:none;font-size:12.5px;color:var(--text-2);margin:0 0 12px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);"></div>' +
           '<div id="rd-list" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
         '</div>' +
 
@@ -539,15 +540,18 @@
   async function dcSweepPoll() {
     clearTimeout(_sweepTimer);
     var el = document.getElementById('dc-sweep'); if (!el) return;
+    var el2 = document.getElementById('rd-sweep');
     var st; try { st = await api('/discord/retry-working'); } catch (e) { return; }
-    if (st.status === 'idle') { el.style.display = 'none'; return; }
-    el.style.display = '';
+    if (st.status === 'idle') { el.style.display = 'none'; if (el2) el2.style.display = 'none'; return; }
+    el.style.display = ''; if (el2) el2.style.display = '';
     var pct = st.total ? Math.round(st.checked / st.total * 100) : 0;
     var scope = st.scope && st.scope !== 'all' ? (/^reddit:/.test(st.scope) ? 'r/' + st.scope.slice(7) : 'this server') : 'every source';
     el.innerHTML = '<b>' + (st.status === 'running' ? 'Checking failed links from ' + scope + '… ' + pct + '%' : st.status === 'done' ? 'Link check finished' : 'Link check cancelled') + '</b> · ' +
       st.checked.toLocaleString() + ' of ' + st.total.toLocaleString() + ' checked · <span style="color:var(--green);">' + st.alive.toLocaleString() + ' still work, queued again</span> · ' +
       st.dead.toLocaleString() + ' gone · ' + st.unknown.toLocaleString() + ' unclear, left as failed · ' + st.skipped.toLocaleString() + ' skipped (no audio / duplicates)' +
-      (st.status === 'running' ? ' <button class="wv-see-all" onclick="dcSweepCancel()">Stop</button>' : '');
+      (st.status === 'running' ? ' <button class="wv-see-all" onclick="dcSweepCancel()">Stop</button>' : '') +
+      (st.queued && st.queued.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Next in line: ' + st.queued.map(function(q) { return /^reddit:/.test(q) ? 'r/' + q.slice(7) : q === 'all' ? 'every source' : 'server ' + q; }).join(', ') + '</div>' : '');
+    if (el2) el2.innerHTML = el.innerHTML;
     if (st.status === 'running') _sweepTimer = setTimeout(dcSweepPoll, 4000);
     else dcLoad();
   }

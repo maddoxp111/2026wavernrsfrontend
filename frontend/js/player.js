@@ -909,7 +909,7 @@ function _lyrIndexAt(t) {
 // the current line's words between those events.
 var _lyrTimer = 0, _lyrWordPos = -1, _lyrWordEl = null, _lyrSpans = null;
 function _syncWords(t) {
-  var i = _lyr.idx; if (i < 0) return;
+  var i = _lyr.onIdx != null ? _lyr.onIdx : _lyr.idx; if (i < 0) return;
   var line = _lyr.lines[i]; if (!line || !line.w) return;
   var scroll = _lyrEl('pfs-lyrics-scroll'); if (!scroll) return;
   var el = scroll.children[i]; if (!el) return;
@@ -939,20 +939,31 @@ function _lyrLoop() {
 }
 function _lyrStartLoop() { if (!_lyrTimer) _lyrTimer = setTimeout(_lyrLoop, 100); }
 
+// A line is "on" only while it is being sung. Before the first word and in
+// instrumental gaps nothing is lit; the next line is scrolled into place so
+// the listener sees what's coming.
+function _lyrState(t) {
+  var lines = _lyr.lines, i = _lyrIndexAt(t);
+  if (i < 0) return { i: -1, on: -1, scroll: 0 };
+  var line = lines[i], next = lines[i + 1];
+  var end = line.e != null ? line.e : (next ? next.t : Infinity);
+  if (t > end + 1.2 && (!next || next.t - t > 2.5)) return { i: i, on: -1, scroll: next ? i + 1 : i };
+  return { i: i, on: i, scroll: i };
+}
 function _syncLyrics(t) {
   if (!_lyr.open || _lyr.mode !== 'view' || !_lyr.lines.length) return;
   _lyrStartLoop();
-  var i = _lyrIndexAt(t);
-  if (i === _lyr.idx) { _syncWords(t); return; }
+  var st = _lyrState(t), i = st.i;
+  if (i === _lyr.idx && st.on === _lyr.onIdx) { if (st.on >= 0) _syncWords(t); return; }
   _lyrWordPos = -1; _lyrWordEl = null; _lyrSpans = null;
-  _lyr.idx = i;
+  _lyr.idx = i; _lyr.onIdx = st.on;
   var scroll = _lyrEl('pfs-lyrics-scroll');
   if (!scroll) return;
   scroll.querySelectorAll('.lyr-line').forEach(function (el, n) {
-    el.classList.toggle('on', n === i);
-    el.classList.toggle('past', n < i);
+    el.classList.toggle('on', n === st.on);
+    el.classList.toggle('past', st.on >= 0 ? n < st.on : n <= i);
   });
-  var active = scroll.children[i];
+  var active = scroll.children[st.scroll];
   if (active) {
     scroll.scrollTo({
       top: active.offsetTop - scroll.clientHeight / 2 + active.clientHeight / 2,
