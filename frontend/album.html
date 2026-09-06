@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609062258">
+  <link rel="stylesheet" href="/css/style.css?v=202609062304">
 </head>
 <body>
 
@@ -16,18 +16,18 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=202609062258"></script>
-<script src="/js/layout.js?v=202609062258"></script>
-<script src="/js/player.js?v=202609062258"></script>
-<script src="/js/router.js?v=202609062258"></script>
-<script src="/js/playlists.js?v=202609062258"></script>
-<script src="/js/ratings.js?v=202609062258"></script>
+<script src="/js/api.js?v=202609062304"></script>
+<script src="/js/layout.js?v=202609062304"></script>
+<script src="/js/player.js?v=202609062304"></script>
+<script src="/js/router.js?v=202609062304"></script>
+<script src="/js/playlists.js?v=202609062304"></script>
+<script src="/js/ratings.js?v=202609062304"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
   // time on MEGA, Discord message), or N/A when the source had none.
   function compDateLabel(album) {
-    var d = album.is_archive ? album.original_date : (album.original_date || album.created_at);
+    var d = album.original_date || (album.is_archive ? null : album.created_at);
     if (!d) return 'N/A';
     var dt = new Date(d); if (isNaN(dt)) return 'N/A';
     return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -148,10 +148,8 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
               </button>
-              ${album.is_archive && album.source_url ? `<a href="${escHtml(album.source_url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
-                Direct Link
-              </a>` : ''}
+              ${album.origin && album.origin.url ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
+              ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
             </div>
           </div>
         </div>
