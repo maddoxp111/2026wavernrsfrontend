@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — charts</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609052314">
+  <link rel="stylesheet" href="/css/style.css?v=202609060118">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609052314"></script>
-<script src="/js/layout.js?v=202609052314"></script>
-<script src="/js/player.js?v=202609052314"></script>
-<script src="/js/router.js?v=202609052314"></script>
-<script src="/js/playlists.js?v=202609052314"></script>
+<script src="/js/api.js?v=202609060118"></script>
+<script src="/js/layout.js?v=202609060118"></script>
+<script src="/js/player.js?v=202609060118"></script>
+<script src="/js/router.js?v=202609060118"></script>
+<script src="/js/playlists.js?v=202609060118"></script>
 <script>
 var _chartsData = null;
 var _minRatings = 5;
@@ -47,6 +47,7 @@ async function initCharts() {
             '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="alltime-types">' +
               '<button class="wv-seg is-active" onclick="setType(\'alltime\',\'edits\')">Edits</button>' +
               '<button class="wv-seg" onclick="setType(\'alltime\',\'comps\')">Comps</button>' +
+              '<button class="wv-seg" onclick="setType(\'alltime\',\'archive\')">Archive</button>' +
             '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="alltime-sorts">' +
@@ -67,6 +68,7 @@ async function initCharts() {
             '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="weekly-types">' +
               '<button class="wv-seg is-active" onclick="setType(\'weekly\',\'edits\')">Edits</button>' +
               '<button class="wv-seg" onclick="setType(\'weekly\',\'comps\')">Comps</button>' +
+              '<button class="wv-seg" onclick="setType(\'weekly\',\'archive\')">Archive</button>' +
             '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="weekly-sorts">' +
@@ -164,8 +166,8 @@ function renderSection(section) {
   var universe = _chartsData[type] || { alltime: [], weekly: [] };
   var src  = section === 'alltime' ? universe.alltime : universe.weekly;
   var list = _rankList(src, sort);
-  var noun = type === 'comps' ? 'comps' : 'edits';
-  var destPage = type === 'comps' ? '/album.html?id=' : '/track.html?id=';
+  var noun = type === 'comps' ? 'comps' : type === 'archive' ? 'archive comps' : 'edits';
+  var destPage = (type === 'comps' || type === 'archive') ? '/album.html?id=' : '/track.html?id=';
 
   // The page background mirrors the #1 all-time release on the selected tab
   // (edits/comps). The weekly section never drives the background.
