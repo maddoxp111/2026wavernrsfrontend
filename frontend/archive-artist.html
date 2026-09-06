@@ -95,8 +95,9 @@ function renderComps() {
   var grid = document.getElementById('aa-grid');
   if (!grid) return;
   var list = _aaComps.slice();
-  if (_aaSort === 'newest')      list.sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
-  else if (_aaSort === 'oldest') list.sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  var _d = function(x) { return x.original_date ? new Date(x.original_date).getTime() : 0; };
+  if (_aaSort === 'newest')      list.sort(function(a, b) { return _d(b) - _d(a) || new Date(b.created_at) - new Date(a.created_at); });
+  else if (_aaSort === 'oldest') list.sort(function(a, b) { return (_d(a) || 9e15) - (_d(b) || 9e15) || new Date(a.created_at) - new Date(b.created_at); });
   else if (_aaSort === 'title')  list.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
   else if (_aaSort === 'plays')  list.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
 

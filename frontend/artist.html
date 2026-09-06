@@ -41,7 +41,7 @@
 
       uploads = allTracks.map(function(t) { return Object.assign({}, t, { _type: 'track' }); })
         .concat(allAlbums.map(function(a) { return Object.assign({}, a, { _type: 'album' }); }))
-        .sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+        .sort(function(a, b) { return new Date(b.original_date || b.created_at) - new Date(a.original_date || a.created_at); });
 
       try {
         var followData = await api('/artists/' + artistId + '/follow');
