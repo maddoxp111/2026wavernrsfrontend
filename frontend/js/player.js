@@ -103,6 +103,7 @@ function goToCurrentTrack() {
 }
 function goToCurrentArtist() {
   if (!currentTrack) return;
+  if (currentTrack._archive_artist && typeof archiveArtistSlug === 'function') { closeFullPlayer(); return navigate('/archive-artist.html?a=' + encodeURIComponent(archiveArtistSlug(currentTrack._archive_artist))); }
   const aid = currentTrack.artist_id || (currentTrack.artists && currentTrack.artists.id);
   if (!aid) return goToCurrentTrack();
   closeFullPlayer(); navigate('/artist.html?id=' + aid);
