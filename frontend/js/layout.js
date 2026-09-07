@@ -937,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072104';
+  s.src = '/js/playlists.js?v=202609072109';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072104';
+  s.src = '/js/ratings.js?v=202609072109';
   document.head.appendChild(s);
 })();
 
@@ -1115,7 +1115,8 @@
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       var r = host.getBoundingClientRect();
       OX = r.left; OY = r.top; W = Math.round(r.width); H = Math.round(r.height);
-      if (!opts.canvas) { c.style.left = OX + 'px'; c.style.top = OY + 'px'; c.style.width = W + 'px'; c.style.height = H + 'px'; }
+      if (!opts.canvas) { c.style.left = OX + 'px'; c.style.top = OY + 'px'; }
+      c.style.width = W + 'px'; c.style.height = H + 'px';
       c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       populate();
