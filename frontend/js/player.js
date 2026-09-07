@@ -609,7 +609,8 @@ function initPlayer() {
       document.dispatchEvent(new CustomEvent('playerSkipNext'));
     }
   });
-  audio.addEventListener('play', () => _setPlayBtns(true));
+  audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); });
+  audio.addEventListener('timeupdate', _lfmOnTick);
   audio.addEventListener('pause', () => _setPlayBtns(false));
   audio.addEventListener('error', () => console.error('Audio error:', audio.src));
 }
@@ -663,6 +664,55 @@ function registerPlay(trackId) {
   }
 }
 
+// Last.fm scrobbling: "now playing" when a track starts, one scrobble once half
+// the track (or four minutes) has actually been heard.
+const _lfm = { key: null, started: 0, heard: 0, last: 0, scrobbled: false, announced: false };
+function _lfmEnabled() {
+  try { return !!localStorage.getItem('token') && localStorage.getItem('wv_lastfm') === '1'; } catch (_) { return false; }
+}
+function _lfmRefreshStatus() {
+  try {
+    if (!localStorage.getItem('token') || typeof api !== 'function') return;
+    if (sessionStorage.getItem('wv_lastfm_checked')) return;
+    sessionStorage.setItem('wv_lastfm_checked', '1');
+    api('/lastfm/status').then(s => { localStorage.setItem('wv_lastfm', s && s.connected ? '1' : '0'); }).catch(() => {});
+  } catch (_) {}
+}
+function _lfmPayload() {
+  const t = currentTrack || {};
+  const artist = String(t.artist_name || t.archive_artist_name || '').trim();
+  const title = String(t.title || '').trim();
+  if (!artist || !title) return null;
+  return { artist, track: title, album: t._album_title || undefined, duration: audio && isFinite(audio.duration) ? Math.round(audio.duration) : undefined };
+}
+function _lfmOnPlay() {
+  _lfmRefreshStatus();
+  if (!currentTrack || !audio) return;
+  const key = (currentTrack.id || '') + '|' + (currentTrack.ia_url || '');
+  if (_lfm.key !== key) {
+    _lfm.key = key; _lfm.started = Math.floor(Date.now() / 1000); _lfm.heard = 0; _lfm.scrobbled = false; _lfm.announced = false;
+  }
+  _lfm.last = audio.currentTime || 0;
+  if (!_lfmEnabled() || _lfm.announced) return;
+  const p = _lfmPayload(); if (!p) return;
+  _lfm.announced = true;
+  api('/lastfm/now-playing', { method: 'POST', body: JSON.stringify(p) }).catch(() => {});
+}
+function _lfmOnTick() {
+  if (!audio || audio.paused || !currentTrack) return;
+  const now = audio.currentTime || 0;
+  const d = now - _lfm.last;
+  if (d > 0 && d < 2.5) _lfm.heard += d;
+  _lfm.last = now;
+  if (_lfm.scrobbled || !_lfmEnabled()) return;
+  const dur = isFinite(audio.duration) ? audio.duration : 0;
+  if (dur < 30) return;
+  if (_lfm.heard >= Math.min(dur / 2, 240)) {
+    const p = _lfmPayload(); if (!p) return;
+    _lfm.scrobbled = true;
+    api('/lastfm/scrobble', { method: 'POST', body: JSON.stringify({ ...p, timestamp: _lfm.started }) }).catch(() => {});
+  }
+}
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;

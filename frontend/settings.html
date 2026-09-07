@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — settings</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609070157">
+  <link rel="stylesheet" href="/css/style.css?v=202609070218">
 </head>
 <body>
 
@@ -146,6 +146,17 @@
             </div>
             <button id="reddit-action-btn" class="wv-pill" onclick="redditAction()"></button>
           </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;" id="lastfm-row">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#D51007"><path d="M10.584 17.21l-.88-2.392s-1.43 1.594-3.573 1.594c-1.897 0-3.244-1.649-3.244-4.288 0-3.382 1.704-4.591 3.381-4.591 2.42 0 3.189 1.567 3.85 3.574l.88 2.749c.88 2.666 2.529 4.81 7.285 4.81 3.409 0 5.718-1.044 5.718-3.793 0-2.227-1.265-3.381-3.63-3.932l-1.758-.385c-1.21-.275-1.567-.77-1.567-1.595 0-.934.742-1.484 1.952-1.484 1.32 0 2.034.495 2.144 1.677l2.749-.33c-.22-2.474-1.924-3.492-4.729-3.492-2.474 0-4.893.935-4.893 3.932 0 1.87.907 3.052 3.189 3.602l1.87.44c1.402.33 1.869.907 1.869 1.704 0 1.017-.99 1.43-2.86 1.43-2.776 0-3.93-1.457-4.59-3.464l-.907-2.75c-1.155-3.573-2.997-4.893-6.653-4.893C2.144 6.333 0 8.89 0 13.235 0 17.402 2.144 19.6 6.05 19.6c3.107 0 4.534-1.457 4.534-1.457z"/></svg>
+              <div>
+                <div style="font-size:14px;font-weight:500;">Last.fm</div>
+                <div id="lastfm-status-label" style="font-size:12px;color:var(--text-2);">Not connected</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">Scrobbles what you play here to your Last.fm profile.</div>
+              </div>
+            </div>
+            <button id="lastfm-action-btn" class="wv-pill" onclick="lastfmAction()"></button>
+          </div>
           <div id="reddit-verify" style="display:none;margin:10px 0 4px 32px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;">
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
               <span style="color:var(--text-2);">u/</span><input id="reddit-name" class="wv-input" placeholder="your Reddit username" style="width:220px;padding:7px 10px;font-size:13px;">
@@ -179,10 +190,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=202609070157"></script>
-<script src="/js/layout.js?v=202609070157"></script>
-<script src="/js/player.js?v=202609070157"></script>
-<script src="/js/router.js?v=202609070157"></script>
+<script src="/js/api.js?v=202609070218"></script>
+<script src="/js/layout.js?v=202609070218"></script>
+<script src="/js/player.js?v=202609070218"></script>
+<script src="/js/router.js?v=202609070218"></script>
 <script>
   if (!isLoggedIn()) navigate('/login.html');
   initPlayer();
@@ -272,6 +283,7 @@
     try {
       _connections = await api('/oauth/connections');
       renderConnections();
+      loadLastfm();
       document.getElementById('connections-loading').style.display = 'none';
       document.getElementById('connections-content').style.display = '';
     } catch (_) {
@@ -292,6 +304,26 @@
     }
   }
 
+  var _lastfm = { available: false, connected: false };
+  async function loadLastfm() {
+    try { _lastfm = await api('/lastfm/status'); } catch (_) { _lastfm = { available: false, connected: false }; }
+    var row = document.getElementById('lastfm-row'); if (!row) return;
+    row.style.display = _lastfm.available ? '' : 'none';
+    document.getElementById('lastfm-status-label').textContent = _lastfm.connected ? ('Connected' + (_lastfm.username ? ' as ' + _lastfm.username : '')) : 'Not connected';
+    var btn = document.getElementById('lastfm-action-btn');
+    btn.textContent = _lastfm.connected ? 'Disconnect' : 'Connect';
+    btn.style.color = _lastfm.connected ? 'var(--red)' : '';
+    try { localStorage.setItem('wv_lastfm', _lastfm.connected ? '1' : '0'); } catch (_) {}
+  }
+  async function lastfmAction() {
+    if (_lastfm.connected) {
+      if (!confirm('Disconnect Last.fm?')) return;
+      try { await api('/lastfm/unlink', { method: 'DELETE' }); await loadLastfm(); } catch (err) { document.getElementById('connections-alert').textContent = 'Error: ' + err.message; }
+      return;
+    }
+    var token = localStorage.getItem('token');
+    location.href = API_BASE + '/lastfm/link?token=' + encodeURIComponent(token || '');
+  }
   function redditAction() {
     if (_connections.reddit) { toggleConnection('reddit'); return; }
     var box = document.getElementById('reddit-verify'); box.style.display = box.style.display === 'none' ? '' : 'none';
