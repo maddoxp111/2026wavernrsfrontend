@@ -816,7 +816,11 @@
   // Runs AFTER initShell so the sidebar elements exist.
   (function _checkRoleStatus() {
     var token = localStorage.getItem('token');
-    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); return; }
+    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); sessionStorage.removeItem('wv_is_radio'); return; }
+    // Role checks cost three requests; once per 10 minutes is plenty.
+    var lastCheck = parseInt(sessionStorage.getItem('wv_roles_at') || '0', 10);
+    if (lastCheck && Date.now() - lastCheck < 10 * 60 * 1000 && sessionStorage.getItem('wv_is_mod') !== null) return;
+    sessionStorage.setItem('wv_roles_at', String(Date.now()));
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
     var headers = { 'Authorization': 'Bearer ' + token };
     Promise.all([
@@ -942,7 +946,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072159';
+  s.src = '/js/playlists.js?v=202609072220';
   document.head.appendChild(s);
 })();
 
@@ -950,7 +954,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072159';
+  s.src = '/js/ratings.js?v=202609072220';
   document.head.appendChild(s);
 })();
 
