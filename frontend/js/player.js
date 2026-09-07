@@ -578,7 +578,7 @@ function initPlayer() {
   // Progress bar interactions
   ['progress-bar', 'pfs-progress-bar'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', e => {
-      if (!audio.duration) return;
+      if (!audio.duration || _radio) return;
       const rect = document.getElementById(id).getBoundingClientRect();
       audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
     });
@@ -600,6 +600,7 @@ function initPlayer() {
   audio.addEventListener('loadedmetadata', _onTimeUpdate);
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
+    if (_radio) { setTimeout(() => _radioSync(true), 600); return; }
     if (!(_pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1)) _wantPlaying = false;
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
     // Auto-advance: prefer the global queue; fall back to the legacy event for
@@ -610,7 +611,7 @@ function initPlayer() {
       document.dispatchEvent(new CustomEvent('playerSkipNext'));
     }
   });
-  audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); });
+  audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); if (_radio) _radioSync(false); });
   audio.addEventListener('timeupdate', _lfmOnTick);
   audio.addEventListener('pause', () => _setPlayBtns(false));
   audio.addEventListener('error', () => console.error('Audio error:', audio.src));
@@ -714,9 +715,42 @@ function _lfmOnTick() {
     api('/lastfm/scrobble', { method: 'POST', body: JSON.stringify({ ...p, timestamp: _lfm.started }) }).catch(() => {});
   }
 }
+// ---- Radio mode: the station clock drives the player ----
+let _radio = null, _radioTimer = null, _radioBusy = false;
+window.radioTuneIn = async function (slug) {
+  _radio = { slug, offset: 0 };
+  clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 8000);
+  await _radioSync(true);
+};
+window.radioStop = function () { _radio = null; clearInterval(_radioTimer); _radioTimer = null; };
+window.radioSlug = function () { return _radio ? _radio.slug : null; };
+async function _radioSync(force) {
+  if (!_radio || _radioBusy || typeof api !== 'function') return;
+  _radioBusy = true;
+  const slug = _radio.slug;
+  try {
+    const d = await api('/radio/stations/' + encodeURIComponent(slug) + '/now');
+    if (!_radio || _radio.slug !== slug) return;
+    _radio.offset = Date.parse(d.server_time) - Date.now();
+    if (!d.now || !d.now.track) { if (audio && !audio.paused) audio.pause(); return; }
+    const t = d.now.track;
+    const pos = () => Math.max(0, (Date.now() + _radio.offset - Date.parse(d.now.started_at)) / 1000);
+    const same = currentTrack && currentTrack.id === t.id && currentTrack._radio === slug && currentTrack._radioStart === d.now.started_at;
+    if (!same || force) {
+      _fromQueue = false;
+      playTrack({ id: t.id, title: t.title, artist_name: t.artist, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: d.now.started_at });
+      const seek = () => { try { audio.currentTime = pos(); } catch (_) {} };
+      if (audio.readyState >= 1) seek(); else audio.addEventListener('loadedmetadata', seek, { once: true });
+    } else if (!audio.paused && audio.readyState >= 1 && Math.abs(audio.currentTime - pos()) > 4) {
+      try { audio.currentTime = pos(); } catch (_) {}
+    }
+  } catch (_) {} finally { _radioBusy = false; }
+}
+
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
+  if (!track._radio && _radio) window.radioStop();
 
   // A standalone play (not driven by the queue) clears any old queue so the OS
   // media controls don't skip back into a comp the user has moved on from.

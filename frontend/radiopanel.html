@@ -4,218 +4,322 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072021">
-  <style>
-    .rp-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:var(--surface-2); margin-bottom:6px; }
-    .rp-row img, .rp-row .ph { width:36px; height:36px; border-radius:6px; object-fit:cover; background:var(--surface); flex-shrink:0; }
-    .rp-row .t { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rp-row .a { font-size:12px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rp-row.playing { outline:2px solid var(--brand); }
-    .rp-btn { background:transparent; border:1px solid var(--hair); color:var(--text); border-radius:8px; padding:5px 9px; font-size:12px; cursor:pointer; white-space:nowrap; }
-    .rp-btn:hover { background:var(--surface); }
-    .rp-btn.brand { background:var(--brand); color:var(--on-brand); border-color:transparent; font-weight:700; }
-    .rp-btn.danger { color:var(--red); }
-    .rp-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    @media (max-width: 860px) { .rp-col { grid-template-columns:1fr; } }
-    .rp-res { max-height:340px; overflow:auto; }
-    .rp-actions { display:flex; gap:6px; margin-left:auto; flex-shrink:0; }
-  </style>
+  <link rel="stylesheet" href="/css/style.css?v=202609072028">
 </head>
 <body>
-<div id="view"><div class="wv-empty">Loading…</div></div>
+<div id="view">
+  <style>
+    .rp-wrap { display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap:18px; align-items:start; }
+    @media (max-width: 980px) { .rp-wrap { grid-template-columns: minmax(0, 1fr); } }
+    .rp-card { background:var(--surface); border-radius:var(--r-lg); padding:18px; }
+    .rp-h { font-size:15px; font-weight:800; letter-spacing:-.01em; display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .rp-h .sp { margin-left:auto; display:flex; gap:6px; }
+    .rp-onair { display:flex; gap:14px; align-items:center; }
+    .rp-onair img, .rp-onair .ph { width:72px; height:72px; border-radius:10px; object-fit:cover; background:var(--surface-2); flex-shrink:0; }
+    .rp-bar { height:4px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-top:8px; }
+    .rp-bar i { display:block; height:100%; width:0; background:var(--brand); transition:width .5s linear; }
+    .rp-row { display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:10px; }
+    .rp-row:hover { background:var(--surface-2); }
+    .rp-row.playing { background:color-mix(in srgb, var(--brand) 14%, transparent); }
+    .rp-row img, .rp-row .ph { width:40px; height:40px; border-radius:7px; object-fit:cover; background:var(--surface-2); flex-shrink:0; }
+    .rp-row .m { min-width:0; flex:1; }
+    .rp-row .t { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+    .rp-row .a { font-size:12px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .rp-tag { font-size:9.5px; font-weight:800; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--surface-2); color:var(--text-2); flex-shrink:0; }
+    .rp-tag.arc { background:rgba(167,139,250,.18); color:var(--brand); }
+    .rp-tag.comp { background:rgba(125,211,252,.16); color:#7dd3fc; }
+    .rp-acts { display:flex; gap:4px; flex-shrink:0; }
+    .rp-ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--hair); background:transparent; color:var(--text); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+    .rp-ib:hover { background:var(--surface); border-color:var(--text-3); }
+    .rp-ib.brand { background:var(--brand); color:var(--on-brand); border-color:transparent; }
+    .rp-ib.danger:hover { color:var(--red); }
+    .rp-handle { cursor:grab; color:var(--text-3); font-size:14px; padding:0 2px; }
+    .rp-num { width:22px; text-align:right; font-size:12px; color:var(--text-3); flex-shrink:0; }
+    .rp-chips { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 8px; align-items:center; }
+    .rp-chip { font-size:12px; font-weight:700; padding:6px 11px; border-radius:999px; background:var(--surface-2); color:var(--text-2); cursor:pointer; border:0; }
+    .rp-chip.on { background:var(--text); color:var(--bg); }
+    .rp-results { max-height:70vh; overflow:auto; }
+    .rp-sub { margin-left:50px; border-left:2px solid var(--hair); padding-left:8px; margin-bottom:6px; }
+    .rp-field label { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); display:block; margin:10px 0 4px; }
+    .rp-toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:10px 16px; border-radius:999px; font-size:13px; font-weight:700; z-index:9999; box-shadow:0 8px 30px rgba(0,0,0,.4); }
+    .rp-empty { font-size:13px; color:var(--text-3); padding:12px 4px; }
+    .rp-sec { font-size:11px; font-weight:800; letter-spacing:.08em; color:var(--text-3); margin:8px 4px 6px; }
+    .rp-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .rp-modal { background:var(--surface); border-radius:var(--r-lg); padding:22px; width:100%; max-width:420px; }
+  </style>
+  <div class="wv-empty">Loading…</div>
+</div>
 
-<script src="/js/api.js?v=202609072021"></script>
-<script src="/js/layout.js?v=202609072021"></script>
-<script src="/js/player.js?v=202609072021"></script>
+<script src="/js/api.js?v=202609072028"></script>
+<script src="/js/layout.js?v=202609072028"></script>
+<script src="/js/player.js?v=202609072028"></script>
 <script>
-var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false, _playlist = [], _queue = [], _search = { tracks: [], albums: [] }, _durCache = {};
+var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false;
+var _playlist = [], _queue = [], _tracks = {}, _albums = {}, _filter = 'all', _q = '', _dragId = null, _showList = 'queue';
 
-function fmtN(n) { n = Number(n || 0); return n.toLocaleString(); }
-function fmtDur(s) { if (!s) return '—'; s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function fmtN(n) { return Number(n || 0).toLocaleString(); }
+function fmtDur(s) { if (!s) return ''; s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function toast(msg) { var t = document.createElement('div'); t.className = 'rp-toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(function() { t.remove(); }, 1600); }
+function normTrack(t) {
+  if (!t) return null;
+  var al = t.albums || {};
+  var isArc = !!(t.is_archive || al.is_archive);
+  return { id: t.id, title: t.title, artist: isArc ? (al.archive_artist_name || t.archive_artist_name || 'Archive') : ((t.artists && t.artists.display_name) || t.artist || 'Unknown'), cover_url: t.cover_url || al.cover_url || null, url: t.ia_url || t.url, album_id: t.album_id || null, album_title: al.title || t.album_title || null, is_archive: isArc };
+}
+function normAlbum(a) {
+  var isArc = !!a.is_archive || !!a.archive_artist_name;
+  return { id: a.id, title: a.title, artist: isArc ? (a.archive_artist_name || 'Archive') : ((a.artists && a.artists.display_name) || 'Unknown'), cover_url: a.cover_url || null, track_count: a.track_count || null, is_archive: isArc };
+}
+function viewEl() { return document.getElementById('view'); }
+function setView(html) { var v = viewEl(); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
 
 async function init() {
-  var view = document.getElementById('view');
-  if (!isLoggedIn()) { view.innerHTML = '<div class="wv-empty">Log in to manage a station.</div>'; return; }
+  if (!isLoggedIn()) { setView('<div class="wv-empty">Log in to manage a station.</div>'); return; }
   try {
     _mine = await api('/radio/mine');
     _isMod = !!_mine.is_mod;
-    if (!_mine.available) { view.innerHTML = '<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio is not set up on the server yet (run RADIO_SQL.md).</div>'; return; }
-    if (!_stId && _mine.stations.length === 1) _stId = _mine.stations[0].id;
+    if (!_mine.available) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio is not set up on the server yet (run RADIO_SQL.md).</div>'); return; }
+    if (!_stId && _mine.stations.length) _stId = _mine.stations[0].id;
     renderShell();
     if (_stId) await openStation(_stId);
-  } catch (e) { view.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; }
+  } catch (e) { setView('<div class="wv-empty">' + escHtml(e.message) + '</div>'); }
 }
 
 function renderShell() {
-  var view = document.getElementById('view');
-  var list = _mine.stations.map(function(s) {
+  var pills = _mine.stations.map(function(s) {
     return '<button class="wv-pill' + (s.id === _stId ? ' brand' : '') + '" onclick="openStation(\'' + s.id + '\')">' + escHtml(s.name) + (s.owner && _isMod ? ' <span style="opacity:.6;font-weight:500;">· ' + escHtml(s.owner.name) + '</span>' : '') + '</button>';
   }).join(' ');
-  view.innerHTML =
-    '<h1 class="wv-page-title">Radio panel</h1>' +
-    '<div style="color:var(--text-2);font-size:14px;margin:-6px 0 16px;">Your station plays around the clock: anything you queue plays first, then the playlist loops.</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' + (list || '<span style="color:var(--text-3);font-size:13px;">' + (_mine.is_host ? 'You have a station waiting. Create it:' : 'You haven\'t been given a station yet. Ask a moderator.') + '</span>') +
-      (_isMod ? '<button class="wv-pill" onclick="createStation()">+ New station</button>' : (_mine.is_host && !_mine.stations.length ? '<button class="wv-pill brand" onclick="createStation()">Create my station</button>' : '')) + '</div>' +
-    '<div id="station"></div>';
+  var canCreate = _isMod || (_mine.is_host && !_mine.stations.length);
+  setView(
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;"><h1 class="wv-page-title" style="margin:0;">Radio panel</h1>' +
+      (_st ? '<a class="wv-pill" style="margin-left:auto;font-size:12px;" href="/radio.html?s=' + encodeURIComponent(_st.slug) + '">Open station ↗</a>' : '') + '</div>' +
+    '<div style="color:var(--text-2);font-size:13.5px;margin:0 0 14px;">Anything you queue plays next. When the queue is empty the playlist loops, forever.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' +
+      (pills || '<span class="rp-empty">' + (_mine.is_host ? 'You have a station waiting.' : 'You haven\'t been given a station yet. Ask a moderator.') + '</span>') +
+      (canCreate ? '<button class="wv-pill' + (!_mine.stations.length ? ' brand' : '') + '" onclick="createStationModal()">' + (_isMod ? '+ New station' : 'Create my station') + '</button>' : '') +
+    '</div><div id="station"></div>');
 }
 
+function createStationModal() {
+  var m = document.createElement('div'); m.className = 'rp-modal-bg'; m.onclick = function(e) { if (e.target === m) m.remove(); };
+  m.innerHTML = '<div class="rp-modal"><div style="font-size:16px;font-weight:800;margin-bottom:12px;">New station</div>' +
+    '<div class="rp-field"><label>Station name</label><input class="wv-input" id="ns-name" placeholder="e.g. Yedits Radio"></div>' +
+    (_isMod ? '<div class="rp-field"><label>Owner username (blank = you)</label><input class="wv-input" id="ns-user" placeholder="username"></div>' : '') +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;"><button class="wv-pill" onclick="this.closest(\'.rp-modal-bg\').remove()">Cancel</button><button class="wv-pill brand" onclick="createStation()">Create</button></div>' +
+    '<div id="ns-err" style="color:var(--red);font-size:12px;margin-top:8px;"></div></div>';
+  document.body.appendChild(m); setTimeout(function() { document.getElementById('ns-name').focus(); }, 50);
+}
 async function createStation() {
-  var name = prompt('Station name'); if (!name) return;
-  var username = _isMod ? (prompt('Give it to which wavernrs username? (blank = you)') || '') : '';
-  try { var d = await api('/radio/stations', { method: 'POST', body: JSON.stringify({ name: name, username: username.trim() || undefined }) }); _mine = await api('/radio/mine'); _stId = d.station.id; renderShell(); openStation(_stId); }
-  catch (e) { alert(e.message); }
+  var name = document.getElementById('ns-name').value.trim(); var u = document.getElementById('ns-user'); var username = u ? u.value.trim() : '';
+  if (!name) { document.getElementById('ns-err').textContent = 'Give it a name.'; return; }
+  try { var d = await api('/radio/stations', { method: 'POST', body: JSON.stringify({ name: name, username: username || undefined }) }); document.querySelector('.rp-modal-bg').remove(); _mine = await api('/radio/mine'); _stId = d.station.id; renderShell(); openStation(_stId); }
+  catch (e) { document.getElementById('ns-err').textContent = e.message; }
 }
 
 async function openStation(id) {
   _stId = id;
   history.replaceState(null, '', '/radiopanel.html?s=' + encodeURIComponent(id));
   var d = await api('/radio/stations/' + id);
-  _st = d.station; _st._now = d.now; _st._up = d.up_next;
+  _st = d.station; _st._now = d.now;
   renderShell();
   document.getElementById('station').innerHTML =
-    '<div class="wv-card" style="padding:20px;margin-bottom:16px;">' +
-      '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">' +
-        '<div style="flex:1;min-width:240px;">' +
-          '<div style="font-size:12px;font-weight:700;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">Station</div>' +
-          '<input class="wv-input" id="st-name" value="' + escHtml(_st.name) + '" placeholder="Station name" style="font-size:16px;font-weight:700;margin-bottom:8px;">' +
-          '<textarea class="wv-input" id="st-desc" rows="2" placeholder="Description (optional)" style="margin-bottom:8px;">' + escHtml(_st.description || '') + '</textarea>' +
-          '<input class="wv-input" id="st-cover" value="' + escHtml(_st.cover_url || '') + '" placeholder="Cover image URL (optional, falls back to the playing track\'s cover)" style="margin-bottom:8px;">' +
-          '<label style="font-size:13px;color:var(--text-2);display:flex;align-items:center;gap:8px;margin-bottom:10px;"><input type="checkbox" id="st-shuffle"' + (_st.shuffle ? ' checked' : '') + '> Shuffle the playlist</label>' +
-          (_isMod ? '<input class="wv-input" id="st-owner" placeholder="Hand to username (mods)" style="margin-bottom:8px;">' : '') +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="wv-pill brand" onclick="saveStation()">Save</button>' +
-          '<a class="wv-pill" href="/radio.html?s=' + encodeURIComponent(_st.slug) + '">Open station</a>' +
-          (_isMod ? '<button class="wv-pill" style="color:var(--red);" onclick="deleteStation()">Delete</button>' : '') + '</div>' +
-          '<div id="st-msg" style="font-size:12px;color:var(--text-3);margin-top:8px;"></div>' +
+    '<div class="rp-wrap">' +
+      '<div>' +
+        '<div class="rp-card" style="margin-bottom:14px;"><div class="rp-h">On air <span class="sp"><button class="rp-ib" title="Skip to next" onclick="skip()">⏭</button></span></div><div id="onair"></div></div>' +
+        '<div class="rp-card" style="margin-bottom:14px;">' +
+          '<div class="rp-chips" style="margin:0 0 10px;"><button class="rp-chip' + (_showList === 'queue' ? ' on' : '') + '" onclick="showList(\'queue\')">Queue <span id="q-count"></span></button><button class="rp-chip' + (_showList === 'playlist' ? ' on' : '') + '" onclick="showList(\'playlist\')">Playlist <span id="p-count"></span></button>' +
+            '<span style="margin-left:auto;display:flex;gap:6px;"><button class="rp-ib" title="Shuffle playlist" id="shuffle-btn" onclick="toggleShuffle()">🔀</button><button class="rp-ib danger" title="Clear this list" onclick="clearList()">🗑</button></span></div>' +
+          '<div id="list-hint" class="rp-empty" style="padding:0 4px 8px;"></div>' +
+          '<div id="list"></div>' +
         '</div>' +
-        '<div style="width:260px;max-width:100%;">' +
-          '<div style="font-size:12px;font-weight:700;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;">On air now</div>' +
-          '<div id="st-now" style="font-size:14px;"></div>' +
-          '<div style="display:flex;gap:6px;margin-top:10px;"><button class="rp-btn" onclick="skip()">Skip ⏭</button></div>' +
-          '<div style="font-size:12px;color:var(--text-3);margin-top:10px;">♥ ' + fmtN(_st.likes) + ' likes</div>' +
+        '<div class="rp-card"><div class="rp-h">Station settings</div>' +
+          '<div class="rp-field"><label>Name</label><input class="wv-input" id="st-name" value="' + escHtml(_st.name) + '"></div>' +
+          '<div class="rp-field"><label>Description</label><textarea class="wv-input" id="st-desc" rows="2">' + escHtml(_st.description || '') + '</textarea></div>' +
+          '<div class="rp-field"><label>Cover image URL</label><input class="wv-input" id="st-cover" value="' + escHtml(_st.cover_url || '') + '" placeholder="Leave blank to use the playing track\'s cover"></div>' +
+          (_isMod ? '<div class="rp-field"><label>Hand to username</label><input class="wv-input" id="st-owner" placeholder="username"></div>' : '') +
+          '<div style="display:flex;gap:8px;align-items:center;margin-top:14px;"><button class="wv-pill brand" onclick="saveStation()">Save</button><span id="st-msg" style="font-size:12px;color:var(--text-3);"></span>' +
+          (_isMod ? '<button class="wv-pill" style="margin-left:auto;color:var(--red);" onclick="deleteStation()">Delete station</button>' : '') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-top:12px;">♥ ' + fmtN(_st.likes) + ' likes</div>' +
         '</div>' +
       '</div>' +
-    '</div>' +
-    '<div class="wv-card" style="padding:20px;margin-bottom:16px;">' +
-      '<div style="font-size:15px;font-weight:700;margin-bottom:10px;">Add music</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:10px;"><input class="wv-input" id="q" placeholder="Search tracks and comps…" oninput="searchDebounced()" style="flex:1;"></div>' +
-      '<div class="rp-res" id="results"><div style="font-size:13px;color:var(--text-3);">Search for a track or a whole comp, then add it to the playlist, queue it, or play it right now.</div></div>' +
-    '</div>' +
-    '<div class="rp-col">' +
-      '<div class="wv-card" style="padding:20px;"><div style="display:flex;align-items:center;margin-bottom:10px;"><div style="font-size:15px;font-weight:700;">Queue <span id="q-count" style="color:var(--text-3);font-weight:500;"></span></div><div class="rp-actions"><button class="rp-btn danger" onclick="clearList(\'queue\')">Clear</button></div></div><div style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Plays next, in order, before going back to the playlist.</div><div id="queue"></div></div>' +
-      '<div class="wv-card" style="padding:20px;"><div style="display:flex;align-items:center;margin-bottom:10px;"><div style="font-size:15px;font-weight:700;">Playlist <span id="p-count" style="color:var(--text-3);font-weight:500;"></span></div><div class="rp-actions"><button class="rp-btn danger" onclick="clearList(\'playlist\')">Clear</button></div></div><div style="font-size:12px;color:var(--text-3);margin-bottom:8px;">Loops forever. Drag handles to reorder.</div><div id="playlist"></div></div>' +
+      '<div class="rp-card">' +
+        '<div class="rp-h">Add music</div>' +
+        '<input class="wv-input" id="q" placeholder="Search tracks, edits, comps, artists…" oninput="searchDebounced()" style="font-size:15px;padding:12px 14px;">' +
+        '<div class="rp-chips"><button class="rp-chip on" data-f="all" onclick="setFilter(\'all\')">All</button><button class="rp-chip" data-f="archive" onclick="setFilter(\'archive\')">Archive</button><button class="rp-chip" data-f="comps" onclick="setFilter(\'comps\')">Comps</button><button class="rp-chip" data-f="tracks" onclick="setFilter(\'tracks\')">Tracks &amp; edits</button></div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin-bottom:8px;">▶ play now &nbsp;·&nbsp; ⏭ add to queue &nbsp;·&nbsp; ＋ add to playlist &nbsp;·&nbsp; comps open to their tracks</div>' +
+        '<div class="rp-results" id="results"></div>' +
+      '</div>' +
     '</div>';
-  renderNow();
+  renderOnAir(); updateShuffleBtn();
   await Promise.all([loadList('queue'), loadList('playlist')]);
+  renderList();
+  browseDefault();
   clearInterval(window._rpPoll); window._rpPoll = setInterval(refreshNow, 10000);
+  clearInterval(window._rpBar); window._rpBar = setInterval(tickBar, 1000);
+  if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(window._rpPoll); clearInterval(window._rpBar); });
 }
 
-function renderNow() {
-  var n = _st._now;
-  document.getElementById('st-now').innerHTML = n && n.track
-    ? '<div style="display:flex;gap:10px;align-items:center;">' + (n.track.cover_url ? '<img src="' + escHtml(n.track.cover_url) + '" style="width:48px;height:48px;border-radius:8px;object-fit:cover;">' : '') + '<div style="min-width:0;"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(n.track.title) + '</div><div style="font-size:12px;color:var(--text-2);">' + escHtml(n.track.artist) + ' · ' + (n.source === 'queue' ? 'from queue' : 'playlist') + '</div></div></div>'
-    : '<div style="color:var(--text-3);">Nothing playing. Add tracks to the playlist.</div>';
+function renderOnAir() {
+  var n = _st._now, el = document.getElementById('onair'); if (!el) return;
+  if (!n || !n.track) { el.innerHTML = '<div class="rp-empty">Nothing on air. Add tracks to the playlist and it starts on its own.</div>'; return; }
+  el.innerHTML = '<div class="rp-onair">' + (n.track.cover_url ? '<img src="' + escHtml(n.track.cover_url) + '">' : '<span class="ph"></span>') +
+    '<div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(n.track.title) + '</div>' +
+    '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(n.track.artist) + (n.track.album_title && n.track.album_title !== n.track.title ? ' · ' + escHtml(n.track.album_title) : '') + '</div>' +
+    '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">' + (n.source === 'queue' ? 'from the queue' : 'from the playlist') + ' · <span id="onair-time"></span></div>' +
+    '<div class="rp-bar"><i id="onair-bar"></i></div></div></div>';
+  tickBar();
 }
-async function refreshNow() { try { var d = await api('/radio/stations/' + _stId + '/now'); _st._now = d.now; renderNow(); } catch (e) {} }
+function tickBar() {
+  var n = _st && _st._now; if (!n) return;
+  var s = Date.parse(n.started_at), e = Date.parse(n.ends_at), p = Math.min(1, (Date.now() - s) / Math.max(1000, e - s));
+  var b = document.getElementById('onair-bar'), t = document.getElementById('onair-time'); if (b) b.style.width = (p * 100) + '%';
+  if (t) t.textContent = fmtDur((Date.now() - s) / 1000) + ' / ' + fmtDur((e - s) / 1000);
+  if (Date.now() > e + 1500) refreshNow();
+}
+async function refreshNow() { try { var d = await api('/radio/stations/' + _stId + '/now'); var was = _st._now && _st._now.track && _st._now.track.id; _st._now = d.now; renderOnAir(); if ((d.now && d.now.track && d.now.track.id) !== was) { await loadList('queue'); await loadList('playlist'); renderList(); } } catch (e) {} }
 
 async function saveStation() {
   var msg = document.getElementById('st-msg'); msg.textContent = 'Saving…';
-  var body = { name: document.getElementById('st-name').value, description: document.getElementById('st-desc').value, cover_url: document.getElementById('st-cover').value, shuffle: document.getElementById('st-shuffle').checked };
+  var body = { name: document.getElementById('st-name').value, description: document.getElementById('st-desc').value, cover_url: document.getElementById('st-cover').value };
   var ow = document.getElementById('st-owner'); if (ow && ow.value.trim()) body.owner_username = ow.value.trim();
-  try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify(body) }); _st = Object.assign(_st, d.station); msg.textContent = 'Saved.'; _mine = await api('/radio/mine'); renderShellKeep(); }
+  try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify(body) }); _st = Object.assign(_st, d.station); msg.textContent = 'Saved.'; _mine = await api('/radio/mine'); var keep = document.getElementById('station').innerHTML; renderShell(); document.getElementById('station').innerHTML = keep; }
   catch (e) { msg.textContent = e.message; }
 }
-function renderShellKeep() { var keep = document.getElementById('station').innerHTML; renderShell(); document.getElementById('station').innerHTML = keep; }
-async function deleteStation() { if (!confirm('Delete this station for good?')) return; await api('/radio/stations/' + _stId, { method: 'DELETE' }); _stId = null; _mine = await api('/radio/mine'); renderShell(); }
-async function skip() { try { await api('/radio/stations/' + _stId + '/skip', { method: 'POST' }); await refreshNow(); loadList('queue'); loadList('playlist'); } catch (e) { alert(e.message); } }
+async function toggleShuffle() { try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify({ shuffle: !_st.shuffle }) }); _st.shuffle = d.station.shuffle; updateShuffleBtn(); renderList(); toast(_st.shuffle ? 'Playlist shuffles' : 'Playlist plays in order'); } catch (e) { alert(e.message); } }
+function updateShuffleBtn() { var b = document.getElementById('shuffle-btn'); if (b) b.className = 'rp-ib' + (_st.shuffle ? ' brand' : ''); }
+async function deleteStation() { if (!confirm('Delete this station for good?')) return; await api('/radio/stations/' + _stId, { method: 'DELETE' }); _stId = null; _st = null; _mine = await api('/radio/mine'); renderShell(); }
+async function skip() { try { await api('/radio/stations/' + _stId + '/skip', { method: 'POST' }); toast('Skipped'); await refreshNow(); } catch (e) { alert(e.message); } }
 
-var _sT = null;
-function searchDebounced() { clearTimeout(_sT); _sT = setTimeout(doSearch, 300); }
-async function doSearch() {
-  var q = document.getElementById('q').value.trim();
-  var box = document.getElementById('results');
-  if (!q) { box.innerHTML = ''; return; }
-  try {
-    _search = await api('/radio/search?q=' + encodeURIComponent(q));
-    var html = '';
-    _search.albums.forEach(function(a) {
-      html += '<div class="rp-row">' + (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '">' : '<span class="ph"></span>') + '<div style="min-width:0;flex:1;"><div class="t">' + escHtml(a.title) + ' <span style="font-size:10px;color:var(--brand);font-weight:800;">COMP</span></div><div class="a">' + escHtml(a.artist) + (a.track_count ? ' · ' + a.track_count + ' tracks' : '') + '</div></div>' +
-        '<div class="rp-actions"><button class="rp-btn" onclick="addAlbum(\'' + a.id + '\',\'playlist\')">+ Playlist</button><button class="rp-btn" onclick="addAlbum(\'' + a.id + '\',\'queue\')">+ Queue</button></div></div>';
-    });
-    _search.tracks.forEach(function(t) {
-      html += '<div class="rp-row">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '">' : '<span class="ph"></span>') + '<div style="min-width:0;flex:1;"><div class="t">' + escHtml(t.title) + '</div><div class="a">' + escHtml(t.artist) + (t.album_title ? ' · ' + escHtml(t.album_title) : '') + '</div></div>' +
-        '<div class="rp-actions"><button class="rp-btn brand" onclick="playNow(\'' + t.id + '\')">Play now</button><button class="rp-btn" onclick="addTrack(\'' + t.id + '\',\'queue\')">+ Queue</button><button class="rp-btn" onclick="addTrack(\'' + t.id + '\',\'playlist\')">+ Playlist</button></div></div>';
-    });
-    box.innerHTML = html || '<div style="font-size:13px;color:var(--text-3);">Nothing found.</div>';
-  } catch (e) { box.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message) + '</div>'; }
+/* ---------- lists ---------- */
+function showList(k) { _showList = k; document.querySelectorAll('.rp-chip[onclick^="showList"]').forEach(function(c) { c.classList.toggle('on', c.getAttribute('onclick').indexOf("'" + k + "'") !== -1); }); renderList(); }
+async function loadList(kind) {
+  var d = await api('/radio/stations/' + _stId + '/items?kind=' + kind);
+  if (kind === 'queue') _queue = d.items || []; else _playlist = d.items || [];
+  var c = document.getElementById(kind === 'queue' ? 'q-count' : 'p-count'); if (c) c.textContent = (d.items || []).length ? '(' + d.items.length + ')' : '';
 }
+function renderList() {
+  var kind = _showList, items = kind === 'queue' ? _queue : _playlist, box = document.getElementById('list'), hint = document.getElementById('list-hint');
+  if (!box) return;
+  hint.textContent = kind === 'queue' ? 'Plays next, top to bottom, then the station goes back to the playlist.' : 'Loops forever · ' + items.length + ' tracks · ' + fmtDur(items.reduce(function(s, x) { return s + (x.duration_sec || 0); }, 0)) + (_st.shuffle ? ' · shuffled' : ' · in order');
+  if (!items.length) { box.innerHTML = '<div class="rp-empty">' + (kind === 'queue' ? 'Queue is empty. Use ⏭ on anything to line it up.' : 'Playlist is empty. Search on the right and add tracks or whole comps.') + '</div>'; return; }
+  box.innerHTML = items.map(function(it, i) {
+    var t = it.track || { title: '(missing track)', artist: '' };
+    return '<div class="rp-row' + (it.playing ? ' playing' : '') + '" draggable="true" data-id="' + it.id + '" ondragstart="dragStart(event)" ondragover="event.preventDefault()" ondrop="dropOn(event)">' +
+      '<span class="rp-handle">⋮⋮</span><span class="rp-num">' + (i + 1) + '</span>' +
+      (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '">' : '<span class="ph"></span>') +
+      '<div class="m"><div class="t">' + escHtml(t.title) + (it.playing ? '<span class="rp-tag arc">ON AIR</span>' : '') + '</div><div class="a">' + escHtml(t.artist) + (it.duration_sec ? ' · ' + fmtDur(it.duration_sec) : '') + '</div></div>' +
+      '<div class="rp-acts"><button class="rp-ib" title="Play now" onclick="playItemNow(\'' + it.id + '\')">▶</button>' + (kind === 'playlist' ? '<button class="rp-ib" title="Add to queue" onclick="addTrack(\'' + t.id + '\',\'queue\')">⏭</button>' : '<button class="rp-ib" title="Move to top" onclick="moveTop(\'' + it.id + '\')">⤒</button>') + '<button class="rp-ib danger" title="Remove" onclick="removeItem(\'' + it.id + '\')">✕</button></div></div>';
+  }).join('');
+}
+function dragStart(e) { _dragId = e.currentTarget.dataset.id; }
+async function dropOn(e) {
+  e.preventDefault(); var target = e.currentTarget.dataset.id; if (!_dragId || _dragId === target) return;
+  var kind = _showList, list = (kind === 'queue' ? _queue : _playlist).map(function(x) { return x.id; });
+  var from = list.indexOf(_dragId), to = list.indexOf(target); if (from < 0 || to < 0) return;
+  list.splice(from, 1); list.splice(to, 0, _dragId); _dragId = null;
+  try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList(kind); renderList(); } catch (err) { alert(err.message); }
+}
+async function moveTop(itemId) { var list = _queue.map(function(x) { return x.id; }); list.splice(list.indexOf(itemId), 1); list.unshift(itemId); try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList('queue'); renderList(); } catch (e) { alert(e.message); } }
+async function removeItem(itemId) { try { await api('/radio/stations/' + _stId + '/items/' + itemId, { method: 'DELETE' }); await loadList(_showList); renderList(); } catch (e) { alert(e.message); } }
+async function clearList() { if (!confirm('Clear the whole ' + _showList + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: _showList }) }); await loadList(_showList); renderList(); } catch (e) { alert(e.message); } }
+async function playItemNow(itemId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ item_id: itemId }) }); toast('Playing now'); await refreshNow(); await loadList('queue'); await loadList('playlist'); renderList(); } catch (e) { alert(e.message); } }
 
+/* ---------- adding ---------- */
 function measure(url) {
   return new Promise(function(res) {
     if (!url) return res(null);
-    var a = new Audio(); a.preload = 'metadata';
-    var done = false; var fin = function(v) { if (!done) { done = true; res(v); a.src = ''; } };
+    var a = new Audio(); a.preload = 'metadata'; var done = false;
+    var fin = function(v) { if (!done) { done = true; res(v); a.src = ''; } };
     a.addEventListener('loadedmetadata', function() { fin(isFinite(a.duration) ? a.duration : null); });
     a.addEventListener('error', function() { fin(null); });
-    setTimeout(function() { fin(null); }, 15000);
+    setTimeout(function() { fin(null); }, 12000);
     a.src = url;
   });
 }
 async function addTrack(id, kind) {
-  var t = _search.tracks.find(function(x) { return x.id === id; });
-  var durations = {};
+  var t = _tracks[id]; var durations = {};
+  toast(kind === 'queue' ? 'Queued' : 'Added to playlist');
   if (t && t.url) { var d = await measure(t.url); if (d) durations[id] = d; }
-  try { await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ track_id: id, kind: kind, durations: durations }) }); toast('Added to ' + kind); loadList(kind); if (!_st._now) setTimeout(refreshNow, 2500); }
+  try { await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ track_id: id, kind: kind, durations: durations }) }); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); }
   catch (e) { alert(e.message); }
 }
 async function addAlbum(id, kind) {
-  try { var d = await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ album_id: id, kind: kind }) }); toast(d.added + ' tracks added to ' + kind); loadList(kind); fillDurations(kind); if (!_st._now) setTimeout(refreshNow, 2500); }
+  try { var d = await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ album_id: id, kind: kind }) }); toast(d.added + ' tracks ' + (kind === 'queue' ? 'queued' : 'added to playlist')); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); fillDurations(kind); }
   catch (e) { alert(e.message); }
 }
-async function playNow(trackId) {
-  try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ track_id: trackId }) }); toast('Playing now'); refreshNow(); loadList('queue'); }
-  catch (e) { alert(e.message); }
-}
-async function playItemNow(itemId) {
-  try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ item_id: itemId }) }); toast('Playing now'); refreshNow(); loadList('queue'); loadList('playlist'); }
-  catch (e) { alert(e.message); }
-}
-async function removeItem(itemId, kind) { try { await api('/radio/stations/' + _stId + '/items/' + itemId, { method: 'DELETE' }); loadList(kind); } catch (e) { alert(e.message); } }
-async function clearList(kind) { if (!confirm('Clear the whole ' + kind + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: kind }) }); loadList(kind); } catch (e) { alert(e.message); } }
-
-async function loadList(kind) {
-  var d = await api('/radio/stations/' + _stId + '/items?kind=' + kind);
-  var items = d.items || [];
-  if (kind === 'queue') _queue = items; else _playlist = items;
-  document.getElementById(kind === 'queue' ? 'q-count' : 'p-count').textContent = items.length ? '(' + items.length + ')' : '';
-  var box = document.getElementById(kind);
-  if (!items.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-3);">' + (kind === 'queue' ? 'Queue is empty.' : 'Playlist is empty. Search above and add tracks or whole comps.') + '</div>'; return; }
-  box.innerHTML = items.map(function(it, i) {
-    var t = it.track || { title: '(missing track)', artist: '' };
-    return '<div class="rp-row' + (it.playing ? ' playing' : '') + '" draggable="true" data-id="' + it.id + '" ondragstart="dragStart(event)" ondragover="event.preventDefault()" ondrop="dropOn(event,\'' + kind + '\')">' +
-      '<span style="cursor:grab;color:var(--text-3);font-size:14px;">⋮⋮</span>' +
-      (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '">' : '<span class="ph"></span>') +
-      '<div style="min-width:0;flex:1;"><div class="t">' + (i + 1) + '. ' + escHtml(t.title) + (it.playing ? ' <span style="font-size:10px;color:var(--brand);font-weight:800;">ON AIR</span>' : '') + '</div><div class="a">' + escHtml(t.artist) + ' · ' + fmtDur(it.duration_sec) + '</div></div>' +
-      '<div class="rp-actions"><button class="rp-btn" onclick="playItemNow(\'' + it.id + '\')">▶ Now</button><button class="rp-btn danger" onclick="removeItem(\'' + it.id + '\',\'' + kind + '\')">✕</button></div></div>';
-  }).join('');
-}
-var _dragId = null;
-function dragStart(e) { _dragId = e.currentTarget.dataset.id; e.dataTransfer.effectAllowed = 'move'; }
-async function dropOn(e, kind) {
-  e.preventDefault(); var target = e.currentTarget.dataset.id; if (!_dragId || _dragId === target) return;
-  var list = (kind === 'queue' ? _queue : _playlist).map(function(x) { return x.id; });
-  var from = list.indexOf(_dragId), to = list.indexOf(target); if (from < 0 || to < 0) return;
-  list.splice(from, 1); list.splice(to, 0, _dragId); _dragId = null;
-  try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); loadList(kind); } catch (err) { alert(err.message); }
-}
+async function playNow(trackId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ track_id: trackId }) }); toast('Playing now'); await refreshNow(); } catch (e) { alert(e.message); } }
 async function fillDurations(kind) {
-  var items = (kind === 'queue' ? _queue : _playlist).filter(function(x) { return !x.duration_sec && x.track && x.track.url; }).slice(0, 40);
-  for (var i = 0; i < items.length; i++) {
-    var d = await measure(items[i].track.url);
-    if (d) { try { await api('/radio/stations/' + _stId + '/items/' + items[i].id, { method: 'PATCH', body: JSON.stringify({ duration_sec: d }) }); } catch (e) {} }
-  }
-  if (items.length) loadList(kind);
+  var items = (kind === 'queue' ? _queue : _playlist).filter(function(x) { return !x.duration_sec && x.track && x.track.url; }).slice(0, 60);
+  for (var i = 0; i < items.length; i++) { var d = await measure(items[i].track.url); if (d) { try { await api('/radio/stations/' + _stId + '/items/' + items[i].id, { method: 'PATCH', body: JSON.stringify({ duration_sec: d }) }); } catch (e) {} } }
+  if (items.length) { await loadList(kind); if (_showList === kind) renderList(); }
 }
-function toast(msg) { if (typeof showToast === 'function') return showToast(msg); var t = document.createElement('div'); t.textContent = msg; t.style.cssText = 'position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:var(--surface-2);color:var(--text);padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 30px rgba(0,0,0,.4);'; document.body.appendChild(t); setTimeout(function() { t.remove(); }, 1800); }
+
+/* ---------- library / search ---------- */
+var _sT = null;
+function setFilter(f) { _filter = f; document.querySelectorAll('.rp-chip[data-f]').forEach(function(c) { c.classList.toggle('on', c.dataset.f === f); }); _q ? doSearch() : browseDefault(); }
+function searchDebounced() { clearTimeout(_sT); _sT = setTimeout(function() { _q = document.getElementById('q').value.trim(); _q ? doSearch() : browseDefault(); }, 280); }
+function trackRowHTML(t) {
+  _tracks[t.id] = t;
+  return '<div class="rp-row">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy">' : '<span class="ph"></span>') +
+    '<div class="m"><div class="t">' + escHtml(t.title) + (t.is_archive ? '<span class="rp-tag arc">ARCHIVE</span>' : '') + '</div><div class="a">' + escHtml(t.artist) + (t.album_title && t.album_title !== t.title ? ' · ' + escHtml(t.album_title) : '') + '</div></div>' +
+    '<div class="rp-acts"><button class="rp-ib brand" title="Play now" onclick="playNow(\'' + t.id + '\')">▶</button><button class="rp-ib" title="Add to queue" onclick="addTrack(\'' + t.id + '\',\'queue\')">⏭</button><button class="rp-ib" title="Add to playlist" onclick="addTrack(\'' + t.id + '\',\'playlist\')">＋</button></div></div>';
+}
+function albumRowHTML(a) {
+  _albums[a.id] = a;
+  return '<div><div class="rp-row" style="cursor:pointer;" onclick="toggleAlbum(\'' + a.id + '\')">' + (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy">' : '<span class="ph"></span>') +
+    '<div class="m"><div class="t">' + escHtml(a.title) + '<span class="rp-tag comp">' + (a.track_count === 1 ? 'EDIT' : 'COMP') + '</span>' + (a.is_archive ? '<span class="rp-tag arc">ARCHIVE</span>' : '') + '</div><div class="a">' + escHtml(a.artist) + (a.track_count ? ' · ' + a.track_count + ' track' + (a.track_count === 1 ? '' : 's') : '') + ' · tap to open</div></div>' +
+    '<div class="rp-acts" onclick="event.stopPropagation()"><button class="rp-ib" title="Queue the whole thing" onclick="addAlbum(\'' + a.id + '\',\'queue\')">⏭</button><button class="rp-ib" title="Add the whole thing to the playlist" onclick="addAlbum(\'' + a.id + '\',\'playlist\')">＋</button></div></div>' +
+    '<div class="rp-sub" id="sub-' + a.id + '" style="display:none;"></div></div>';
+}
+async function toggleAlbum(id) {
+  var sub = document.getElementById('sub-' + id);
+  if (sub.style.display !== 'none') { sub.style.display = 'none'; return; }
+  sub.style.display = ''; sub.innerHTML = '<div class="rp-empty">Loading…</div>';
+  try {
+    var d = await api('/albums/' + id);
+    var list = (d.album_tracks || []).map(function(x) { var t = x.tracks || x; t.albums = t.albums || { title: d.title, cover_url: d.cover_url, is_archive: d.is_archive, archive_artist_name: d.archive_artist_name }; t.album_id = d.id; return normTrack(t); }).filter(Boolean);
+    sub.innerHTML = list.length ? list.map(trackRowHTML).join('') : '<div class="rp-empty">No tracks.</div>';
+  } catch (e) { sub.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
+}
+async function browseDefault() {
+  var box = document.getElementById('results'); if (!box) return;
+  box.innerHTML = '<div class="rp-empty">Loading…</div>';
+  try {
+    var html = '';
+    if (_filter !== 'tracks') {
+      var a = await api('/archive?sort=likes&limit=24' + (_filter === 'comps' ? '&kind=comps' : ''));
+      html += '<div class="rp-sec">MOST LIKED IN THE ARCHIVE</div>' + (a.items || []).map(function(x) { return albumRowHTML(normAlbum(Object.assign({ is_archive: true }, x))); }).join('');
+    }
+    if (_filter === 'all' || _filter === 'tracks') {
+      var d = await api('/discover');
+      var recent = (d.recent || []).filter(function(x) { return x._type === 'track'; }).slice(0, 20);
+      if (recent.length) html += '<div class="rp-sec">NEW UPLOADS</div>' + recent.map(function(x) { return trackRowHTML(normTrack(x)); }).join('');
+    }
+    box.innerHTML = html || '<div class="rp-empty">Type to search.</div>';
+  } catch (e) { box.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
+}
+async function doSearch() {
+  var q = _q, box = document.getElementById('results'); if (!box) return;
+  box.innerHTML = '<div class="rp-empty">Searching…</div>';
+  try {
+    var wantArc = _filter !== 'tracks', wantSite = _filter !== 'archive';
+    var r = await Promise.all([wantSite ? api('/search?q=' + encodeURIComponent(q)) : Promise.resolve({}), wantArc ? api('/archive?q=' + encodeURIComponent(q) + '&limit=30&sort=likes' + (_filter === 'comps' ? '&kind=comps' : '')) : Promise.resolve({})]);
+    var s = r[0] || {}, arc = r[1] || {};
+    if (document.getElementById('q').value.trim() !== q) return;
+    var comps = [], tracks = [];
+    (s.albums || []).forEach(function(a) { comps.push(normAlbum(a)); });
+    (arc.items || []).forEach(function(a) { comps.push(normAlbum(Object.assign({ is_archive: true }, a))); });
+    (s.tracks || []).forEach(function(t) { tracks.push(normTrack(t)); });
+    var seen = {}; comps = comps.filter(function(c) { if (seen[c.id]) return false; seen[c.id] = 1; return true; });
+    if (_filter === 'tracks') comps = [];
+    if (_filter === 'comps') { comps = comps.filter(function(c) { return c.track_count == null || c.track_count > 1; }); tracks = []; }
+    if (_filter === 'archive') { comps = comps.filter(function(c) { return c.is_archive; }); tracks = tracks.filter(function(t) { return t.is_archive; }); }
+    var html = '';
+    if (comps.length) html += '<div class="rp-sec">COMPS &amp; EDITS · ' + comps.length + '</div>' + comps.map(albumRowHTML).join('');
+    if (tracks.length) html += '<div class="rp-sec">TRACKS · ' + tracks.length + '</div>' + tracks.map(trackRowHTML).join('');
+    box.innerHTML = html || '<div class="rp-empty">Nothing found for “' + escHtml(q) + '”.</div>';
+  } catch (e) { box.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
+}
 init();
 </script>
 </body>

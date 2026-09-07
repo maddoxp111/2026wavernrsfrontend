@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072021">
+  <link rel="stylesheet" href="/css/style.css?v=202609072028">
+</head>
+<body>
+<div id="view">
   <style>
     .rd-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
     .rd-card { background:var(--surface); border-radius:var(--r-lg); overflow:hidden; cursor:pointer; transition:transform .16s var(--ease); }
@@ -57,13 +60,11 @@
       .rd-up { max-width:48%; }
     }
   </style>
-</head>
-<body>
-<div id="view"><div class="wv-empty">Loading…</div></div>
+<div class="wv-empty">Loading…</div></div>
 
-<script src="/js/api.js?v=202609072021"></script>
-<script src="/js/layout.js?v=202609072021"></script>
-<script src="/js/player.js?v=202609072021"></script>
+<script src="/js/api.js?v=202609072028"></script>
+<script src="/js/layout.js?v=202609072028"></script>
+<script src="/js/player.js?v=202609072028"></script>
 <script>
 var _slug = new URLSearchParams(location.search).get('s');
 var _st = null, _now = null, _up = [], _audio = null, _lyrics = null, _lyricTrack = null, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false;
@@ -122,6 +123,7 @@ async function initStation() {
       (_st.description ? '<div style="margin-top:14px;color:var(--text-2);font-size:14px;line-height:1.6;">' + escHtml(_st.description) + '</div>' : '') +
       (_st.owner ? '<div style="margin-top:8px;font-size:13px;color:var(--text-3);">Station by <a href="/artist.html?id=' + escHtml(_st.owner.artist_id) + '" style="color:var(--brand);font-weight:600;">' + escHtml(_st.owner.name) + '</a></div>' : '');
     renderNow();
+    if (typeof window.radioSlug === 'function' && window.radioSlug() === _slug) { _listening = true; document.getElementById('rd-listen').style.display = 'none'; }
     _poll = setInterval(pollNow, 8000);
     _tick = setInterval(tickUI, 250);
   } catch (e) { view.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; }
@@ -192,28 +194,12 @@ async function pollNow() {
 }
 
 function tuneIn() {
-  if (typeof pausePlayer === 'function') pausePlayer();
-  if (!_audio) { _audio = new Audio(); _audio.preload = 'auto'; _audio.addEventListener('ended', function() { setTimeout(pollNow, 800); }); }
   _listening = true;
   document.getElementById('rd-listen').style.display = 'none';
-  syncAudio(true);
-  if ('mediaSession' in navigator) { try { navigator.mediaSession.setActionHandler('pause', function() { _audio.pause(); }); navigator.mediaSession.setActionHandler('play', function() { syncAudio(true); }); } catch (_) {} }
+  if (typeof window.radioTuneIn === 'function') window.radioTuneIn(_slug);
 }
 
-function syncAudio(force) {
-  if (!_audio || !_now || !_now.track) { if (_audio) _audio.pause(); return; }
-  var t = _now.track, p = posSec();
-  if (force || _audio.src !== t.url) {
-    if (_audio.src !== t.url) _audio.src = t.url;
-    var seekTo = p;
-    var apply = function() { try { _audio.currentTime = seekTo + (Date.now() - t0) / 1000; } catch (_) {} _audio.play().catch(function() {}); };
-    var t0 = Date.now();
-    if (_audio.readyState >= 1) apply(); else _audio.addEventListener('loadedmetadata', apply, { once: true });
-    if ('mediaSession' in navigator) { try { navigator.mediaSession.metadata = new MediaMetadata({ title: t.title, artist: t.artist, album: _st.name + ' · wavernrs radio', artwork: t.cover_url ? [{ src: t.cover_url }] : [] }); } catch (_) {} }
-  } else if (Math.abs(_audio.currentTime - p) > 4 && _audio.readyState >= 1) {
-    try { _audio.currentTime = p; } catch (_) {}
-  }
-}
+function syncAudio() {}
 
 function likeTap(ev) {
   _likes++; _pendingLikes++;
@@ -231,7 +217,8 @@ async function flushLikes() {
   try { var d = await api('/radio/stations/' + encodeURIComponent(_slug) + '/like', { method: 'POST', body: JSON.stringify({ n: n }) }); if (d.likes != null && !_pendingLikes) { _likes = d.likes; document.getElementById('rd-likes').textContent = fmtN(_likes); } } catch (e) {}
 }
 
-window.addEventListener('pagehide', function() { if (_audio) _audio.pause(); clearInterval(_poll); clearInterval(_tick); });
+window.addEventListener('pagehide', function() { clearInterval(_poll); clearInterval(_tick); });
+if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(_poll); clearInterval(_tick); });
 init();
 </script>
 </body>
