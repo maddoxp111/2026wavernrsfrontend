@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072143">
+  <link rel="stylesheet" href="/css/style.css?v=202609072147">
 </head>
 <body>
 <div id="view">
@@ -35,8 +35,13 @@
     .rd-tools { display:flex; gap:8px; flex-shrink:0; }
     .rd-pill { border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.4); color:#fff; border-radius:999px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; backdrop-filter:blur(8px); }
     .rd-pill.on { background:#fff; color:#000; }
-    .rd-left { position:absolute; left:5%; top:13%; bottom:calc(70px + env(safe-area-inset-bottom)); width:26%; min-width:170px; z-index:2; display:flex; flex-direction:column; overflow:hidden; }
-    .rd-cover { width:100%; max-height:46vh; aspect-ratio:1; border-radius:14px; background:linear-gradient(135deg,#3b2a6e,#141420); box-shadow:0 12px 44px rgba(0,0,0,.6); overflow:hidden; border:3px solid rgba(255,255,255,.9); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:44px; }
+    /* Default: centred now-playing layout. With lyrics on, the cover moves left and lyrics take the right. */
+    .rd-left { position:absolute; left:50%; transform:translateX(-50%); top:11%; bottom:calc(70px + env(safe-area-inset-bottom)); width:min(42vh, 82vw); z-index:2; display:flex; flex-direction:column; align-items:center; text-align:center; overflow:hidden; transition:left .35s var(--ease), width .35s var(--ease), transform .35s var(--ease); }
+    #rd-fs.lyr-on .rd-left { left:5%; transform:none; width:26%; min-width:170px; align-items:stretch; text-align:left; }
+    .rd-left .rd-upnext-label, .rd-left .rd-bar { width:100%; }
+    #rd-fs:not(.lyr-on) .rd-upnext { flex-direction:row; flex-wrap:wrap; justify-content:center; }
+    #rd-fs:not(.lyr-on) .rd-up { width:calc(50% - 4px); }
+    .rd-cover { width:100%; max-height:44vh; aspect-ratio:1; border-radius:14px; background:linear-gradient(135deg,#3b2a6e,#141420); box-shadow:0 12px 44px rgba(0,0,0,.6); overflow:hidden; border:3px solid rgba(255,255,255,.9); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:44px; }
     .rd-cover img { width:100%; height:100%; object-fit:cover; display:block; }
     .rd-now-title { font-weight:800; font-size:clamp(14px, 1.6vw, 22px); margin-top:14px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 6px rgba(0,0,0,.6); }
     .rd-now-sub { font-size:clamp(11px, 1.05vw, 14px); color:rgba(255,255,255,.72); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -64,7 +69,7 @@
     .rd-foot a { color:#fff; font-weight:700; text-decoration:none; }
     @media (max-width: 700px) {
       .rd-title { font-size:18px; }
-      .rd-left { left:6%; right:6%; width:auto; top:80px; }
+      .rd-left, #rd-fs.lyr-on .rd-left { left:6%; right:6%; width:auto; min-width:0; top:80px; transform:none; align-items:center; text-align:center; }
       .rd-cover { width:52%; }
       .rd-lyrics { left:6%; right:6%; top:auto; bottom:22%; height:32%; justify-content:flex-start; }
       .rd-upnext { flex-direction:row; flex-wrap:wrap; }
@@ -92,10 +97,10 @@
   <div class="rd-foot" id="rd-foot"></div>
 </div>
 
-<script src="/js/api.js?v=202609072143"></script>
-<script src="/js/layout.js?v=202609072143"></script>
-<script src="/js/player.js?v=202609072143"></script>
-<script src="/js/router.js?v=202609072143"></script>
+<script src="/js/api.js?v=202609072147"></script>
+<script src="/js/layout.js?v=202609072147"></script>
+<script src="/js/player.js?v=202609072147"></script>
+<script src="/js/router.js?v=202609072147"></script>
 <script>
 var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false, _stations = [];
 
@@ -134,7 +139,7 @@ async function openStation(slug) {
   slug = decodeURIComponent(slug);
   _slug = slug; _lyrics = null; _lyricTrack = null; _lyricsOn = false; _now = null; _up = [];
   var fs = fsEl(); fs.style.display = ''; document.body.style.overflow = 'hidden';
-  document.getElementById('rd-lyrics').classList.remove('on'); document.getElementById('rd-lyr-btn').classList.remove('on');
+  document.getElementById('rd-lyrics').classList.remove('on'); document.getElementById('rd-lyr-btn').classList.remove('on'); fs.classList.remove('lyr-on');
   history.replaceState(null, '', '/radio.html?s=' + encodeURIComponent(slug));
   try {
     var d = await api('/radio/stations/' + encodeURIComponent(slug));
@@ -183,6 +188,7 @@ function renderNow() {
 
 function toggleRadioLyrics() {
   _lyricsOn = !_lyricsOn;
+  fsEl().classList.toggle('lyr-on', _lyricsOn);
   document.getElementById('rd-lyrics').classList.toggle('on', _lyricsOn);
   document.getElementById('rd-lyr-btn').classList.toggle('on', _lyricsOn);
   if (_lyricsOn && _lyricTrack && !_lyrics) loadLyrics(_lyricTrack);
