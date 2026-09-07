@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072150">
+  <link rel="stylesheet" href="/css/style.css?v=202609072152">
 </head>
 <body>
 <div id="view">
@@ -50,10 +50,10 @@
   <div class="wv-empty">Loading…</div>
 </div>
 
-<script src="/js/api.js?v=202609072150"></script>
-<script src="/js/layout.js?v=202609072150"></script>
-<script src="/js/player.js?v=202609072150"></script>
-<script src="/js/router.js?v=202609072150"></script>
+<script src="/js/api.js?v=202609072152"></script>
+<script src="/js/layout.js?v=202609072152"></script>
+<script src="/js/player.js?v=202609072152"></script>
+<script src="/js/router.js?v=202609072152"></script>
 <script>
 var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false;
 var _playlist = [], _queue = [], _tracks = {}, _albums = {}, _filter = 'all', _q = '', _dragId = null, _showList = 'queue';
@@ -80,6 +80,7 @@ async function init() {
     _mine = await api('/radio/mine');
     _isMod = !!_mine.is_mod;
     if (!_mine.available) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio is not set up on the server yet (run RADIO_SQL.md).</div>'); return; }
+    if (!_isMod && !_mine.is_host && !_mine.stations.length) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio stations are handed out by the wavernrs team. If you\'d like one, ask in the Discord.</div>'); return; }
     if (!_stId && _mine.stations.length) _stId = _mine.stations[0].id;
     renderShell();
     if (_stId) await openStation(_stId);

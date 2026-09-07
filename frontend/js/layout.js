@@ -124,7 +124,7 @@
       html += '<a href="/settings.html" data-page="settings">Settings</a>';
       if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel.html" data-page="modpanel">Mod panel</a>';
       if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel.html" data-page="archivepanel">Archive panel</a>';
-      html += '<a href="/radiopanel.html" data-page="radiopanel">Radio panel</a>';
+      if (sessionStorage.getItem('wv_is_radio') === 'true') html += '<a href="/radiopanel.html" data-page="radiopanel">Radio panel</a>';
     } else {
       html += '<a href="/login.html">Log in</a><a href="/register.html">Sign up</a>';
     }
@@ -822,14 +822,19 @@
     Promise.all([
       fetch(base + '/mod/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
       fetch(base + '/archive/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+      fetch(base + '/radio/mine', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
     ]).then(function(results) {
       var isMod = !!(results[0] && results[0].is_mod);
       var isArchiver = !!(results[1] && results[1].is_archiver);
+      var rm = results[2] || {};
+      var isRadio = !!(rm.available && (rm.is_mod || rm.is_host || (rm.stations && rm.stations.length)));
       var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
       var wasArchiver = sessionStorage.getItem('wv_is_archiver') === 'true';
+      var wasRadio = sessionStorage.getItem('wv_is_radio') === 'true';
       sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
       sessionStorage.setItem('wv_is_archiver', isArchiver ? 'true' : 'false');
-      if (isMod || isArchiver || wasMod !== isMod || wasArchiver !== isArchiver) {
+      sessionStorage.setItem('wv_is_radio', isRadio ? 'true' : 'false');
+      if (isMod || isArchiver || isRadio || wasMod !== isMod || wasArchiver !== isArchiver || wasRadio !== isRadio) {
         var sidebar = document.getElementById('wv-sidebar');
         if (sidebar) sidebar.innerHTML = buildSidebarHTML();
         var drawer = document.getElementById('wv-drawer');
@@ -937,7 +942,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072150';
+  s.src = '/js/playlists.js?v=202609072152';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +950,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072150';
+  s.src = '/js/ratings.js?v=202609072152';
   document.head.appendChild(s);
 })();
 
