@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072148">
+  <link rel="stylesheet" href="/css/style.css?v=202609072150">
 </head>
 <body>
 <div id="view">
@@ -55,7 +55,9 @@
     .rd-up img, .rd-up .ph { width:30px; height:30px; border-radius:6px; object-fit:cover; background:#444; flex-shrink:0; }
     .rd-up .t { font-size:clamp(10px, 1vw, 13px); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rd-up .a { font-size:clamp(9px, .85vw, 11px); color:rgba(255,255,255,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .rd-lyrics { position:absolute; left:36%; right:6%; top:16%; bottom:14%; display:none; flex-direction:column; justify-content:center; gap:12px; overflow:hidden; z-index:2; mask-image:linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); -webkit-mask-image:linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); }
+    .rd-lyrics { position:absolute; left:36%; right:6%; top:16%; bottom:14%; display:none; flex-direction:column; justify-content:flex-start; gap:12px; overflow-y:auto; overflow-x:hidden; z-index:2; scrollbar-width:none; padding:38vh 0; box-sizing:border-box; mask-image:linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); -webkit-mask-image:linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent); }
+    .rd-lyrics::-webkit-scrollbar { display:none; }
+    .rd-lyric { cursor:default; }
     .rd-lyrics.on { display:flex; }
     .rd-lyric { font-size:clamp(15px, 2.1vw, 28px); font-weight:700; color:rgba(255,255,255,.35); text-shadow:0 1px 8px rgba(0,0,0,.6); transition:color .3s, transform .3s; letter-spacing:-.01em; }
     .rd-lyric.on { color:#fff; transform:scale(1.02); }
@@ -99,11 +101,12 @@
   <div class="rd-foot" id="rd-foot"></div>
 </div>
 
-<script src="/js/api.js?v=202609072148"></script>
-<script src="/js/layout.js?v=202609072148"></script>
-<script src="/js/player.js?v=202609072148"></script>
-<script src="/js/router.js?v=202609072148"></script>
+<script src="/js/api.js?v=202609072150"></script>
+<script src="/js/layout.js?v=202609072150"></script>
+<script src="/js/player.js?v=202609072150"></script>
+<script src="/js/router.js?v=202609072150"></script>
 <script>
+var _lastLyricIdx = -2;
 var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false, _stations = [];
 
 function fmtN(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n); }
@@ -206,6 +209,7 @@ async function loadLyrics(trackId) {
     if (!lines.length) { box.innerHTML = '<div class="rd-empty">No lyrics for this one yet.</div>'; return; }
     _lyrics = lines;
     box.innerHTML = lines.map(function(l, i) { return '<div class="rd-lyric" data-i="' + i + '">' + escHtml(l.x || l.text || '') + '</div>'; }).join('');
+    box.scrollTop = 0; _lastLyricIdx = -2;
   } catch (e) { box.innerHTML = ''; }
 }
 
@@ -216,12 +220,14 @@ function tickUI() {
   if (_lyrics && _lyricsOn) {
     var idx = -1;
     for (var i = 0; i < _lyrics.length; i++) { if (Number(_lyrics[i].t) <= p) idx = i; else break; }
-    var box = document.getElementById('rd-lyrics');
-    var cur = box.querySelector('.rd-lyric.on');
-    var want = idx >= 0 ? box.querySelector('.rd-lyric[data-i="' + idx + '"]') : null;
-    if (cur !== want) {
-      if (cur) cur.classList.remove('on');
-      if (want) { want.classList.add('on'); var off = want.offsetTop - box.clientHeight / 2 + want.offsetHeight / 2; box.scrollTo({ top: off, behavior: 'smooth' }); }
+    if (idx !== _lastLyricIdx) {
+      _lastLyricIdx = idx;
+      var box = document.getElementById('rd-lyrics');
+      box.querySelectorAll('.rd-lyric.on').forEach(function(el) { el.classList.remove('on'); });
+      var want = idx >= 0 ? box.querySelector('.rd-lyric[data-i="' + idx + '"]') : null;
+      var target = want || box.querySelector('.rd-lyric');
+      if (want) want.classList.add('on');
+      if (target) { var off = target.offsetTop - box.clientHeight / 2 + target.offsetHeight / 2; box.scrollTo({ top: Math.max(0, off), behavior: 'smooth' }); }
     }
   }
   if (p > d + 2) pollNow();
