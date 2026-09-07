@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072117">
+  <link rel="stylesheet" href="/css/style.css?v=202609072119">
 </head>
 <body>
 <div id="view">
@@ -62,12 +62,13 @@
   </style>
 <div class="wv-empty">Loading…</div></div>
 
-<script src="/js/router.js?v=202609072117"></script>
-<script src="/js/api.js?v=202609072117"></script>
-<script src="/js/layout.js?v=202609072117"></script>
-<script src="/js/player.js?v=202609072117"></script>
+<script src="/js/router.js?v=202609072119"></script>
+<script src="/js/api.js?v=202609072119"></script>
+<script src="/js/layout.js?v=202609072119"></script>
+<script src="/js/player.js?v=202609072119"></script>
 <script>
 var _slug = new URLSearchParams(location.search).get('s');
+function setView(html) { var v = document.getElementById('view'); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
 var _st = null, _now = null, _up = [], _audio = null, _lyrics = null, _lyricTrack = null, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false;
 
 function fmtN(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n); }
@@ -78,7 +79,7 @@ async function init() {
   var view = document.getElementById('view');
   try {
     var d = await api('/radio/stations');
-    if (!d.available) { view.innerHTML = '<h1 class="wv-page-title">Radio</h1><div class="wv-empty">Radio is not set up yet.</div>'; return; }
+    if (!d.available) { setView('<h1 class="wv-page-title">Radio</h1><div class="wv-empty">Radio is not set up yet.</div>'); return; }
     var cards = (d.stations || []).map(function(s) {
       var now = s.now && s.now.track ? s.now.track : null;
       var art = s.cover_url || (now && now.cover_url) || '';
@@ -88,9 +89,9 @@ async function init() {
         '<div class="rd-card-sub">' + (now ? '▶ ' + escHtml(now.title) + ' · ' + escHtml(now.artist) : 'Off air') + '</div>' +
         '<div class="rd-card-likes">' + (s.owner ? 'by ' + escHtml(s.owner.name) + ' · ' : '') + '♥ ' + fmtN(s.likes) + '</div></div></div>';
     }).join('');
-    view.innerHTML = '<h1 class="wv-page-title">Radio</h1><div style="color:var(--text-2);font-size:14px;margin:-6px 0 18px;">Stations run around the clock. Tune in and everyone hears the same thing at the same time.</div>' +
-      (cards ? '<div class="rd-grid">' + cards + '</div>' : '<div class="wv-empty">No stations yet.</div>');
-  } catch (e) { view.innerHTML = '<div class="wv-empty">Failed: ' + escHtml(e.message) + '</div>'; }
+    setView('<h1 class="wv-page-title">Radio</h1><div style="color:var(--text-2);font-size:14px;margin:-6px 0 18px;">Stations run around the clock. Tune in and everyone hears the same thing at the same time.</div>' +
+      (cards ? '<div class="rd-grid">' + cards + '</div>' : '<div class="wv-empty">No stations yet.</div>'));
+  } catch (e) { setView('<div class="wv-empty">Failed: ' + escHtml(e.message) + '</div>'); }
 }
 
 async function initStation() {
@@ -100,7 +101,7 @@ async function initStation() {
     _st = d.station; _now = d.now; _up = d.up_next || []; _likes = _st.likes || 0;
     _offset = Date.parse(d.server_time) - Date.now();
     document.title = _st.name + ' — wavernrs radio';
-    view.innerHTML =
+    setView(
       '<div style="display:flex;align-items:center;gap:10px;margin:2px 0 10px;flex-wrap:wrap;">' +
         '<a href="/radio.html" onclick="navigate(\'/radio.html\');return false;" style="font-size:13px;color:var(--text-3);text-decoration:none;">← Radio</a>' +
         (d.can_control ? '<a href="/radiopanel.html?s=' + encodeURIComponent(_st.id) + '" class="wv-pill" style="font-size:12px;margin-left:auto;">Manage station</a>' : '') +
@@ -122,12 +123,12 @@ async function initStation() {
         '<div class="rd-heart" id="rd-heart" onclick="likeTap(event)"><span class="h">♥</span><span id="rd-likes">' + fmtN(_likes) + '</span></div>' +
       '</div>' +
       (_st.description ? '<div style="margin-top:14px;color:var(--text-2);font-size:14px;line-height:1.6;">' + escHtml(_st.description) + '</div>' : '') +
-      (_st.owner ? '<div style="margin-top:8px;font-size:13px;color:var(--text-3);">Station by <a href="/artist.html?id=' + escHtml(_st.owner.artist_id) + '" style="color:var(--brand);font-weight:600;">' + escHtml(_st.owner.name) + '</a></div>' : '');
+      (_st.owner ? '<div style="margin-top:8px;font-size:13px;color:var(--text-3);">Station by <a href="/artist.html?id=' + escHtml(_st.owner.artist_id) + '" style="color:var(--brand);font-weight:600;">' + escHtml(_st.owner.name) + '</a></div>' : ''));
     renderNow();
     if (typeof window.radioSlug === 'function' && window.radioSlug() === _slug) { _listening = true; document.getElementById('rd-listen').style.display = 'none'; }
     _poll = setInterval(pollNow, 8000);
     _tick = setInterval(tickUI, 250);
-  } catch (e) { view.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; }
+  } catch (e) { setView('<div class="wv-empty">' + escHtml(e.message) + '</div>'); }
 }
 
 function serverNow() { return Date.now() + _offset; }
