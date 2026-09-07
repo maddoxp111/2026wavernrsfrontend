@@ -560,7 +560,7 @@
     var gen = ++_washGen;
     if (!url) { _applyWash(seed ? coverHues(seed) : null); return; }
     if (typeof extractCoverHues === 'function') {
-      extractCoverHues(url, seed || url, function(colors) { if (gen === _washGen) _applyWash(colors); });
+      extractCoverHues(url, seed || url, function(colors, fromImage) { if (gen === _washGen) _applyWash(fromImage === false ? null : colors); });
     } else {
       _applyWash(typeof coverHues === 'function' ? coverHues(seed || url) : null);
     }
@@ -932,7 +932,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609071721';
+  s.src = '/js/playlists.js?v=202609071726';
   document.head.appendChild(s);
 })();
 
@@ -940,7 +940,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609071721';
+  s.src = '/js/ratings.js?v=202609071726';
   document.head.appendChild(s);
 })();
 
