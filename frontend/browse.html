@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — browse</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609062304">
+  <link rel="stylesheet" href="/css/style.css?v=202609070157">
 </head>
 <body>
 <div id="view"><div class="loading"><div class="spinner"></div></div></div>
-<script src="/js/api.js?v=202609062304"></script>
-<script src="/js/layout.js?v=202609062304"></script>
-<script src="/js/player.js?v=202609062304"></script>
-<script src="/js/router.js?v=202609062304"></script>
-<script src="/js/playlists.js?v=202609062304"></script>
+<script src="/js/api.js?v=202609070157"></script>
+<script src="/js/layout.js?v=202609070157"></script>
+<script src="/js/player.js?v=202609070157"></script>
+<script src="/js/router.js?v=202609070157"></script>
+<script src="/js/playlists.js?v=202609070157"></script>
 <script>
 initPlayer();
 var _p = new URLSearchParams(location.search);
@@ -53,17 +53,52 @@ function renderIndex() {
   html += '<div class="wv-browse-grid">';
   CATS.forEach(function(c, i) {
     var go = c.href ? "navigate('" + c.href + "')" : "go('tab','" + c.k + "')";
-    html += '<div class="wv-browse-tile' + (i === 0 ? ' wide' : '') + '" style="background:' + tileBg(c.h) + ';" onclick="' + go + '"><span>' + escHtml(c.l) + '</span><div class="fake" style="background:' + tileBg((c.h + 180) % 360) + ';"></div></div>';
+    html += '<div class="wv-browse-tile' + (i === 0 ? ' wide' : '') + '" data-tile="' + (c.k || c.href) + '" style="background:' + tileBg(c.h) + ';" onclick="' + go + '"><span>' + escHtml(c.l) + '</span><div class="fake" style="background:' + tileBg((c.h + 180) % 360) + ';"></div></div>';
   });
   html += '</div>';
   if (_eras.length) {
     html += '<div class="wv-sec-head"><h2 class="wv-sec-title">Eras</h2></div>';
     html += '<div class="wv-browse-grid">' + _eras.map(function(t) {
       var c = coverHues(t.name || '');
-      return '<div class="wv-browse-tile" style="background:' + tileBg(c.h1) + ';" onclick="go(\'era\',\'' + escHtml(t.id) + '\')"><span>' + escHtml(t.name) + '</span><div class="fake" style="background:' + tileBg(c.h2) + ';"></div></div>';
+      return '<div class="wv-browse-tile" data-tile="era:' + escHtml(t.id) + '" style="background:' + tileBg(c.h1) + ';" onclick="go(\'era\',\'' + escHtml(t.id) + '\')"><span>' + escHtml(t.name) + '</span><div class="fake" style="background:' + tileBg(c.h2) + ';"></div></div>';
     }).join('') + '</div>';
   }
   view.innerHTML = html;
+  fillTileCovers();
+}
+
+function setTileCover(key, url) {
+  if (!url) return;
+  var tile = document.querySelector('.wv-browse-tile[data-tile="' + key + '"]');
+  if (!tile || tile.querySelector('img')) return;
+  var fake = tile.querySelector('.fake');
+  var img = document.createElement('img');
+  img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+  img.onerror = function() { img.remove(); };
+  img.src = url;
+  if (fake) fake.replaceWith(img); else tile.appendChild(img);
+}
+
+async function fillTileCovers() {
+  var d;
+  try { d = await api('/discover'); } catch (e) { return; }
+  var recent = (d && d.recent) || [], trending = (d && d.trending) || [];
+  var withCover = function(list, pred) { var it = list.find(function(x) { return x && x.cover_url && (!pred || pred(x)); }); return it ? it.cover_url : ''; };
+  var used = {};
+  var pick = function(list, pred) { var it = list.find(function(x) { return x && x.cover_url && !used[x.cover_url] && (!pred || pred(x)); }); if (it) { used[it.cover_url] = 1; return it.cover_url; } return withCover(list, pred); };
+  setTileCover('recent', pick(recent));
+  setTileCover('trending', pick(trending));
+  setTileCover('comps', pick(recent, function(x) { return x._type === 'album'; }));
+  setTileCover('edits', pick(recent, function(x) { return x._type === 'track'; }));
+  setTileCover('/charts.html', pick(trending));
+  setTileCover('/artists.html', pick(recent));
+  setTileCover('/stats.html', pick(recent));
+  _eras.forEach(function(t) { setTileCover('era:' + t.id, pick(recent, function(x) { return String(x.era_tag_id) === String(t.id); })); });
+  try { var hl = await api('/discover/highlighted'); setTileCover('highlighted', pick(hl || [])); } catch (e) {}
+  var missing = _eras.filter(function(t) { return !document.querySelector('.wv-browse-tile[data-tile="era:' + t.id + '"] img'); }).slice(0, 12);
+  for (var i = 0; i < missing.length; i++) {
+    try { var items = await api('/discover/era/' + encodeURIComponent(missing[i].id)); setTileCover('era:' + missing[i].id, pick(items || [])); } catch (e) {}
+  }
 }
 
 window.go = function(kind, v) {
