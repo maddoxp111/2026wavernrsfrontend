@@ -473,11 +473,15 @@ function skipPrev() {
 }
 
 function skipNext() {
+  if (_radio) return;
   if (_pq.length && _pqIdx >= 0) {
     if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
+    else window.skipNextOrAutoplay();
     return;
   }
+  const before = _autoplayTicket;
   document.dispatchEvent(new CustomEvent('playerSkipNext'));
+  setTimeout(() => { if (_autoplayTicket === before && (!currentTrack || audio.paused)) window.skipNextOrAutoplay(); }, 400);
 }
 
 function openFullPlayer(withLyrics) {
@@ -601,12 +605,12 @@ function initPlayer() {
     // pages (e.g. resources/tracker) that manage their own list.
     if (_pq.length && _pqIdx >= 0) {
       if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
-      else _autoplayNext();
+      else window.skipNextOrAutoplay();
     } else {
       const before = _autoplayTicket;
       document.dispatchEvent(new CustomEvent('playerSkipNext'));
       // Nothing else picked up playback: keep the music going with another edit.
-      setTimeout(() => { if (_autoplayTicket === before && audio.paused && audio.ended) _autoplayNext(); }, 900);
+      setTimeout(() => { if (_autoplayTicket === before && audio.paused && audio.ended) window.skipNextOrAutoplay(); }, 900);
     }
   });
   audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); if (_radio) _radioSync(false); });
@@ -773,10 +777,52 @@ async function _autoplayNext() {
   } catch (_) {}
 }
 
+// ---- Autoplay queue: a standalone play seeds a queue of more edits; skipping past the end adds more ----
+let _apSeedTicket = 0;
+function _normAutoTrack(t) {
+  if (!t || !t.ia_url) return null;
+  const al = t.albums || {};
+  const isArc = !!(t.is_archive || al.is_archive);
+  return { id: t.id, title: t.title, artist_name: isArc ? (al.archive_artist_name || t.archive_artist_name || 'Archive') : ((t.artists && t.artists.display_name) || t.artist_name || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: t.album_id || null, _album_title: al.title || null, _archive_artist: isArc ? (al.archive_artist_name || t.archive_artist_name || 'Unknown') : null, _autoplay: true };
+}
+async function _autoplayPicks(n) {
+  if (typeof api !== 'function') return [];
+  const pool = [];
+  try { const c = await api('/charts'); const e = (c && c.edits) || {}; [].concat(e.alltime || [], e.week || [], e.trending || []).forEach(t => { const x = _normAutoTrack(t); if (x) pool.push(x); }); } catch (_) {}
+  try { const d = await api('/discover'); (d.recent || []).filter(x => x._type === 'track').forEach(t => { const x = _normAutoTrack(t); if (x) pool.push(x); }); } catch (_) {}
+  const seen = new Set(_pq.map(x => x.id)); if (currentTrack) seen.add(currentTrack.id);
+  const uniq = []; const ids = new Set();
+  for (const t of pool) { if (!ids.has(t.id) && !seen.has(t.id) && !_autoplaySeen.has(t.id)) { ids.add(t.id); uniq.push(t); } }
+  for (let i = uniq.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [uniq[i], uniq[j]] = [uniq[j], uniq[i]]; }
+  return uniq.slice(0, n);
+}
+async function _seedAutoplayQueue(track) {
+  const my = ++_apSeedTicket;
+  const picks = await _autoplayPicks(12);
+  if (my !== _apSeedTicket || !picks.length) return;
+  if (!currentTrack || currentTrack.id !== track.id || _radio) return;
+  _pq = [track].concat(picks); _pqIdx = 0; _pqOnChange = null;
+  _renderQueuePanel();
+}
+async function _extendAutoplayQueue() {
+  const picks = await _autoplayPicks(10);
+  if (!picks.length) return false;
+  if (!_pq.length || _pqIdx < 0) { _pq = currentTrack ? [currentTrack] : []; _pqIdx = _pq.length - 1; }
+  _pq = _pq.concat(picks); _renderQueuePanel();
+  return true;
+}
+window.skipNextOrAutoplay = async function () {
+  if (_radio) return;
+  if (_pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1) return window.playQueueIndex(_pqIdx + 1);
+  if (await _extendAutoplayQueue()) return window.playQueueIndex(_pqIdx + 1);
+  return _autoplayNext();
+};
+
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
   if (!track._radio && _radio) window.radioStop();
+  if (!_fromQueue && !track._radio) setTimeout(() => _seedAutoplayQueue(track), 0);
 
   // A standalone play (not driven by the queue) clears any old queue so the OS
   // media controls don't skip back into a comp the user has moved on from.
