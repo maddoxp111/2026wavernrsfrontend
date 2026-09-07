@@ -937,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072030';
+  s.src = '/js/playlists.js?v=202609072032';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072030';
+  s.src = '/js/ratings.js?v=202609072032';
   document.head.appendChild(s);
 })();
 
@@ -1092,3 +1092,63 @@
   })();
 })();
 
+
+// ── Star field: faint drifting points; lines reach from the pointer to nearby ones ──
+(function () {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var c = document.createElement('canvas');
+  c.id = 'wv-stars';
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2147483000;mix-blend-mode:screen;opacity:.9;';
+  document.body.appendChild(c);
+  var ctx = c.getContext('2d'), stars = [], W = 0, H = 0, dpr = 1, mx = -9999, my = -9999, mouseAt = 0, raf = null, running = false;
+  var mobile = window.matchMedia('(max-width: 700px)').matches;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var want = Math.round((W * H) / (mobile ? 22000 : 13000));
+    while (stars.length < want) stars.push(mk(true));
+    stars.length = Math.min(stars.length, want);
+  }
+  function mk(anywhere) {
+    return { x: Math.random() * W, y: anywhere ? Math.random() * H : (Math.random() < 0.5 ? -4 : H + 4), vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: 0.6 + Math.random() * 1.1, a: 0.25 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2, ts: 0.004 + Math.random() * 0.012 };
+  }
+  function light() { return document.body.classList.contains('theme-light'); }
+  function frame() {
+    raf = null;
+    if (!running) return;
+    ctx.clearRect(0, 0, W, H);
+    var isLight = light();
+    c.style.mixBlendMode = isLight ? 'multiply' : 'screen';
+    var col = isLight ? '20,20,40' : '255,255,255';
+    var near = mobile ? 110 : 150, near2 = near * near;
+    var recent = Date.now() - mouseAt < 4000;
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      s.x += s.vx; s.y += s.vy; s.tw += s.ts;
+      if (s.x < -6) s.x = W + 6; else if (s.x > W + 6) s.x = -6;
+      if (s.y < -6) s.y = H + 6; else if (s.y > H + 6) s.y = -6;
+      var al = s.a * (0.65 + 0.35 * Math.sin(s.tw));
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + col + ',' + al.toFixed(3) + ')'; ctx.fill();
+      if (recent) {
+        var dx = s.x - mx, dy = s.y - my, d2 = dx * dx + dy * dy;
+        if (d2 < near2) {
+          var k = 1 - Math.sqrt(d2) / near;
+          ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(s.x, s.y);
+          ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 * k).toFixed(3) + ')'; ctx.lineWidth = 0.8; ctx.stroke();
+        }
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function start() { if (running) return; running = true; if (!raf) raf = requestAnimationFrame(frame); }
+  function stop() { running = false; }
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; mouseAt = Date.now(); }, { passive: true });
+  window.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX; my = t.clientY; mouseAt = Date.now(); } }, { passive: true });
+  window.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX; my = t.clientY; mouseAt = Date.now(); } }, { passive: true });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
+  resize(); start();
+})();
