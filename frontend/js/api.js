@@ -48,10 +48,17 @@ async function api(path, options = {}) {
   const siteAccess = localStorage.getItem('wv_site_access');
   if (siteAccess) headers['X-Site-Access'] = siteAccess;
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const isGet = !options.method || String(options.method).toUpperCase() === 'GET';
+  const ctrl = isGet && !options.signal && typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 30000) : null;
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(ctrl ? { signal: ctrl.signal } : {}) });
+  } catch (e) {
+    if (timer) clearTimeout(timer);
+    throw new Error(e && e.name === 'AbortError' ? 'Request timed out' : (e && e.message) || 'Network error');
+  }
+  if (timer) clearTimeout(timer);
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
