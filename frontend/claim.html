@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — claim your comps</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072153">
+  <link rel="stylesheet" href="/css/style.css?v=202609072159">
 </head>
 <body>
 
@@ -29,7 +29,7 @@
         <li><b style="color:var(--text);">Wrong name.</b> Your comps show under a username or spelling you don't want. Tell us what to call the profile.</li>
         <li><b style="color:var(--text);">Move to my account.</b> You want the comps on your wavernrs account so they show as your own uploads.</li>
         <li><b style="color:var(--text);">Someone posted my comp as theirs.</b> A comp in the archive is yours but credited to someone else. We move it to you and note the correction.</li>
-        <li><b style="color:var(--text);">Take it down.</b> You made it and don't want it archived.</li>
+        <li><b style="color:var(--text);">Takedown request.</b> You made it and don't want it archived, or it's your work being hosted without permission. Pick "Takedown request" in the form and link the comp; the team removes it after checking.</li>
       </ul>
       <div style="font-size:13px;color:var(--text-3);line-height:1.6;">Proof matters most. The best proof is a link to the original post, project, or upload from an account we can see is yours, a screenshot of the project in your untitled.stream or Samply library, or a message from the account that originally posted it. Claims without proof are declined.</div>
     </div>
@@ -43,7 +43,7 @@
             <option value="rename">Wrong name — rename the profile my comps are under</option>
             <option value="transfer">Move these comps to my wavernrs account</option>
             <option value="stolen">Someone posted my comp as theirs</option>
-            <option value="remove">Take my comp down</option>
+            <option value="remove">Takedown request — remove this comp or edit from the site</option>
             <option value="other">Something else</option>
           </select></label>
         <label style="font-size:12.5px;color:var(--text-3);display:block;">Links to the comps on wavernrs (one per line — open the comp and copy the address)
@@ -81,10 +81,10 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=202609072153"></script>
-<script src="/js/layout.js?v=202609072153"></script>
-<script src="/js/player.js?v=202609072153"></script>
-<script src="/js/router.js?v=202609072153"></script>
+<script src="/js/api.js?v=202609072159"></script>
+<script src="/js/layout.js?v=202609072159"></script>
+<script src="/js/player.js?v=202609072159"></script>
+<script src="/js/router.js?v=202609072159"></script>
 <script>
   initPlayer();
   function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -137,6 +137,8 @@
     return false;
   };
   (function() {
+    var pre = new URLSearchParams(location.search).get('type');
+    if (pre) { var sel = document.getElementById('cf-type'); if (sel) sel.value = pre; if (pre === 'remove') { var c = document.getElementById('claim-form-card'); if (c) c.scrollIntoView({ block: 'start' }); } }
     if (isLoggedIn()) { document.getElementById('claim-form').style.display = 'flex'; loadMine(); }
     else document.getElementById('claim-login').style.display = '';
   })();
