@@ -248,7 +248,7 @@ img { display: block; }
   overflow-y: auto;
   overflow-x: hidden;
   background:
-    linear-gradient(180deg, var(--wv-wash) 0px, var(--page-bg) 320px) no-repeat,
+    linear-gradient(180deg, var(--page-bg) 0px, var(--page-bg) 320px) no-repeat,
     var(--page-bg);
   background-attachment: local;
   transition: background 500ms var(--ease);
@@ -730,9 +730,12 @@ img { display: block; }
   position: fixed; inset: 0; z-index: 200; display: none;
   flex-direction: column; align-items: center;
   padding: calc(20px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, var(--wv-wash) 0%, var(--page-bg) 70%);
+  background: var(--page-bg); overflow: hidden;
 }
 #player-fullscreen > * { position: relative; z-index: 1; }
+#player-fullscreen .pfs-bg { position: absolute; inset: -40px; z-index: 0; background-size: cover; background-position: center; filter: blur(48px) brightness(.38) saturate(1.15); transform: scale(1.1); pointer-events: none; transition: background-image .4s; }
+#player-fullscreen .pfs-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55)); }
+#player-fullscreen #wv-stars-fs { position: absolute; inset: 0; z-index: 0; pointer-events: none; mix-blend-mode: screen; opacity: .9; }
 #player-fullscreen.open { display: flex; }
 
 .pfs-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }

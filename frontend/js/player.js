@@ -268,6 +268,8 @@ function injectPlayer() {
   const fs = document.createElement('div');
   fs.id = 'player-fullscreen';
   fs.innerHTML = `
+    <div class="pfs-bg" id="pfs-bg"></div>
+    <canvas id="wv-stars-fs"></canvas>
     <div class="pfs-wrap">
       <div class="pfs-header">
         <button class="pfs-close" onclick="closeFullPlayer()" aria-label="Close">
@@ -865,6 +867,8 @@ function _renderAll(track) {
   if (pfsTitle) pfsTitle.textContent = title;
   if (pfsArtist) pfsArtist.textContent = artist;
   if (pfsCover) { pfsCover.style.background = bg; pfsCover.style.position = 'relative'; pfsCover.innerHTML = largeCoverHtml; }
+  const pfsBg = document.getElementById('pfs-bg');
+  if (pfsBg) pfsBg.style.backgroundImage = track.cover_url ? 'url("' + String(track.cover_url).replace(/"/g, '%22') + '")' : 'none';
   const ctx = document.getElementById('pfs-context');
   if (ctx) ctx.textContent = track._album_title ? 'From ' + track._album_title : (artist !== '—' ? artist : 'wavernrs');
   _refreshLike();
@@ -1087,9 +1091,20 @@ function _renderLyrics() {
 
   if (tools) {
     var hasWords = _lyr.lines.some(function (l) { return l.w && l.w.length; });
-    if (_lyr.canEdit && (!_lyr.lines.length || (_lyr.source === 'auto' && !hasWords))) {
+    if (!_lyr.lines.length && _lyr.loaded && !_lyr.generating && _lyr.autoTried !== _lyr.trackId) {
+      _lyr.autoTried = _lyr.trackId; _lyr.generating = true;
       tools.hidden = false;
-      tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">' + (_lyr.lines.length ? 'Get word timing' : 'Get lyrics') + '</button>';
+      tools.innerHTML = '<span class="lyr-src">Getting the lyrics…</span>';
+      autoGenerateLyrics(null);
+    } else if (_lyr.generating) {
+      tools.hidden = false;
+      tools.innerHTML = '<span class="lyr-src">Getting the lyrics…</span>';
+    } else if (!_lyr.lines.length && _lyr.autoFailed === _lyr.trackId) {
+      tools.hidden = false;
+      tools.innerHTML = '<span class="lyr-src">No lyrics could be made for this one.</span>';
+    } else if (_lyr.canEdit && _lyr.lines.length && _lyr.source === 'auto' && !hasWords) {
+      tools.hidden = false;
+      tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get word timing</button>';
     } else {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
@@ -1132,7 +1147,7 @@ function loadLyricsForCurrent() {
   if (_lyr.trackId === t.id && _lyr.lines.length) return _renderLyrics();
 
   _lyr.trackId = t.id;
-  _lyr.lines = [];
+  _lyr.lines = []; _lyr.loaded = false; _lyr.generating = false;
   _lyr.idx = -1;
   var scroll = _lyrEl('pfs-lyrics-scroll');
   if (scroll) scroll.innerHTML = '<div class="lyr-empty"><div class="lyr-empty-d">Loading…</div></div>';
@@ -1145,11 +1160,11 @@ function loadLyricsForCurrent() {
     .then(function (d) {
       if (!d) return;
       _lyr.lines = d.lines || [];
-      _lyr.canEdit = !!d.can_edit;
+      _lyr.canEdit = !!d.can_edit; _lyr.loaded = true;
       _lyr.source = d.source;
       _renderLyrics();
     })
-    .catch(function () { _renderLyrics(); });
+    .catch(function () { _lyr.loaded = true; _renderLyrics(); });
 }
 
 // Reload lyrics when the track changes while the panel is open.
@@ -1277,20 +1292,18 @@ function _persistLyrics(lines, plain) {
 
 window.autoGenerateLyrics = function (btn) {
   var tok = localStorage.getItem('token');
-  if (!tok || !_lyr.trackId) return;
+  if (!_lyr.trackId) return;
+  var forTrack = _lyr.trackId;
+  var hdr = tok ? { 'Authorization': 'Bearer ' + tok } : {};
   if (btn) { btn.disabled = true; btn.textContent = 'Listening…'; }
-  fetch(API_BASE + '/lyrics/' + encodeURIComponent(_lyr.trackId) + '/auto', {
-    method: 'POST', headers: { 'Authorization': 'Bearer ' + tok },
-  })
+  var fail = function (msg) { _lyr.generating = false; if (_lyr.trackId === forTrack) { _lyr.autoFailed = forTrack; _renderLyrics(); } if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; if (msg) alert(msg); } };
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/auto', { method: 'POST', headers: hdr })
     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
     .then(function (res) {
-      if (!res.ok) {
-        alert(res.d.error || 'Could not get lyrics');
-        if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
-        return;
-      }
+      if (!res.ok) { fail(btn ? (res.d.error || 'Could not get lyrics') : null); return; }
       // The file already carried them — nothing to wait for.
       if (res.d.status === 'succeeded') {
+        _lyr.generating = false;
         _lyr.lines = res.d.lines || [];
         _lyr.source = 'embedded';
         _lyr.mode = 'view';
@@ -1304,26 +1317,26 @@ window.autoGenerateLyrics = function (btn) {
       var tries = 0;
       var poll = setInterval(function () {
         tries++;
-        fetch(API_BASE + '/lyrics/job/' + res.d.id, { headers: { 'Authorization': 'Bearer ' + tok } })
+        fetch(API_BASE + '/lyrics/job/' + res.d.id, { headers: hdr })
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (j) {
             if (!j) return;
             if (j.status === 'succeeded') {
               clearInterval(poll);
+              _lyr.generating = false;
+              if (_lyr.trackId !== forTrack) return;
               _lyr.lines = j.lines || [];
               _lyr.source = 'auto';
               _lyr.mode = 'view';
               _renderLyrics();
+              if (btn) { btn.disabled = false; btn.textContent = 'Get word timing'; }
             } else if (j.status === 'failed' || tries > 150) {
               clearInterval(poll);
-              alert(j.error || 'Transcription timed out');
-              if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
+              fail(btn ? (j.error || 'Transcription timed out') : null);
             }
           })
           .catch(function () {});
       }, 4000);
     })
-    .catch(function () {
-      if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
-    });
+    .catch(function () { fail(btn ? 'Could not get lyrics' : null); });
 };

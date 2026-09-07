@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072040">
+  <link rel="stylesheet" href="/css/style.css?v=202609072046">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609072040"></script>
-<script src="/js/layout.js?v=202609072040"></script>
-<script src="/js/player.js?v=202609072040"></script>
-<script src="/js/router.js?v=202609072040"></script>
+<script src="/js/api.js?v=202609072046"></script>
+<script src="/js/layout.js?v=202609072046"></script>
+<script src="/js/player.js?v=202609072046"></script>
+<script src="/js/router.js?v=202609072046"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -118,11 +118,13 @@ async function arcLoadMore() {
     _arcDone = !items.length || _arcItems.length >= _archiveTotal;
     var grid = document.getElementById('archive-grid');
     if (!grid) return;
+    var trackCards = (first && Array.isArray(page.tracks) && page.tracks.length) ? page.tracks.map(archiveTrackCardHTML).join('') : '';
     if (first) {
+      if (!_arcItems.length && trackCards) { grid.innerHTML = trackCards; return; }
       if (!_arcItems.length) {
         grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">' + (_arcQuery ? 'Nothing matches your search.' : 'No archived comps yet.') + '</div>';
       } else {
-        grid.innerHTML = items.map(archiveCardHTML).join('');
+        grid.innerHTML = items.map(archiveCardHTML).join('') + trackCards;
         if (typeof window.setPageBgImage === 'function') {
           var withCover = items.filter(function(i) { return i.cover_url; });
           window.setPageBgImage(withCover.length ? withCover[Math.floor(Math.random() * withCover.length)].cover_url : '');
@@ -241,6 +243,17 @@ function archiveCardHTML(item) {
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + _onyxIcon(item.id) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(artistName) + (item.original_date ? ' · ' + new Date(item.original_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '') + (item.external_likes ? ' · ♥ ' + Number(item.external_likes).toLocaleString() : '') + '</div></div>';
+}
+
+function archiveTrackCardHTML(t) {
+  var bg = coverGradient(t.title || '');
+  return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + t.album_id + '&t=' + t.id + '\')">' +
+    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
+    '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(167,139,250,0.35);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">track in a comp</div>' +
+    (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+    '</div></div>' +
+    '<div class="wv-comp-card-title">' + escHtml(t.title) + '</div>' +
+    '<div class="wv-comp-card-artist">' + escHtml(t.archive_artist_name || 'Unknown') + (t.album_title ? ' · from ' + escHtml(t.album_title) : '') + '</div></div>';
 }
 
 function escHtml(s) {
