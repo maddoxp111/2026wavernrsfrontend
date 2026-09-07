@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609070218">
+  <link rel="stylesheet" href="/css/style.css?v=202609070302">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609070218"></script>
-<script src="/js/layout.js?v=202609070218"></script>
-<script src="/js/player.js?v=202609070218"></script>
-<script src="/js/router.js?v=202609070218"></script>
+<script src="/js/api.js?v=202609070302"></script>
+<script src="/js/layout.js?v=202609070302"></script>
+<script src="/js/player.js?v=202609070302"></script>
+<script src="/js/router.js?v=202609070302"></script>
 <script>
 initPlayer();
 
@@ -84,7 +84,9 @@ async function initArchiveArtist() {
         '<option value="plays">Most played</option>' +
       '</select>' +
     '</div>' +
-    '<div id="aa-grid" class="wv-tile-grid"></div>';
+    '<div id="aa-comps" style="display:none;"><h2 class="wv-sec-title" style="margin:4px 0 12px;">Comps</h2><div class="wv-tile-grid" id="aa-grid"></div></div>' +
+    '<div id="aa-edits" style="display:none;margin-top:8px;"><h2 class="wv-sec-title" style="margin:4px 0 12px;">Edits</h2><div class="wv-tile-grid" id="aa-grid-edits"></div></div>' +
+    '<div id="aa-empty"></div>';
 
   renderComps();
 }
@@ -92,19 +94,25 @@ async function initArchiveArtist() {
 function aaSort(v) { _aaSort = v; renderComps(); }
 
 function renderComps() {
-  var grid = document.getElementById('aa-grid');
+  var isEdit = function(c) { return Number(c.track_count) === 1; };
+  var comps = _aaComps.filter(function(c) { return !isEdit(c); }), edits = _aaComps.filter(isEdit);
+  var cs = document.getElementById('aa-comps'), es = document.getElementById('aa-edits'), em = document.getElementById('aa-empty');
+  if (cs) cs.style.display = comps.length ? '' : 'none';
+  if (es) es.style.display = edits.length ? '' : 'none';
+  if (em) em.innerHTML = _aaComps.length ? '' : '<div class="wv-empty">No comps.</div>';
+  renderGrid('aa-grid', comps);
+  renderGrid('aa-grid-edits', edits);
+}
+
+function renderGrid(gridId, items) {
+  var grid = document.getElementById(gridId);
   if (!grid) return;
-  var list = _aaComps.slice();
+  var list = items.slice();
   var _d = function(x) { return x.original_date ? new Date(x.original_date).getTime() : 0; };
   if (_aaSort === 'newest')      list.sort(function(a, b) { return _d(b) - _d(a) || new Date(b.created_at) - new Date(a.created_at); });
   else if (_aaSort === 'oldest') list.sort(function(a, b) { return (_d(a) || 9e15) - (_d(b) || 9e15) || new Date(a.created_at) - new Date(b.created_at); });
   else if (_aaSort === 'title')  list.sort(function(a, b) { return (a.title || '').localeCompare(b.title || ''); });
   else if (_aaSort === 'plays')  list.sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); });
-
-  if (!list.length) {
-    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No comps.</div>';
-    return;
-  }
 
   grid.innerHTML = list.map(function(item) {
     var bg = coverGradient(item.title || '');

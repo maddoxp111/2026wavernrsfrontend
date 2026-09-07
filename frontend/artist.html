@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609070218">
+  <link rel="stylesheet" href="/css/style.css?v=202609070302">
 </head>
 <body>
 
@@ -12,11 +12,11 @@
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609070218"></script>
-<script src="/js/layout.js?v=202609070218"></script>
-<script src="/js/player.js?v=202609070218"></script>
-<script src="/js/router.js?v=202609070218"></script>
-<script src="/js/playlists.js?v=202609070218"></script>
+<script src="/js/api.js?v=202609070302"></script>
+<script src="/js/layout.js?v=202609070302"></script>
+<script src="/js/player.js?v=202609070302"></script>
+<script src="/js/router.js?v=202609070302"></script>
+<script src="/js/playlists.js?v=202609070302"></script>
 <script>
   initPlayer();
 
@@ -129,24 +129,26 @@
           (artist.website ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener" style="color:var(--brand);">Website ↗</a></span>' : '') +
         '</div>' +
 
-        '<h2 class="wv-section-title">Uploads</h2>' +
-        '<div id="uploads-list"></div>' +
+        '<div id="uploads-empty"></div>' +
+        '<div id="comps-section" style="display:none;"><h2 class="wv-section-title">Comps</h2><div id="comps-list"></div></div>' +
+        '<div id="edits-section" style="display:none;"><h2 class="wv-section-title">Edits</h2><div id="edits-list"></div></div>' +
       '</div>';
 
     document.getElementById('view').innerHTML = html;
-    renderUploads();
+    var isEdit = function(u) { return u._type === 'track' || Number(u.track_count) === 1; };
+    var comps = uploads.filter(function(u) { return !isEdit(u); });
+    var edits = uploads.filter(isEdit);
+    if (!uploads.length) document.getElementById('uploads-empty').innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No uploads yet</div></div>';
+    if (comps.length) { document.getElementById('comps-section').style.display = ''; renderUploads(comps, 'comps-list'); }
+    if (edits.length) { document.getElementById('edits-section').style.display = ''; renderUploads(edits, 'edits-list'); }
   }
 
-  function renderUploads() {
-    var el = document.getElementById('uploads-list');
+  function renderUploads(list, elId) {
+    var el = document.getElementById(elId);
     if (!el) return;
-    if (!uploads.length) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">No uploads yet</div></div>';
-      return;
-    }
 
-    el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:40px;">' +
-      uploads.map(function(item, i) {
+    el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:32px;">' +
+      list.map(function(item, i) {
         var isAlbum = item._type === 'album';
         var coverBg = coverGradient(item.title || '');
         var coverImg = item.cover_url
@@ -178,7 +180,7 @@
     '</div>';
 
     if (typeof wireIACoverRetry === 'function') {
-      document.querySelectorAll('#uploads-list img').forEach(wireIACoverRetry);
+      document.querySelectorAll('#' + elId + ' img').forEach(wireIACoverRetry);
     }
   }
 
