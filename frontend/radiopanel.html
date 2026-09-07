@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072020">
+  <link rel="stylesheet" href="/css/style.css?v=202609072021">
   <style>
     .rp-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:var(--surface-2); margin-bottom:6px; }
     .rp-row img, .rp-row .ph { width:36px; height:36px; border-radius:6px; object-fit:cover; background:var(--surface); flex-shrink:0; }
@@ -24,9 +24,9 @@
 <body>
 <div id="view"><div class="wv-empty">Loading…</div></div>
 
-<script src="/js/api.js?v=202609072020"></script>
-<script src="/js/layout.js?v=202609072020"></script>
-<script src="/js/player.js?v=202609072020"></script>
+<script src="/js/api.js?v=202609072021"></script>
+<script src="/js/layout.js?v=202609072021"></script>
+<script src="/js/player.js?v=202609072021"></script>
 <script>
 var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false, _playlist = [], _queue = [], _search = { tracks: [], albums: [] }, _durCache = {};
 
@@ -54,14 +54,14 @@ function renderShell() {
   view.innerHTML =
     '<h1 class="wv-page-title">Radio panel</h1>' +
     '<div style="color:var(--text-2);font-size:14px;margin:-6px 0 16px;">Your station plays around the clock: anything you queue plays first, then the playlist loops.</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' + (list || '<span style="color:var(--text-3);font-size:13px;">You don\'t have a station yet.</span>') +
-      (_isMod ? '<button class="wv-pill" onclick="createStation()">+ New station</button>' : '') + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' + (list || '<span style="color:var(--text-3);font-size:13px;">' + (_mine.is_host ? 'You have a station waiting. Create it:' : 'You haven\'t been given a station yet. Ask a moderator.') + '</span>') +
+      (_isMod ? '<button class="wv-pill" onclick="createStation()">+ New station</button>' : (_mine.is_host && !_mine.stations.length ? '<button class="wv-pill brand" onclick="createStation()">Create my station</button>' : '')) + '</div>' +
     '<div id="station"></div>';
 }
 
 async function createStation() {
   var name = prompt('Station name'); if (!name) return;
-  var username = prompt('Give it to which wavernrs username? (blank = you)') || '';
+  var username = _isMod ? (prompt('Give it to which wavernrs username? (blank = you)') || '') : '';
   try { var d = await api('/radio/stations', { method: 'POST', body: JSON.stringify({ name: name, username: username.trim() || undefined }) }); _mine = await api('/radio/mine'); _stId = d.station.id; renderShell(); openStation(_stId); }
   catch (e) { alert(e.message); }
 }
