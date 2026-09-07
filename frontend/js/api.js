@@ -42,6 +42,7 @@ function _handleAuthFailure(res, data) {
 }
 
 async function api(path, options = {}) {
+  const navGen = window._wvNavGen || 0;
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -61,6 +62,9 @@ async function api(path, options = {}) {
   if (timer) clearTimeout(timer);
 
   const data = await res.json().catch(() => ({}));
+  // The page that made this request has been navigated away from: never
+  // resolve, so its stale render can't overwrite the page now on screen.
+  if ((window._wvNavGen || 0) !== navGen) return new Promise(() => {});
   if (!res.ok) {
     _handleAuthFailure(res, data);
     throw new Error(data.error || `Request failed (${res.status})`);

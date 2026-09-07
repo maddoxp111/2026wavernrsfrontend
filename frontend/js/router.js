@@ -16,6 +16,8 @@ window.navigate = async function(url) {
     return;
   }
 
+  // New page generation: in-flight api() calls from the old page are dropped
+  window._wvNavGen = (window._wvNavGen || 0) + 1;
   // Run teardown registered by the previous page
   window._pageCleanup.forEach(fn => { try { fn(); } catch (_) {} });
   window._pageCleanup = [];
