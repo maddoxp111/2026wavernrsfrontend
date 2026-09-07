@@ -937,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072039';
+  s.src = '/js/playlists.js?v=202609072040';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072039';
+  s.src = '/js/ratings.js?v=202609072040';
   document.head.appendChild(s);
 })();
 
@@ -1093,13 +1093,15 @@
 })();
 
 
-// ── Star field: faint drifting points; lines reach from the pointer to nearby ones ──
+// ── Star field: faint drifting points in page space; lines reach from the pointer to nearby ones ──
 (function () {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var c = document.createElement('canvas');
   c.id = 'wv-stars';
   c.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:-1;mix-blend-mode:screen;opacity:.9;';
-  var host = null, OX = 0, OY = 0;
+  var host = null, OX = 0, OY = 0, W = 0, H = 0, DH = 0, dpr = 1;
+  var ctx = c.getContext('2d'), stars = [], mx = -9999, my = -9999, mouseAt = 0, raf = null, running = false, n = 0;
+  var mobile = window.matchMedia('(max-width: 700px)').matches;
   function mount() {
     host = document.getElementById('wv-content');
     if (!host) { setTimeout(mount, 200); return; }
@@ -1107,8 +1109,6 @@
     host.insertBefore(c, host.firstChild);
     resize(); start();
   }
-  var ctx = c.getContext('2d'), stars = [], W = 0, H = 0, dpr = 1, mx = -9999, my = -9999, mouseAt = 0, raf = null, running = false;
-  var mobile = window.matchMedia('(max-width: 700px)').matches;
   function resize() {
     if (!host) return;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1117,12 +1117,17 @@
     c.style.left = OX + 'px'; c.style.top = OY + 'px'; c.style.width = W + 'px'; c.style.height = H + 'px';
     c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var want = Math.round((W * H) / (mobile ? 22000 : 13000));
-    while (stars.length < want) stars.push(mk(true));
-    stars.length = Math.min(stars.length, want);
+    populate();
   }
-  function mk(anywhere) {
-    return { x: Math.random() * W, y: anywhere ? Math.random() * H : (Math.random() < 0.5 ? -4 : H + 4), vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: 0.6 + Math.random() * 1.1, a: 0.25 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2, ts: 0.004 + Math.random() * 0.012 };
+  // Stars are spread over the whole scrollable height, so scrolling reveals more of them.
+  function populate() {
+    DH = Math.max(H, host.scrollHeight || H);
+    var want = Math.round((W * DH) / (mobile ? 22000 : 13000));
+    while (stars.length < want) stars.push(mk());
+    if (stars.length > want) stars.length = want;
+  }
+  function mk() {
+    return { x: Math.random() * W, y: Math.random() * DH, vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: 0.6 + Math.random() * 1.1, a: 0.25 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2, ts: 0.004 + Math.random() * 0.012 };
   }
   function light() { return document.body.classList.contains('theme-light'); }
   function frame() {
@@ -1134,19 +1139,24 @@
     var col = isLight ? '20,20,40' : '255,255,255';
     var near = mobile ? 110 : 150, near2 = near * near;
     var recent = Date.now() - mouseAt < 4000;
+    var sy = host.scrollTop || 0;
+    if ((++n % 30) === 0 && (host.scrollHeight || 0) !== DH) populate();
+    var pmy = my + sy;
     for (var i = 0; i < stars.length; i++) {
       var s = stars[i];
       s.x += s.vx; s.y += s.vy; s.tw += s.ts;
       if (s.x < -6) s.x = W + 6; else if (s.x > W + 6) s.x = -6;
-      if (s.y < -6) s.y = H + 6; else if (s.y > H + 6) s.y = -6;
+      if (s.y < -6) s.y = DH + 6; else if (s.y > DH + 6) s.y = -6;
+      var vy = s.y - sy;
+      if (vy < -8 || vy > H + 8) continue;
       var al = s.a * (0.65 + 0.35 * Math.sin(s.tw));
-      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(s.x, vy, s.r, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(' + col + ',' + al.toFixed(3) + ')'; ctx.fill();
       if (recent) {
-        var dx = s.x - mx, dy = s.y - my, d2 = dx * dx + dy * dy;
+        var dx = s.x - mx, dy = s.y - pmy, d2 = dx * dx + dy * dy;
         if (d2 < near2) {
           var k = 1 - Math.sqrt(d2) / near;
-          ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(s.x, s.y);
+          ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(s.x, vy);
           ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 * k).toFixed(3) + ')'; ctx.lineWidth = 0.8; ctx.stroke();
         }
       }
