@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072119">
+  <link rel="stylesheet" href="/css/style.css?v=202609072121">
 </head>
 <body>
 <div id="view">
@@ -50,10 +50,10 @@
   <div class="wv-empty">Loading…</div>
 </div>
 
-<script src="/js/router.js?v=202609072119"></script>
-<script src="/js/api.js?v=202609072119"></script>
-<script src="/js/layout.js?v=202609072119"></script>
-<script src="/js/player.js?v=202609072119"></script>
+<script src="/js/router.js?v=202609072121"></script>
+<script src="/js/api.js?v=202609072121"></script>
+<script src="/js/layout.js?v=202609072121"></script>
+<script src="/js/player.js?v=202609072121"></script>
 <script>
 var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false;
 var _playlist = [], _queue = [], _tracks = {}, _albums = {}, _filter = 'all', _q = '', _dragId = null, _showList = 'queue';
@@ -186,10 +186,10 @@ async function saveStation() {
   try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify(body) }); _st = Object.assign(_st, d.station); msg.textContent = 'Saved.'; _mine = await api('/radio/mine'); var keep = document.getElementById('station').innerHTML; renderShell(); document.getElementById('station').innerHTML = keep; }
   catch (e) { msg.textContent = e.message; }
 }
-async function toggleShuffle() { try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify({ shuffle: !_st.shuffle }) }); _st.shuffle = d.station.shuffle; updateShuffleBtn(); renderList(); toast(_st.shuffle ? 'Playlist shuffles' : 'Playlist plays in order'); } catch (e) { alert(e.message); } }
+async function toggleShuffle() { try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify({ shuffle: !_st.shuffle }) }); _st.shuffle = d.station.shuffle; updateShuffleBtn(); renderList(); toast(_st.shuffle ? 'Playlist shuffles' : 'Playlist plays in order'); } catch (e) { toast(e.message); } }
 function updateShuffleBtn() { var b = document.getElementById('shuffle-btn'); if (b) b.className = 'rp-ib' + (_st.shuffle ? ' brand' : ''); }
 async function deleteStation() { if (!confirm('Delete this station for good?')) return; await api('/radio/stations/' + _stId, { method: 'DELETE' }); _stId = null; _st = null; _mine = await api('/radio/mine'); renderShell(); }
-async function skip() { try { await api('/radio/stations/' + _stId + '/skip', { method: 'POST' }); toast('Skipped'); await refreshNow(); } catch (e) { alert(e.message); } }
+async function skip() { try { await api('/radio/stations/' + _stId + '/skip', { method: 'POST' }); toast('Skipped'); await refreshNow(); } catch (e) { toast(e.message); } }
 
 /* ---------- lists ---------- */
 function showList(k) { _showList = k; document.querySelectorAll('.rp-chip[onclick^="showList"]').forEach(function(c) { c.classList.toggle('on', c.getAttribute('onclick').indexOf("'" + k + "'") !== -1); }); renderList(); }
@@ -218,43 +218,25 @@ async function dropOn(e) {
   var kind = _showList, list = (kind === 'queue' ? _queue : _playlist).map(function(x) { return x.id; });
   var from = list.indexOf(_dragId), to = list.indexOf(target); if (from < 0 || to < 0) return;
   list.splice(from, 1); list.splice(to, 0, _dragId); _dragId = null;
-  try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList(kind); renderList(); } catch (err) { alert(err.message); }
+  try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList(kind); renderList(); } catch (err) { toast(err.message); }
 }
-async function moveTop(itemId) { var list = _queue.map(function(x) { return x.id; }); list.splice(list.indexOf(itemId), 1); list.unshift(itemId); try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList('queue'); renderList(); } catch (e) { alert(e.message); } }
-async function removeItem(itemId) { try { await api('/radio/stations/' + _stId + '/items/' + itemId, { method: 'DELETE' }); await loadList(_showList); renderList(); } catch (e) { alert(e.message); } }
-async function clearList() { if (!confirm('Clear the whole ' + _showList + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: _showList }) }); await loadList(_showList); renderList(); } catch (e) { alert(e.message); } }
-async function playItemNow(itemId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ item_id: itemId }) }); toast('Playing now'); await refreshNow(); await loadList('queue'); await loadList('playlist'); renderList(); } catch (e) { alert(e.message); } }
+async function moveTop(itemId) { var list = _queue.map(function(x) { return x.id; }); list.splice(list.indexOf(itemId), 1); list.unshift(itemId); try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList('queue'); renderList(); } catch (e) { toast(e.message); } }
+async function removeItem(itemId) { try { await api('/radio/stations/' + _stId + '/items/' + itemId, { method: 'DELETE' }); await loadList(_showList); renderList(); } catch (e) { toast(e.message); } }
+async function clearList() { if (!confirm('Clear the whole ' + _showList + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: _showList }) }); await loadList(_showList); renderList(); } catch (e) { toast(e.message); } }
+async function playItemNow(itemId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ item_id: itemId }) }); toast('Playing now'); await refreshNow(); await loadList('queue'); await loadList('playlist'); renderList(); } catch (e) { toast(e.message); } }
 
 /* ---------- adding ---------- */
-function measure(url) {
-  return new Promise(function(res) {
-    if (!url) return res(null);
-    var a = new Audio(); a.preload = 'metadata'; var done = false;
-    var fin = function(v) { if (!done) { done = true; res(v); a.src = ''; } };
-    a.addEventListener('loadedmetadata', function() { fin(isFinite(a.duration) ? a.duration : null); });
-    a.addEventListener('error', function() { fin(null); });
-    setTimeout(function() { fin(null); }, 12000);
-    a.src = url;
-  });
-}
 async function addTrack(id, kind) {
-  var t = _tracks[id]; var durations = {};
   toast(kind === 'queue' ? 'Queued' : 'Added to playlist');
-  if (t && t.url) { var d = await measure(t.url); if (d) durations[id] = d; }
-  try { await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ track_id: id, kind: kind, durations: durations }) }); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); }
-  catch (e) { alert(e.message); }
+  try { await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ track_id: id, kind: kind }) }); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); }
+  catch (e) { toast(e.message); }
 }
 async function addAlbum(id, kind) {
-  try { var d = await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ album_id: id, kind: kind }) }); toast(d.added + ' tracks ' + (kind === 'queue' ? 'queued' : 'added to playlist')); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); fillDurations(kind); }
-  catch (e) { alert(e.message); }
+  toast('Adding…');
+  try { var d = await api('/radio/stations/' + _stId + '/items', { method: 'POST', body: JSON.stringify({ album_id: id, kind: kind }) }); toast(d.added + ' tracks ' + (kind === 'queue' ? 'queued' : 'added to playlist')); await loadList(kind); if (_showList === kind) renderList(); if (!_st._now) setTimeout(refreshNow, 3000); }
+  catch (e) { toast(e.message); }
 }
-async function playNow(trackId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ track_id: trackId }) }); toast('Playing now'); await refreshNow(); } catch (e) { alert(e.message); } }
-async function fillDurations(kind) {
-  var items = (kind === 'queue' ? _queue : _playlist).filter(function(x) { return !x.duration_sec && x.track && x.track.url; }).slice(0, 60);
-  for (var i = 0; i < items.length; i++) { var d = await measure(items[i].track.url); if (d) { try { await api('/radio/stations/' + _stId + '/items/' + items[i].id, { method: 'PATCH', body: JSON.stringify({ duration_sec: d }) }); } catch (e) {} } }
-  if (items.length) { await loadList(kind); if (_showList === kind) renderList(); }
-}
-
+async function playNow(trackId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ track_id: trackId }) }); toast('Playing now'); await refreshNow(); } catch (e) { toast(e.message); } }
 /* ---------- library / search ---------- */
 var _sT = null;
 function setFilter(f) { _filter = f; document.querySelectorAll('.rp-chip[data-f]').forEach(function(c) { c.classList.toggle('on', c.dataset.f === f); }); _q ? doSearch() : browseDefault(); }
