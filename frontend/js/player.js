@@ -731,7 +731,10 @@ async function _radioSync(force) {
   _radioBusy = true;
   const slug = _radio.slug;
   try {
-    const d = await api('/radio/stations/' + encodeURIComponent(slug) + '/now');
+    // Plain fetch: api() drops responses across page navigations, which would freeze the station clock.
+    const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 20000);
+    const r = await fetch(API_BASE + '/radio/stations/' + encodeURIComponent(slug) + '/now', { signal: ctrl.signal }).finally(() => clearTimeout(tm));
+    const d = await r.json();
     if (!_radio || _radio.slug !== slug) return;
     _radio.offset = Date.parse(d.server_time) - Date.now();
     if (!d.now || !d.now.track) { if (audio && !audio.paused) audio.pause(); return; }
@@ -740,7 +743,8 @@ async function _radioSync(force) {
     const same = currentTrack && currentTrack.id === t.id && currentTrack._radio === slug && currentTrack._radioStart === d.now.started_at;
     if (!same || force) {
       _fromQueue = false;
-      playTrack({ id: t.id, title: t.title, artist_name: t.artist, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: d.now.started_at });
+      playTrack({ id: t.id, title: t.title, artist_name: t.artist + ' · 📻 ' + d.name, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: d.now.started_at });
+      const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = '📻 ' + d.name;
       const seek = () => { try { audio.currentTime = pos(); } catch (_) {} };
       if (audio.readyState >= 1) seek(); else audio.addEventListener('loadedmetadata', seek, { once: true });
     } else if (!audio.paused && audio.readyState >= 1 && Math.abs(audio.currentTime - pos()) > 4) {
