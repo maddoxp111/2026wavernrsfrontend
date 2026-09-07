@@ -937,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072056';
+  s.src = '/js/playlists.js?v=202609072104';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072056';
+  s.src = '/js/ratings.js?v=202609072104';
   document.head.appendChild(s);
 })();
 
@@ -1122,12 +1122,13 @@
     }
     function populate() {
       DH = opts.scrolls ? Math.max(H, host.scrollHeight || H) : H;
-      var want = Math.round((W * DH) / (mobile ? 22000 : 13000));
+      var want = Math.round((W * DH) / ((mobile ? 22000 : 13000) / (opts.density || 1)));
       while (stars.length < want) stars.push(mk());
       if (stars.length > want) stars.length = want;
     }
     function mk() {
-      return { x: Math.random() * W, y: Math.random() * DH, vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: 0.6 + Math.random() * 1.1, a: 0.25 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2, ts: 0.004 + Math.random() * 0.012 };
+      var sz = opts.size || 1;
+      return { x: Math.random() * W, y: Math.random() * DH, vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: (0.6 + Math.random() * 1.1) * sz, a: 0.25 + Math.random() * 0.5, tw: Math.random() * Math.PI * 2, ts: 0.004 + Math.random() * 0.012 };
     }
     function frame() {
       raf = null;
@@ -1136,9 +1137,9 @@
       if ((++n % 30) === 0) { var r = host.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H || r.left !== OX || r.top !== OY) resize(); else if (opts.scrolls && (host.scrollHeight || 0) !== DH) populate(); }
       ctx.clearRect(0, 0, W, H);
       var isLight = light();
-      c.style.mixBlendMode = isLight ? 'multiply' : 'screen';
+      c.style.mixBlendMode = opts.blend || (isLight ? 'multiply' : 'screen');
       var col = isLight ? '20,20,40' : '255,255,255';
-      var near = mobile ? 70 : 95, near2 = near * near;
+      var near = mobile ? 90 : 130, near2 = near * near;
       var recent = Date.now() - mouseAt < 4000;
       var sy = opts.scrolls ? (host.scrollTop || 0) : 0;
       var pmy = my + sy;
@@ -1178,6 +1179,6 @@
   (function fs() {
     var cv = document.getElementById('wv-stars-fs');
     if (!cv) { setTimeout(fs, 500); return; }
-    makeField({ canvas: cv, scrolls: false, getHost: function () { return document.getElementById('player-fullscreen'); } });
+    makeField({ canvas: cv, scrolls: false, density: 2.6, size: 0.6, blend: 'normal', getHost: function () { return document.getElementById('player-fullscreen'); } });
   })();
 })();

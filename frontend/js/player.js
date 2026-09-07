@@ -53,13 +53,13 @@ function _unlockIOS() {
     audio.pause();
     if (_iosUnlockPending) {
       _iosUnlockPending = false;
-      audio.src = s; audio.currentTime = t; audio.volume = 0.8;
+      audio.src = s; audio.currentTime = t; audio.volume = 1;
       if (!p && s) audio.play().catch(() => {});
     }
   }).catch(() => {
     if (_iosUnlockPending) {
       _iosUnlockPending = false;
-      audio.src = s; audio.currentTime = t; audio.volume = 0.8;
+      audio.src = s; audio.currentTime = t; audio.volume = 1;
     }
   });
   document.removeEventListener('touchstart', _unlockIOS);
@@ -232,10 +232,6 @@ function injectPlayer() {
       <button class="player-btn player-icon-btn player-timer" id="player-timer-btn" onclick="openTimerSheet()" title="Sleep timer">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3h2v5.3l3.8 2.2-1 1.7L11 13.2Z"/></svg>
       </button>
-      <button class="player-btn player-icon-btn" onclick="toggleMute()" id="vol-icon-btn" title="Volume">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-      </button>
-      <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.02" value="0.8">
       <button class="player-btn player-icon-btn" onclick="openFullPlayer()" title="Full screen">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v2H6v4H4Zm10 0h6v6h-2V6h-4ZM4 14h2v4h4v2H4Zm14 0h2v6h-6v-2h4Z"/></svg>
       </button>
@@ -339,11 +335,6 @@ function injectPlayer() {
             <button class="pfs-tool" id="pfs-timer-btn" onclick="openTimerSheet()">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3h2v5.3l3.8 2.2-1 1.7L11 13.2Z"/></svg><span id="pfs-timer-lbl">Timer</span>
             </button>
-          </div>
-          <div class="pfs-volume">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
-            <input type="range" class="volume-slider pfs-vol-slider" id="pfs-volume" min="0" max="1" step="0.02" value="0.8">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--text-tertiary)"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
           </div>
         </div>
       </div>
@@ -528,7 +519,7 @@ function initPlayer() {
   injectPlayer();
 
   audio = new Audio();
-  audio.volume = 0.8;
+  audio.volume = 1;
   audio.loop = _repeat;
   setPlaybackSpeed(parseFloat(localStorage.getItem('wv_speed')) || 1);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { _closeSheet(); const f = document.getElementById('player-fullscreen'); if (f && f.classList.contains('open')) closeFullPlayer(); } });
@@ -603,14 +594,19 @@ function initPlayer() {
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
     if (_radio) { setTimeout(() => _radioSync(true), 600); return; }
-    if (!(_pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1)) _wantPlaying = false;
+    const moreInQueue = _pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1;
+    if (!moreInQueue) _wantPlaying = false;
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
     // Auto-advance: prefer the global queue; fall back to the legacy event for
     // pages (e.g. resources/tracker) that manage their own list.
     if (_pq.length && _pqIdx >= 0) {
       if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
+      else _autoplayNext();
     } else {
+      const before = _autoplayTicket;
       document.dispatchEvent(new CustomEvent('playerSkipNext'));
+      // Nothing else picked up playback: keep the music going with another edit.
+      setTimeout(() => { if (_autoplayTicket === before && audio.paused && audio.ended) _autoplayNext(); }, 900);
     }
   });
   audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); if (_radio) _radioSync(false); });
@@ -747,6 +743,34 @@ async function _radioSync(force) {
       try { audio.currentTime = pos(); } catch (_) {}
     }
   } catch (_) {} finally { _radioBusy = false; }
+}
+
+// ---- Autoplay: after the last thing you played, keep going with more edits ----
+let _autoplayTicket = 0;
+const _autoplaySeen = new Set();
+async function _autoplayNext() {
+  if (typeof api !== 'function') return;
+  const my = ++_autoplayTicket;
+  try {
+    const page = await api('/archive?kind=edits&sort=likes&limit=1&offset=0');
+    const total = Math.min(page.total || 0, 3000);
+    let pick = null;
+    for (let tries = 0; tries < 4 && !pick; tries++) {
+      const off = Math.floor(Math.random() * Math.max(1, total));
+      const r = await api('/archive?kind=edits&sort=likes&limit=1&offset=' + off);
+      const a = (r.items || [])[0];
+      if (a && !_autoplaySeen.has(a.id) && (!currentTrack || currentTrack._album_id !== a.id)) pick = a;
+    }
+    if (!pick || my !== _autoplayTicket) return;
+    const al = await api('/albums/' + pick.id);
+    const t0 = (al.album_tracks || [])[0]; const t = t0 && (t0.tracks || t0);
+    if (!t || !t.ia_url || my !== _autoplayTicket) return;
+    _autoplaySeen.add(pick.id);
+    if (_autoplaySeen.size > 200) _autoplaySeen.clear();
+    _fromQueue = false;
+    playTrack({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
+    const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = 'Autoplay · ' + (al.title || '');
+  } catch (_) {}
 }
 
 function playTrack(track) {
