@@ -861,28 +861,18 @@
     try { if (new URL(src).origin === location.origin) return; } catch (_) { return; }
     img._wvCdn = true;
     img.dataset.wvOrig = src;
-    var inlineErr = img.getAttribute('onerror');
-    if (inlineErr) { img.dataset.wvOnerror = inlineErr; img.removeAttribute('onerror'); img.onerror = null; }
     img.src = window.wvImg(src, sizeFor(img));
     if (!img.getAttribute('loading')) img.loading = 'lazy';
     if (!img.getAttribute('decoding')) img.decoding = 'async';
     img.addEventListener('error', function onErr() {
       img.removeEventListener('error', onErr);
-      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) {
-        img.addEventListener('error', function onErr2() {
-          img.removeEventListener('error', onErr2);
-          var h = img.dataset.wvOnerror;
-          if (h) { try { new Function('event', h).call(img); } catch (_) { img.style.opacity = 0; } } else img.style.opacity = 0;
-        });
-        img._wvCdn = true;
-        img.src = img.dataset.wvOrig;
-      }
+      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) img.src = img.dataset.wvOrig;
     });
   }
   function scan(root) { (root.querySelectorAll ? root.querySelectorAll('img[src]') : []).forEach(apply); if (root.tagName === 'IMG') apply(root); }
   new MutationObserver(function (ms) {
     ms.forEach(function (m) {
-      if (m.type === 'attributes') { var t = m.target; if (t.dataset && t.dataset.wvOrig && t.getAttribute('src') === t.dataset.wvOrig) return; t._wvCdn = false; apply(t); return; }
+      if (m.type === 'attributes') { m.target._wvCdn = false; apply(m.target); return; }
       m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); });
     });
   }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
@@ -942,7 +932,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609070154';
+  s.src = '/js/playlists.js?v=202609062304';
   document.head.appendChild(s);
 })();
 
@@ -950,7 +940,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609070154';
+  s.src = '/js/ratings.js?v=202609062304';
   document.head.appendChild(s);
 })();
 
