@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609071726">
+  <link rel="stylesheet" href="/css/style.css?v=202609071921">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609071726"></script>
-<script src="/js/layout.js?v=202609071726"></script>
-<script src="/js/player.js?v=202609071726"></script>
-<script src="/js/router.js?v=202609071726"></script>
+<script src="/js/api.js?v=202609071921"></script>
+<script src="/js/layout.js?v=202609071921"></script>
+<script src="/js/player.js?v=202609071921"></script>
+<script src="/js/router.js?v=202609071921"></script>
 <script>
   initPlayer();
 
@@ -66,6 +66,7 @@
         '<div class="wv-card" id="arc-overview" style="padding:18px 22px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">' +
           '<div><div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Comps left, all imports</div><div id="ov-total" style="font-size:30px;font-weight:900;letter-spacing:-.03em;">…</div><div id="ov-eta" style="font-size:12.5px;color:var(--text-2);">estimating</div></div>' +
           '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">MEGA</div><div id="ov-mega" style="font-size:22px;font-weight:800;">…</div><div id="ov-mega-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
+          '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Edits</div><div id="ov-edits" style="font-size:22px;font-weight:800;">…</div><div id="ov-edits-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
           '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Discord</div><div id="ov-discord" style="font-size:22px;font-weight:800;">…</div><div id="ov-discord-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
           '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Reddit</div><div id="ov-reddit" style="font-size:22px;font-weight:800;">…</div><div id="ov-reddit-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
           '<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Server memory</div><div id="ov-mem" style="font-size:22px;font-weight:800;">…</div><div id="ov-mem-sub" style="font-size:12px;color:var(--text-3);"></div></div>' +
@@ -335,7 +336,10 @@
       set('ov-eta', d.total_remaining ? 'about ' + _fmtEta(d.eta_min).replace('~', '') + ' left · ' + _rate(d, d.links.rate_per_min, 'links') + ' overall' + (d.links.stalled ? ' · <span style="color:var(--orange);">' + d.links.stalled.toLocaleString() + ' MEGA links stalled, not counted</span>' : '') : 'nothing pending');
       var megaKnown = d.mega.folder_total > 0;
       set('ov-mega', (megaKnown ? d.mega.remaining.toLocaleString() : '…') + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
-      set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' : 'shards restarting · ') + (d.mega.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + (d.mega.tracks_last_30m || 0) + ' tracks in 30 min · ' + _fmtEta(d.mega.eta_min)) + (d.edits && (d.edits.running || d.edits.imported) ? '<br><span style="color:var(--text-2);font-weight:600;">Edits:</span> ' + (d.edits.imported || 0).toLocaleString() + ' imported · ' + (d.edits.running ? d.edits.remaining.toLocaleString() + ' left in ' + d.edits.running + ' jobs · ' + (d.edits.done_last_30m || 0) + ' in 30 min' : 'no job running') : ''));
+      set('ov-mega-sub', (d.mega.imported || 0).toLocaleString() + (megaKnown ? ' / ' + d.mega.folder_total.toLocaleString() : '') + ' in archive · ' + (d.mega.running ? d.mega.running + ' shards · ' : 'shards restarting · ') + (d.mega.stalled ? '<span style="color:var(--orange);">stalled — MEGA transfer quota</span>' : _rate(d, d.mega.rate_per_min, 'comps') + ' · ' + (d.mega.tracks_last_30m || 0) + ' tracks in 30 min · ' + _fmtEta(d.mega.eta_min)));
+      var e = d.edits || {};
+      set('ov-edits', (e.running ? e.remaining.toLocaleString() : '0') + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> left</span>');
+      set('ov-edits-sub', (e.imported || 0).toLocaleString() + ' edits in archive · ' + (e.running ? e.running + ' jobs · ' + (e.done_last_30m || 0) + ' in 30 min · ' + _rate(d, e.rate_per_min, 'edits') + ' · ' + _fmtEta(e.eta_min) : 'no edits job running') + (e.failed ? ' · ' + e.failed + ' failed' : ''));
       set('ov-discord', d.links.discord.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       set('ov-reddit', d.links.reddit.toLocaleString() + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> queued</span>');
       var LABEL = { rvideo: 'Reddit videos', dfiles: 'Discord files', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA folders', megafile: 'MEGA files', pillow: 'Pillows', gdrive: 'Google Drive', other: 'Other' };
