@@ -788,8 +788,18 @@ function _normAutoTrack(t) {
 async function _autoplayPicks(n) {
   if (typeof api !== 'function') return [];
   const pool = [];
-  try { const c = await api('/charts'); const e = (c && c.edits) || {}; [].concat(e.alltime || [], e.week || [], e.trending || []).forEach(t => { const x = _normAutoTrack(t); if (x) pool.push(x); }); } catch (_) {}
   try { const d = await api('/discover'); (d.recent || []).filter(x => x._type === 'track').forEach(t => { const x = _normAutoTrack(t); if (x) pool.push(x); }); } catch (_) {}
+  // Random archived edits: pick single-track comps from random pages, then resolve their track.
+  try {
+    const first = await api('/archive?kind=edits&sort=likes&limit=1&offset=0');
+    const total = Math.min(first.total || 0, 4000);
+    if (total > 0) {
+      const pages = await Promise.all([0, 1, 2].map(() => api('/archive?kind=edits&sort=likes&limit=6&offset=' + Math.floor(Math.random() * Math.max(1, total - 6)))));
+      const albums = [].concat(...pages.map(p => p.items || [])).filter(a => a && !_autoplaySeen.has(a.id)).slice(0, 10);
+      const full = await Promise.all(albums.map(a => api('/albums/' + a.id).catch(() => null)));
+      full.forEach(al => { if (!al) return; const t0 = (al.album_tracks || [])[0]; const t = t0 && (t0.tracks || t0); if (!t || !t.ia_url) return; pool.push({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true }); });
+    }
+  } catch (_) {}
   const seen = new Set(_pq.map(x => x.id)); if (currentTrack) seen.add(currentTrack.id);
   const uniq = []; const ids = new Set();
   for (const t of pool) { if (!ids.has(t.id) && !seen.has(t.id) && !_autoplaySeen.has(t.id)) { ids.add(t.id); uniq.push(t); } }
