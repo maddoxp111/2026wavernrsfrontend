@@ -5,6 +5,7 @@
 
   // ── SVG icon paths (Heroicons outline 24×24) ─────────────────
   var ICONS = {
+    radio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>',
     // Purpose-drawn on a single 24 grid: solid shapes, matched corner
     // radii, one optical weight. Filled rather than hairline-outlined so
     // they hold up at nav size and read as a set instead of stock clip art.
@@ -61,6 +62,8 @@
     if (p.endsWith('/artist.html')) return 'artist';
     if (p.endsWith('/search.html')) return 'search';
     if (p.endsWith('/community.html')) return 'community';
+    if (p.endsWith('/radio.html')) return 'radio';
+    if (p.endsWith('/radiopanel.html')) return 'radiopanel';
     if (p.endsWith('/adminpanel.html')) return 'admin';
     if (p.endsWith('/modpanel.html')) return 'modpanel';
     if (p.endsWith('/archivepanel.html')) return 'archivepanel';
@@ -91,6 +94,7 @@
     html += navItem('charts', 'Charts', '/charts.html', 'chart');
     html += navItem('artists', 'Artists', '/artists.html', 'profile');
     html += navItem('archive', 'Archive', '/archive.html', 'archive');
+    html += navItem('radio', 'Radio', '/radio.html', 'radio');
     html += navItem('community', 'Community', '/community.html', 'community');
     html += navItem('resources', 'Tracker', '/resources.html', 'resources');
     html += '</nav>';
@@ -120,6 +124,7 @@
       html += '<a href="/settings.html" data-page="settings">Settings</a>';
       if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel.html" data-page="modpanel">Mod panel</a>';
       if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel.html" data-page="archivepanel">Archive panel</a>';
+      html += '<a href="/radiopanel.html" data-page="radiopanel">Radio panel</a>';
     } else {
       html += '<a href="/login.html">Log in</a><a href="/register.html">Sign up</a>';
     }
@@ -932,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609071942';
+  s.src = '/js/playlists.js?v=202609072002';
   document.head.appendChild(s);
 })();
 
@@ -940,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609071942';
+  s.src = '/js/ratings.js?v=202609072002';
   document.head.appendChild(s);
 })();
 
