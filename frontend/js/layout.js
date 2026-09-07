@@ -937,7 +937,7 @@
 (function () {
   if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072032';
+  s.src = '/js/playlists.js?v=202609072036';
   document.head.appendChild(s);
 })();
 
@@ -945,7 +945,7 @@
 (function () {
   if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
   var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072032';
+  s.src = '/js/ratings.js?v=202609072036';
   document.head.appendChild(s);
 })();
 
@@ -1098,13 +1098,23 @@
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   var c = document.createElement('canvas');
   c.id = 'wv-stars';
-  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2147483000;mix-blend-mode:screen;opacity:.9;';
-  document.body.appendChild(c);
+  c.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:-1;mix-blend-mode:screen;opacity:.9;';
+  var host = null, OX = 0, OY = 0;
+  function mount() {
+    host = document.getElementById('wv-content');
+    if (!host) { setTimeout(mount, 200); return; }
+    host.style.isolation = 'isolate';
+    host.insertBefore(c, host.firstChild);
+    resize(); start();
+  }
   var ctx = c.getContext('2d'), stars = [], W = 0, H = 0, dpr = 1, mx = -9999, my = -9999, mouseAt = 0, raf = null, running = false;
   var mobile = window.matchMedia('(max-width: 700px)').matches;
   function resize() {
+    if (!host) return;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth; H = window.innerHeight;
+    var r = host.getBoundingClientRect();
+    OX = r.left; OY = r.top; W = Math.round(r.width); H = Math.round(r.height);
+    c.style.left = OX + 'px'; c.style.top = OY + 'px'; c.style.width = W + 'px'; c.style.height = H + 'px';
     c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     var want = Math.round((W * H) / (mobile ? 22000 : 13000));
@@ -1146,9 +1156,10 @@
   function start() { if (running) return; running = true; if (!raf) raf = requestAnimationFrame(frame); }
   function stop() { running = false; }
   window.addEventListener('resize', resize);
-  window.addEventListener('mousemove', function (e) { mx = e.clientX; my = e.clientY; mouseAt = Date.now(); }, { passive: true });
-  window.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX; my = t.clientY; mouseAt = Date.now(); } }, { passive: true });
-  window.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX; my = t.clientY; mouseAt = Date.now(); } }, { passive: true });
+  window.addEventListener('mousemove', function (e) { mx = e.clientX - OX; my = e.clientY - OY; mouseAt = Date.now(); }, { passive: true });
+  window.addEventListener('touchstart', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX - OX; my = t.clientY - OY; mouseAt = Date.now(); } }, { passive: true });
+  window.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) { mx = t.clientX - OX; my = t.clientY - OY; mouseAt = Date.now(); } }, { passive: true });
   document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else start(); });
-  resize(); start();
+  new MutationObserver(function () { if (host && !document.body.contains(c)) { host = null; mount(); } }).observe(document.body, { childList: true, subtree: false });
+  mount();
 })();
