@@ -789,17 +789,28 @@ async function _autoplayPicks(n) {
   if (typeof api !== 'function') return [];
   const pool = [];
   try { const d = await api('/discover'); (d.recent || []).filter(x => x._type === 'track').forEach(t => { const x = _normAutoTrack(t); if (x) pool.push(x); }); } catch (_) {}
-  // Random archived edits: pick single-track comps from random pages, then resolve their track.
+  // Discovery: random comps and edits from the whole archive, a track from each.
+  // Skips anything played before on this device so autoplay always surfaces new stuff.
+  let heard = new Set();
+  try { (JSON.parse(localStorage.getItem('recently_played') || '[]') || []).forEach(h => { if (h && h.id) heard.add(h.id); }); (JSON.parse(localStorage.getItem('wv_autoplay_heard') || '[]') || []).forEach(id => heard.add(id)); } catch (_) {}
   try {
-    const first = await api('/archive?kind=edits&sort=likes&limit=1&offset=0');
-    const total = Math.min(first.total || 0, 4000);
+    const first = await api('/archive?sort=newest&limit=1&offset=0');
+    const total = Math.min(first.total || 0, 12000);
     if (total > 0) {
-      const pages = await Promise.all([0, 1, 2].map(() => api('/archive?kind=edits&sort=likes&limit=6&offset=' + Math.floor(Math.random() * Math.max(1, total - 6)))));
-      const albums = [].concat(...pages.map(p => p.items || [])).filter(a => a && !_autoplaySeen.has(a.id)).slice(0, 10);
+      const sorts = ['likes', 'newest', 'plays', 'oldest'];
+      const pages = await Promise.all([0, 1, 2, 3].map(i => api('/archive?sort=' + sorts[i] + '&limit=6&offset=' + Math.floor(Math.random() * Math.max(1, Math.min(total, 3000) - 6)))));
+      const albums = [].concat(...pages.map(p => p.items || [])).filter(a => a && !heard.has(a.id) && !_autoplaySeen.has(a.id)).slice(0, 12);
       const full = await Promise.all(albums.map(a => api('/albums/' + a.id).catch(() => null)));
-      full.forEach(al => { if (!al) return; const t0 = (al.album_tracks || [])[0]; const t = t0 && (t0.tracks || t0); if (!t || !t.ia_url) return; pool.push({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true }); });
+      full.forEach(al => {
+        if (!al) return;
+        const tracks = (al.album_tracks || []).map(x => x.tracks || x).filter(t => t && t.ia_url && !heard.has(t.id));
+        if (!tracks.length) return;
+        const t = tracks[Math.floor(Math.random() * tracks.length)];
+        pool.push({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
+      });
     }
   } catch (_) {}
+  for (let i = pool.length - 1; i >= 0; i--) if (heard.has(pool[i].id)) pool.splice(i, 1);
   const seen = new Set(_pq.map(x => x.id)); if (currentTrack) seen.add(currentTrack.id);
   const uniq = []; const ids = new Set();
   for (const t of pool) { if (!ids.has(t.id) && !seen.has(t.id) && !_autoplaySeen.has(t.id)) { ids.add(t.id); uniq.push(t); } }
@@ -832,6 +843,7 @@ function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
   if (!track._radio && _radio) window.radioStop();
+  try { const h = JSON.parse(localStorage.getItem('wv_autoplay_heard') || '[]'); if (track.id && h.indexOf(track.id) === -1) { h.push(track.id); if (track._album_id && h.indexOf(track._album_id) === -1) h.push(track._album_id); localStorage.setItem('wv_autoplay_heard', JSON.stringify(h.slice(-800))); } } catch (_) {}
   if (!_fromQueue && !track._radio) setTimeout(() => _seedAutoplayQueue(track), 0);
 
   // A standalone play (not driven by the queue) clears any old queue so the OS
