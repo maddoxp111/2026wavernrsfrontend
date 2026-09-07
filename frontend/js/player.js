@@ -485,6 +485,11 @@ function skipNext() {
 }
 
 function openFullPlayer(withLyrics) {
+  if (_radio && _radio.slug) {
+    if (typeof window.openStation === 'function' && /\/radio\.html$/.test(location.pathname)) return window.openStation(_radio.slug);
+    if (typeof navigate === 'function') return navigate('/radio.html?s=' + encodeURIComponent(_radio.slug));
+    location.assign('/radio.html?s=' + encodeURIComponent(_radio.slug)); return;
+  }
   const fs = document.getElementById('player-fullscreen');
   if (!fs) return;
   fs.classList.add('open'); document.body.style.overflow = 'hidden';

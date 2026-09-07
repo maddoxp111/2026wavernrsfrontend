@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609072132">
+  <link rel="stylesheet" href="/css/style.css?v=202609072143">
 </head>
 <body>
 <div id="view">
@@ -35,15 +35,15 @@
     .rd-tools { display:flex; gap:8px; flex-shrink:0; }
     .rd-pill { border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.4); color:#fff; border-radius:999px; padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; backdrop-filter:blur(8px); }
     .rd-pill.on { background:#fff; color:#000; }
-    .rd-left { position:absolute; left:5%; top:14%; width:26%; min-width:170px; z-index:2; }
-    .rd-cover { width:100%; aspect-ratio:1; border-radius:14px; background:#222; box-shadow:0 12px 44px rgba(0,0,0,.6); overflow:hidden; border:3px solid rgba(255,255,255,.9); }
+    .rd-left { position:absolute; left:5%; top:13%; bottom:calc(70px + env(safe-area-inset-bottom)); width:26%; min-width:170px; z-index:2; display:flex; flex-direction:column; overflow:hidden; }
+    .rd-cover { width:100%; max-height:46vh; aspect-ratio:1; border-radius:14px; background:linear-gradient(135deg,#3b2a6e,#141420); box-shadow:0 12px 44px rgba(0,0,0,.6); overflow:hidden; border:3px solid rgba(255,255,255,.9); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:44px; }
     .rd-cover img { width:100%; height:100%; object-fit:cover; display:block; }
     .rd-now-title { font-weight:800; font-size:clamp(14px, 1.6vw, 22px); margin-top:14px; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 6px rgba(0,0,0,.6); }
     .rd-now-sub { font-size:clamp(11px, 1.05vw, 14px); color:rgba(255,255,255,.72); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rd-bar { height:3px; background:rgba(255,255,255,.25); border-radius:2px; margin:10px 0; overflow:hidden; }
     .rd-bar i { display:block; height:100%; width:0; background:#fff; }
     .rd-upnext-label { font-size:9.5px; letter-spacing:.14em; font-weight:800; color:rgba(255,255,255,.55); margin-bottom:6px; }
-    .rd-upnext { display:flex; flex-direction:column; gap:6px; }
+    .rd-upnext { display:flex; flex-direction:column; gap:6px; overflow:hidden; min-height:0; }
     .rd-up { display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.38); border-radius:9px; padding:5px 9px 5px 5px; backdrop-filter:blur(6px); }
     .rd-up img, .rd-up .ph { width:30px; height:30px; border-radius:6px; object-fit:cover; background:#444; flex-shrink:0; }
     .rd-up .t { font-size:clamp(10px, 1vw, 13px); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -60,7 +60,7 @@
     .rd-listen { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:#fff; color:#000; border:0; border-radius:999px; padding:16px 30px; font-weight:800; font-size:17px; cursor:pointer; box-shadow:0 8px 30px rgba(0,0,0,.5); z-index:3; }
     .rd-float { position:absolute; pointer-events:none; font-size:24px; z-index:4; animation:rdfloat 1.1s ease-out forwards; }
     @keyframes rdfloat { from { opacity:1; transform:translateY(0) scale(1); } to { opacity:0; transform:translateY(-140px) scale(1.6); } }
-    .rd-foot { position:absolute; left:22px; bottom:calc(22px + env(safe-area-inset-bottom)); font-size:12.5px; color:rgba(255,255,255,.6); z-index:3; }
+    .rd-foot { position:absolute; left:22px; bottom:calc(22px + env(safe-area-inset-bottom)); font-size:12.5px; color:rgba(255,255,255,.6); z-index:3; background:rgba(0,0,0,.35); padding:6px 10px; border-radius:8px; backdrop-filter:blur(6px); }
     .rd-foot a { color:#fff; font-weight:700; text-decoration:none; }
     @media (max-width: 700px) {
       .rd-title { font-size:18px; }
@@ -92,10 +92,10 @@
   <div class="rd-foot" id="rd-foot"></div>
 </div>
 
-<script src="/js/router.js?v=202609072132"></script>
-<script src="/js/api.js?v=202609072132"></script>
-<script src="/js/layout.js?v=202609072132"></script>
-<script src="/js/player.js?v=202609072132"></script>
+<script src="/js/api.js?v=202609072143"></script>
+<script src="/js/layout.js?v=202609072143"></script>
+<script src="/js/player.js?v=202609072143"></script>
+<script src="/js/router.js?v=202609072143"></script>
 <script>
 var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false, _stations = [];
 
@@ -170,11 +170,11 @@ function durSec() { if (!_now) return 0; return Math.max(1, (Date.parse(_now.end
 function renderNow() {
   var t = _now && _now.track;
   var art = (t && t.cover_url) || (_st && _st.cover_url) || '';
-  document.getElementById('rd-cover').innerHTML = art ? '<img src="' + escHtml(art) + '" onerror="this.remove()">' : '';
-  document.getElementById('rd-bg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : '';
+  document.getElementById('rd-cover').innerHTML = art ? '<img src="' + escHtml(art) + '" onerror="this.remove()">' : '📻';
+  document.getElementById('rd-bg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'linear-gradient(135deg,#2a1d5e,#0b0b12)';
   document.getElementById('rd-now-title').textContent = t ? t.title : 'Off air';
   document.getElementById('rd-now-sub').textContent = t ? (t.artist + (t.album_title && t.album_title !== t.title ? ' — ' + t.album_title : '')) : ((_st ? _st.name : 'This station') + ' has nothing scheduled right now');
-  document.getElementById('rd-upnext').innerHTML = _up.slice(0, 5).map(function(u) {
+  document.getElementById('rd-upnext').innerHTML = _up.slice(0, 4).map(function(u) {
     return '<div class="rd-up">' + (u.track.cover_url ? '<img src="' + escHtml(u.track.cover_url) + '" onerror="this.outerHTML=\'<span class=ph></span>\'">' : '<span class="ph"></span>') + '<div style="min-width:0;"><div class="t">' + escHtml(u.track.title) + '</div><div class="a">' + escHtml(u.track.artist) + '</div></div></div>';
   }).join('');
   if (t && t.id !== _lyricTrack) { _lyricTrack = t.id; _lyrics = null; document.getElementById('rd-lyrics').innerHTML = ''; if (_lyricsOn) loadLyrics(t.id); }
@@ -256,6 +256,8 @@ async function flushLikes() {
 }
 
 if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(_poll); clearInterval(_tick); var fs = fsEl(); if (fs) fs.remove(); document.body.style.overflow = ''; });
+if (typeof initPlayer === 'function') initPlayer();
+window.openStation = openStation;
 init();
 </script>
 </body>
