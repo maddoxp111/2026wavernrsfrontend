@@ -60,6 +60,7 @@
     loadAlbumComments();
       loadMoreLikeThis();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
+      loadTrackerPills(album.id);
     } catch (err) {
       console.error('album render error', err);
     }
@@ -128,6 +129,7 @@
           <div class="wv-hero-body">
             <div class="wv-kind">${album.is_archive ? 'Archived compilation' : 'Compilation'}</div>
             ${badgePills ? `<div style="margin:6px 0 2px;">${badgePills}</div>` : ''}
+            <div id="wv-tracker-pills" style="margin:6px 0 2px;"></div>
             <div class="wv-hero-title">${escHtml(album.title)}</div>
             <div class="wv-hero-sub">
               ${album.is_archive
@@ -756,6 +758,24 @@
       var el = document.getElementById('albumcomment-' + commentId);
       if (el) el.remove();
     } catch(err) { alert(err.message || 'Failed to delete'); }
+  }
+
+  async function loadTrackerPills(id) {
+    var box = document.getElementById('wv-tracker-pills');
+    if (!box) return;
+    try {
+      var d = await api('/trackers/album/' + id);
+      var list = (d && d.in) || [];
+      if (!list.length) { box.innerHTML = ''; return; }
+      var seen = {};
+      box.innerHTML = list.filter(function (x) {
+        var k = x.t + '|' + x.era; if (seen[k]) return false; seen[k] = 1; return true;
+      }).map(function (x) {
+        return '<a href="/tracker.html?t=' + encodeURIComponent(x.t) + '&era=' + encodeURIComponent(x.es) + '" ' +
+          'class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;text-decoration:none;display:inline-block;" ' +
+          'title="Listed in ' + escHtml(x.tn) + '">' + (x.s ? '⭐ ' : '') + '📋 ' + escHtml(x.tn) + ' · ' + escHtml(x.era) + '</a>';
+      }).join('');
+    } catch (e) { box.innerHTML = ''; }
   }
 
   loadAlbum();

@@ -64,6 +64,7 @@ async function initArchive() {
       '<button id="arc-view-comps" onclick="arcSetView(\'comps\')">Comps</button>' +
       '<button id="arc-view-edits" onclick="arcSetView(\'edits\')">Edits</button>' +
       '<button id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
+      '<button id="arc-view-trackers" onclick="arcSetView(\'trackers\')">Trackers</button>' +
     '</div>' +
     '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
       '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
@@ -205,17 +206,22 @@ function arcSetView(view) {
   if (view === _arcView) return;
   _arcView = view;
   arcApplyView();
+  if (view === 'trackers') { loadTrackers(); return; }
   if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
   _arcKind = view; // all | comps | edits
   arcReload();
 }
 
 function arcApplyView() {
-  ['all', 'comps', 'edits', 'artists'].forEach(function(v) { var b = document.getElementById('arc-view-' + v); if (b) b.classList.toggle('on', _arcView === v); });
+  ['all', 'comps', 'edits', 'artists', 'trackers'].forEach(function(v) { var b = document.getElementById('arc-view-' + v); if (b) b.classList.toggle('on', _arcView === v); });
+  var listView = _arcView !== 'artists' && _arcView !== 'trackers';
   var sortEl = document.getElementById('arc-sort');
-  if (sortEl) sortEl.style.display = _arcView !== 'artists' ? '' : 'none';
+  if (sortEl) sortEl.style.display = listView ? '' : 'none';
   var search = document.getElementById('arc-search');
-  if (search) search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
+  if (search) {
+    search.style.display = _arcView === 'trackers' ? 'none' : '';
+    search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
+  }
 }
 
 // Near the bottom: next server page for comps, next chunk of tiles for artists.
@@ -230,6 +236,33 @@ function _arcWatchSentinel() {
   _arcObserver.observe(el);
 }
 (window._pageCleanup || []).push(function() { if (_arcObserver) _arcObserver.disconnect(); });
+
+// ── Trackers ─────────────────────────────────────────────────────────────────
+var _trackers = null;
+async function loadTrackers() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid) return;
+  var cEl = document.getElementById('arc-count'); if (cEl) cEl.textContent = '';
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    if (!_trackers) { var d = await api('/trackers'); _trackers = (d && d.trackers) || []; }
+  } catch (e) {
+    grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load trackers. <button class="wv-pill" style="margin-left:8px;" onclick="loadTrackers()">Try again</button></div>';
+    return;
+  }
+  if (_arcView !== 'trackers') return;
+  if (!_trackers.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No trackers yet.</div>'; return; }
+  if (cEl) cEl.textContent = _trackers.length + ' tracker' + (_trackers.length !== 1 ? 's' : '');
+  grid.innerHTML = _trackers.map(function(t) {
+    var bg = coverGradient(t.name || '');
+    return '<div class="wv-comp-card" style="grid-column:span 2;" onclick="navigate(\'/tracker.html?t=' + encodeURIComponent(t.slug) + '\')">' +
+      '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
+        (t.cover ? '<img src="' + escHtml(t.cover) + '" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+      '</div></div>' +
+      '<div class="wv-comp-card-title">' + escHtml(t.name) + '</div>' +
+      '<div class="wv-comp-card-sub">' + t.eras + ' eras · ' + t.entries.toLocaleString() + ' picks · ' + t.have.toLocaleString() + ' on wavernrs</div></div>';
+  }).join('');
+}
 
 function artistCardHTML(a) {
   var bg = coverGradient(a.name || '');
