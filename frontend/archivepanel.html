@@ -434,8 +434,9 @@
       var bt = l.by_type || {};
       set('ov-types', Object.keys(bt).sort(function(a, b) { return (bt[b].remaining || 0) - (bt[a].remaining || 0); }).map(function(k) {
         var t = bt[k];
-        var status = t.stalled ? '<span style="color:var(--orange);">nothing finished in 3h</span>'
-          : t.remaining ? (t.rate_per_min ? t.rate_per_min + '/min · ' + _fmtEta(t.eta_min) : 'waiting its turn') : 'queue empty';
+        var status = t.failed_3h && !t.done_30m ? '<span style="color:var(--orange);">' + t.failed_3h + ' failing: ' + escHtml(String(t.fail_reason || '').slice(0, 46)) + '</span>'
+          : t.stalled ? '<span style="color:var(--orange);">nothing finished in 3h</span>'
+          : t.remaining ? (t.rate_per_min ? t.rate_per_min + '/min · ' + _fmtEta(t.eta_min) + (t.failed_3h ? ' · ' + t.failed_3h + ' failed' : '') : 'waiting its turn') : 'queue empty';
         return '<div style="background:var(--surface-2);border-radius:var(--r-md);padding:10px 12px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:700;">' + escHtml(LABEL[k] || k) + '</div>' + (t.running ? '<span class="wv-chip acc" style="font-size:10px;">' + t.running + ' running</span>' : '') + '</div>' +
           '<div style="font-size:20px;font-weight:900;letter-spacing:-.02em;">' + _n(t.remaining) + '<span style="font-size:11px;color:var(--text-3);font-weight:600;"> left</span></div>' +
