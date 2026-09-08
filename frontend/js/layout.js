@@ -525,7 +525,7 @@
     _loadNotifications();
     setInterval(function() {
       if (localStorage.getItem('token')) _loadNotifications();
-    }, 60000);
+    }, 180000);
   })();
 
   // ── Mobile drawer ─────────────────────────────────────────────
