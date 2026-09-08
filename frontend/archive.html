@@ -85,7 +85,6 @@ async function initArchive() {
   arcApplyView();
   _arcWatchSentinel();
   arcReload();
-  loadArtists();
 }
 
 // ── Comps: paged from the server ─────────────────────────────────────────────
@@ -108,9 +107,9 @@ async function arcLoadMore() {
     var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
       (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
     var page = null, lastErr = null;
-    for (var attempt = 0; attempt < 5; attempt++) {
+    for (var attempt = 0; attempt < 3; attempt++) {
       try { page = await api(url); break; }
-      catch (e) { lastErr = e; if (gen !== _arcGen) return; if (attempt === 4) throw e; await new Promise(function(r) { setTimeout(r, 2500 * (attempt + 1)); }); }
+      catch (e) { lastErr = e; if (gen !== _arcGen) return; if (attempt === 2) throw e; await new Promise(function(r) { setTimeout(r, 800 * (attempt + 1)); }); }
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
     var items = Array.isArray(page) ? page : (page.items || []);
@@ -150,7 +149,7 @@ function arcSearchInput() {
   clearTimeout(_arcSearchTimer);
   _arcSearchTimer = setTimeout(function() {
     _arcQuery = ((document.getElementById('arc-search') || {}).value || '').trim();
-    if (_arcView !== 'artists') arcReload(); else renderArtists();
+    if (_arcView !== 'artists') arcReload(); else loadArtists(true);
   }, 250);
 }
 
@@ -160,12 +159,27 @@ function arcSortChange() {
 }
 
 // ── Artist index ─────────────────────────────────────────────────────────────
-async function loadArtists() {
+var _artistsLoaded = false, _artistsLoading = false, _artistsTotal = 0, _artistsGen = 0;
+async function loadArtists(reset) {
+  if (_artistsLoading) return;
+  if (reset) { _archiveArtists = []; _artistsLoaded = false; _artistsTotal = 0; }
+  if (_artistsLoaded && _archiveArtists.length >= _artistsTotal) return;
+  _artistsLoading = true;
+  var gen = ++_artistsGen;
+  var grid = document.getElementById('archive-grid');
+  if (grid && !_archiveArtists.length) grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    var d = await api('/archive/artists?sort=comps');
-    _archiveArtists = (d && d.artists) || [];
+    var url = '/archive/artists?sort=comps&limit=120&offset=' + _archiveArtists.length + (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
+    var d = await api(url);
+    if (gen !== _artistsGen) return;
+    _archiveArtists = _archiveArtists.concat((d && d.artists) || []);
+    _artistsTotal = (d && d.total) || _archiveArtists.length;
+    _artistsLoaded = true;
   } catch (e) {
-    _archiveArtists = [];
+    if (gen !== _artistsGen) return;
+    if (!_archiveArtists.length && grid) grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load artists. <button class="wv-pill" style="margin-left:8px;" onclick="loadArtists(true)">Try again</button></div>';
+  } finally {
+    _artistsLoading = false;
   }
   if (_arcView === 'artists') renderArtists();
 }
@@ -174,24 +188,16 @@ var _arcArtistList = [];
 function renderArtists() {
   var grid = document.getElementById('archive-grid');
   if (!grid) return;
-  var q = _arcQuery.toLowerCase();
-  var artists = q ? _archiveArtists.filter(function(a) { return (a.name || '').toLowerCase().indexOf(q) !== -1; }) : _archiveArtists;
+  var artists = _archiveArtists;
   var cEl = document.getElementById('arc-count');
-  if (cEl) cEl.textContent = artists.length === _archiveArtists.length
-    ? _archiveArtists.length + ' artist' + (_archiveArtists.length !== 1 ? 's' : '')
-    : artists.length + ' of ' + _archiveArtists.length + ' artists';
-  if (!_archiveArtists.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No archived comps yet.</div>'; return; }
-  if (!artists.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match your search.</div>'; return; }
+  if (cEl) cEl.textContent = (_artistsTotal || artists.length).toLocaleString() + ' artist' + ((_artistsTotal || artists.length) !== 1 ? 's' : '');
+  if (!artists.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">' + (_arcQuery ? 'No artists match your search.' : 'No archived comps yet.') + '</div>'; return; }
   _arcArtistList = artists;
-  _arcShownArtists = Math.min(_ARC_PAGE, artists.length);
-  grid.innerHTML = artists.slice(0, _arcShownArtists).map(artistCardHTML).join('');
+  _arcShownArtists = artists.length;
+  grid.innerHTML = artists.map(artistCardHTML).join('');
 }
 function _arcMoreArtists() {
-  var grid = document.getElementById('archive-grid');
-  if (!grid || _arcShownArtists >= _arcArtistList.length) return;
-  var next = _arcArtistList.slice(_arcShownArtists, _arcShownArtists + _ARC_PAGE);
-  grid.insertAdjacentHTML('beforeend', next.map(artistCardHTML).join(''));
-  _arcShownArtists += next.length;
+  if (_archiveArtists.length < _artistsTotal) loadArtists();
 }
 
 // ── View toggle ──────────────────────────────────────────────────────────────
@@ -199,7 +205,7 @@ function arcSetView(view) {
   if (view === _arcView) return;
   _arcView = view;
   arcApplyView();
-  if (view === 'artists') { renderArtists(); return; }
+  if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
   _arcKind = view; // all | comps | edits
   arcReload();
 }
