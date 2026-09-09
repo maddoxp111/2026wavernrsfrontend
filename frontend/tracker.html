@@ -10,27 +10,42 @@
 
 <div id="view">
   <style>
-    #view .tk-hero { display:flex; gap:18px; align-items:flex-end; margin-bottom:22px; flex-wrap:wrap; }
-    #view .tk-hero .art { width:120px; height:120px; border-radius:16px; overflow:hidden; flex-shrink:0; box-shadow:0 8px 26px rgba(0,0,0,.35); }
-    #view .tk-hero .art img { width:100%; height:100%; object-fit:cover; }
-    #view .tk-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:18px 14px; }
+    #view .tk-top { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+    #view .tk-top h1 { margin:0; font-size:30px; font-weight:800; letter-spacing:-.03em; }
+    #view .tk-sub { font-size:12.5px; color:var(--text-3); margin-top:3px; }
+    #view .tk-tabs { display:inline-flex; background:var(--surface-2); border-radius:99px; padding:4px; gap:2px; }
+    #view .tk-tabs button { border:none; background:none; color:var(--text-2); font-size:14px; font-weight:700;
+      padding:8px 22px; border-radius:99px; cursor:pointer; transition:background .15s,color .15s; }
+    #view .tk-tabs button.on { background:var(--text); color:var(--bg); }
+    #view .tk-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:20px 14px; }
     #view .tk-era { cursor:pointer; }
-    #view .tk-era .cv { aspect-ratio:1; border-radius:12px; overflow:hidden; margin-bottom:8px; box-shadow:0 4px 14px rgba(0,0,0,.2); position:relative; }
-    #view .tk-era .cv img { width:100%; height:100%; object-fit:cover; }
-    #view .tk-era:hover .cv { transform:translateY(-2px); transition:transform .18s; }
+    #view .tk-era .cv { aspect-ratio:1; border-radius:10px; overflow:hidden; margin-bottom:8px;
+      box-shadow:0 4px 14px rgba(0,0,0,.25); transition:transform .16s; }
+    #view .tk-era:hover .cv { transform:translateY(-3px); }
+    #view .tk-era .cv img { width:100%; height:100%; object-fit:cover; display:block; }
     #view .tk-era .nm { font-size:13.5px; font-weight:700; line-height:1.3; }
     #view .tk-era .mt { font-size:11.5px; color:var(--text-3); margin-top:2px; }
-    #view .tk-sec { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); margin:26px 0 12px; }
-    #view .tk-row { display:flex; gap:12px; padding:10px; border-radius:12px; align-items:flex-start; }
-    #view .tk-row:hover { background:var(--surface-2); }
-    #view .tk-row .cv { width:56px; height:56px; border-radius:8px; overflow:hidden; flex-shrink:0; }
-    #view .tk-row .cv img { width:100%; height:100%; object-fit:cover; }
-    #view .tk-row .nm { font-weight:700; font-size:14.5px; }
-    #view .tk-row .by { font-size:12.5px; color:var(--text-2); }
-    #view .tk-row .ds { font-size:12.5px; color:var(--text-3); line-height:1.5; margin-top:3px; }
-    #view .tk-miss { opacity:.62; }
-    #view .tk-back { font-size:13px; color:var(--text-2); cursor:pointer; display:inline-block; margin-bottom:14px; }
+    #view .tk-group { font-size:11.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+      color:var(--text-3); margin:28px 0 12px; }
+    #view .tk-back { font-size:13px; color:var(--text-2); cursor:pointer; display:inline-block; margin-bottom:12px; }
     #view .tk-back:hover { color:var(--text); }
+    #view .tk-list { display:flex; flex-direction:column; gap:2px; }
+    #view .tk-row { display:flex; gap:12px; padding:10px; border-radius:10px; align-items:center; }
+    #view .tk-row.hit { cursor:pointer; }
+    #view .tk-row.hit:hover { background:var(--surface-2); }
+    #view .tk-row .cv { width:52px; height:52px; border-radius:7px; overflow:hidden; flex-shrink:0; }
+    #view .tk-row .cv img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .tk-row .nm { font-weight:700; font-size:14.5px; }
+    #view .tk-row .by { font-size:12.5px; color:var(--text-2); margin-top:1px; }
+    #view .tk-row .ds { font-size:12.5px; color:var(--text-3); line-height:1.45; margin-top:3px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    #view .tk-miss { opacity:.5; }
+    #view .tk-tag { font-size:10.5px; font-weight:700; color:var(--text-3); border:1px solid var(--border);
+      border-radius:99px; padding:2px 8px; white-space:nowrap; }
+    #view .tk-hero { display:flex; gap:16px; align-items:center; margin-bottom:6px; }
+    #view .tk-hero .art { width:96px; height:96px; border-radius:12px; overflow:hidden; flex-shrink:0;
+      box-shadow:0 8px 24px rgba(0,0,0,.35); }
+    #view .tk-hero .art img { width:100%; height:100%; object-fit:cover; display:block; }
   </style>
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
@@ -41,100 +56,111 @@
 <script src="/js/router.js?v=202609072220"></script>
 <script>
 (function () {
-  var esc = window.escHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
-  function grad(seed) { return (window.coverGradient ? window.coverGradient(seed || '') : 'linear-gradient(135deg,#2a2a34,#15151b)'); }
-  function el() { return document.getElementById('tk-body'); }
+  var esc = window.escHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); };
+  function grad(seed) { return window.coverGradient ? window.coverGradient(seed || '') : 'linear-gradient(135deg,#2a2a34,#15151b)'; }
+  function body() { return document.getElementById('tk-body'); }
 
-  async function renderTracker(slug) {
-    var b = el(); if (!b) return;
-    b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    var d;
-    try { d = await api('/trackers/' + encodeURIComponent(slug)); }
-    catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this tracker.</div>'; return; }
-    var t = d.tracker;
-    document.title = 'wavernrs — ' + t.name;
-    var html = '<div class="tk-back" onclick="navigate(\'/archive.html\')">← Archive</div>' +
-      '<div class="tk-hero">' +
-        '<div class="art" style="background:' + grad(t.name) + ';">' + (t.cover ? '<img src="' + esc(t.cover) + '" onerror="this.style.opacity=0">' : '') + '</div>' +
-        '<div style="flex:1;min-width:220px;">' +
-          '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Yedits tracker</div>' +
-          '<h1 style="margin:4px 0 6px;font-size:32px;font-weight:800;letter-spacing:-.03em;">' + esc(t.name) + '</h1>' +
-          '<div style="font-size:13.5px;color:var(--text-2);max-width:560px;line-height:1.55;">' + esc(t.blurb || '') + '</div>' +
-          '<div style="font-size:12.5px;color:var(--text-3);margin-top:8px;">' + t.eras + ' eras · ' + t.entries.toLocaleString() + ' picks · ' + t.have.toLocaleString() + ' already on wavernrs' +
+  var _slug = null, _kind = 'comp', _cache = {};
+
+  function header(t, kind) {
+    return '<div class="tk-back" onclick="navigate(\'/archive.html\')">← Archive</div>' +
+      '<div class="tk-top">' +
+        '<div style="flex:1;min-width:200px;">' +
+          '<h1>' + esc(t.name) + '</h1>' +
+          '<div class="tk-sub">' + t.comps.toLocaleString() + ' comps · ' + t.edits.toLocaleString() + ' edits · ' +
+            t.have.toLocaleString() + ' on wavernrs' +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
         '</div>' +
+        '<div class="tk-tabs">' +
+          '<button class="' + (kind === 'comp' ? 'on' : '') + '" onclick="tkKind(\'comp\')">Comps</button>' +
+          '<button class="' + (kind === 'edit' ? 'on' : '') + '" onclick="tkKind(\'edit\')">Edits</button>' +
+        '</div>' +
       '</div>';
-    (d.sections || []).forEach(function (sec) {
-      html += '<div class="tk-sec">' + esc(sec.name) + ' · ' + sec.eras.length + ' eras</div><div class="tk-grid">';
-      html += sec.eras.map(function (e) {
-        var n = e.comps + e.edits;
-        return '<div class="tk-era" onclick="tkEra(\'' + esc(t.slug) + '\',\'' + esc(e.slug) + '\')">' +
-          '<div class="cv" style="background:' + grad(e.name) + ';">' + (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
-          '<div class="nm">' + esc(e.name) + '</div>' +
-          '<div class="mt">' + n + ' pick' + (n !== 1 ? 's' : '') + ' · ' + e.have + ' here</div></div>';
-      }).join('');
-      html += '</div>';
-    });
-    b.innerHTML = html;
   }
 
-  window.tkEra = async function (slug, eraSlug) {
-    var b = el(); if (!b) return;
-    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug));
+  async function renderTracker(slug, kind) {
+    _slug = slug; _kind = kind;
+    var b = body(); if (!b) return;
+    var ck = slug + '|' + kind, d = _cache[ck];
+    if (!d) {
+      b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try { d = await api('/trackers/' + encodeURIComponent(slug) + '?kind=' + kind); _cache[ck] = d; }
+      catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this tracker.</div>'; return; }
+    }
+    if (_slug !== slug || _kind !== kind) return;
+    document.title = 'wavernrs — ' + d.tracker.name;
+    var html = header(d.tracker, kind);
+    if (!d.groups.length) html += '<div class="wv-empty">No ' + (kind === 'comp' ? 'comps' : 'edits') + ' in this tracker.</div>';
+    (d.groups || []).forEach(function (g, gi) {
+      if (d.groups.length > 1 || g.name !== 'Eras') html += '<div class="tk-group">' + esc(g.name) + '</div>';
+      else if (gi === 0) html += '<div style="height:6px;"></div>';
+      html += '<div class="tk-grid">' + g.eras.map(function (e) {
+        return '<div class="tk-era" onclick="tkEra(\'' + esc(e.slug) + '\')">' +
+          '<div class="cv" style="background:' + grad(e.name) + ';">' +
+            (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
+          '<div class="nm">' + esc(e.name) + '</div>' +
+          '<div class="mt">' + e.n + (kind === 'comp' ? ' comp' : ' edit') + (e.n !== 1 ? 's' : '') +
+            ' · ' + e.have + ' here</div></div>';
+      }).join('') + '</div>';
+    });
+    b.innerHTML = html;
+    history.replaceState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + (kind === 'edit' ? '&kind=edit' : ''));
+  }
+
+  window.tkKind = function (kind) { renderTracker(_slug, kind); window.scrollTo(0, 0); };
+
+  window.tkEra = async function (eraSlug) {
+    var b = body(); if (!b) return;
+    var slug = _slug, kind = _kind;
     b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     var d;
-    try { d = await api('/trackers/' + encodeURIComponent(slug) + '/era/' + encodeURIComponent(eraSlug)); }
+    try { d = await api('/trackers/' + encodeURIComponent(slug) + '/era/' + encodeURIComponent(eraSlug) + '?kind=' + kind); }
     catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this era.</div>'; return; }
     var t = d.tracker, era = d.era;
     document.title = 'wavernrs — ' + era.name;
-    var comps = d.items.filter(function (x) { return x.kind === 'comp'; });
-    var edits = d.items.filter(function (x) { return x.kind !== 'comp'; });
-    var html = '<div class="tk-back" onclick="tkOpen(\'' + esc(slug) + '\')">← ' + esc(t.name) + '</div>' +
+    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'edit' ? '&kind=edit' : ''));
+    var here = d.items.filter(function (x) { return x.album; }).length;
+    var html = '<div class="tk-back" onclick="tkBack()">← ' + esc(t.name) + '</div>' +
       '<div class="tk-hero">' +
-        '<div class="art" style="background:' + grad(era.name) + ';">' + (era.cover ? '<img src="' + esc(era.cover) + '" onerror="this.style.opacity=0">' : '') + '</div>' +
-        '<div style="flex:1;min-width:220px;">' +
-          '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">' + esc(t.name) + '</div>' +
-          '<h1 style="margin:4px 0 6px;font-size:32px;font-weight:800;letter-spacing:-.03em;">' + esc(era.name) + '</h1>' +
-          '<div style="font-size:12.5px;color:var(--text-3);">' + d.items.length + ' picks · ' + era.have + ' on wavernrs' + (era.missing ? ' · ' + era.missing + ' not here yet' : '') + '</div>' +
+        '<div class="art" style="background:' + grad(era.name) + ';">' +
+          (era.cover ? '<img src="' + esc(era.cover) + '" onerror="this.style.opacity=0">' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">' +
+            esc(t.name) + ' · ' + (kind === 'comp' ? 'Comps' : 'Edits') + '</div>' +
+          '<h1 style="margin:3px 0 4px;font-size:30px;font-weight:800;letter-spacing:-.03em;">' + esc(era.name) + '</h1>' +
+          '<div class="tk-sub">' + d.items.length + ' listed · ' + here + ' on wavernrs</div>' +
+        '</div></div>' +
+      '<div style="height:14px;"></div><div class="tk-list">';
+    html += d.items.map(function (x) {
+      var a = x.album;
+      return '<div class="tk-row ' + (a ? 'hit' : 'tk-miss') + '"' +
+          (a ? ' onclick="navigate(\'/album.html?id=' + a.id + '\')"' : '') + '>' +
+        '<div class="cv" style="background:' + grad(x.name) + ';">' +
+          (a && a.cover_url ? '<img src="' + esc(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="nm">' + (x.starred ? '⭐ ' : '') + esc(x.name) + '</div>' +
+          (x.creator ? '<div class="by">' + esc(x.creator) + '</div>' : '') +
+          (x.description ? '<div class="ds">' + esc(x.description) + '</div>' : '') +
         '</div>' +
-      '</div>';
-
-    function rows(list, label) {
-      if (!list.length) return '';
-      var out = '<div class="tk-sec">' + label + ' · ' + list.length + '</div>';
-      out += list.map(function (x) {
-        var a = x.album;
-        var click = a ? ' onclick="navigate(\'/album.html?id=' + a.id + '\')" style="cursor:pointer;"' : '';
-        return '<div class="tk-row' + (a ? '' : ' tk-miss') + '"' + click + '>' +
-          '<div class="cv" style="background:' + grad(x.name) + ';">' + (a && a.cover_url ? '<img src="' + esc(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div class="nm">' + (x.starred ? '<span title="Standout pick">⭐ </span>' : '') + esc(x.name) +
-              (a ? '' : ' <span style="font-size:11px;color:var(--text-3);font-weight:600;">not on wavernrs yet</span>') + '</div>' +
-            (x.creator ? '<div class="by">' + esc(x.creator) + '</div>' : '') +
-            (x.description ? '<div class="ds">' + esc(x.description) + '</div>' : '') +
-            (a ? '<div style="font-size:11.5px;color:var(--text-3);margin-top:3px;">' + (a.track_count || 0) + ' track' + (a.track_count === 1 ? '' : 's') + '</div>' : '') +
-          '</div></div>';
-      }).join('');
-      return out;
-    }
-    html += rows(comps, 'Comps') + rows(edits, 'Edits');
+        (a ? '<span class="tk-tag">' + (a.track_count || 0) + ' track' + (a.track_count === 1 ? '' : 's') + '</span>'
+           : '<span class="tk-tag">not here yet</span>') +
+        '</div>';
+    }).join('') + '</div>';
     b.innerHTML = html;
     window.scrollTo(0, 0);
   };
 
-  window.tkOpen = function (slug) {
-    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug));
-    renderTracker(slug);
-  };
+  window.tkBack = function () { renderTracker(_slug, _kind); window.scrollTo(0, 0); };
 
-  function boot() {
+  (function boot() {
     var p = new URLSearchParams(location.search);
     var slug = p.get('t'), era = p.get('era');
+    var kind = p.get('kind') === 'edit' ? 'edit' : 'comp';
     if (!slug) { navigate('/archive.html'); return; }
-    if (era) window.tkEra(slug, era); else renderTracker(slug);
-  }
-  if (typeof initPlayer === 'function') initPlayer();
-  boot();
+    if (typeof initPlayer === 'function') initPlayer();
+    _slug = slug; _kind = kind;
+    if (era) window.tkEra(era); else renderTracker(slug, kind);
+  })();
 })();
 </script>
 </body>
