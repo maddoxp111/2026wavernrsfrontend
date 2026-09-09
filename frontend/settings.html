@@ -183,6 +183,19 @@
 
         </div>
         <div id="connections-alert" style="margin-top:12px;font-size:13px;"></div>
+
+        <div id="claimable-box" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;">Comps that might be yours</div>
+          <div style="font-size:13px;color:var(--text-2);line-height:1.55;margin-bottom:12px;">
+            These came from posts under your connected accounts. Tick the ones you actually made and they move onto your profile as your uploads. Leave the rest — they stay in the archive.
+          </div>
+          <div id="claimable-list" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;"></div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+            <button class="wv-pill brand" id="claim-btn" onclick="claimSelected()">Add selected to my profile</button>
+            <button class="wv-pill" onclick="claimToggleAll()">Select all</button>
+            <span id="claim-msg" style="font-size:12.5px;color:var(--text-3);"></span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -284,6 +297,7 @@
       _connections = await api('/oauth/connections');
       renderConnections();
       loadLastfm();
+      loadClaimable();
       document.getElementById('connections-loading').style.display = 'none';
       document.getElementById('connections-content').style.display = '';
     } catch (_) {
@@ -292,6 +306,49 @@
       if (section) section.style.display = 'none';
     }
   }
+
+  var _claimable = [];
+  async function loadClaimable() {
+    var box = document.getElementById('claimable-box');
+    if (!box) return;
+    try {
+      var d = await api('/oauth/claimable');
+      _claimable = (d && d.items) || [];
+    } catch (_) { return; }
+    if (!_claimable.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    document.getElementById('claimable-list').innerHTML = _claimable.map(function (a) {
+      return '<label style="display:flex;gap:10px;align-items:center;padding:7px 9px;border-radius:9px;background:var(--surface-2);cursor:pointer;">' +
+        '<input type="checkbox" value="' + a.id + '" style="width:16px;height:16px;flex-shrink:0;">' +
+        '<div style="width:34px;height:34px;border-radius:5px;overflow:hidden;background:var(--surface-3);flex-shrink:0;">' +
+          (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" style="width:100%;height:100%;object-fit:cover;">' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title || 'Untitled') + '</div>' +
+          '<div style="font-size:11.5px;color:var(--text-3);">' + (a.track_count || 0) + ' track' + (a.track_count === 1 ? '' : 's') +
+            (a.archive_artist_name ? ' · listed as ' + escHtml(a.archive_artist_name) : '') + '</div>' +
+        '</div>' +
+        '<a href="/album.html?id=' + a.id + '" target="_blank" style="font-size:11.5px;color:var(--brand);font-weight:600;flex-shrink:0;">open</a>' +
+      '</label>';
+    }).join('');
+  }
+  window.claimToggleAll = function () {
+    var boxes = document.querySelectorAll('#claimable-list input[type=checkbox]');
+    var anyOff = [].some.call(boxes, function (b) { return !b.checked; });
+    [].forEach.call(boxes, function (b) { b.checked = anyOff; });
+  };
+  window.claimSelected = async function () {
+    var ids = [].map.call(document.querySelectorAll('#claimable-list input[type=checkbox]:checked'), function (b) { return b.value; });
+    var msg = document.getElementById('claim-msg');
+    if (!ids.length) { msg.textContent = 'Nothing ticked.'; return; }
+    var btn = document.getElementById('claim-btn');
+    btn.disabled = true; msg.textContent = 'Moving ' + ids.length + '…';
+    try {
+      var r = await api('/oauth/claim', { method: 'POST', body: JSON.stringify({ album_ids: ids }) });
+      msg.textContent = (r.claimed || 0) + ' moved onto your profile.';
+      await loadClaimable();
+    } catch (e) { msg.textContent = 'Error: ' + e.message; }
+    btn.disabled = false;
+  };
 
   function renderConnections() {
     for (var p of ['discord', 'google', 'reddit']) {

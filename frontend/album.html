@@ -61,6 +61,7 @@
       loadMoreLikeThis();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
       loadTrackerPills(album.id);
+      showDisown(album);
     } catch (err) {
       console.error('album render error', err);
     }
@@ -131,6 +132,7 @@
             <div class="wv-kind">${album.is_archive ? 'Archived compilation' : 'Compilation'}</div>
             ${badgePills ? `<div style="margin:6px 0 2px;">${badgePills}</div>` : ''}
             <div id="wv-tracker-pills" style="margin:6px 0 2px;"></div>
+            <div id="wv-disown" style="margin:8px 0 2px;display:none;"></div>
             ${isLowQualityCover ? `<div style="margin:8px 0 2px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);background:var(--surface-2);border-radius:8px;padding:7px 11px;max-width:420px;line-height:1.4;"><span style="font-size:13px;">🖼️</span><span>Low quality cover — taken from the Yedits tracker. Got the original? <a href="/claim.html" style="color:var(--brand);font-weight:600;">Send it in</a>.</span></div>` : ''}
             <div class="wv-hero-title">${escHtml(album.title)}</div>
             <div class="wv-hero-sub">
@@ -761,6 +763,24 @@
       if (el) el.remove();
     } catch(err) { alert(err.message || 'Failed to delete'); }
   }
+
+  function showDisown(album) {
+    var box = document.getElementById('wv-disown');
+    if (!box || album.is_archive) return;
+    var me = null;
+    try { me = JSON.parse(localStorage.getItem('user')); } catch (_) {}
+    if (!me || !album.artists || album.artists.user_id !== me.id) return;
+    box.style.display = '';
+    box.innerHTML = '<button class="wv-pill" style="font-size:12px;padding:6px 12px;" onclick="disownAlbum(\'' + album.id + '\')">This isn\'t mine</button>' +
+      '<span style="font-size:11.5px;color:var(--text-3);margin-left:8px;">Sends it back to the archive.</span>';
+  }
+  window.disownAlbum = async function (id) {
+    if (!confirm('Take this off your profile and return it to the archive?')) return;
+    try {
+      await api('/oauth/disown', { method: 'POST', body: JSON.stringify({ album_ids: [id] }) });
+      location.reload();
+    } catch (e) { alert(e.message || 'Failed'); }
+  };
 
   async function loadTrackerPills(id) {
     var box = document.getElementById('wv-tracker-pills');
