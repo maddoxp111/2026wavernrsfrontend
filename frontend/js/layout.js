@@ -1192,3 +1192,84 @@
     makeField({ canvas: cv, scrolls: false, density: 2.6, size: 0.6, blend: 'normal', getHost: function () { return document.getElementById('player-fullscreen'); } });
   })();
 })();
+
+/* ── Ownership review ──────────────────────────────────────────────────────
+   Comps that landed on a profile automatically get shown to their supposed
+   owner once. Nothing else happens on the page until every one is answered. */
+(function () {
+  if (!localStorage.getItem('token')) return;
+  var API = (typeof API_BASE !== 'undefined' ? API_BASE : '/api');
+  var esc = window.escHtml || function (x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); };
+  var items = [], at = 0, decisions = [];
+
+  function card() {
+    var it = items[at];
+    var pct = Math.round((at / items.length) * 100);
+    return '<div style="max-width:440px;width:100%;background:var(--surface);border-radius:18px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.6);">' +
+      '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Is this yours?</div>' +
+      '<div style="font-size:13px;color:var(--text-2);line-height:1.55;margin:6px 0 16px;">' +
+        'These were added to your profile automatically when you connected an account. Tell us which ones you actually made — the rest go back to the archive.' +
+      '</div>' +
+      '<div style="height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-bottom:16px;">' +
+        '<div style="height:100%;width:' + pct + '%;background:var(--brand);border-radius:99px;transition:width .2s;"></div></div>' +
+      '<div style="display:flex;gap:14px;align-items:center;margin-bottom:18px;">' +
+        '<div style="width:76px;height:76px;border-radius:10px;overflow:hidden;background:var(--surface-3);flex-shrink:0;">' +
+          (it.cover_url ? '<img src="' + esc(it.cover_url) + '" style="width:100%;height:100%;object-fit:cover;">' : '') + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:16px;font-weight:800;line-height:1.25;">' + esc(it.title || 'Untitled') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">' + (it.track_count || 0) + ' track' + (it.track_count === 1 ? '' : 's') + '</div>' +
+          (it.shared_link ? '<div style="font-size:11.5px;color:var(--orange);margin-top:5px;">Came from a link someone posted</div>' : '') +
+        '</div></div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="wv-pill brand" style="flex:1;padding:11px;font-weight:700;" onclick="wvReview(true)">I made this</button>' +
+        '<button class="wv-pill" style="flex:1;padding:11px;font-weight:700;" onclick="wvReview(false)">Not mine</button>' +
+      '</div>' +
+      '<div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:12px;">' + (at + 1) + ' of ' + items.length +
+        ' · <a href="/album.html?id=' + esc(it.id) + '" target="_blank" style="color:var(--brand);">open it</a></div>' +
+      '</div>';
+  }
+
+  function paint() {
+    var el = document.getElementById('wv-review-overlay');
+    if (!el) return;
+    if (at >= items.length) return submit(el);
+    el.innerHTML = card();
+  }
+
+  async function submit(el) {
+    el.innerHTML = '<div style="color:var(--text-2);font-size:14px;">Saving…</div>';
+    try {
+      await fetch(API + '/oauth/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+        body: JSON.stringify({ decisions: decisions }),
+      });
+    } catch (_) {}
+    el.remove();
+    document.body.style.overflow = '';
+    if (decisions.some(function (d) { return !d.mine; })) location.reload();
+  }
+
+  window.wvReview = function (mine) {
+    decisions.push({ album_id: items[at].id, mine: !!mine });
+    at++;
+    paint();
+  };
+
+  (async function () {
+    var d;
+    try {
+      var r = await fetch(API + '/oauth/review', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+      if (!r.ok) return;
+      d = await r.json();
+    } catch (_) { return; }
+    items = (d && d.items) || [];
+    if (!items.length) return;
+    var el = document.createElement('div');
+    el.id = 'wv-review-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    document.body.appendChild(el);
+    document.body.style.overflow = 'hidden';
+    paint();
+  })();
+})();
