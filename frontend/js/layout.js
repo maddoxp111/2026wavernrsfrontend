@@ -210,6 +210,10 @@
   window.refreshSidebarLibrary = function() { _libData = null; _renderLib(); if (_libKind !== 'recent') _loadLibData(); };
   // The player appends to recently_played; re-render when it does.
   window.addEventListener('storage', function(e) { if (e.key === 'recently_played') _renderLib(); });
+  // Staff can fix a missing cover on any comp, not just their own.
+  try {
+    window._wvIsStaff = sessionStorage.getItem('wv_is_mod') === 'true' || sessionStorage.getItem('wv_is_archiver') === 'true';
+  } catch (_) { window._wvIsStaff = false; }
   window._sidebarLibRender = _renderLib;
 
   // ── Topbar HTML ───────────────────────────────────────────────
