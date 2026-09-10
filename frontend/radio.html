@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609102025">
+  <link rel="stylesheet" href="/css/style.css?v=202609102050">
 </head>
 <body>
 <div id="view">
@@ -22,8 +22,6 @@
     .rd-card-likes { font-size:12px; color:var(--text-3); margin-top:6px; }
   </style>
   <div class="wv-empty">Loading…</div>
-</div>
-
 <div id="rd-fs" style="display:none;">
   <style>
     #rd-fs { position:fixed; inset:0; z-index:250; background:#000; color:#fff; overflow:hidden; font-family:inherit; }
@@ -100,21 +98,28 @@
   <div class="rd-heart" id="rd-heart" onclick="likeTap(event)"><span class="h">♥</span><span id="rd-likes">0</span></div>
   <div class="rd-foot" id="rd-foot"></div>
 </div>
+</div>
 
-<script src="/js/api.js?v=202609102025"></script>
-<script src="/js/layout.js?v=202609102025"></script>
-<script src="/js/player.js?v=202609102025"></script>
-<script src="/js/router.js?v=202609102025"></script>
+<script src="/js/api.js?v=202609102050"></script>
+<script src="/js/layout.js?v=202609102050"></script>
+<script src="/js/player.js?v=202609102050"></script>
+<script src="/js/router.js?v=202609102050"></script>
 <script>
 var _lastLyricIdx = -2;
 var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false, _stations = [];
 
 function fmtN(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n); }
 function setView(html) { var v = document.getElementById('view'); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
-function fsEl() { return document.getElementById('rd-fs'); }
+function fsEl() { return _mountFs(); }
+function _mountFs() {
+  var fs = document.getElementById('rd-fs');
+  if (fs && fs.parentNode !== document.body) document.body.appendChild(fs);
+  return fs;
+}
 
 async function init() {
   document.title = 'wavernrs — radio';
+  _mountFs();
   await loadList();
   var s = new URLSearchParams(location.search).get('s');
   if (s) openStation(s);
