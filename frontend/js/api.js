@@ -62,9 +62,13 @@ async function api(path, options = {}) {
   if (timer) clearTimeout(timer);
 
   const data = await res.json().catch(() => ({}));
-  // The page that made this request has been navigated away from: never
-  // resolve, so its stale render can't overwrite the page now on screen.
-  if ((window._wvNavGen || 0) !== navGen) return new Promise(() => {});
+  // The page that made this request has been navigated away from. Reject so the
+  // caller stops cleanly — hanging forever left spinners on screen for good.
+  if ((window._wvNavGen || 0) !== navGen) {
+    const err = new Error('Navigated away');
+    err.navAborted = true;
+    throw err;
+  }
   if (!res.ok) {
     _handleAuthFailure(res, data);
     throw new Error(data.error || `Request failed (${res.status})`);

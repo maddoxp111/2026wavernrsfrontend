@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609100325">
+  <link rel="stylesheet" href="/css/style.css?v=202609101203">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609100325"></script>
-<script src="/js/layout.js?v=202609100325"></script>
-<script src="/js/player.js?v=202609100325"></script>
-<script src="/js/router.js?v=202609100325"></script>
+<script src="/js/api.js?v=202609101203"></script>
+<script src="/js/layout.js?v=202609101203"></script>
+<script src="/js/player.js?v=202609101203"></script>
+<script src="/js/router.js?v=202609101203"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -93,6 +93,12 @@ async function initArchive() {
   _arcWatchSentinel();
   arcReload();
   loadTrackerTabs();
+  setTimeout(function () {
+    var g = document.getElementById('archive-grid');
+    if (g && !_arcItems.length && g.querySelector('.spinner')) {
+      g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">The archive is taking too long to load. <button class="wv-pill" style="margin-left:8px;" onclick="arcReload()">Try again</button></div>';
+    }
+  }, 20000);
 }
 
 // ── Comps: paged from the server ─────────────────────────────────────────────
@@ -117,7 +123,13 @@ async function arcLoadMore() {
     var page = null, lastErr = null;
     for (var attempt = 0; attempt < 3; attempt++) {
       try { page = await api(url); break; }
-      catch (e) { lastErr = e; if (gen !== _arcGen) return; if (attempt === 2) throw e; await new Promise(function(r) { setTimeout(r, 800 * (attempt + 1)); }); }
+      catch (e) {
+        lastErr = e;
+        if (e && e.navAborted) return;
+        if (gen !== _arcGen) return;
+        if (attempt === 2) throw e;
+        await new Promise(function(r) { setTimeout(r, 800 * (attempt + 1)); });
+      }
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
     var items = Array.isArray(page) ? page : (page.items || []);
@@ -147,7 +159,7 @@ async function arcLoadMore() {
   } catch (err) {
     if (gen !== _arcGen) return;
     var g = document.getElementById('archive-grid');
-    if (g && !_arcItems.length) g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not reach the server. <button class="wv-pill" style="margin-left:8px;" onclick="location.reload()">Try again</button></div>';
+    if (g && !_arcItems.length) g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load the archive. <button class="wv-pill" style="margin-left:8px;" onclick="arcReload()">Try again</button></div>';
   } finally {
     if (gen === _arcGen) { _arcLoading = false; if (more) more.style.display = 'none'; }
   }
