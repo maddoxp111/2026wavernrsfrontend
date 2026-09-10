@@ -54,10 +54,9 @@ window.navigate = async function(url) {
       window._updateNavActive();
     }
 
-    // Extract and run the last inline <script> (the page init block)
-    const inlineScripts = [...doc.querySelectorAll('script:not([src])')];
-    const pageScript = inlineScripts[inlineScripts.length - 1];
-    if (pageScript) {
+    // Run every inline <script> the page has, in order. Running only the last
+    // one left pages whose helpers live in an earlier block half-defined.
+    for (const pageScript of doc.querySelectorAll('script:not([src])')) {
       const s = document.createElement('script');
       s.textContent = pageScript.textContent;
       document.head.appendChild(s);
