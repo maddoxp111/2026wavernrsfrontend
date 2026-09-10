@@ -2000,12 +2000,26 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
 /* Hero header: big type, art with hard shadow */
 .wv-hero { padding: 8px 0 24px; }
 .wv-hero-art { border-radius: var(--r-art); box-shadow: 0 4px 60px rgba(0,0,0,0.5); width: 232px; height: 232px; }
-.wv-hero-title { font-size: clamp(30px, 4.5vw, 56px); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin: 8px 0 14px; }
+.wv-hero-title {
+  font-size: clamp(26px, 4.5vw, 56px); font-weight: 900; letter-spacing: -0.04em;
+  line-height: 1.03; margin: 8px 0 14px;
+  overflow-wrap: anywhere; word-break: break-word; max-width: 100%;
+}
 .wv-hero-sub { font-size: 14px; font-weight: 500; color: var(--text); }
 .wv-hero-sub a:hover { text-decoration: underline; }
 .wv-hero-meta { color: var(--text-2); }
 .wv-hero-actions { margin-top: 18px; gap: 14px; }
 @media (max-width: 640px) { .wv-hero-art { width: min(60vw, 220px); height: min(60vw, 220px); } }
+@media (max-width: 640px) {
+  /* long comp names have to wrap instead of running off the screen */
+  .wv-hero-title { font-size: clamp(22px, 7.5vw, 34px); }
+  .wv-hero, .wv-hero-sub, .wv-hero-meta { max-width: 100%; min-width: 0; }
+  .wv-hero-sub, .wv-hero-meta { overflow-wrap: anywhere; }
+}
+/* tracker / badge pills wrap and never push the page sideways */
+#wv-tracker-pills { display: flex; flex-wrap: wrap; gap: 5px; max-width: 100%; }
+#wv-tracker-pills > a { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wv-badge-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
 
 /* Section heads */
 .wv-sec-head { margin: 28px 0 10px; }
