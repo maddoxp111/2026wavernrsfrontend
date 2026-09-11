@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — mod panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609110333">
+  <link rel="stylesheet" href="/css/style.css?v=202609111900">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609110333"></script>
-<script src="/js/layout.js?v=202609110333"></script>
-<script src="/js/player.js?v=202609110333"></script>
-<script src="/js/router.js?v=202609110333"></script>
+<script src="/js/api.js?v=202609111900"></script>
+<script src="/js/layout.js?v=202609111900"></script>
+<script src="/js/player.js?v=202609111900"></script>
+<script src="/js/router.js?v=202609111900"></script>
 <script>
   var _allUsers = [];
 
@@ -127,6 +127,10 @@
 
         // Uploads tab
         '<div id="mod-tab-uploads" style="display:none;">' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">' +
+            '<input id="uploads-q" class="wv-input" placeholder="Search every comp and edit by title, artist name or account…" style="flex:1;min-width:220px;max-width:460px;padding:8px 12px;font-size:13.5px;" oninput="uploadsSearchInput()">' +
+            '<span id="uploads-count" style="font-size:12px;color:var(--text-3);"></span>' +
+          '</div>' +
           '<div id="uploads-list"><div class="loading"><div class="spinner"></div></div></div>' +
         '</div>' +
 
@@ -435,14 +439,20 @@
   }
 
   // ── Uploads ───────────────────────────────────────────────────────────────
+  var _uploadsTimer = null, _uploadsGen = 0;
+  window.uploadsSearchInput = function() { clearTimeout(_uploadsTimer); _uploadsTimer = setTimeout(loadUploads, 250); };
   async function loadUploads() {
     var el = document.getElementById('uploads-list');
     if (!el) return;
+    var q = ((document.getElementById('uploads-q') || {}).value || '').trim();
+    var gen = ++_uploadsGen;
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      var r = await fetch(API_BASE + '/mod/uploads', { headers: authHeaders() });
+      var r = await fetch(API_BASE + '/mod/uploads' + (q ? '?q=' + encodeURIComponent(q) : ''), { headers: authHeaders() });
       var data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Failed');
+      if (gen !== _uploadsGen) return;
+      var cnt = document.getElementById('uploads-count'); if (cnt) cnt.textContent = q ? (data.length + ' result' + (data.length === 1 ? '' : 's') + ' for "' + q + '"') : 'Latest 50 uploads';
       renderUploads(data);
     } catch (err) {
       if (el) el.innerHTML = '<div style="color:var(--red);">' + escHtml(err.message) + '</div>';
