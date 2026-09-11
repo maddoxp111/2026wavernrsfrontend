@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609102050">
+  <link rel="stylesheet" href="/css/style.css?v=202609110244">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609102050"></script>
-<script src="/js/layout.js?v=202609102050"></script>
-<script src="/js/player.js?v=202609102050"></script>
-<script src="/js/router.js?v=202609102050"></script>
+<script src="/js/api.js?v=202609110244"></script>
+<script src="/js/layout.js?v=202609110244"></script>
+<script src="/js/player.js?v=202609110244"></script>
+<script src="/js/router.js?v=202609110244"></script>
 <script>
   initPlayer();
 
@@ -254,7 +254,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, profile it belongs to, description, cover, tracks. Move comps between profiles, merge comps, rename and merge profiles. Select several for bulk actions.</div></div>' +
-            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button></div>' +
+            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button></div>' +
           '</div>' +
           '<div id="mg-comps">' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
@@ -284,6 +284,14 @@
               '<button class="wv-see-all" onclick="mgAClearSel()">Clear</button>' +
             '</div>' +
             '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
+          '</div>' +
+          '<div id="mg-trackers" style="display:none;">' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Tracker comps that have no album on the site yet. Search for the right comp and hit Match: the album takes the tracker\'s title and creator name, gets the tracker badge, and is taken off any user profile it was claimed under.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
+              '<input id="mg-tq" class="wv-input" placeholder="Filter tracker entries…" style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgTrackersRender()">' +
+              '<span id="mg-tcount" style="font-size:12px;color:var(--text-3);"></span>' +
+            '</div>' +
+            '<div id="mg-tlist" style="display:flex;flex-direction:column;gap:6px;"></div>' +
           '</div>' +
           '<div id="mg-editor" style="display:none;margin-top:14px;"></div>' +
         '</div>' +
@@ -1451,9 +1459,81 @@
   window.mgTab = function(t) {
     document.getElementById('mg-comps').style.display = t === 'comps' ? '' : 'none';
     document.getElementById('mg-artists').style.display = t === 'artists' ? '' : 'none';
+    document.getElementById('mg-trackers').style.display = t === 'trackers' ? '' : 'none';
     document.getElementById('mg-tab-comps').classList.toggle('on', t === 'comps');
     document.getElementById('mg-tab-artists').classList.toggle('on', t === 'artists');
+    document.getElementById('mg-tab-trackers').classList.toggle('on', t === 'trackers');
     if (t === 'artists' && !_mg.artists.length) mgArtistsLoad();
+    if (t === 'trackers' && !_mg.trackers) mgTrackersLoad();
+  };
+
+  // ── Tracker hand-matching ─────────────────────────────────────────────
+  _mg.trackers = null; _mg.tpick = {}; _mg.ttimer = {};
+  window.mgTrackersLoad = async function() {
+    var list = document.getElementById('mg-tlist'); if (!list) return;
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try { var d = await api('/trackers/unmatched'); _mg.trackers = d.items || []; }
+    catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    mgTrackersRender();
+  };
+  window.mgTrackersRender = function() {
+    var list = document.getElementById('mg-tlist'); if (!list || !_mg.trackers) return;
+    var q = ((document.getElementById('mg-tq') || {}).value || '').toLowerCase().trim();
+    var items = _mg.trackers.filter(function(e) { return !q || (e.name + ' ' + e.creator + ' ' + e.era + ' ' + e.tracker_name).toLowerCase().indexOf(q) >= 0; });
+    document.getElementById('mg-tcount').textContent = items.length + ' of ' + _mg.trackers.length + ' unmatched';
+    if (!items.length) { list.innerHTML = '<div class="wv-empty">Every tracker comp is matched.</div>'; return; }
+    list.innerHTML = items.map(function(e) {
+      var links = (e.links || []).map(function(u) { return '<a href="' + escHtml(u) + '" target="_blank" rel="noopener" style="font-size:11.5px;">' + escHtml(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 34)) + '</a>'; }).join(' · ');
+      return '<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--r-md);" data-tkey="' + escHtml(e.key) + '">' +
+        '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;">' +
+          '<b style="font-size:13.5px;">' + escHtml(e.name) + '</b><span style="font-size:12.5px;color:var(--text-2);">' + escHtml(e.creator || 'Unknown') + '</span>' +
+          '<span style="font-size:11px;color:var(--text-3);">' + escHtml(e.tracker_name) + ' · ' + escHtml(e.era || '') + (e.section && e.section !== 'Comps' ? ' · ' + escHtml(e.section) : '') + '</span>' +
+        '</div>' +
+        (e.description ? '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">' + escHtml(String(e.description).slice(0, 220)) + '</div>' : '') +
+        (links ? '<div style="margin-top:3px;">' + links + '</div>' : '') +
+        '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
+          '<input class="wv-input" placeholder="Search the archive for this comp…" style="flex:1;min-width:200px;max-width:420px;padding:6px 10px;font-size:13px;" oninput="mgTrackerSearch(this)">' +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgTrackerMatch(this)" disabled>Match</button>' +
+        '</div>' +
+        '<div class="mg-tresults" style="display:none;flex-direction:column;gap:3px;margin-top:6px;"></div>' +
+      '</div>';
+    }).join('');
+  };
+  window.mgTrackerSearch = function(inp) {
+    var row = inp.closest('[data-tkey]'); var key = row.getAttribute('data-tkey');
+    clearTimeout(_mg.ttimer[key]);
+    _mg.ttimer[key] = setTimeout(async function() {
+      var q = inp.value.trim(); var box = row.querySelector('.mg-tresults');
+      if (q.length < 2) { box.style.display = 'none'; return; }
+      var d; try { d = await api('/archive-manage/comps?limit=12&q=' + encodeURIComponent(q)); } catch (e) { return; }
+      var items = d.items || d.comps || [];
+      box.style.display = 'flex';
+      box.innerHTML = items.length ? items.map(function(a) {
+        var on = _mg.tpick[key] === a.id;
+        return '<div onclick="mgTrackerPick(this,\'' + a.id + '\')" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;' + (on ? 'background:var(--brand);color:#14121c;' : 'background:var(--surface-3);') + '">' + _mgCover(a.cover_url) +
+          '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div><div style="font-size:11.5px;opacity:.75;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + (a.track_count != null ? a.track_count + ' tracks' : '') + '</div></div>' +
+          '<a href="/album.html?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()" style="font-size:11.5px;">open</a></div>';
+      }).join('') : '<div style="font-size:12px;color:var(--text-3);padding:4px 8px;">Nothing found</div>';
+    }, 250);
+  };
+  window.mgTrackerPick = function(el, id) {
+    var row = el.closest('[data-tkey]'); var key = row.getAttribute('data-tkey');
+    _mg.tpick[key] = id;
+    row.querySelectorAll('.mg-tresults > div').forEach(function(x) { x.style.background = 'var(--surface-3)'; x.style.color = ''; });
+    el.style.background = 'var(--brand)'; el.style.color = '#14121c';
+    row.querySelector('button').disabled = false;
+  };
+  window.mgTrackerMatch = async function(btn) {
+    var row = btn.closest('[data-tkey]'); var key = row.getAttribute('data-tkey'); var id = _mg.tpick[key];
+    if (!id) return;
+    var e = _mg.trackers.find(function(x) { return x.key === key; }) || {};
+    if (!confirm('Match this album to "' + e.name + '" by ' + (e.creator || 'Unknown') + '?\n\nThe album will be renamed to the tracker\'s title and creator, tagged with the tracker, and removed from any user profile.')) return;
+    btn.disabled = true; btn.textContent = 'Matching…';
+    try {
+      await api('/trackers/match', { method: 'POST', body: JSON.stringify({ key: key, album_id: id }) });
+      _mg.trackers = _mg.trackers.filter(function(x) { return x.key !== key; });
+      mgTrackersRender();
+    } catch (err) { alert(err.message || 'Match failed'); btn.disabled = false; btn.textContent = 'Match'; }
   };
   window.mgSearchInput = function() { clearTimeout(_mg.timer); _mg.timer = setTimeout(function() { mgLoad(); }, 250); };
   window.mgLoad = async function(more) {
