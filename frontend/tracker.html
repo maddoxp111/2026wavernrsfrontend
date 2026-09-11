@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — tracker</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609110323">
+  <link rel="stylesheet" href="/css/style.css?v=202609110333">
 </head>
 <body>
 
@@ -53,11 +53,14 @@
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<script src="/js/api.js?v=202609110323"></script>
-<script src="/js/layout.js?v=202609110323"></script>
-<script src="/js/player.js?v=202609110323"></script>
-<script src="/js/router.js?v=202609110323"></script>
+<script src="/js/api.js?v=202609110333"></script>
+<script src="/js/layout.js?v=202609110333"></script>
+<script src="/js/player.js?v=202609110333"></script>
+<script src="/js/router.js?v=202609110333"></script>
 <script>
+  var TK_TAGS = { '\u2b50': 'Every edit is amazing', '\ud83d\uddd1': 'Only the leak is bad', '\ud83e\udd16': 'Every edit used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
+  function tkTagHint(tag) { var out = []; for (var k in TK_TAGS) if (tag.indexOf(k) >= 0) out.push(TK_TAGS[k]); return out.join(' · ') || 'Tracker tag'; }
+
 (function () {
   var esc = window.escHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); };
   function grad(seed) { return window.coverGradient ? window.coverGradient(seed || '') : 'linear-gradient(135deg,#2a2a34,#15151b)'; }
@@ -144,7 +147,7 @@
         '<div class="cv" style="background:' + grad(x.name) + ';">' +
           (a && a.cover_url ? '<img src="' + esc(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
         '<div style="flex:1;min-width:0;">' +
-          '<div class="nm">' + (x.starred ? '⭐ ' : '') + esc(x.name) + '</div>' +
+          '<div class="nm">' + (x.starred ? '⭐ ' : '') + (x.tag ? '<span title="' + esc(tkTagHint(x.tag)) + '" style="cursor:help;">' + esc(x.tag) + '</span> ' : '') + esc(x.name) + '</div>' +
           (x.creator ? '<div class="by">' + esc(x.creator) + '</div>' : '') +
           (x.description ? '<div class="ds">' + esc(x.description) + '</div>' : '') +
         '</div>' +
