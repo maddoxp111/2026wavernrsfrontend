@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609110244">
+  <link rel="stylesheet" href="/css/style.css?v=202609110323">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=202609110244"></script>
-<script src="/js/layout.js?v=202609110244"></script>
-<script src="/js/player.js?v=202609110244"></script>
-<script src="/js/router.js?v=202609110244"></script>
+<script src="/js/api.js?v=202609110323"></script>
+<script src="/js/layout.js?v=202609110323"></script>
+<script src="/js/player.js?v=202609110323"></script>
+<script src="/js/router.js?v=202609110323"></script>
 <script>
   initPlayer();
 
@@ -286,7 +286,7 @@
             '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
           '</div>' +
           '<div id="mg-trackers" style="display:none;">' +
-            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Tracker comps that have no album on the site yet. Search for the right comp and hit Match: the album takes the tracker\'s title and creator name, gets the tracker badge, and is taken off any user profile it was claimed under.</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Tracker comps that have no album on the site yet. Search for the right comp and hit Match: the album takes the tracker\'s title and creator name and gets the tracker badge. A comp sitting on its own creator\'s profile stays there; one claimed by someone else goes back to the archive.</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
               '<input id="mg-tq" class="wv-input" placeholder="Filter tracker entries…" style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgTrackersRender()">' +
               '<span id="mg-tcount" style="font-size:12px;color:var(--text-3);"></span>' +
@@ -1505,13 +1505,13 @@
     _mg.ttimer[key] = setTimeout(async function() {
       var q = inp.value.trim(); var box = row.querySelector('.mg-tresults');
       if (q.length < 2) { box.style.display = 'none'; return; }
-      var d; try { d = await api('/archive-manage/comps?limit=12&q=' + encodeURIComponent(q)); } catch (e) { return; }
+      var d; try { d = await api('/archive-manage/comps?all=1&limit=12&q=' + encodeURIComponent(q)); } catch (e) { return; }
       var items = d.items || d.comps || [];
       box.style.display = 'flex';
       box.innerHTML = items.length ? items.map(function(a) {
         var on = _mg.tpick[key] === a.id;
         return '<div onclick="mgTrackerPick(this,\'' + a.id + '\')" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;' + (on ? 'background:var(--brand);color:#14121c;' : 'background:var(--surface-3);') + '">' + _mgCover(a.cover_url) +
-          '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div><div style="font-size:11.5px;opacity:.75;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + (a.track_count != null ? a.track_count + ' tracks' : '') + '</div></div>' +
+          '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div><div style="font-size:11.5px;opacity:.75;">' + escHtml(a.is_archive === false ? ('on ' + ((a.artists && a.artists.display_name) || 'a user') + '\u2019s profile') : (a.archive_artist_name || 'Unknown')) + ' · ' + (a.track_count != null ? a.track_count + ' tracks' : '') + '</div></div>' +
           '<a href="/album.html?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()" style="font-size:11.5px;">open</a></div>';
       }).join('') : '<div style="font-size:12px;color:var(--text-3);padding:4px 8px;">Nothing found</div>';
     }, 250);
