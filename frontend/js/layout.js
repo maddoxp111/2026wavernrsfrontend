@@ -946,20 +946,22 @@
   window.getBadgeData();
 })();
 
-// ── Ensure playlists.js is available on all pages (SPA doesn't reload src scripts) ──
+// ── Ensure playlists.js and ratings.js exist on every page ──────────────────
+// The router does not re-run <script src> tags, so pages that arrive through
+// it need these pulled in. Take the cache-busting version from this file's own
+// URL: hardcoding one meant a stale copy was fetched alongside the current one.
 (function () {
-  if (document.querySelector('script[src*="playlists.js"]') || typeof window.openAddToPlaylist === 'function') return;
-  var s = document.createElement('script');
-  s.src = '/js/playlists.js?v=202609072220';
-  document.head.appendChild(s);
-})();
-
-// ── Ensure ratings.js is available on all pages (SPA doesn't reload src scripts) ──
-(function () {
-  if (document.querySelector('script[src*="ratings.js"]') || typeof window.loadRatings === 'function') return;
-  var s = document.createElement('script');
-  s.src = '/js/ratings.js?v=202609072220';
-  document.head.appendChild(s);
+  var self = document.querySelector('script[src*="layout.js"]');
+  var ver = (self && self.src.indexOf('?') >= 0) ? self.src.slice(self.src.indexOf('?')) : '';
+  function ensure(file, ready) {
+    if (typeof window[ready] === 'function') return;
+    if (document.querySelector('script[src*="' + file + '"]')) return;
+    var s = document.createElement('script');
+    s.src = '/js/' + file + ver;
+    document.head.appendChild(s);
+  }
+  ensure('playlists.js', 'openAddToPlaylist');
+  ensure('ratings.js', 'loadRatings');
 })();
 
 // ── Countdown / pre-launch lockdown ─────────────────────────────────────────
