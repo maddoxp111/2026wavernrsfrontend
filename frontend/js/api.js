@@ -61,13 +61,32 @@ function _noteApi(ok) {
   _apiFails++;
   if (_apiFails === 2) window.dispatchEvent(new CustomEvent('wv-api-down'));
 }
+// Only the server being unreachable or broken counts as "down". A 404 for an
+// album that was deleted, or a 401 after logging out, is the API working
+// correctly, and counting those put an offline banner over a healthy site.
+function _noteApiStatus(status) {
+  _noteApi(!(status >= 500 || status === 0));
+}
 window.wvApiHealthy = () => _apiFails < 2;
 window.wvIsBusyError = function (e) {
   const m = (e && e.message) || String(e || '');
   return m === BUSY_MSG || /busy|schema cache|PGRST|timed out|Network error|Failed to fetch/i.test(m);
 };
-async function api(path, options = {}) {
-  const navGen = window._wvNavGen || 0;
+// Worth trying again shortly. Everything wvIsBusyError matches is transient by
+// definition, so a page that skipped its retry whenever wvIsBusyError was true
+// was skipping it in exactly the cases retrying is for.
+window.wvIsRetryable = function (e) {
+  if (!e || e.navAborted) return false;
+  if (e.status && e.status < 500 && e.status !== 429) return false;
+  return window.wvIsBusyError(e);
+};
+// The server may spend up to 45s on a slow query, so aborting at 15 turned a
+// response that was still coming into an error. Wait longer, but only once:
+// a second attempt usually lands on the server's own cached copy.
+const GET_TIMEOUT_MS = 25000;
+const GET_RETRIES = 1;
+
+async function _apiOnce(path, options, navGen) {
   const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -76,7 +95,7 @@ async function api(path, options = {}) {
 
   const isGet = !options.method || String(options.method).toUpperCase() === 'GET';
   const ctrl = isGet && !options.signal && typeof AbortController === 'function' ? new AbortController() : null;
-  const timer = ctrl ? setTimeout(() => ctrl.abort(), 15000) : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), GET_TIMEOUT_MS) : null;
   let res;
   try {
     res = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(ctrl ? { signal: ctrl.signal } : {}) });
@@ -88,7 +107,7 @@ async function api(path, options = {}) {
   if (timer) clearTimeout(timer);
 
   const data = await res.json().catch(() => ({}));
-  _noteApi(res.ok);
+  _noteApiStatus(res.status);
   // The page that made this request has been navigated away from. Reject so the
   // caller stops cleanly — hanging forever left spinners on screen for good.
   if ((window._wvNavGen || 0) !== navGen) {
@@ -98,9 +117,31 @@ async function api(path, options = {}) {
   }
   if (!res.ok) {
     _handleAuthFailure(res, data);
-    throw new Error(friendlyError(data.error, res.status));
+    const err = new Error(friendlyError(data.error, res.status));
+    err.status = res.status;
+    throw err;
   }
   return data;
+}
+
+async function api(path, options = {}) {
+  const navGen = window._wvNavGen || 0;
+  const isGet = !options.method || String(options.method).toUpperCase() === 'GET';
+  // Only reads are retried. Replaying a write because the answer was slow can
+  // create the same thing twice.
+  const tries = isGet ? GET_RETRIES + 1 : 1;
+  let lastErr;
+  for (let attempt = 0; attempt < tries; attempt++) {
+    try { return await _apiOnce(path, options, navGen); }
+    catch (e) {
+      lastErr = e;
+      if (e && e.navAborted) throw e;
+      if ((window._wvNavGen || 0) !== navGen) throw e;
+      if (attempt === tries - 1 || !window.wvIsRetryable(e)) throw e;
+      await new Promise(r => setTimeout(r, 700));
+    }
+  }
+  throw lastErr;
 }
 
 async function apiUpload(path, formData, method = 'POST') {

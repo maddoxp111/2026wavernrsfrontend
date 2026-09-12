@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609120803">
+  <link rel="stylesheet" href="/css/style.css?v=9ba3bcbcbd93">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609120803"></script>
-<script src="/js/layout.js?v=202609120803"></script>
-<script src="/js/player.js?v=202609120803"></script>
-<script src="/js/router.js?v=202609120803"></script>
+<script src="/js/api.js?v=9ba3bcbcbd93"></script>
+<script src="/js/layout.js?v=9ba3bcbcbd93"></script>
+<script src="/js/player.js?v=9ba3bcbcbd93"></script>
+<script src="/js/router.js?v=9ba3bcbcbd93"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -120,16 +120,12 @@ async function arcLoadMore() {
   try {
     var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
       (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
-    var page = null, lastErr = null;
-    for (var attempt = 0; attempt < 3; attempt++) {
-      try { page = await api(url); break; }
-      catch (e) {
-        lastErr = e;
-        if (e && e.navAborted) return;
-        if (gen !== _arcGen) return;
-        if (attempt === 2 || (typeof wvIsBusyError === 'function' && wvIsBusyError(e))) throw e;
-        await new Promise(function(r) { setTimeout(r, 800 * (attempt + 1)); });
-      }
+    var page = null;
+    try { page = await api(url); }
+    catch (e) {
+      if (e && e.navAborted) return;
+      if (gen !== _arcGen) return;
+      throw e;
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
     var items = Array.isArray(page) ? page : (page.items || []);
