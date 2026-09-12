@@ -47,6 +47,10 @@
     // best-effort so a hiccup in a secondary call can't blank the page.
     try {
       album = await api(`/albums/${albumId}`);
+      if (album && album.id && album.id !== albumId) {
+        albumId = album.id;
+        try { history.replaceState(null, '', '/album.html?id=' + albumId + location.hash); } catch (_) {}
+      }
     } catch (err) {
       document.getElementById('album-container').innerHTML =
         `<div class="empty-state"><div class="empty-title">Comp not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
