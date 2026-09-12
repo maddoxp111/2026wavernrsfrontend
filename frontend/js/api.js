@@ -42,12 +42,21 @@ function _handleAuthFailure(res, data) {
 }
 
 // Outages can arrive as a whole error page in the message; show one line instead.
+const BUSY_MSG = 'wavernrs is having trouble right now. Give it a minute and try again.';
 function friendlyError(msg, status, fallback) {
   const m = typeof msg === 'string' ? msg.trim() : '';
+  if (status === 503 || status === 502 || status === 504) return BUSY_MSG;
   if (!m) return `${fallback || 'Request failed'} (${status})`;
-  if (/<\/?(html|head|body|div|span|title)\b/i.test(m) || m.length > 300 || /cloudflare|error code 5\d\d|connection timed out/i.test(m)) return 'The site is busy right now, try again in a moment';
+  if (/<\/?(html|head|body|div|span|title)\b/i.test(m) || m.length > 300) return BUSY_MSG;
+  // database and gateway trouble should never be shown in its raw form
+  if (/cloudflare|error code 5\d\d|connection timed out|schema cache|PGRST\d+|database is busy|could not query the database|fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|upstream/i.test(m)) return BUSY_MSG;
   return m;
 }
+window.WV_BUSY_MSG = BUSY_MSG;
+window.wvIsBusyError = function (e) {
+  const m = (e && e.message) || String(e || '');
+  return m === BUSY_MSG || /busy|schema cache|PGRST|timed out|Network error|Failed to fetch/i.test(m);
+};
 async function api(path, options = {}) {
   const navGen = window._wvNavGen || 0;
   const token = getToken();
@@ -58,7 +67,7 @@ async function api(path, options = {}) {
 
   const isGet = !options.method || String(options.method).toUpperCase() === 'GET';
   const ctrl = isGet && !options.signal && typeof AbortController === 'function' ? new AbortController() : null;
-  const timer = ctrl ? setTimeout(() => ctrl.abort(), 30000) : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 15000) : null;
   let res;
   try {
     res = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(ctrl ? { signal: ctrl.signal } : {}) });

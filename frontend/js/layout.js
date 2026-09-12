@@ -1277,3 +1277,23 @@
     paint();
   })();
 })();
+
+// One shared "couldn't load this" block, so every page fails the same way
+// instead of spinning forever or printing a database error at the reader.
+window.wvErrorHTML = function (err, retryAttr) {
+  var busy = typeof wvIsBusyError === 'function' && wvIsBusyError(err);
+  var msg = busy ? (window.WV_BUSY_MSG || 'wavernrs is having trouble right now. Give it a minute and try again.')
+                 : ((err && err.message) || 'Something went wrong.');
+  var esc = typeof escHtml === 'function' ? escHtml : function (x) { return String(x); };
+  return '<div class="wv-empty" style="grid-column:1/-1;padding:28px 16px;text-align:center;">' +
+    '<div style="font-size:15px;font-weight:700;margin-bottom:6px;">' + (busy ? 'Can\u2019t reach wavernrs' : 'Couldn\u2019t load this') + '</div>' +
+    '<div style="font-size:13px;color:var(--text-3);max-width:380px;margin:0 auto 14px;line-height:1.6;">' + esc(msg) + '</div>' +
+    (retryAttr ? '<button class="wv-pill brand" onclick="' + retryAttr + '">Try again</button>' : '') +
+    '</div>';
+};
+window.wvShowError = function (el, err, retryAttr) {
+  var node = typeof el === 'string' ? document.getElementById(el) : el;
+  if (!node) return;
+  if (err && err.navAborted) return;
+  node.innerHTML = window.wvErrorHTML(err, retryAttr);
+};

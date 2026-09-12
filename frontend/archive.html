@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609120510">
+  <link rel="stylesheet" href="/css/style.css?v=202609120727">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=202609120510"></script>
-<script src="/js/layout.js?v=202609120510"></script>
-<script src="/js/player.js?v=202609120510"></script>
-<script src="/js/router.js?v=202609120510"></script>
+<script src="/js/api.js?v=202609120727"></script>
+<script src="/js/layout.js?v=202609120727"></script>
+<script src="/js/player.js?v=202609120727"></script>
+<script src="/js/router.js?v=202609120727"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -127,7 +127,7 @@ async function arcLoadMore() {
         lastErr = e;
         if (e && e.navAborted) return;
         if (gen !== _arcGen) return;
-        if (attempt === 2) throw e;
+        if (attempt === 2 || (typeof wvIsBusyError === 'function' && wvIsBusyError(e))) throw e;
         await new Promise(function(r) { setTimeout(r, 800 * (attempt + 1)); });
       }
     }
@@ -159,7 +159,7 @@ async function arcLoadMore() {
   } catch (err) {
     if (gen !== _arcGen) return;
     var g = document.getElementById('archive-grid');
-    if (g && g.querySelector('.spinner')) g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load the archive. <button class="wv-pill" style="margin-left:8px;" onclick="arcReload()">Try again</button></div>';
+    if (g && g.querySelector('.spinner')) wvShowError(g, err, 'arcReload()');
   } finally {
     if (gen === _arcGen) { _arcLoading = false; if (more) more.style.display = 'none'; }
   }

@@ -4,17 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — playlist</title>
-  <link rel="stylesheet" href="/css/style.css?v=202609120510">
+  <link rel="stylesheet" href="/css/style.css?v=202609120727">
 </head>
 <body>
 
 <div id="view">
 <div id="playlist-container">
   <div class="loading"><div class="spinner"></div></div>
-</div>
-</div><!-- /view -->
-
-<!-- Edit Playlist Modal -->
 <div class="modal-overlay" id="edit-playlist-modal">
   <div class="modal" style="max-width:460px;">
     <div class="modal-title">Edit Playlist</div>
@@ -38,12 +34,15 @@
     </div>
   </div>
 </div>
+</div>
+</div><!-- /view -->
 
-<script src="/js/api.js?v=202609120510"></script>
-<script src="/js/layout.js?v=202609120510"></script>
-<script src="/js/player.js?v=202609120510"></script>
-<script src="/js/router.js?v=202609120510"></script>
-<script src="/js/playlists.js?v=202609120510"></script>
+<!-- Edit Playlist Modal -->
+<script src="/js/api.js?v=202609120727"></script>
+<script src="/js/layout.js?v=202609120727"></script>
+<script src="/js/player.js?v=202609120727"></script>
+<script src="/js/router.js?v=202609120727"></script>
+<script src="/js/playlists.js?v=202609120727"></script>
 <script>
   initPlayer();
 
@@ -365,6 +364,17 @@
       }
     }
   }
+
+  // The router only swaps #view, so the overlay has to travel with the page
+  // and then be lifted out to the body to sit above the app chrome.
+  (function () {
+    var m = document.getElementById('edit-playlist-modal');
+    if (m && m.parentNode !== document.body) document.body.appendChild(m);
+    if (window._pageCleanup) window._pageCleanup.push(function () {
+      var el = document.getElementById('edit-playlist-modal');
+      if (el) el.remove();
+    });
+  })();
 
   loadPlaylist();
 </script>
