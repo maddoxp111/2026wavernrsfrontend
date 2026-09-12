@@ -41,6 +41,13 @@ function _handleAuthFailure(res, data) {
     '&next=' + encodeURIComponent(location.pathname + location.search);
 }
 
+// Outages can arrive as a whole error page in the message; show one line instead.
+function friendlyError(msg, status, fallback) {
+  const m = typeof msg === 'string' ? msg.trim() : '';
+  if (!m) return `${fallback || 'Request failed'} (${status})`;
+  if (/<\/?(html|head|body|div|span|title)\b/i.test(m) || m.length > 300 || /cloudflare|error code 5\d\d|connection timed out/i.test(m)) return 'The site is busy right now, try again in a moment';
+  return m;
+}
 async function api(path, options = {}) {
   const navGen = window._wvNavGen || 0;
   const token = getToken();
@@ -71,7 +78,7 @@ async function api(path, options = {}) {
   }
   if (!res.ok) {
     _handleAuthFailure(res, data);
-    throw new Error(data.error || `Request failed (${res.status})`);
+    throw new Error(friendlyError(data.error, res.status));
   }
   return data;
 }
@@ -92,7 +99,7 @@ async function apiUpload(path, formData, method = 'POST') {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     _handleAuthFailure(res, data);
-    throw new Error(data.error || `Upload failed (${res.status})`);
+    throw new Error(friendlyError(data.error, res.status, 'Upload failed'));
   }
   return data;
 }
