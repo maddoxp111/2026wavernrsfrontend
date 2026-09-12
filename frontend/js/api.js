@@ -53,6 +53,15 @@ function friendlyError(msg, status, fallback) {
   return m;
 }
 window.WV_BUSY_MSG = BUSY_MSG;
+// Track whether the API is answering at all, so the shell can say so once
+// instead of every page inventing its own way to look broken.
+let _apiFails = 0;
+function _noteApi(ok) {
+  if (ok) { if (_apiFails) { _apiFails = 0; window.dispatchEvent(new CustomEvent('wv-api-ok')); } return; }
+  _apiFails++;
+  if (_apiFails === 2) window.dispatchEvent(new CustomEvent('wv-api-down'));
+}
+window.wvApiHealthy = () => _apiFails < 2;
 window.wvIsBusyError = function (e) {
   const m = (e && e.message) || String(e || '');
   return m === BUSY_MSG || /busy|schema cache|PGRST|timed out|Network error|Failed to fetch/i.test(m);
@@ -73,11 +82,13 @@ async function api(path, options = {}) {
     res = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(ctrl ? { signal: ctrl.signal } : {}) });
   } catch (e) {
     if (timer) clearTimeout(timer);
+    _noteApi(false);
     throw new Error(e && e.name === 'AbortError' ? 'Request timed out' : (e && e.message) || 'Network error');
   }
   if (timer) clearTimeout(timer);
 
   const data = await res.json().catch(() => ({}));
+  _noteApi(res.ok);
   // The page that made this request has been navigated away from. Reject so the
   // caller stops cleanly — hanging forever left spinners on screen for good.
   if ((window._wvNavGen || 0) !== navGen) {

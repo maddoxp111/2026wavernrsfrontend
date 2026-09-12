@@ -1299,3 +1299,22 @@ window.wvShowError = function (el, err, retryAttr) {
   if (err && err.navAborted) return;
   node.innerHTML = window.wvErrorHTML(err, retryAttr);
 };
+
+// ── "can't reach wavernrs" banner ───────────────────────────────────────────
+(function () {
+  var el = null;
+  function show() {
+    if (el) return;
+    el = document.createElement('div');
+    el.id = 'wv-offline-bar';
+    el.setAttribute('role', 'status');
+    el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#5b4a2a;color:#ffe9b8;' +
+      'font-size:12.5px;font-weight:600;text-align:center;padding:7px 12px;padding-top:calc(7px + env(safe-area-inset-top));' +
+      'box-shadow:0 1px 0 rgba(0,0,0,.35);';
+    el.textContent = 'Having trouble reaching wavernrs — some things may not load. Retrying…';
+    document.body.appendChild(el);
+  }
+  function hide() { if (el) { el.remove(); el = null; } }
+  window.addEventListener('wv-api-down', show);
+  window.addEventListener('wv-api-ok', hide);
+})();
