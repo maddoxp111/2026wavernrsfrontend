@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Not found — wavernrs</title>
+  <link rel="stylesheet" href="/css/style.css?v=202609120510">
+</head>
+<body>
+
+<div id="view">
+  <style>
+    .nf-wrap { max-width:560px; margin:40px auto 0; text-align:center; }
+    .nf-code { font-size:72px; font-weight:800; letter-spacing:-.04em; line-height:1; background:linear-gradient(135deg,var(--brand),#8b7bd8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .nf-title { font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:10px; }
+    .nf-sub { font-size:14px; color:var(--text-2); margin-top:8px; line-height:1.6; }
+    .nf-search { display:flex; gap:8px; margin:24px 0 18px; }
+    .nf-search input { flex:1; padding:11px 14px; font-size:14px; }
+    .nf-links { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    @media (max-width:520px) { .nf-code { font-size:56px; } }
+  </style>
+  <div class="nf-wrap">
+    <div class="nf-code">404</div>
+    <div class="nf-title">We couldn't find that page</div>
+    <div class="nf-sub" id="nf-sub">The link may be old, or the comp may have been removed from the archive.</div>
+    <div class="nf-search">
+      <input id="nf-q" class="wv-input" placeholder="Search comps, edits and artists…" onkeydown="if(event.key==='Enter')nfGo()">
+      <button class="wv-pill brand" onclick="nfGo()">Search</button>
+    </div>
+    <div class="nf-links">
+      <a class="wv-pill" href="/">Home</a>
+      <a class="wv-pill" href="/archive.html">Archive</a>
+      <a class="wv-pill" href="/charts.html">Charts</a>
+      <a class="wv-pill" href="/radio.html">Radio</a>
+      <a class="wv-pill" href="/community.html">Community</a>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=202609120510"></script>
+<script src="/js/layout.js?v=202609120510"></script>
+<script src="/js/player.js?v=202609120510"></script>
+<script src="/js/router.js?v=202609120510"></script>
+<script>
+  window.nfGo = function () {
+    var q = (document.getElementById('nf-q') || {}).value || '';
+    if (q.trim()) navigate('/search.html?q=' + encodeURIComponent(q.trim()));
+  };
+  (function () {
+    var p = location.pathname.replace(/^\//, '');
+    var sub = document.getElementById('nf-sub');
+    if (p && sub) sub.textContent = '"' + p.slice(0, 60) + '" doesn\'t exist. The link may be old, or the comp may have been removed from the archive.';
+    var i = document.getElementById('nf-q');
+    var guess = decodeURIComponent(p.replace(/\.html$/, '').replace(/[-_\/]+/g, ' ')).trim();
+    if (i && guess && guess.length < 40) i.value = guess;
+  })();
+  if (typeof initPlayer === 'function') initPlayer();
+</script>
+</body>
+</html>
