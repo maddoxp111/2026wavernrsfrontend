@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — playlist</title>
-  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
+  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
 </head>
 <body>
 
@@ -38,11 +38,11 @@
 </div><!-- /view -->
 
 <!-- Edit Playlist Modal -->
-<script src="/js/api.js?v=770081b7033c"></script>
-<script src="/js/layout.js?v=770081b7033c"></script>
-<script src="/js/player.js?v=770081b7033c"></script>
-<script src="/js/router.js?v=770081b7033c"></script>
-<script src="/js/playlists.js?v=770081b7033c"></script>
+<script src="/js/api.js?v=922f4ba78a89"></script>
+<script src="/js/layout.js?v=922f4ba78a89"></script>
+<script src="/js/player.js?v=922f4ba78a89"></script>
+<script src="/js/router.js?v=922f4ba78a89"></script>
+<script src="/js/playlists.js?v=922f4ba78a89"></script>
 <script>
   initPlayer();
 
@@ -74,9 +74,17 @@
       }
       renderPlaylist();
     } catch (err) {
+      var priv = /private/i.test(String(err && err.message || '')) || (err && err.status === 403);
       document.getElementById('playlist-container').innerHTML =
-        '<div class="empty-state"><div class="empty-title">Playlist not found</div>' +
-        '<a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>';
+        '<div class="empty-state"><div class="empty-title">' +
+        (priv ? 'This playlist is private' : 'Playlist not found') + '</div>' +
+        '<div class="empty-desc">' + (priv
+          ? (isLoggedIn() ? 'Only its owner can open it.' : 'Log in as its owner to open it.')
+          : 'It may have been deleted.') + '</div>' +
+        (priv && !isLoggedIn()
+          ? '<a href="/login.html?next=' + encodeURIComponent(location.pathname + location.search) + '" class="btn btn-primary" style="margin-top:16px">Log in</a>'
+          : '<a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a>') +
+        '</div>';
     }
   }
 
@@ -89,7 +97,7 @@
       : '';
 
     var ownerHtml = owner.username
-      ? 'by <a href="#" style="color:var(--text-secondary);font-weight:500;">' + escHtml(owner.username) + '</a>'
+      ? 'by <span style="color:var(--text-secondary);font-weight:500;">' + escHtml(owner.username) + '</span>'
       : '';
 
     var privacyBadge = playlist.is_public ? '' :
@@ -114,9 +122,13 @@
           ? '<img src="' + escHtml(t.cover_url) + '" alt="">'
           : '🎵';
         var removeBtn = isOwner
-          ? '<button class="btn btn-danger btn-sm remove-track-btn" onclick="event.stopPropagation();removeTrack(\'' + escHtml(t.id) + '\', ' + i + ')">' +
-            '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
-            '</button>'
+          ? '<span class="wv-pl-tools" onclick="event.stopPropagation()">' +
+              '<button class="wv-icon-btn" title="Move up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + ' onclick="movePlTrack(' + i + ',-1)">↑</button>' +
+              '<button class="wv-icon-btn" title="Move down" aria-label="Move down"' + (i === tracks.length - 1 ? ' disabled' : '') + ' onclick="movePlTrack(' + i + ',1)">↓</button>' +
+              '<button class="btn btn-danger btn-sm remove-track-btn" title="Remove" aria-label="Remove" onclick="removeTrack(\'' + escHtml(t.id) + '\', ' + i + ')">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
+              '</button>' +
+            '</span>'
           : '';
         return '<div class="wv-track-row' + (i === currentIndex ? ' playing' : '') + '" onclick="playAtIndex(' + i + ')">' +
           '<div class="track-row-num">' + (i + 1) + '</div>' +
@@ -161,6 +173,15 @@
               '<button class="wv-btn-play" onclick="playAll()">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play' +
               '</button>' +
+              '<button class="wv-btn-ghost" onclick="shufflePlaylist()">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M17.2 4.4 21 8.2l-3.8 3.8V9.4h-2.1c-1 0-1.6.4-2.3 1.4l-.9 1.3-1.5-2.1.7-1c1.1-1.6 2.4-2.4 4-2.4h2.1Zm0 8.1 3.8 3.8-3.8 3.8v-2.6h-2.1c-1.6 0-2.9-.8-4-2.4l-3-4.3c-.7-1-1.3-1.4-2.3-1.4H3.2V9.4h2.6c1.6 0 2.9.8 4 2.4l3 4.3c.7 1 1.3 1.4 2.3 1.4h2.1Zm-11.4 2.1c.6 0 1.1-.15 1.55-.5l1.45 2.05c-.85.6-1.85.9-3 .9H3.2v-2.45Z"/></svg>Shuffle' +
+              '</button>' +
+              '<button class="wv-btn-ghost" onclick="sharePlaylist()">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="margin-right:4px;"><path d="M7.2 10.9a2.25 2.25 0 1 0 0 2.2m0-2.2 9.6-5.3m-9.6 7.5 9.6 5.3m0 0a2.25 2.25 0 1 0 3.9 2.2 2.25 2.25 0 0 0-3.9-2.2Zm0-12.8a2.25 2.25 0 1 0 3.9-2.2 2.25 2.25 0 0 0-3.9 2.2Z"/></svg>Share' +
+              '</button>' +
+              (tracks.length ? '<button class="wv-btn-ghost" onclick="exportPlaylist()" title="Download the tracklist as a text file">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18h14v2H5z"/></svg>Export' +
+              '</button>' : '') +
               actionBtns +
             '</div>' +
           '</div>' +
@@ -178,6 +199,67 @@
   function playAll() {
     if (!tracks.length) return;
     playAtIndex(0);
+  }
+
+  function shufflePlaylist() {
+    if (!tracks.length) return;
+    var q = tracks.map(function (t) { return Object.assign({}, t, { artist_name: t.artist_name }); });
+    for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = q[i]; q[i] = q[j]; q[j] = tmp; }
+    setPlayerQueue(q, 0);
+    playQueueIndex(0);
+    if (typeof wvToast === 'function') wvToast('Shuffling ' + q.length + ' track' + (q.length === 1 ? '' : 's'));
+  }
+
+  function sharePlaylist() {
+    var url = location.origin + '/playlist.html?id=' + playlistId;
+    if (!playlist.is_public && isOwner && typeof wvToast === 'function') {
+      wvToast('This playlist is private — make it public in Edit so others can open it');
+    }
+    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      navigator.share({ title: playlist.title || 'Playlist', url: url }).catch(function () {});
+      return;
+    }
+    navigator.clipboard.writeText(url).then(function () {
+      if (typeof wvToast === 'function') wvToast('Link copied');
+    }).catch(function () { if (typeof wvToast === 'function') wvToast('Could not copy the link', 'error'); });
+  }
+
+  // A playlist you can take somewhere else: a plain, readable tracklist.
+  function exportPlaylist() {
+    var lines = [playlist.title || 'Playlist', ''];
+    tracks.forEach(function (t, i) { lines.push((i + 1) + '. ' + (t.title || 'Unknown') + ' — ' + (t.artist_name || 'Unknown')); });
+    lines.push('', location.origin + '/playlist.html?id=' + playlistId);
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (playlist.title || 'playlist').replace(/[^\w -]+/g, '').trim().slice(0, 60) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    if (typeof wvToast === 'function') wvToast('Tracklist downloaded');
+  }
+
+  // Order is saved as the full list, so a failed save can simply be undone.
+  async function movePlTrack(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= tracks.length) return;
+    var before = tracks.slice();
+    var moved = tracks.splice(i, 1)[0];
+    tracks.splice(j, 0, moved);
+    if (currentIndex === i) currentIndex = j;
+    else if (currentIndex === j) currentIndex = i;
+    renderPlaylist();
+    try {
+      await api('/playlists/' + playlistId + '/order', {
+        method: 'PUT',
+        body: JSON.stringify({ track_ids: tracks.map(function (t) { return t.id; }) }),
+      });
+      invalidatePlaylistCache();
+    } catch (e) {
+      tracks = before;
+      renderPlaylist();
+      if (typeof wvToast === 'function') wvToast('Could not save the new order', 'error');
+    }
   }
 
   function _highlightPlRow(index) {

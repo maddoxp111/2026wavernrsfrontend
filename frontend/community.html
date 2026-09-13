@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
-  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
+  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=770081b7033c"></script>
-<script src="/js/layout.js?v=770081b7033c"></script>
-<script src="/js/player.js?v=770081b7033c"></script>
-<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/api.js?v=922f4ba78a89"></script>
+<script src="/js/layout.js?v=922f4ba78a89"></script>
+<script src="/js/player.js?v=922f4ba78a89"></script>
+<script src="/js/router.js?v=922f4ba78a89"></script>
 <script>
   // Inject community styles once (works on both hard refresh and SPA navigation)
   if (!document.getElementById('comm-styles')) {
@@ -54,6 +54,14 @@
 
   try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch(_) {}
   isMod = sessionStorage.getItem('wv_is_mod') === 'true';
+  // The role check finishes after this script runs on a hard refresh.
+  window.addEventListener('wv-roles', function (e) {
+    var next = !!(e.detail && e.detail.isMod);
+    if (next === isMod) return;
+    isMod = next;
+    if (typeof rerenderComments === 'function' && currentComments.length) rerenderComments();
+    if (typeof renderList === 'function') { try { renderList(); } catch (_) {} }
+  });
   // Fetch the full artist profile to get profile_image_url for the page background.
   if (typeof window.setPageBgImage === 'function' && isLoggedIn()) {
     api('/auth/me').then(function(full) {
@@ -195,7 +203,7 @@
           '<div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;">New Post</div>' +
           '<div>' +
             '<label class="wv-form-label">Title *</label>' +
-            '<input id="np-title" type="text" class="wv-input" placeholder="What\'s the topic?" style="width:100%;box-sizing:border-box;" maxlength="300">' +
+            '<input id="np-title" type="text" class="wv-input" placeholder="What\'s the topic?" style="width:100%;box-sizing:border-box;" maxlength="200">' +
           '</div>' +
           '<div>' +
             '<label class="wv-form-label">Body</label>' +
@@ -645,10 +653,14 @@
   async function modDeleteComment(id) {
     if (!confirm('Take down this comment?')) return;
     try {
-      await api('/community/comments/' + id, { method: 'DELETE' });
+      await api('/mod/community-comments/' + id, { method: 'DELETE' });
       currentComments = currentComments.filter(function(c) { return c.id !== id; });
       rerenderComments();
-    } catch (err) { alert('Could not take down: ' + err.message); }
+      if (typeof wvToast === 'function') wvToast('Comment taken down');
+    } catch (err) {
+      if (typeof wvToast === 'function') wvToast('Could not take it down: ' + (err.message || 'error'), 'error');
+      else alert('Could not take down: ' + err.message);
+    }
   }
 </script>
 </body>

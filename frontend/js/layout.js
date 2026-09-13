@@ -250,6 +250,7 @@
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
       html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
+      html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvCycleTheme()" title="Theme" aria-label="Switch theme">' + icon('more') + '</button>';
       html += '<a href="/register.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
       html += '<a href="/login.html" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
@@ -351,6 +352,7 @@
       ['Profile', function() { navigate('/dashboard.html'); }],
       ['Settings', function() { navigate('/settings.html'); }],
       [isLight ? 'Dark mode' : 'Light mode', function() { window.setTheme(isLight ? 'dark' : 'light'); }],
+      ['Match my device', function() { window.setTheme('system'); if (typeof wvToast === 'function') wvToast('Theme follows your device'); }],
       ['Sign out', function() { logout(); }],
     ];
     items.forEach(function(item) {
@@ -401,6 +403,21 @@
     return Math.floor(diff/86400) + 'd ago';
   }
 
+  function _notifHref(n) {
+    if (!n || !n.entity_id) return '';
+    if (n.entity_type === 'track') return '/track.html?id=' + n.entity_id;
+    if (n.entity_type === 'album') return '/album.html?id=' + n.entity_id;
+    if (n.entity_type === 'artist') return '/artist.html?id=' + n.entity_id;
+    return '';
+  }
+
+  window._openNotif = function (id, el, href) {
+    window._markNotifRead(id, el);
+    var panel = document.getElementById('wv-notif-panel');
+    if (panel) panel.classList.remove('open');
+    if (href && typeof navigate === 'function') navigate(href);
+  };
+
   function _renderNotifPanel(notifs) {
     var panel = document.getElementById('wv-notif-panel');
     if (!panel) return;
@@ -410,7 +427,8 @@
       return;
     }
     panel.querySelector('.wv-notif-list').innerHTML = notifs.map(function(n) {
-      return '<div class="wv-notif-item' + (n.read ? '' : ' unread') + '" onclick="window._markNotifRead(\'' + n.id + '\',this)">' +
+      var href = _notifHref(n);
+      return '<div class="wv-notif-item' + (n.read ? '' : ' unread') + (href ? ' wv-notif-link' : '') + '" onclick="window._openNotif(\'' + n.id + '\',this,\'' + href + '\')">' +
         '<div class="wv-notif-icon">' + _notifIcon(n.type) + '</div>' +
         '<div class="wv-notif-body">' +
           '<div class="wv-notif-title">' + _escN(n.title || '') + '</div>' +
@@ -461,8 +479,12 @@
   function _updateNotifDot() {
     var dot = document.getElementById('wv-notif-dot');
     if (!dot) return;
-    var hasUnread = _notifCache && _notifCache.some(function(n) { return !n.read; });
-    dot.style.display = hasUnread ? 'block' : 'none';
+    var unread = _notifCache ? _notifCache.filter(function(n) { return !n.read; }).length : 0;
+    dot.style.display = unread ? 'block' : 'none';
+    dot.textContent = unread > 9 ? '9+' : (unread || '');
+    dot.classList.toggle('wv-notif-count', unread > 0);
+    var bell = document.getElementById('wv-notif-btn');
+    if (bell) bell.setAttribute('aria-label', unread ? unread + ' unread notification' + (unread === 1 ? '' : 's') : 'Notifications');
   }
 
   function _loadNotifications() {
@@ -574,18 +596,39 @@
       _applyWash(typeof coverHues === 'function' ? coverHues(seed || url) : null);
     }
   };
-  // Theme: persisted, applied to body + app root without a reload.
-  window.setTheme = function(t) {
-    t = t === 'light' ? 'light' : 'dark';
-    localStorage.setItem('wv_theme', t);
+  // Theme: 'system' follows the device, otherwise the stored choice wins.
+  // Applied to body + app root without a reload, and available logged out.
+  function _systemTheme() {
+    try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (_) { return 'dark'; }
+  }
+  function _storedTheme() {
+    var v;
+    try { v = localStorage.getItem('wv_theme'); } catch (_) { v = null; }
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
+  }
+  function _paintTheme(t) {
     [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
       if (!el) return;
       el.classList.remove('theme-light', 'theme-dark');
       el.classList.add('theme-' + t);
     });
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', t === 'light' ? '#f7f7fb' : '#0d0d15');
+    document.documentElement.style.colorScheme = t;
+  }
+  window.setTheme = function(t) {
+    t = (t === 'light' || t === 'dark' || t === 'system') ? t : 'dark';
+    try { localStorage.setItem('wv_theme', t); } catch (_) {}
+    _paintTheme(t === 'system' ? _systemTheme() : t);
     document.querySelectorAll('input[name="wv-theme"]').forEach(function(r) { r.checked = r.value === t; });
   };
-  window.getTheme = function() { return localStorage.getItem('wv_theme') === 'light' ? 'light' : 'dark'; };
+  window.getTheme = function() { var t = _storedTheme(); return t === 'system' ? _systemTheme() : t; };
+  window.getThemePref = function() { return _storedTheme(); };
+  try {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
+      if (_storedTheme() === 'system') _paintTheme(_systemTheme());
+    });
+  } catch (_) {}
   window.setPageWash = function(seed) { _washGen++; _applyWash(seed ? coverHues(seed) : null); };
 
   function initShell() {
@@ -603,7 +646,8 @@
       document.head.appendChild(man);
     }
 
-    var theme = localStorage.getItem('wv_theme') === 'light' ? 'light' : 'dark';
+    var themePref = _storedTheme();
+    var theme = themePref === 'system' ? _systemTheme() : themePref;
 
     var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
 
@@ -821,9 +865,6 @@
   (function _checkRoleStatus() {
     var token = localStorage.getItem('token');
     if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); sessionStorage.removeItem('wv_is_radio'); return; }
-    // Role checks cost three requests; once per 10 minutes is plenty.
-    var lastCheck = parseInt(sessionStorage.getItem('wv_roles_at') || '0', 10);
-    if (lastCheck && Date.now() - lastCheck < 10 * 60 * 1000 && sessionStorage.getItem('wv_is_mod') !== null) return;
     sessionStorage.setItem('wv_roles_at', String(Date.now()));
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
     var headers = { 'Authorization': 'Bearer ' + token };
@@ -842,6 +883,9 @@
       sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
       sessionStorage.setItem('wv_is_archiver', isArchiver ? 'true' : 'false');
       sessionStorage.setItem('wv_is_radio', isRadio ? 'true' : 'false');
+      // Pages read these flags at script time, before this answer lands, so
+      // tell them once it has.
+      window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: isMod, isArchiver: isArchiver, isRadio: isRadio } }));
       if (isMod || isArchiver || isRadio || wasMod !== isMod || wasArchiver !== isArchiver || wasRadio !== isRadio) {
         var sidebar = document.getElementById('wv-sidebar');
         if (sidebar) sidebar.innerHTML = buildSidebarHTML();
@@ -1392,4 +1436,28 @@ document.addEventListener('keydown', function (e) {
   e.preventDefault();
   box.focus();
   box.select && box.select();
+});
+
+// Anyone can switch themes, signed in or not: device → light → dark → device.
+window.wvCycleTheme = function () {
+  var order = ['system', 'light', 'dark'];
+  var cur = typeof window.getThemePref === 'function' ? window.getThemePref() : 'dark';
+  var next = order[(order.indexOf(cur) + 1) % order.length];
+  window.setTheme(next);
+  if (typeof wvToast === 'function') {
+    wvToast(next === 'system' ? 'Theme follows your device' : next === 'light' ? 'Light mode' : 'Dark mode');
+  }
+  var btn = document.getElementById('wv-theme-btn');
+  if (btn) btn.innerHTML = _themeIcon(next);
+};
+
+function _themeIcon(pref) {
+  if (pref === 'light') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-13.5v2m0 16v2m8.5-10h-2m-13 0h-2M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4m11.8 0-1.4-1.4M7.5 7.5 6.1 6.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  if (pref === 'dark') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 13.2A9 9 0 1 1 10.8 3a7 7 0 0 0 10.2 10.2Z"/></svg>';
+  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8" stroke-linecap="round"/></svg>';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var btn = document.getElementById('wv-theme-btn');
+  if (btn && typeof window.getThemePref === 'function') btn.innerHTML = _themeIcon(window.getThemePref());
 });

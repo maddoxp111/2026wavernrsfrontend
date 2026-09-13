@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — search</title>
-  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
+  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
 </head>
 <body>
 <div id="view"></div>
 
-<script src="/js/api.js?v=770081b7033c"></script>
-<script src="/js/layout.js?v=770081b7033c"></script>
-<script src="/js/player.js?v=770081b7033c"></script>
-<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/api.js?v=922f4ba78a89"></script>
+<script src="/js/layout.js?v=922f4ba78a89"></script>
+<script src="/js/player.js?v=922f4ba78a89"></script>
+<script src="/js/router.js?v=922f4ba78a89"></script>
 <script>
   initPlayer();
 
@@ -69,6 +69,7 @@
       var results = _results[0];
       var badges = _results[1] || { verified_artists:[], highlighted_albums:[], exclusive_albums:[], highlighted_tracks:[], exclusive_tracks:[] };
       var tracks = results.tracks || [];
+      _searchTracks = tracks;
       var artists = results.artists || [];
       var albums = results.albums || [];
       var archived = results.archived || [];
@@ -138,7 +139,7 @@
             var isE = badges.exclusive_tracks   && badges.exclusive_tracks.indexOf(t.id) !== -1;
             var trackBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
                               (isE ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
-            return '<div class="track-row" onclick="playThis(' + td + ')">' +
+            return '<div class="track-row" onclick="navigate(\'/track.html?id=' + t.id + '\')">' +
               '<div class="track-row-num">' + (i + 1) + '</div>' +
               '<div class="track-row-cover" style="background:' + bg + ';">' +
                 (coverUrl ? '<img src="' + escHtml(coverUrl) + '" onerror="this.style.display=\'none\'">' : '') +
@@ -147,8 +148,11 @@
                 '<div class="track-row-title" style="display:flex;align-items:center;gap:3px;">' + escHtml(t.title) + trackBadges + '</div>' +
                 '<div class="track-row-artist">' + artistName + '</div>' +
               '</div>' +
-              '<button onclick="event.stopPropagation();playThis(' + td + ')" class="wv-icon-circle" title="Play" style="flex-shrink:0;">' +
+              '<button onclick="event.stopPropagation();searchPlay(' + i + ')" class="wv-icon-circle" title="Play" aria-label="Play ' + escHtml(t.title || '') + '" style="flex-shrink:0;">' +
                 '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+              '</button>' +
+              '<button onclick="event.stopPropagation();addToQueue(' + td + ')" class="wv-icon-circle" title="Add to queue" aria-label="Add to queue" style="flex-shrink:0;">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>' +
               '</button>' +
             '</div>';
           }).join('') +
@@ -188,8 +192,28 @@
     }
   }
 
+  var _searchTracks = [];
+
   function playThis(track) {
     playTrack(track);
+  }
+
+  // Play a result and queue the rest of the results behind it.
+  function searchPlay(i) {
+    var playable = _searchTracks.filter(function (t) { return t.ia_url; });
+    var want = _searchTracks[i];
+    if (!want || !want.ia_url) { if (typeof wvToast === 'function') wvToast('That edit has no audio yet'); return; }
+    var idx = playable.findIndex(function (t) { return t.id === want.id; });
+    var queue = playable.map(function (t) {
+      return {
+        id: t.id, title: t.title, ia_url: t.ia_url,
+        cover_url: t.cover_url || (t.albums && t.albums.cover_url) || null,
+        artist_name: (t.artists && t.artists.display_name) || '',
+        album_id: t.album_id || null,
+      };
+    });
+    setPlayerQueue(queue, Math.max(0, idx));
+    playQueueIndex(Math.max(0, idx));
   }
 
   if (initialQ) {

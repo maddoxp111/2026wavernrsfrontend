@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — your library</title>
-  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
+  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
 </head>
 <body>
 
@@ -18,10 +18,10 @@
   <div id="lib-body"><div class="loading"><div class="spinner"></div></div></div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=770081b7033c"></script>
-<script src="/js/layout.js?v=770081b7033c"></script>
-<script src="/js/player.js?v=770081b7033c"></script>
-<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/api.js?v=922f4ba78a89"></script>
+<script src="/js/layout.js?v=922f4ba78a89"></script>
+<script src="/js/player.js?v=922f4ba78a89"></script>
+<script src="/js/router.js?v=922f4ba78a89"></script>
 <script>
   initPlayer();
 
@@ -128,7 +128,12 @@
           '<div class="wv-trow-title">' + escHtml(t.title || 'Untitled') + '</div>' +
           '<div class="wv-trow-sub">' + escHtml(artist) + '</div>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">' +
+        '<div class="wv-lib-actions" style="display:flex;gap:6px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">' +
+          (t.ia_url ? '<button class="wv-icon-btn" title="Add to queue" aria-label="Add to queue" onclick="libQueue(' + i + ')">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg></button>' : '') +
+          '<button class="wv-icon-btn" title="Add to a playlist" aria-label="Add to a playlist" onclick="libAddToPlaylist(' + i + ')">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm19.5-4.5L23 13l-6.99 7-4.51-4.5L13 14l3.01 3 5.49-5.5z"/></svg></button>' +
+          '<button class="wv-icon-btn" title="Remove from your likes" aria-label="Remove from your likes" onclick="libUnlikeTrack(\'' + escHtml(t.id) + '\', this)">♥</button>' +
           '<a class="btn btn-secondary btn-sm" href="/track.html?id=' + escHtml(t.id) + '" ' +
             'onclick="navigate(\'/track.html?id=' + escHtml(t.id) + '\');return false;" style="text-decoration:none;">Open</a>' +
         '</div>' +
@@ -137,6 +142,30 @@
     html += '</div>';
     return html;
   }
+
+  // Acting on something you have liked should not mean leaving the page.
+  window.libQueue = function (i) {
+    var t = (_lib.tracks || [])[i];
+    if (t) addToQueue(_libTrackObj(t));
+  };
+
+  window.libAddToPlaylist = function (i) {
+    var t = (_lib.tracks || [])[i];
+    if (!t) return;
+    if (typeof openAddToPlaylist === 'function') openAddToPlaylist(_libTrackObj(t));
+    else if (typeof wvToast === 'function') wvToast('Playlists are not available right now', 'error');
+  };
+
+  window.libUnlikeTrack = async function (id, btn) {
+    try {
+      await api('/tracks/' + id + '/like', { method: 'POST' });
+      _lib.tracks = (_lib.tracks || []).filter(function (t) { return t.id !== id; });
+      renderLib();
+      if (typeof wvToast === 'function') wvToast('Removed from your likes');
+    } catch (e) {
+      if (typeof wvToast === 'function') wvToast('Could not update that like', 'error');
+    }
+  };
 
   function _libTrackObj(t) {
     return {
@@ -185,7 +214,10 @@
         var bg = coverGradient(a.title || '');
         return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + escHtml(a.id) + '\')">' +
           '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
-            (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+            (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+            '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(a.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + escHtml(a.id) + '\')">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+            '</button>' +
           '</div></div>' +
           '<div class="wv-comp-card-title">' + escHtml(a.title || 'Untitled') + '</div>' +
           '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +

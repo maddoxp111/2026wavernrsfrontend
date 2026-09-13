@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — dashboard</title>
-  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
+  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -34,7 +34,7 @@
 <div class="modal-overlay" id="delete-comp-modal">
   <div class="modal">
     <div class="modal-title">Delete comp?</div>
-    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the comp. The individual edits will not be deleted.</p>
+    <p style="font-size:14px;color:var(--text-secondary);">This permanently removes the comp and every edit inside it.</p>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeDeleteCompModal()">Cancel</button>
       <button class="btn btn-danger" id="confirm-delete-comp-btn">Delete</button>
@@ -121,11 +121,11 @@
 </div><!-- #view -->
 
 
-<script src="/js/api.js?v=770081b7033c"></script>
-<script src="/js/layout.js?v=770081b7033c"></script>
-<script src="/js/player.js?v=770081b7033c"></script>
-<script src="/js/router.js?v=770081b7033c"></script>
-<script src="/js/playlists.js?v=770081b7033c"></script>
+<script src="/js/api.js?v=922f4ba78a89"></script>
+<script src="/js/layout.js?v=922f4ba78a89"></script>
+<script src="/js/player.js?v=922f4ba78a89"></script>
+<script src="/js/router.js?v=922f4ba78a89"></script>
+<script src="/js/playlists.js?v=922f4ba78a89"></script>
 <script>
   if (!isLoggedIn()) navigate('/login.html');
 
@@ -963,7 +963,7 @@
     var isDark = document.getElementById('wv-root')?.classList.contains('theme-dark');
     var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
     var labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
-    var brandColor = 'var(--purple)'; // purple brand
+    var brandColor = (getComputedStyle(document.body).getPropertyValue('--brand') || '#a78bfa').trim();
     var brand2Color = '#06b6d4'; // teal for followers
 
     var chartDefaults = {
@@ -989,7 +989,7 @@
             var dt = new Date(d.date + 'T12:00:00');
             return dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
           }),
-          datasets: [{ data: statsData.likes_by_day.map(d => d.count), backgroundColor: brandColor + 'cc', borderRadius: 6, borderSkipped: false }],
+          datasets: [{ data: statsData.likes_by_day.map(d => d.count), backgroundColor: brandColor, borderRadius: 6, borderSkipped: false }],
         },
         options: chartDefaults,
       });
@@ -1022,7 +1022,7 @@
         type: 'bar',
         data: {
           labels: statsData.top_tracks.map(t => t.title.length > 22 ? t.title.slice(0, 22) + '…' : t.title),
-          datasets: [{ data: statsData.top_tracks.map(t => t.play_count), backgroundColor: brandColor + 'cc', borderRadius: 6, borderSkipped: false }],
+          datasets: [{ data: statsData.top_tracks.map(t => t.play_count), backgroundColor: brandColor, borderRadius: 6, borderSkipped: false }],
         },
         options: topOptions,
       });
