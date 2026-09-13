@@ -21,11 +21,124 @@ let _pqIdx = -1;       // current index within _pq
 let _pqOnChange = null; // optional callback(idx) for row highlighting
 let _fromQueue = false; // guard so queue-driven plays don't reset the queue
 
+const QUEUE_KEY = 'wv_queue';
+
+function _saveQueue() {
+  try {
+    if (!_pq.length) { localStorage.removeItem(QUEUE_KEY); return; }
+    localStorage.setItem(QUEUE_KEY, JSON.stringify({ list: _pq.slice(0, 200), idx: _pqIdx, at: Date.now() }));
+  } catch (_) {}
+}
+
 window.setPlayerQueue = function (list, idx, onChange) {
   _pq = Array.isArray(list) ? list : [];
   _pqIdx = (typeof idx === 'number') ? idx : -1;
   _pqOnChange = (typeof onChange === 'function') ? onChange : null;
+  _shuffleBag = [];
   _renderQueuePanel();
+  _saveQueue();
+};
+
+function _queueable(t) {
+  if (!t || !t.ia_url) return null;
+  return {
+    id: t.id, title: t.title, ia_url: t.ia_url,
+    cover_url: t.cover_url || t.cover || null,
+    artist_name: t.artist_name || t._archive_artist || (t.artists && t.artists.display_name) || '',
+    album_id: t.album_id || null, artist_id: t.artist_id || null,
+    _archive_artist: t._archive_artist || null,
+  };
+}
+
+// Drop a track in right after the one playing.
+window.playNextInQueue = function (track) {
+  const t = _queueable(track);
+  if (!t) { if (typeof wvToast === 'function') wvToast('That track has no audio yet'); return false; }
+  if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
+  _pq.splice(_pqIdx + 1, 0, t);
+  _shuffleBag = _shuffleBag.map(i => (i > _pqIdx ? i + 1 : i));
+  _renderQueuePanel();
+  _saveQueue();
+  if (typeof wvToast === 'function') wvToast('Playing next: ' + (t.title || 'track'));
+  return true;
+};
+
+window.addToQueue = function (track) {
+  const t = _queueable(track);
+  if (!t) { if (typeof wvToast === 'function') wvToast('That track has no audio yet'); return false; }
+  if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
+  _pq.push(t);
+  _renderQueuePanel();
+  _saveQueue();
+  if (typeof wvToast === 'function') wvToast('Added to queue: ' + (t.title || 'track'));
+  return true;
+};
+
+// Queue a whole comp without interrupting what is playing.
+window.addAlbumToQueue = async function (albumId) {
+  try {
+    const rows = await api('/albums/' + albumId + '/tracks');
+    const tracks = (rows || []).map(r => r.tracks || r).filter(t => t && t.ia_url);
+    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('Nothing playable on that comp'); return false; }
+    if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
+    tracks.forEach(t => { const q = _queueable(t); if (q) _pq.push(q); });
+    _renderQueuePanel();
+    _saveQueue();
+    if (typeof wvToast === 'function') wvToast('Queued ' + tracks.length + ' track' + (tracks.length === 1 ? '' : 's'));
+    return true;
+  } catch (e) {
+    if (typeof wvToast === 'function') wvToast('Could not load that comp');
+    return false;
+  }
+};
+
+window.getPlayerQueue = function () { return { list: _pq.slice(), idx: _pqIdx }; };
+
+// Play a whole comp from anywhere on the site — a grid card, a chart row, a
+// related rail — without first opening its page.
+window.playCompById = async function (albumId, opts) {
+  const o = opts || {};
+  try {
+    if (typeof wvToast === 'function' && !o.quiet) wvToast('Loading…');
+    const rows = await api('/albums/' + albumId + '/tracks');
+    let tracks = (rows || []).map(r => r.tracks || r).filter(t => t && t.ia_url);
+    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('Nothing playable on that comp', 'error'); return false; }
+    let meta = o.album || null;
+    if (!meta) { try { meta = await api('/albums/' + albumId); } catch (_) { meta = null; } }
+    const who = meta ? ((meta.is_archive && meta.archive_artist_name) || (meta.artists && meta.artists.display_name) || '') : '';
+    const cover = meta ? meta.cover_url : null;
+    const queue = tracks.map(t => ({
+      id: t.id, title: t.title, ia_url: t.ia_url,
+      cover_url: t.cover_url || cover || null,
+      artist_name: who || (t.artists && t.artists.display_name) || '',
+      album_id: albumId, artist_id: t.artist_id || null,
+      _album_id: albumId,
+      _album_title: meta ? meta.title : null,
+      _album_cover: cover || null,
+      _archive_artist: meta && meta.is_archive ? (meta.archive_artist_name || null) : null,
+    }));
+    if (o.shuffle) {
+      for (let i = queue.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [queue[i], queue[j]] = [queue[j], queue[i]]; }
+    }
+    window.setPlayerQueue(queue, 0);
+    window.playQueueIndex(0);
+    return true;
+  } catch (e) {
+    if (typeof wvToast === 'function') wvToast('Could not start that comp', 'error');
+    return false;
+  }
+};
+
+window.moveQueueItem = function (from, to) {
+  if (from < 0 || from >= _pq.length || to < 0 || to >= _pq.length || from === to) return;
+  const [item] = _pq.splice(from, 1);
+  _pq.splice(to, 0, item);
+  if (_pqIdx === from) _pqIdx = to;
+  else if (from < _pqIdx && to >= _pqIdx) _pqIdx--;
+  else if (from > _pqIdx && to <= _pqIdx) _pqIdx++;
+  _shuffleBag = [];
+  _renderQueuePanel();
+  _saveQueue();
 };
 
 window.playQueueIndex = function (idx) {
@@ -36,6 +149,7 @@ window.playQueueIndex = function (idx) {
   _fromQueue = false;
   if (_pqOnChange) { try { _pqOnChange(idx); } catch (_) {} }
   _renderQueuePanel();
+  _saveQueue();
   return true;
 };
 
@@ -217,7 +331,7 @@ function injectPlayer() {
       </div>
       <div class="player-progress">
         <span class="player-time" id="time-elapsed">0:00</span>
-        <div class="progress-bar" id="progress-bar">
+        <div class="progress-bar" id="progress-bar" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div class="progress-fill" id="progress-fill"></div>
         </div>
         <span class="player-time" id="time-total">0:00</span>
@@ -225,6 +339,10 @@ function injectPlayer() {
     </div>
     <!-- Desktop right: tools + volume -->
     <div class="player-volume">
+      <button class="player-btn player-icon-btn" id="player-mute-btn" onclick="toggleMute()" title="Mute (m)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+      </button>
+      <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume" title="Volume">
       <button class="player-btn player-icon-btn" id="player-lyrics-btn" onclick="openFullPlayer(true)" title="Lyrics">
         <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="18" height="2.4" rx="1.2"/><rect x="3" y="10.8" width="13" height="2.4" rx="1.2"/><rect x="3" y="16.6" width="16" height="2.4" rx="1.2"/></svg>
       </button>
@@ -440,33 +558,103 @@ document.addEventListener('click', function (e) {
   if (qbtn) qbtn.classList.remove('player-icon-active');
 });
 
-let _shuffle = false;
-let _repeat = false;
+let _shuffle = (function () { try { return localStorage.getItem('wv_shuffle') === '1'; } catch (_) { return false; } })();
+let _repeat = (function () { try { const v = localStorage.getItem('wv_repeat'); return v === 'one' || v === 'all' ? v : 'off'; } catch (_) { return 'off'; } })();
 let _muted = false;
+let _shuffleBag = [];
+
+function _syncModeButtons() {
+  [document.getElementById('player-shuffle-btn'), document.getElementById('pfs-shuffle')].forEach(b => {
+    if (!b) return;
+    b.classList.toggle('player-icon-active', _shuffle);
+    b.setAttribute('aria-pressed', _shuffle ? 'true' : 'false');
+    b.title = _shuffle ? 'Shuffle on' : 'Shuffle';
+  });
+  [document.getElementById('player-repeat-btn'), document.getElementById('pfs-repeat')].forEach(b => {
+    if (!b) return;
+    b.classList.toggle('player-icon-active', _repeat !== 'off');
+    b.setAttribute('aria-pressed', _repeat !== 'off' ? 'true' : 'false');
+    b.title = _repeat === 'one' ? 'Repeat this track' : _repeat === 'all' ? 'Repeat queue' : 'Repeat';
+    let dot = b.querySelector('.player-repeat-one');
+    if (_repeat === 'one' && !dot) {
+      dot = document.createElement('span');
+      dot.className = 'player-repeat-one';
+      dot.textContent = '1';
+      b.appendChild(dot);
+    } else if (_repeat !== 'one' && dot) dot.remove();
+  });
+  const mb = document.getElementById('player-mute-btn');
+  if (mb) {
+    mb.classList.toggle('player-icon-active', _muted);
+    mb.title = _muted ? 'Unmute (m)' : 'Mute (m)';
+    mb.innerHTML = _muted
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.6 3 2.6-2.6-1.4-1.4L15.2 10.6 12.6 8l-1.4 1.4 2.6 2.6-2.6 2.6 1.4 1.4 2.6-2.6 2.6 2.6 1.4-1.4z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>';
+  }
+}
 
 function toggleShuffle() {
   _shuffle = !_shuffle;
-  const btns = [document.getElementById('player-shuffle-btn'), document.getElementById('pfs-shuffle')];
-  btns.forEach(b => b && b.classList.toggle('player-icon-active', _shuffle));
+  try { localStorage.setItem('wv_shuffle', _shuffle ? '1' : '0'); } catch (_) {}
+  _shuffleBag = [];
+  _syncModeButtons();
+  _renderQueuePanel();
+  if (typeof wvToast === 'function') wvToast(_shuffle ? 'Shuffle on' : 'Shuffle off');
 }
 
 function toggleRepeat() {
-  _repeat = !_repeat;
-  const btns = [document.getElementById('player-repeat-btn'), document.getElementById('pfs-repeat')];
-  btns.forEach(b => b && b.classList.toggle('player-icon-active', _repeat));
-  if (audio) audio.loop = _repeat;
+  _repeat = _repeat === 'off' ? 'all' : _repeat === 'all' ? 'one' : 'off';
+  try { localStorage.setItem('wv_repeat', _repeat); } catch (_) {}
+  if (audio) audio.loop = _repeat === 'one';
+  _syncModeButtons();
+  if (typeof wvToast === 'function') wvToast(_repeat === 'one' ? 'Repeating this track' : _repeat === 'all' ? 'Repeating the queue' : 'Repeat off');
 }
 
 function toggleMute() {
   if (!audio) return;
   _muted = !_muted;
   audio.muted = _muted;
+  try { localStorage.setItem('wv_muted', _muted ? '1' : '0'); } catch (_) {}
+  _syncModeButtons();
+}
+
+function setVolume(v) {
+  const val = Math.max(0, Math.min(1, Number(v)));
+  if (audio) { audio.volume = val; if (val > 0 && _muted) { _muted = false; audio.muted = false; } }
+  try { localStorage.setItem('wv_volume', String(val)); } catch (_) {}
+  ['volume-slider', 'pfs-volume'].forEach(id => { const el = document.getElementById(id); if (el && el.value !== String(val)) el.value = String(val); });
+  _syncModeButtons();
+}
+
+// Shuffle draws without replacement, so a pass plays every queued track once
+// before anything repeats. An empty bag means the pass is over: wrap only when
+// repeat-all is on, otherwise fall through to autoplay.
+let _shuffleStarted = false;
+function _refillShuffleBag() {
+  const fresh = [];
+  for (let i = 0; i < _pq.length; i++) if (i !== _pqIdx) fresh.push(i);
+  for (let i = fresh.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [fresh[i], fresh[j]] = [fresh[j], fresh[i]]; }
+  _shuffleBag = fresh;
+}
+function _nextQueueIndex() {
+  if (!_pq.length) return -1;
+  if (!_shuffle) return _pqIdx < _pq.length - 1 ? _pqIdx + 1 : (_repeat === 'all' ? 0 : -1);
+  _shuffleBag = _shuffleBag.filter(i => i >= 0 && i < _pq.length && i !== _pqIdx);
+  if (!_shuffleBag.length) {
+    if (_shuffleStarted && _repeat !== 'all') { _shuffleStarted = false; return -1; }
+    _refillShuffleBag();
+    if (!_shuffleBag.length) return _repeat === 'all' ? _pqIdx : -1;
+  }
+  _shuffleStarted = true;
+  return _shuffleBag.shift();
 }
 
 function skipPrev() {
   if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
   if (_pq.length && _pqIdx >= 0) {
     if (_pqIdx > 0) window.playQueueIndex(_pqIdx - 1);
+    else if (_repeat === 'all') window.playQueueIndex(_pq.length - 1);
+    else if (audio) audio.currentTime = 0;
     return;
   }
   document.dispatchEvent(new CustomEvent('playerSkipPrev'));
@@ -475,7 +663,8 @@ function skipPrev() {
 function skipNext() {
   if (_radio) return;
   if (_pq.length && _pqIdx >= 0) {
-    if (_pqIdx < _pq.length - 1) window.playQueueIndex(_pqIdx + 1);
+    const nxt = _nextQueueIndex();
+    if (nxt >= 0) window.playQueueIndex(nxt);
     else window.skipNextOrAutoplay();
     return;
   }
@@ -528,8 +717,15 @@ function initPlayer() {
   injectPlayer();
 
   audio = new Audio();
-  audio.volume = 1;
-  audio.loop = _repeat;
+  let _vol = 1;
+  try { const v = parseFloat(localStorage.getItem('wv_volume')); if (!isNaN(v)) _vol = Math.max(0, Math.min(1, v)); } catch (_) {}
+  audio.volume = _vol;
+  try { _muted = localStorage.getItem('wv_muted') === '1'; } catch (_) {}
+  audio.muted = _muted;
+  audio.loop = _repeat === 'one';
+  audio.preload = 'auto';
+  _syncModeButtons();
+  ['volume-slider', 'pfs-volume'].forEach(id => { const el = document.getElementById(id); if (el) el.value = String(_vol); });
   setPlaybackSpeed(parseFloat(localStorage.getItem('wv_speed')) || 1);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { _closeSheet(); const f = document.getElementById('player-fullscreen'); if (f && f.classList.contains('open')) closeFullPlayer(); } });
 
@@ -577,26 +773,67 @@ function initPlayer() {
     } catch (_) {}
   }
 
-  // Progress bar interactions
+  // Progress bars: click, drag and keyboard. Dragging previews the position
+  // and only seeks on release, so scrubbing does not thrash the stream.
   ['progress-bar', 'pfs-progress-bar'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', e => {
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    let dragging = false;
+    const ratioAt = clientX => {
+      const rect = bar.getBoundingClientRect();
+      if (!rect.width) return 0;
+      return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    };
+    const preview = r => {
+      const pct = (r * 100) + '%';
+      bar.style.setProperty('--pct', pct);
+      const fill = bar.querySelector('.progress-fill, .pfs-fill, [id$="-fill"]');
+      if (fill) fill.style.width = pct;
+      const label = document.getElementById(id === 'progress-bar' ? 'time-elapsed' : 'pfs-elapsed');
+      if (label && audio.duration) label.textContent = fmtTime(r * audio.duration);
+    };
+    const commit = r => { if (audio.duration && !_radio) audio.currentTime = r * audio.duration; };
+    bar.addEventListener('pointerdown', e => {
       if (!audio.duration || _radio) return;
-      const rect = document.getElementById(id).getBoundingClientRect();
-      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+      dragging = true;
+      bar.setPointerCapture && bar.setPointerCapture(e.pointerId);
+      preview(ratioAt(e.clientX));
+      e.preventDefault();
+    });
+    bar.addEventListener('pointermove', e => { if (dragging) preview(ratioAt(e.clientX)); });
+    const end = e => {
+      if (!dragging) return;
+      dragging = false;
+      commit(ratioAt(e.clientX));
+    };
+    bar.addEventListener('pointerup', end);
+    bar.addEventListener('pointercancel', () => { dragging = false; _onTimeUpdate(); });
+    bar.addEventListener('keydown', e => {
+      if (!audio.duration || _radio) return;
+      const step = e.shiftKey ? 30 : 5;
+      if (e.key === 'ArrowRight') { audio.currentTime = Math.min(audio.duration, audio.currentTime + step); e.preventDefault(); }
+      else if (e.key === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - step); e.preventDefault(); }
+      else if (e.key === 'Home') { audio.currentTime = 0; e.preventDefault(); }
+      else if (e.key === 'End') { audio.currentTime = audio.duration; e.preventDefault(); }
     });
   });
 
-  // Volume sliders
   ['volume-slider', 'pfs-volume'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', e => {
-      audio.volume = parseFloat(e.target.value);
-      // Sync both sliders
-      ['volume-slider', 'pfs-volume'].forEach(sid => {
-        const el = document.getElementById(sid);
-        if (el) el.value = e.target.value;
-      });
-    });
+    document.getElementById(id)?.addEventListener('input', e => setVolume(e.target.value));
   });
+
+  // Bring the queue back after a reload or a login round-trip.
+  try {
+    const rawQ = localStorage.getItem(QUEUE_KEY);
+    if (rawQ) {
+      const q = JSON.parse(rawQ);
+      if (q && Array.isArray(q.list) && q.list.length && Date.now() - (q.at || 0) < 7 * 24 * 3600 * 1000) {
+        _pq = q.list;
+        _pqIdx = typeof q.idx === 'number' ? q.idx : -1;
+        _renderQueuePanel();
+      }
+    }
+  } catch (_) {}
 
   audio.addEventListener('timeupdate', _onTimeUpdate);
   audio.addEventListener('loadedmetadata', _onTimeUpdate);
@@ -620,8 +857,24 @@ function initPlayer() {
   });
   audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); if (_radio) _radioSync(false); });
   audio.addEventListener('timeupdate', _lfmOnTick);
-  audio.addEventListener('pause', () => _setPlayBtns(false));
-  audio.addEventListener('error', () => console.error('Audio error:', audio.src));
+  audio.addEventListener('pause', () => { _setPlayBtns(false); if (_baseTitle) document.title = _baseTitle; });
+  audio.addEventListener('play', () => { if (currentTrack) _setTabTitle(currentTrack); });
+  audio.addEventListener('waiting', () => { const b = document.getElementById('player-play-btn'); if (b) b.classList.add('player-buffering'); });
+  audio.addEventListener('playing', () => { document.querySelectorAll('.player-buffering').forEach(b => b.classList.remove('player-buffering')); _audioFails = 0; });
+  audio.addEventListener('canplay', () => { document.querySelectorAll('.player-buffering').forEach(b => b.classList.remove('player-buffering')); });
+  audio.addEventListener('error', () => {
+    document.querySelectorAll('.player-buffering').forEach(b => b.classList.remove('player-buffering'));
+    if (!audio.src || audio.src === location.href) return;
+    console.error('Audio error:', audio.src);
+    _audioFails++;
+    const name = (currentTrack && currentTrack.title) || 'That track';
+    if (typeof wvToast === 'function') wvToast(name + ' would not play — its file is missing', 'error');
+    _setPlayBtns(false);
+    // One dead link should not end the listening session, but a run of them
+    // means something wider is wrong, so stop rather than skip the whole queue.
+    if (_audioFails <= 3 && _wantPlaying) setTimeout(() => { if (audio.error) skipNext(); }, 900);
+    else _wantPlaying = false;
+  });
 }
 
 function _onTimeUpdate() {
@@ -641,6 +894,7 @@ function _onTimeUpdate() {
   if (pfsEl) pfsEl.textContent = fmtTime(audio.currentTime);
   if (pfsTot) pfsTot.textContent = fmtTime(audio.duration);
   if (typeof _syncLyrics === 'function') _syncLyrics(audio.currentTime);
+  _playGateTick();
   // Update thumb position — CSS uses --pct on .progress-bar::after
   const pb = document.getElementById('progress-bar');
   const pfsPb = document.getElementById('pfs-progress-bar');
@@ -663,7 +917,20 @@ function _onTimeUpdate() {
 
 // Register a stream, debounced per track so re-renders / quick replays of the
 // same track don't double-count. Fire-and-forget; failures are silent.
+var _audioFails = 0;
 var _lastPlayRegistered = { id: null, ts: 0 };
+var _playGate = { id: null, heard: 0, last: 0, sent: true };
+const PLAY_MIN_SECONDS = 30;
+function _playGateTick() {
+  const g = _playGate;
+  if (!g.id || g.sent || !audio || audio.paused) { if (audio) g.last = audio.currentTime; return; }
+  const now = audio.currentTime;
+  const step = now - g.last;
+  g.last = now;
+  if (step > 0 && step < 2) g.heard += step;
+  const target = Math.min(PLAY_MIN_SECONDS, (audio.duration || PLAY_MIN_SECONDS * 2) / 2);
+  if (g.heard >= target) { g.sent = true; registerPlay(g.id); }
+}
 function registerPlay(trackId) {
   var now = Date.now();
   if (_lastPlayRegistered.id === trackId && now - _lastPlayRegistered.ts < 30000) return;
@@ -849,6 +1116,7 @@ function playTrack(track) {
 
   currentTrack = { ...track, _savedTime: 0 };
   localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
+  _setTabTitle(track);
 
   // recently_played — store the comp when a track comes from one, not the individual track
   const HISTORY_KEY = 'recently_played';
@@ -897,10 +1165,10 @@ function playTrack(track) {
   const p = audio.play();
   if (p) p.catch(() => {});
 
-  // Register the stream. This is what actually counts a play — opening a
-  // detail page no longer inflates the count, so comps and album tracks
-  // accumulate real streams when listened to (here, not on page view).
-  if (track.id) registerPlay(track.id);
+  // A stream is counted once the track has really been heard (see _playGate
+  // in _onTimeUpdate), not the moment it is opened, so skipping past a track
+  // never inflates its count.
+  _playGate = { id: track.id || null, heard: 0, last: 0, sent: false };
 
   _renderAll(track);
   playerEl.classList.remove('hidden');
@@ -917,8 +1185,19 @@ function playTrack(track) {
     navigator.mediaSession.setActionHandler('nexttrack', () => skipNext());
     navigator.mediaSession.setActionHandler('seekbackward', e => { audio.currentTime -= e.seekOffset || 10; });
     navigator.mediaSession.setActionHandler('seekforward', e => { audio.currentTime += e.seekOffset || 10; });
+    try { navigator.mediaSession.setActionHandler('seekto', e => { if (e.seekTime != null && audio.duration) audio.currentTime = e.seekTime; }); } catch (_) {}
+    try { navigator.mediaSession.setActionHandler('stop', () => { _wantPlaying = false; audio.pause(); }); } catch (_) {}
   }
 }
+
+// The tab title carries what is playing so a listener can find the tab again.
+let _baseTitle = document.title;
+function _setTabTitle(track) {
+  if (!track || !track.title) return;
+  const who = track.artist_name || track._archive_artist || (track.artists && track.artists.display_name) || '';
+  document.title = '\u25B6 ' + track.title + (who ? ' — ' + who : '');
+}
+window._wvRestoreTabTitle = function (t) { _baseTitle = t || _baseTitle; if (!currentTrack || !audio || audio.paused) document.title = _baseTitle; else _setTabTitle(currentTrack); };
 
 function _renderAll(track) {
   const title = track.title || '—';
@@ -1032,24 +1311,37 @@ function pauseIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" f
 document.addEventListener('keydown', function(e) {
   // Skip when focus is in a text field or content-editable element
   var t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable || t.tagName === 'SELECT')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (!audio) return;
+  // Space and the arrows belong to whatever control has focus.
+  var onControl = t && t.closest && t.closest('button, a, [role="slider"], [tabindex]:not([tabindex="-1"])');
 
   if (e.code === 'Space') {
+    if (onControl) return;
     e.preventDefault();
     togglePlay();
-  } else if ((e.key === 'ArrowRight' || e.key === 'l') && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+  } else if ((e.key === 'ArrowRight' || e.key === 'l') && !e.shiftKey && !onControl) {
     e.preventDefault();
     audio.currentTime = Math.min((audio.duration || 0), audio.currentTime + 10);
-  } else if ((e.key === 'ArrowLeft' || e.key === 'j') && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+  } else if ((e.key === 'ArrowLeft' || e.key === 'j') && !e.shiftKey && !onControl) {
     e.preventDefault();
     audio.currentTime = Math.max(0, audio.currentTime - 10);
   } else if (e.key === 'ArrowRight' && e.shiftKey) {
     skipNext();
   } else if (e.key === 'ArrowLeft' && e.shiftKey) {
     skipPrev();
-  } else if (e.key === 'm' && !e.metaKey && !e.ctrlKey) {
+  } else if (e.key === 'm') {
     toggleMute();
+  } else if (e.key === 's' && !onControl) {
+    toggleShuffle();
+  } else if (e.key === 'r' && !onControl) {
+    toggleRepeat();
+  } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.shiftKey) {
+    e.preventDefault();
+    setVolume((audio.volume || 0) + (e.key === 'ArrowUp' ? 0.1 : -0.1));
+  } else if (e.key === '?') {
+    if (typeof window.wvShortcutsHelp === 'function') window.wvShortcutsHelp();
   }
 });
 

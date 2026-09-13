@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=6acab5542f58">
+  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
 </head>
 <body>
 <div id="view">
@@ -22,16 +22,16 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=6acab5542f58"></script>
-<script src="/js/layout.js?v=6acab5542f58"></script>
-<script src="/js/player.js?v=6acab5542f58"></script>
-<script src="/js/router.js?v=6acab5542f58"></script>
-<script src="/js/playlists.js?v=6acab5542f58"></script>
+<script src="/js/api.js?v=770081b7033c"></script>
+<script src="/js/layout.js?v=770081b7033c"></script>
+<script src="/js/player.js?v=770081b7033c"></script>
+<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/playlists.js?v=770081b7033c"></script>
 <script>
 initPlayer();
 
 // ── State ──────────────────────────────────────────────────────
-var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [] };
+var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [], justAdded: [] };
 var _homeFilter = 'all';      // all | comps | edits
 var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
 var _allItems = {};           // id -> item, for play buttons
@@ -59,6 +59,7 @@ async function loadHome() {
       api('/charts').catch(function() { return null; }),
       api('/archive?limit=12').catch(function() { return null; }),
       getBadgeData().catch(function() { return null; }),
+      api('/archive/recent?limit=14').catch(function() { return null; }),
     ]);
     _home.recent = (r[0] && r[0].recent) || [];
     _home.trending = Array.isArray(r[1]) ? r[1] : [];
@@ -66,7 +67,8 @@ async function loadHome() {
     _home.charts = r[3];
     _home.archive = r[4] ? (Array.isArray(r[4]) ? r[4] : (r[4].items || [])) : [];
     _badges = r[5] || _badges;
-    [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
+    _home.justAdded = (r[6] && r[6].items) || [];
+    [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive, _home.justAdded).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
     renderHome();
   } catch (err) {
     wvShowError('view', err, 'loadHome()');
@@ -88,6 +90,7 @@ function renderHome() {
   html += '<div class="wv-home-chips">' +
     chip('all', 'All') + chip('comps', 'Comps') + chip('edits', 'Edits') +
     '<span class="wv-chip" onclick="navigate(\'/archive.html\')">Archive</span>' +
+    '<span class="wv-chip" onclick="homeSurprise()" title="Play a comp at random">Surprise me</span>' +
     '</div>';
 
   // Jump back in — dense 2×4 tile grid, first screen
@@ -111,6 +114,9 @@ function renderHome() {
   if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse.html?tab=recent');
   if (_homeFilter !== 'comps') html += rail('New edits', newEdits, '/browse.html?tab=recent');
   html += chartsBlock();
+  if (_homeFilter !== 'edits') {
+    html += rail('Just added to the archive', _home.justAdded.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive.html?sort=newest');
+  }
   html += rail('From the archive', _home.archive.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive.html');
   html += rail('Recently played', recent.slice(0, 20).map(function(t) {
     return { id: t.id, _type: t._type, title: t.title, cover_url: t.cover_url, ia_url: t.ia_url, artists: { display_name: t.artist_name } };
@@ -118,6 +124,18 @@ function renderHome() {
 
   view.innerHTML = html;
 }
+
+// One click from the home page into something nobody was looking for.
+window.homeSurprise = async function () {
+  try {
+    if (typeof wvToast === 'function') wvToast('Finding something…');
+    var r = await api('/archive/random?n=1');
+    var pick = r && r.items && r.items[0];
+    if (!pick) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); return; }
+    if (typeof wvToast === 'function') wvToast('Playing ' + pick.title);
+    playCompById(pick.id, { album: pick, quiet: true });
+  } catch (_) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); }
+};
 
 function chip(k, label) {
   return '<span class="wv-chip' + (_homeFilter === k ? ' acc' : '') + '" onclick="setHomeFilter(\'' + k + '\')">' + label + '</span>';

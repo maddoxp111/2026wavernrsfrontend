@@ -1318,3 +1318,78 @@ window.wvShowError = function (el, err, retryAttr) {
   window.addEventListener('wv-api-down', show);
   window.addEventListener('wv-api-ok', hide);
 })();
+
+// ── Toasts ──────────────────────────────────────────────────────────────────
+// One place for short, non-blocking feedback. Pages used to invent their own
+// alert box each time, or say nothing at all when an action succeeded.
+(function () {
+  var host = null;
+  function ensureHost() {
+    if (host && document.body.contains(host)) return host;
+    host = document.createElement('div');
+    host.id = 'wv-toasts';
+    host.setAttribute('role', 'status');
+    host.setAttribute('aria-live', 'polite');
+    document.body.appendChild(host);
+    return host;
+  }
+  window.wvToast = function (message, kind, ms) {
+    if (!message) return;
+    var h = ensureHost();
+    var t = document.createElement('div');
+    t.className = 'wv-toast' + (kind ? ' wv-toast-' + kind : '');
+    t.textContent = String(message);
+    h.appendChild(t);
+    requestAnimationFrame(function () { t.classList.add('in'); });
+    var life = ms || (kind === 'error' ? 5200 : 3200);
+    var kill = function () {
+      t.classList.remove('in');
+      setTimeout(function () { t.remove(); if (host && !host.childElementCount) { host.remove(); host = null; } }, 220);
+    };
+    t.addEventListener('click', kill);
+    setTimeout(kill, life);
+    while (h.childElementCount > 4) h.firstElementChild.remove();
+  };
+})();
+
+// ── Keyboard shortcuts ──────────────────────────────────────────────────────
+window.wvShortcutsHelp = function () {
+  var existing = document.getElementById('wv-keys');
+  if (existing) { existing.remove(); return; }
+  var rows = [
+    ['Space', 'Play or pause'],
+    ['← / →', 'Back or forward 10 seconds'],
+    ['Shift + ← / →', 'Previous or next track'],
+    ['Shift + ↑ / ↓', 'Volume'],
+    ['S', 'Shuffle'],
+    ['R', 'Repeat (queue → track → off)'],
+    ['M', 'Mute'],
+    ['/', 'Search'],
+    ['?', 'This list'],
+    ['Esc', 'Close what is open'],
+  ];
+  var wrap = document.createElement('div');
+  wrap.id = 'wv-keys';
+  wrap.className = 'wv-keys-overlay';
+  wrap.innerHTML = '<div class="wv-keys-card" role="dialog" aria-label="Keyboard shortcuts">' +
+    '<div class="wv-keys-head">Keyboard shortcuts</div>' +
+    '<dl class="wv-keys-list">' +
+    rows.map(function (r) { return '<div><dt><kbd>' + r[0] + '</kbd></dt><dd>' + r[1] + '</dd></div>'; }).join('') +
+    '</dl><button class="wv-keys-close" type="button">Close</button></div>';
+  wrap.addEventListener('click', function (e) { if (e.target === wrap || e.target.classList.contains('wv-keys-close')) wrap.remove(); });
+  document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { wrap.remove(); document.removeEventListener('keydown', esc); } });
+  document.body.appendChild(wrap);
+};
+
+// "/" focuses search the way it does on GitHub and Reddit.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+  var t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  var box = document.getElementById('wv-search-inp');
+  if (!box && typeof navigate === 'function' && !/\/search\.html$/.test(location.pathname)) { e.preventDefault(); navigate('/search.html'); return; }
+  if (!box) return;
+  e.preventDefault();
+  box.focus();
+  box.select && box.select();
+});

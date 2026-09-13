@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — edit</title>
-  <link rel="stylesheet" href="/css/style.css?v=6acab5542f58">
+  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=6acab5542f58"></script>
-<script src="/js/layout.js?v=6acab5542f58"></script>
-<script src="/js/player.js?v=6acab5542f58"></script>
-<script src="/js/router.js?v=6acab5542f58"></script>
-<script src="/js/playlists.js?v=6acab5542f58"></script>
-<script src="/js/ratings.js?v=6acab5542f58"></script>
+<script src="/js/api.js?v=770081b7033c"></script>
+<script src="/js/layout.js?v=770081b7033c"></script>
+<script src="/js/player.js?v=770081b7033c"></script>
+<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/playlists.js?v=770081b7033c"></script>
+<script src="/js/ratings.js?v=770081b7033c"></script>
 <script>
   initPlayer();
 
@@ -62,22 +62,50 @@
   }
 
   function copyLink() {
-    navigator.clipboard.writeText(window.location.href).then(function() {
-      var btn = document.getElementById('share-btn');
-      if (!btn) return;
-      var orig = btn.innerHTML;
-      btn.textContent = 'Copied!';
-      setTimeout(function() { btn.innerHTML = orig; }, 2000);
-    }).catch(function() {});
+    var url = window.location.href;
+    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      navigator.share({ title: track ? track.title : 'wavernrs', url: url }).catch(function() {});
+      return;
+    }
+    navigator.clipboard.writeText(url).then(function() {
+      if (typeof wvToast === 'function') wvToast('Link copied');
+    }).catch(function() {
+      if (typeof wvToast === 'function') wvToast('Could not copy the link', 'error');
+    });
   }
 
   function playThisTrack() {
     if (!track) return;
-    playTrack(Object.assign({}, track, { artist_name: track.artists ? track.artists.display_name : '' }));
+    playTrack(_playable());
+  }
+
+  // Edits inside archived comps carry the importer account as their artist row,
+  // so the real credit comes off the comp itself.
+  function trackCreator() {
+    if (!track) return { name: 'Unknown', href: '', archive: false };
+    const fromArchive = track.is_archive || (track.albums && track.albums.is_archive);
+    const archiveName = track.archive_artist_name || (track.albums && track.albums.archive_artist_name) || null;
+    if (fromArchive && archiveName) {
+      return { name: archiveName, href: '/archive-artist.html?a=' + encodeURIComponent(typeof archiveArtistSlug === 'function' ? archiveArtistSlug(archiveName) : archiveName), archive: true };
+    }
+    const a = track.artists || {};
+    return { name: a.display_name || 'Unknown', href: a.id ? '/artist.html?id=' + a.id : '', archive: false };
+  }
+
+  function _playable() {
+    const c = trackCreator();
+    return Object.assign({}, track, {
+      artist_name: c.name,
+      _archive_artist: c.archive ? c.name : null,
+      _album_id: track.albums ? track.albums.id : null,
+      _album_title: track.albums ? track.albums.title : null,
+      _album_cover: track.albums ? track.albums.cover_url : null,
+    });
   }
 
   async function renderTrack() {
     const artist = track.artists || {};
+    const creator = trackCreator();
 
     const starEmpty = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
     const starPlaceholder = [1,2,3,4,5].map(i =>
@@ -113,7 +141,9 @@
           <div class="wv-media-header-info" style="flex:1;min-width:0;">
             ${badgePills ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">${badgePills}</div>` : ''}
             <div class="wv-title" style="font-size:28px;font-weight:800;letter-spacing:-0.04em;margin-bottom:6px;line-height:1.15;color:var(--text);">${escHtml(track.title)}</div>
-            <a href="/artist.html?id=${artist.id}" style="font-size:15px;color:var(--text-2);font-weight:500;text-decoration:none;">${escHtml(artist.display_name || 'Unknown')}</a>
+            ${creator.href
+              ? `<a href="${creator.href}" style="font-size:15px;color:var(--text-2);font-weight:500;text-decoration:none;">${escHtml(creator.name)}</a>`
+              : `<span style="font-size:15px;color:var(--text-2);font-weight:500;">${escHtml(creator.name)}</span>`}
             ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
             ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-2);line-height:1.65;">${escHtml(track.description)}</p>` : ''}
             <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap;">
@@ -132,6 +162,14 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
                 Download
               </a>
+              <button class="btn btn-secondary" onclick="playNextInQueue(_playable())" title="Play right after the current track">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm13-8v6.2a2.8 2.8 0 1 0 2 2.7V8h3V6z"/></svg>
+                Play next
+              </button>
+              <button class="btn btn-secondary" onclick="addToQueue(_playable())" title="Add to the end of the queue">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
+                Queue
+              </button>
               <button class="btn btn-secondary" id="share-btn" onclick="copyLink()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
@@ -200,15 +238,15 @@
       title: track.title,
       cover_url: track.cover_url || '',
       ia_url: track.ia_url || '',
-      artist_name: track.artists ? track.artists.display_name : '',
+      artist_name: trackCreator().name,
     }).replace(/"/g, '&quot;');
     el.innerHTML =
-      '<div class="track-row playing" onclick="playTrack({...track, artist_name: track.artists && track.artists.display_name})">' +
+      '<div class="track-row playing" onclick="playThisTrack()">' +
         '<div class="track-row-num">1</div>' +
         '<div class="track-row-cover">' + cover + '</div>' +
         '<div class="track-row-info">' +
           '<div class="track-row-title">' + escHtml(track.title) + '</div>' +
-          '<div class="track-row-artist">' + escHtml(track.artists ? track.artists.display_name : 'Unknown') + '</div>' +
+          '<div class="track-row-artist">' + escHtml(trackCreator().name) + '</div>' +
         '</div>' +
         '<span class="track-row-plays">' + fmtNum(track.play_count) + ' plays</span>' +
         '<button onclick="event.stopPropagation();openAddToPlaylist(' + trackObjStr + ')" ' +

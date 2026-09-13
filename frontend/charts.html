@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — charts</title>
-  <link rel="stylesheet" href="/css/style.css?v=6acab5542f58">
+  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=6acab5542f58"></script>
-<script src="/js/layout.js?v=6acab5542f58"></script>
-<script src="/js/player.js?v=6acab5542f58"></script>
-<script src="/js/router.js?v=6acab5542f58"></script>
-<script src="/js/playlists.js?v=6acab5542f58"></script>
+<script src="/js/api.js?v=770081b7033c"></script>
+<script src="/js/layout.js?v=770081b7033c"></script>
+<script src="/js/player.js?v=770081b7033c"></script>
+<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/playlists.js?v=770081b7033c"></script>
 <script>
 var _chartsData = null;
 var _minRatings = 5;
@@ -156,6 +156,23 @@ function _metricLabel(sort) {
   return 'Streams';
 }
 
+var _chartPlayable = [];
+
+// Play a charted edit and queue the rest of the chart behind it.
+function chartPlay(id) {
+  var idx = _chartPlayable.findIndex(function(t) { return t.id === id; });
+  if (idx < 0) { if (typeof wvToast === 'function') wvToast('That one has no audio yet'); return; }
+  var queue = _chartPlayable.map(function(t) {
+    return {
+      id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null,
+      artist_name: t.archive_artist_name || (t.artists ? t.artists.display_name : '') || '',
+      album_id: t.album_id || null, artist_id: t.artist_id || null,
+    };
+  });
+  setPlayerQueue(queue, idx);
+  playQueueIndex(idx);
+}
+
 function renderSection(section) {
   if (!_chartsData) return;
   var body = document.getElementById(section + '-body');
@@ -188,15 +205,21 @@ function renderSection(section) {
     '<div>#</div><div>Title</div><div style="text-align:right;">' + _metricLabel(sort) + '</div>' +
     '</div>';
 
+  var isComp = (type === 'comps' || type === 'archive');
+  _chartPlayable = isComp ? [] : list.filter(function(t) { return t.ia_url; });
+
   var rows = list.map(function(t, i) {
-    var seed = t.title || '', artist = t.artists ? t.artists.display_name : 'Unknown';
+    var seed = t.title || '', artist = (t.archive_artist_name || (t.artists ? t.artists.display_name : '')) || 'Unknown';
     var bg = coverGradient(seed);
+    var playCall = isComp ? "playCompById('" + t.id + "')" : "chartPlay('" + t.id + "')";
     return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 150px;" onclick="navigate(\'' + destPage + t.id + '\')">' +
       '<div style="font-size:14px;color:var(--text-3);">' + (i+1) + '</div>' +
       '<div style="display:flex;align-items:center;gap:14px;min-width:0;">' +
-        '<div style="width:44px;height:44px;border-radius:8px;background:' + bg + ';position:relative;overflow:hidden;flex-shrink:0;">' +
-          '' +
-          (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
+        '<div class="wv-chart-cover" style="width:44px;height:44px;border-radius:8px;background:' + bg + ';position:relative;overflow:hidden;flex-shrink:0;">' +
+          (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
+          '<button class="wv-chart-play" title="Play" aria-label="Play ' + escHtml(t.title || '') + '" onclick="event.stopPropagation();' + playCall + '">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' +
+          '</button>' +
         '</div>' +
         '<div style="min-width:0;">' +
           '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">' + escHtml(t.title) + '</div>' +

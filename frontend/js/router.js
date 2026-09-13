@@ -41,6 +41,7 @@ window.navigate = async function(url) {
     }
 
     document.title = doc.title;
+    if (typeof window._wvRestoreTabTitle === 'function') window._wvRestoreTabTitle(doc.title);
 
     // Swap only #view — nav and player stay alive
     const curView = document.getElementById('view');
@@ -75,11 +76,16 @@ window.navigate = async function(url) {
 
 // Intercept same-origin <a> clicks
 document.addEventListener('click', e => {
+  // Anything the browser has its own meaning for stays the browser's: a new
+  // tab on cmd/ctrl/middle click, a new window on shift, target="_blank".
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const a = e.target.closest('a[href]');
   if (!a) return;
   if (a.hasAttribute('download')) return;
+  const target = (a.getAttribute('target') || '').toLowerCase();
+  if (target && target !== '_self') return;
   const href = a.getAttribute('href');
-  if (!href || href.startsWith('http') || href.startsWith('//') || href.startsWith('#') || href.startsWith('mailto:')) return;
+  if (!href || href.startsWith('http') || href.startsWith('//') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
   e.preventDefault();
   navigate(href);
 });

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=6acab5542f58">
+  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
 </head>
 <body>
 
@@ -12,11 +12,11 @@
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=6acab5542f58"></script>
-<script src="/js/layout.js?v=6acab5542f58"></script>
-<script src="/js/player.js?v=6acab5542f58"></script>
-<script src="/js/router.js?v=6acab5542f58"></script>
-<script src="/js/playlists.js?v=6acab5542f58"></script>
+<script src="/js/api.js?v=770081b7033c"></script>
+<script src="/js/layout.js?v=770081b7033c"></script>
+<script src="/js/player.js?v=770081b7033c"></script>
+<script src="/js/router.js?v=770081b7033c"></script>
+<script src="/js/playlists.js?v=770081b7033c"></script>
 <script>
   initPlayer();
 
@@ -27,6 +27,43 @@
   var uploads = [];
   var isFollowing = false;
   var followerCount = 0;
+
+  // Play the artist's whole catalogue: standalone edits plus every comp track.
+  async function artistPlayAll(shuffle) {
+    var singles = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; });
+    var albums = uploads.filter(function (u) { return u._type === 'album'; });
+    if (!singles.length && !albums.length) { if (typeof wvToast === 'function') wvToast('Nothing to play here yet'); return; }
+    if (typeof wvToast === 'function') wvToast('Building the queue…');
+    var who = artist.display_name || '';
+    var queue = singles.map(function (t) {
+      return { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null, artist_name: who, album_id: null, artist_id: artistId };
+    });
+    var batches = await Promise.all(albums.slice(0, 12).map(function (a) {
+      return api('/albums/' + a.id + '/tracks').catch(function () { return []; });
+    }));
+    batches.forEach(function (rows, i) {
+      var a = albums[i];
+      (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; }).forEach(function (t) {
+        queue.push({ id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || a.cover_url || null, artist_name: who, album_id: a.id, artist_id: artistId, _album_id: a.id, _album_title: a.title, _album_cover: a.cover_url || null });
+      });
+    });
+    if (!queue.length) { if (typeof wvToast === 'function') wvToast('Nothing playable here yet', 'error'); return; }
+    if (shuffle) for (var i = queue.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = queue[i]; queue[i] = queue[j]; queue[j] = t; }
+    setPlayerQueue(queue, 0);
+    playQueueIndex(0);
+    if (typeof wvToast === 'function') wvToast((shuffle ? 'Shuffling ' : 'Playing ') + queue.length + ' track' + (queue.length === 1 ? '' : 's'));
+  }
+
+  function artistPlayTrack(id) {
+    var t = uploads.find(function (u) { return u.id === id; });
+    if (!t || !t.ia_url) { if (typeof wvToast === 'function') wvToast('That edit has no audio yet'); return; }
+    var idx = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; }).findIndex(function (u) { return u.id === id; });
+    var list = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; }).map(function (u) {
+      return { id: u.id, title: u.title, ia_url: u.ia_url, cover_url: u.cover_url || null, artist_name: artist.display_name || '', artist_id: artistId };
+    });
+    setPlayerQueue(list, Math.max(0, idx));
+    playQueueIndex(Math.max(0, idx));
+  }
 
   async function loadPage() {
     try {
@@ -112,6 +149,10 @@
           '<div style="flex:1;min-width:0;padding-bottom:4px;">' +
             '<div style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;">' + escHtml(artist.display_name || 'Unknown') + verifiedPill + '</div>' +
             '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+              '<button class="btn btn-primary btn-sm" onclick="artistPlayAll(false)">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play all</button>' +
+              '<button class="btn btn-secondary btn-sm" onclick="artistPlayAll(true)">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;"><path d="M17.2 4.4 21 8.2l-3.8 3.8V9.4h-2.1c-1 0-1.6.4-2.3 1.4l-.9 1.3-1.5-2.1.7-1c1.1-1.6 2.4-2.4 4-2.4h2.1Zm0 8.1 3.8 3.8-3.8 3.8v-2.6h-2.1c-1.6 0-2.9-.8-4-2.4l-3-4.3c-.7-1-1.3-1.4-2.3-1.4H3.2V9.4h2.6c1.6 0 2.9.8 4 2.4l3 4.3c.7 1 1.3 1.4 2.3 1.4h2.1Zm-11.4 2.1c.6 0 1.1-.15 1.55-.5l1.45 2.05c-.85.6-1.85.9-3 .9H3.2v-2.45Z"/></svg>Shuffle</button>' +
               (isOwner
                 ? '<a href="/dashboard.html" class="btn btn-secondary btn-sm">Manage music</a>'
                 : '<button class="btn ' + (isFollowing ? 'btn-secondary' : 'btn-primary') + ' btn-sm" id="follow-btn" onclick="toggleFollow()">' + (isFollowing ? 'Following' : 'Follow') + '</button>') +
@@ -126,7 +167,7 @@
           '<span><strong style="color:var(--text);">' + fmtNum(totalPlays) + '</strong> total plays</span>' +
           '<span><strong style="color:var(--text);" id="follower-count">' + fmtNum(followerCount) + '</strong> followers</span>' +
           (artist.location ? '<span>📍 ' + escHtml(artist.location) + '</span>' : '') +
-          (artist.website ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener" style="color:var(--brand);">Website ↗</a></span>' : '') +
+          (/^https?:\/\//i.test(String(artist.website || '')) ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener noreferrer" style="color:var(--brand);">Website ↗</a></span>' : '') +
         '</div>' +
 
         '<div id="uploads-empty"></div>' +
@@ -165,7 +206,8 @@
               '' +
               (isAlbum ? '' : '') +
               coverImg +
-              '<button class="wv-cover-play-btn" onclick="event.stopPropagation();' + clickAction + '">' +
+              '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();' +
+                (isAlbum ? "playCompById('" + item.id + "')" : "artistPlayTrack('" + item.id + "')") + '">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
               '</button>' +
             '</div>' +

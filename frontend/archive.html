@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=6acab5542f58">
+  <link rel="stylesheet" href="/css/style.css?v=770081b7033c">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=6acab5542f58"></script>
-<script src="/js/layout.js?v=6acab5542f58"></script>
-<script src="/js/player.js?v=6acab5542f58"></script>
-<script src="/js/router.js?v=6acab5542f58"></script>
+<script src="/js/api.js?v=770081b7033c"></script>
+<script src="/js/layout.js?v=770081b7033c"></script>
+<script src="/js/player.js?v=770081b7033c"></script>
+<script src="/js/router.js?v=770081b7033c"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -77,6 +77,10 @@ async function initArchive() {
         '<option value="artist">Artist A–Z</option>' +
         '<option value="plays">Most played</option>' +
       '</select>' +
+      '<select id="arc-era" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;display:none;" onchange="arcEraChange()">' +
+        '<option value="">Every era</option>' +
+      '</select>' +
+      '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcSurprise()" title="Play a comp at random">Surprise me</button>' +
       '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
     '</div>' +
     '<div id="archive-grid" class="wv-tile-grid"><div class="loading"><div class="spinner"></div></div></div>' +
@@ -93,6 +97,7 @@ async function initArchive() {
   _arcWatchSentinel();
   arcReload();
   loadTrackerTabs();
+  loadArcEras();
   setTimeout(function () {
     var g = document.getElementById('archive-grid');
     if (g && !_arcItems.length && g.querySelector('.spinner')) {
@@ -119,7 +124,8 @@ async function arcLoadMore() {
   if (more && _arcItems.length) more.style.display = '';
   try {
     var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
-      (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
+      (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '') +
+      (_arcEra ? '&era=' + encodeURIComponent(_arcEra) : '');
     var page = null;
     try { page = await api(url); }
     catch (e) {
@@ -129,10 +135,15 @@ async function arcLoadMore() {
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
     var items = Array.isArray(page) ? page : (page.items || []);
-    _archiveTotal = Array.isArray(page) ? items.length : (page.total || 0);
+    var knownTotal = Array.isArray(page) ? items.length
+      : (page.total_known || typeof page.total === 'number' && page.total > 0) ? page.total : null;
+    if (typeof knownTotal === 'number') _archiveTotal = knownTotal;
     var first = _arcItems.length === 0;
     _arcItems = _arcItems.concat(items);
-    _arcDone = !items.length || _arcItems.length >= _archiveTotal;
+    // A short page means the end. Only trust a total the server actually knows;
+    // it counts in the background and reports null until that lands.
+    _arcDone = !items.length || items.length < _ARC_PAGE ||
+      (typeof knownTotal === 'number' && _arcItems.length >= knownTotal);
     var grid = document.getElementById('archive-grid');
     if (!grid) return;
     var trackCards = (first && Array.isArray(page.tracks) && page.tracks.length) ? page.tracks.map(archiveTrackCardHTML).join('') : '';
@@ -151,7 +162,11 @@ async function arcLoadMore() {
       grid.insertAdjacentHTML('beforeend', items.map(archiveCardHTML).join(''));
     }
     var countEl = document.getElementById('arc-count');
-    if (countEl) countEl.textContent = _archiveTotal.toLocaleString() + ' ' + _arcNoun(_archiveTotal) + (_arcQuery ? ' match' : '');
+    if (countEl) {
+      countEl.textContent = _archiveTotal
+        ? _archiveTotal.toLocaleString() + ' ' + _arcNoun(_archiveTotal) + (_arcQuery ? ' match' : '')
+        : _arcItems.length.toLocaleString() + '+ ' + _arcNoun(2) + (_arcDone ? '' : ' so far');
+    }
   } catch (err) {
     if (gen !== _arcGen) return;
     var g = document.getElementById('archive-grid');
@@ -167,6 +182,36 @@ function arcSearchInput() {
     _arcQuery = ((document.getElementById('arc-search') || {}).value || '').trim();
     if (_arcView !== 'artists') arcReload(); else loadArtists(true);
   }, 250);
+}
+
+var _arcEra = '';
+async function loadArcEras() {
+  try {
+    var r = await api('/archive/eras');
+    var sel = document.getElementById('arc-era');
+    if (!sel || !r || !r.items || r.items.length < 2) return;
+    sel.innerHTML = '<option value="">Every era</option>' +
+      r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
+    sel.value = _arcEra;
+    sel.style.display = '';
+  } catch (_) {}
+}
+
+function arcEraChange() {
+  var sel = document.getElementById('arc-era');
+  _arcEra = sel ? sel.value : '';
+  arcReload();
+}
+
+async function arcSurprise() {
+  try {
+    if (typeof wvToast === 'function') wvToast('Finding something…');
+    var r = await api('/archive/random?n=1');
+    var pick = r && r.items && r.items[0];
+    if (!pick) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); return; }
+    if (typeof wvToast === 'function') wvToast('Playing ' + pick.title);
+    playCompById(pick.id, { album: pick, quiet: true });
+  } catch (_) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); }
 }
 
 function arcSortChange() {
@@ -280,7 +325,10 @@ function archiveCardHTML(item) {
   return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + item.id + '\')">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
     (item.is_archive === false ? '' : '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>') +
-    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+    (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
+    '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + item.id + '\')">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+    '</button>' +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + _onyxIcon(item.id) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(artistName) + (item.original_date ? ' · ' + new Date(item.original_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '') + (item.external_likes ? ' · ♥ ' + Number(item.external_likes).toLocaleString() : '') + '</div></div>';
