@@ -64,6 +64,9 @@ function renderIndex() {
     }).join('') + '</div>';
   }
   view.innerHTML = html;
+  // Each era has its own album art now; only fall back to a comp cover when
+  // the wiki has nothing for that era (Turbo Grafx 16, Other).
+  _eras.forEach(function(t) { if (t.cover) setTileCover('era:' + t.id, t.cover); });
   fillTileCovers();
 }
 
@@ -93,9 +96,9 @@ async function fillTileCovers() {
   setTileCover('/charts.html', pick(trending));
   setTileCover('/artists.html', pick(recent));
   setTileCover('/stats.html', pick(recent));
-  _eras.forEach(function(t) { setTileCover('era:' + t.id, pick(recent, function(x) { return String(x.era_tag_id) === String(t.id); })); });
+  _eras.forEach(function(t) { if (!t.cover) setTileCover('era:' + t.id, pick(recent, function(x) { return String(x.era_tag_id) === String(t.id); })); });
   try { var hl = await api('/discover/highlighted'); setTileCover('highlighted', pick(hl || [])); } catch (e) {}
-  var missing = _eras.filter(function(t) { return !document.querySelector('.wv-browse-tile[data-tile="era:' + t.id + '"] img'); }).slice(0, 12);
+  var missing = _eras.filter(function(t) { return !t.cover && !document.querySelector('.wv-browse-tile[data-tile="era:' + t.id + '"] img'); }).slice(0, 12);
   for (var i = 0; i < missing.length; i++) {
     try { var items = await api('/discover/era/' + encodeURIComponent(missing[i].id)); setTileCover('era:' + missing[i].id, pick(items || [])); } catch (e) {}
   }
@@ -143,8 +146,9 @@ async function renderList() {
     if (_tab === 'comps') items = items.filter(function(i) { return i._type === 'album'; });
     if (_tab === 'edits') items = items.filter(function(i) { return i._type !== 'album'; });
     _items = Array.isArray(items) ? items : [];
+    var eraArt = eraObj && eraObj.cover;
     var withCover = _items.find(function(i) { return i.cover_url; });
-    if (typeof window.setPageBgImage === 'function') window.setPageBgImage(withCover ? withCover.cover_url : '', title);
+    if (typeof window.setPageBgImage === 'function') window.setPageBgImage(eraArt || (withCover ? withCover.cover_url : ''), title);
     var sel = document.getElementById('br-sort');
     if (sel) sel.value = _sort;
     paintGrid();

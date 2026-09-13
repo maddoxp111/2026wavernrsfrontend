@@ -186,11 +186,13 @@ function arcSearchInput() {
 }
 
 var _arcEra = '';
+var _arcEras = [];
 async function loadArcEras() {
   try {
     var r = await api('/archive/eras');
     var sel = document.getElementById('arc-era');
     if (!sel || !r || !r.items || r.items.length < 2) return;
+    _arcEras = r.items;
     sel.innerHTML = '<option value="">Every era</option>' +
       r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
     sel.value = _arcEra;
@@ -201,6 +203,9 @@ async function loadArcEras() {
 function arcEraChange() {
   var sel = document.getElementById('arc-era');
   _arcEra = sel ? sel.value : '';
+  // Wash the page in the era's own cover while you are filtered to it.
+  var era = _arcEras.find(function (e) { return e.id === _arcEra; });
+  if (typeof window.setPageBgImage === 'function' && era && era.cover) window.setPageBgImage(era.cover, era.name);
   arcReload();
 }
 
