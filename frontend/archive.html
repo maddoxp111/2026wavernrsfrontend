@@ -387,12 +387,12 @@ function renderTrackerCards() {
 // The community ranking. Emphasis drops off in steps, so the very top of the
 // list reads as a shortlist rather than one long undifferentiated grid.
 var _topComps = null;
+// Only the top 3 and the top 10 stand apart; the rest of the ranking shares
+// one size so the list stays scannable.
 var TOP_TIERS = [
   { to: 3,   cls: 'tier1' },
   { to: 10,  cls: 'tier2' },
-  { to: 25,  cls: 'tier3' },
-  { to: 100, cls: 'tier4' },
-  { to: 150, cls: 'tier5' },
+  { to: 150, cls: 'tier3' },
 ];
 
 async function loadTopComps() {
@@ -415,9 +415,10 @@ function renderTopComps() {
     '<h2>The 150 best comps</h2>' +
     '<p>Yedits Top 100 Comps…made by 100greenmen and mp.</p>' +
     '<div class="wv-top150-actions">' +
-      '<button class="wv-btn-play" onclick="playTop(3)">Play the top 3</button>' +
-      '<button class="wv-pill" onclick="playTop(10)">Top 10</button>' +
-      '<button class="wv-pill" onclick="playTop(25)">Top 25</button>' +
+      '<button class="wv-pill" onclick="playTop(3)">Play Top 3</button>' +
+      '<button class="wv-pill" onclick="playTop(10)">Play Top 10</button>' +
+      '<button class="wv-pill" onclick="playTop(100)">Play Top 100</button>' +
+      '<button class="wv-pill" onclick="playTop(150)">Play Full Ranking</button>' +
     '</div></div>';
   var html = head;
   var from = 1;
@@ -451,31 +452,55 @@ function topCard(i) {
   '</div>';
 }
 
-// Queue one track from each of the top N, in rank order.
+// Play down the ranking in order. A short range plays every comp in full; the
+// long ones would be thousands of tracks and a request per comp, so those take
+// one track from each. The toast says which you got.
 async function playTop(n) {
   if (!_topComps) return;
   var picks = (_topComps.items || []).filter(function (i) { return i.on_site && i.rank <= n; });
   if (!picks.length) { if (typeof wvToast === 'function') wvToast('None of those are on the site yet'); return; }
-  if (n <= 3) {
-    if (typeof wvToast === 'function') wvToast('Playing ' + picks[0].title);
-    return playCompById(picks[0].album_id, { album: { id: picks[0].album_id, title: picks[0].title, cover_url: picks[0].cover_url, is_archive: true, archive_artist_name: picks[0].creator }, quiet: true });
+  var whole = picks.length <= 10;
+  if (typeof wvToast === 'function') {
+    wvToast('Loading ' + (whole ? 'the top ' + picks.length : 'one track from each of the top ' + picks.length) + '…');
   }
-  if (typeof wvToast === 'function') wvToast('Building a mix from the top ' + n + '…');
-  var batches = await Promise.all(picks.map(function (p) { return api('/albums/' + p.album_id + '/tracks').catch(function () { return []; }); }));
+
+  // Eight at a time, so the long ranges do not hit the API all at once.
+  var lists = new Array(picks.length);
+  var next = 0;
+  async function worker() {
+    while (next < picks.length) {
+      var i = next++;
+      try {
+        var rows = await api('/albums/' + picks[i].album_id + '/tracks');
+        lists[i] = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+      } catch (e) { lists[i] = []; }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(8, picks.length) }, worker));
+
   var queue = [];
-  batches.forEach(function (rows, idx) {
-    var p = picks[idx];
-    var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
-    if (!tracks.length) return;
-    var t = tracks[Math.floor(Math.random() * tracks.length)];
-    queue.push({ id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || p.cover_url || null,
-      artist_name: p.creator || '', album_id: p.album_id, _album_id: p.album_id, _album_title: p.title,
-      _album_cover: p.cover_url || null, _archive_artist: p.creator || null });
+  lists.forEach(function (tracks, i) {
+    if (!tracks || !tracks.length) return;
+    var p = picks[i];
+    var take = whole ? tracks : [tracks[Math.floor(Math.random() * tracks.length)]];
+    take.forEach(function (t) {
+      queue.push({
+        id: t.id, title: t.title, ia_url: t.ia_url,
+        cover_url: t.cover_url || p.cover_url || null,
+        artist_name: p.creator || '',
+        album_id: p.album_id, _album_id: p.album_id, _album_title: p.title,
+        _album_cover: p.cover_url || null, _archive_artist: p.creator || null,
+      });
+    });
   });
   if (!queue.length) { if (typeof wvToast === 'function') wvToast('Nothing playable in that range', 'error'); return; }
   setPlayerQueue(queue, 0);
   playQueueIndex(0);
-  if (typeof wvToast === 'function') wvToast('Playing ' + queue.length + ' from the top ' + n);
+  if (typeof wvToast === 'function') {
+    wvToast(whole
+      ? 'Playing ' + queue.length + ' tracks from the top ' + picks.length
+      : 'Playing one track from each of ' + queue.length + ' comps');
+  }
 }
 
 function artistCardHTML(a) {
