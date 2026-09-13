@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=86bd8d09ae9f">
+  <link rel="stylesheet" href="/css/style.css?v=7c06bfb95faa">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=86bd8d09ae9f"></script>
-<script src="/js/layout.js?v=86bd8d09ae9f"></script>
-<script src="/js/player.js?v=86bd8d09ae9f"></script>
-<script src="/js/router.js?v=86bd8d09ae9f"></script>
+<script src="/js/api.js?v=7c06bfb95faa"></script>
+<script src="/js/layout.js?v=7c06bfb95faa"></script>
+<script src="/js/player.js?v=7c06bfb95faa"></script>
+<script src="/js/router.js?v=7c06bfb95faa"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -81,6 +81,7 @@ async function initArchive() {
         '<option value="">Every era</option>' +
       '</select>' +
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcSurprise()" title="Play a comp at random">Surprise me</button>' +
+      '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcShuffleResults()" title="Queue a track from each comp shown">Shuffle these</button>' +
       '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
     '</div>' +
     '<div id="archive-grid" class="wv-tile-grid"><div class="loading"><div class="spinner"></div></div></div>' +
@@ -201,6 +202,36 @@ function arcEraChange() {
   var sel = document.getElementById('arc-era');
   _arcEra = sel ? sel.value : '';
   arcReload();
+}
+
+// Build a mixtape out of whatever the grid is currently showing: one track
+// from each comp, shuffled.
+async function arcShuffleResults() {
+  var comps = _arcItems.filter(function (i) { return (i.track_count || 0) > 1 || i.track_count === undefined; }).slice(0, 25);
+  if (!comps.length) { if (typeof wvToast === 'function') wvToast('Nothing to shuffle yet'); return; }
+  if (typeof wvToast === 'function') wvToast('Building a mix from ' + comps.length + ' comps…');
+  var batches = await Promise.all(comps.map(function (c) {
+    return api('/albums/' + c.id + '/tracks').catch(function () { return []; });
+  }));
+  var queue = [];
+  batches.forEach(function (rows, i) {
+    var c = comps[i];
+    var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+    if (!tracks.length) return;
+    var t = tracks[Math.floor(Math.random() * tracks.length)];
+    queue.push({
+      id: t.id, title: t.title, ia_url: t.ia_url,
+      cover_url: t.cover_url || c.cover_url || null,
+      artist_name: c.archive_artist_name || 'Unknown',
+      album_id: c.id, _album_id: c.id, _album_title: c.title, _album_cover: c.cover_url || null,
+      _archive_artist: c.archive_artist_name || null,
+    });
+  });
+  if (!queue.length) { if (typeof wvToast === 'function') wvToast('None of those had playable audio', 'error'); return; }
+  for (var i = queue.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = queue[i]; queue[i] = queue[j]; queue[j] = tmp; }
+  setPlayerQueue(queue, 0);
+  playQueueIndex(0);
+  if (typeof wvToast === 'function') wvToast('Playing a mix of ' + queue.length + ' tracks');
 }
 
 async function arcSurprise() {
@@ -331,7 +362,10 @@ function archiveCardHTML(item) {
     '</button>' +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title) + _onyxIcon(item.id) + '</div>' +
-    '<div class="wv-comp-card-artist">' + escHtml(artistName) + (item.original_date ? ' · ' + new Date(item.original_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '') + (item.external_likes ? ' · ♥ ' + Number(item.external_likes).toLocaleString() : '') + '</div></div>';
+    '<div class="wv-comp-card-artist">' + escHtml(artistName) +
+      (item.era_tag && item.era_tag.name ? ' · ' + escHtml(item.era_tag.name) : '') +
+      (item.original_date ? ' · ' + new Date(item.original_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '') +
+      (item.external_likes ? ' · ♥ ' + Number(item.external_likes).toLocaleString() : '') + '</div></div>';
 }
 
 function archiveTrackCardHTML(t) {

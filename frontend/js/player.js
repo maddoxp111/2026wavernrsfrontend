@@ -1218,7 +1218,9 @@ function playTrack(track) {
   if (!playerEl || !audio) return;
   if (!track._radio && _radio) window.radioStop();
   try { const h = JSON.parse(localStorage.getItem('wv_autoplay_heard') || '[]'); if (track.id && h.indexOf(track.id) === -1) { h.push(track.id); if (track._album_id && h.indexOf(track._album_id) === -1) h.push(track._album_id); localStorage.setItem('wv_autoplay_heard', JSON.stringify(h.slice(-800))); } } catch (_) {}
-  if (!_fromQueue && !track._radio) setTimeout(() => _seedAutoplayQueue(track), 0);
+  // Seeding costs a pool lookup plus a fetch per candidate comp. Wait until the
+  // listener has actually stayed with this track, so a skipped one costs nothing.
+  if (!_fromQueue && !track._radio) setTimeout(() => _seedAutoplayQueue(track), 12000);
 
   // A standalone play (not driven by the queue) clears any old queue so the OS
   // media controls don't skip back into a comp the user has moved on from.
