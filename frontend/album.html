@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=be079f4a4877">
+  <link rel="stylesheet" href="/css/style.css?v=3dd102390155">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=be079f4a4877"></script>
-<script src="/js/layout.js?v=be079f4a4877"></script>
-<script src="/js/player.js?v=be079f4a4877"></script>
-<script src="/js/router.js?v=be079f4a4877"></script>
-<script src="/js/playlists.js?v=be079f4a4877"></script>
-<script src="/js/ratings.js?v=be079f4a4877"></script>
+<script src="/js/api.js?v=3dd102390155"></script>
+<script src="/js/layout.js?v=3dd102390155"></script>
+<script src="/js/player.js?v=3dd102390155"></script>
+<script src="/js/router.js?v=3dd102390155"></script>
+<script src="/js/playlists.js?v=3dd102390155"></script>
+<script src="/js/ratings.js?v=3dd102390155"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -927,9 +927,13 @@
       box.innerHTML = list.filter(function (x) {
         var k = x.t + '|' + x.era; if (seen[k]) return false; seen[k] = 1; return true;
       }).map(function (x) {
+        // Full tracker names are long enough to run off a phone screen, so the
+        // pill carries a short one and the full name lives in the tooltip.
+        var short = String(x.tn || '').replace(/\s*Tracker$/i, '').replace(/^Sophie's Curated Comps & Edits$/i, "Sophie's CET");
+        if (short.length > 26) short = short.slice(0, 25).trim() + '…';
         return '<a href="/tracker.html?t=' + encodeURIComponent(x.t) + '&era=' + encodeURIComponent(x.es) + '" ' +
-          'class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;text-decoration:none;display:inline-block;" ' +
-          'title="Listed in ' + escHtml(x.tn) + '">' + (x.s ? '⭐ ' : '') + '📋 ' + escHtml(x.tn) + ' · ' + escHtml(x.era) + '</a>';
+          'class="wv-badge-pill wv-badge-highlight" style="text-decoration:none;" ' +
+          'title="Listed in ' + escHtml(x.tn) + ' · ' + escHtml(x.era) + '">' + (x.s ? '⭐ ' : '') + '📋 ' + escHtml(short) + ' · ' + escHtml(x.era) + '</a>';
       }).join('');
     } catch (e) { box.innerHTML = ''; }
   }

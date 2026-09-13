@@ -2018,7 +2018,12 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
 }
 /* tracker / badge pills wrap and never push the page sideways */
 #wv-tracker-pills { display: flex; flex-wrap: wrap; gap: 5px; max-width: 100%; }
-#wv-tracker-pills > a { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Flex items will not shrink below their text without min-width:0, which is
+   what let these run off both edges of a phone screen. */
+#wv-tracker-pills > a {
+  min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+@media (max-width: 900px) { #wv-tracker-pills { justify-content: center; } }
 .wv-badge-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
 
 /* Section heads */
@@ -2609,3 +2614,5 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .wv-top150-grid.tier5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .wv-tracker-grid { grid-template-columns: 1fr; }
 }
+
+.wv-top150-grid + .wv-top150-grid { margin-top: 18px; }
