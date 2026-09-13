@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — tracker</title>
-  <link rel="stylesheet" href="/css/style.css?v=3dd102390155">
+  <link rel="stylesheet" href="/css/style.css?v=1755d5ae33eb">
 </head>
 <body>
 
@@ -53,10 +53,10 @@
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<script src="/js/api.js?v=3dd102390155"></script>
-<script src="/js/layout.js?v=3dd102390155"></script>
-<script src="/js/player.js?v=3dd102390155"></script>
-<script src="/js/router.js?v=3dd102390155"></script>
+<script src="/js/api.js?v=1755d5ae33eb"></script>
+<script src="/js/layout.js?v=1755d5ae33eb"></script>
+<script src="/js/player.js?v=1755d5ae33eb"></script>
+<script src="/js/router.js?v=1755d5ae33eb"></script>
 <script>
   var TK_TAGS = { '\u2b50': 'Every edit is amazing', '\ud83d\uddd1': 'Only the leak is bad', '\ud83e\udd16': 'Every edit used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
   function tkTagHint(tag) { var out = []; for (var k in TK_TAGS) if (tag.indexOf(k) >= 0) out.push(TK_TAGS[k]); return out.join(' · ') || 'Tracker tag'; }
@@ -127,6 +127,7 @@
     history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'edit' ? '&kind=edit' : ''));
     var here = d.items.filter(function (x) { return x.album; }).length;
     var near = d.items.filter(function (x) { return !x.album && x.maybe; }).length;
+    var extraCount = d.items.filter(function (x) { return x.tier === 'additional'; }).length;
     var html = '<div class="tk-back" onclick="tkBack()">← ' + esc(t.name) + '</div>' +
       '<div class="tk-hero">' +
         '<div class="art" style="background:' + grad(era.name) + ';">' +
@@ -135,14 +136,30 @@
           '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">' +
             esc(t.name) + ' · ' + (kind === 'comp' ? 'Comps' : 'Edits') + '</div>' +
           '<h1 style="margin:3px 0 4px;font-size:30px;font-weight:800;letter-spacing:-.03em;">' + esc(era.name) + '</h1>' +
-          '<div class="tk-sub">' + d.items.length + ' listed · ' + here + ' matched' + (near ? ' · ' + near + ' to check' : '') + '</div>' +
+          '<div class="tk-sub">' + d.items.length + ' listed · ' + here + ' matched' + (near ? ' · ' + near + ' to check' : '') +
+            (extraCount ? ' · ' + extraCount + ' additional' : '') + '</div>' +
         '</div></div>' +
-      '<div style="height:14px;"></div><div class="tk-list">';
-    html += d.items.map(function (x) {
-      var a = x.album;
-      var searchUrl = '/archive.html?q=' + encodeURIComponent(x.name);
-      var go = a ? 'navigate(\'/album.html?id=' + a.id + '\')' : (x.maybe ? 'navigate(\'' + searchUrl + '\')' : '');
-      return '<div class="tk-row ' + (a ? 'hit' : (x.maybe ? 'hit tk-part' : 'tk-miss')) + '"' +
+      '<div style="height:14px;"></div>';
+
+    // The tracker keeps a curated main list and a separate additional list of
+    // comps that did not make the cut, so show them apart rather than merged.
+    var mainItems = d.items.filter(function (x) { return x.tier !== 'additional'; });
+    var extraItems = d.items.filter(function (x) { return x.tier === 'additional'; });
+    html += '<div class="tk-list">' + mainItems.map(tkRow).join('') + '</div>';
+    if (extraItems.length) {
+      html += '<div class="tk-sec-head">Additional comps<span>' + extraItems.length + '</span></div>' +
+        '<div class="tk-sec-note">On the tracker\'s second list — not part of the curated main list.</div>' +
+        '<div class="tk-list">' + extraItems.map(tkRow).join('') + '</div>';
+    }
+    b.innerHTML = html;
+    window.scrollTo(0, 0);
+  };
+
+  function tkRow(x) {
+    var a = x.album;
+    var searchUrl = '/archive.html?q=' + encodeURIComponent(x.name);
+    var go = a ? 'navigate(\'/album.html?id=' + a.id + '\')' : (x.maybe ? 'navigate(\'' + searchUrl + '\')' : '');
+    return '<div class="tk-row ' + (a ? 'hit' : (x.maybe ? 'hit tk-part' : 'tk-miss')) + '"' +
           (go ? ' onclick="' + go + '"' : '') + '>' +
         '<div class="cv" style="background:' + grad(x.name) + ';">' +
           (a && a.cover_url ? '<img src="' + esc(a.cover_url) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
@@ -155,10 +172,7 @@
            : x.maybe ? '<span class="tk-tag">' + x.maybe + ' with this name →</span>'
            : '<span class="tk-tag">not here yet</span>') +
         '</div>';
-    }).join('') + '</div>';
-    b.innerHTML = html;
-    window.scrollTo(0, 0);
-  };
+  }
 
   window.tkBack = function () { renderTracker(_slug, _kind); window.scrollTo(0, 0); };
 
