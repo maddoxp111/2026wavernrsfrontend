@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
-  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
+  <link rel="stylesheet" href="/css/style.css?v=4f033efd623e">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=922f4ba78a89"></script>
-<script src="/js/layout.js?v=922f4ba78a89"></script>
-<script src="/js/player.js?v=922f4ba78a89"></script>
-<script src="/js/router.js?v=922f4ba78a89"></script>
+<script src="/js/api.js?v=4f033efd623e"></script>
+<script src="/js/layout.js?v=4f033efd623e"></script>
+<script src="/js/player.js?v=4f033efd623e"></script>
+<script src="/js/router.js?v=4f033efd623e"></script>
 <script>
   // Inject community styles once (works on both hard refresh and SPA navigation)
   if (!document.getElementById('comm-styles')) {
@@ -281,9 +281,9 @@
         '<div style="display:flex;gap:14px;">' +
           // Vote column
           '<div class="comm-vote-col" style="padding-top:2px;">' +
-            '<button class="comm-vote-btn up" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote">▲</button>' +
+            '<button class="comm-vote-btn up' + (p.user_vote === 1 ? ' on' : '') + '" id="post-up-' + escHtml(p.id) + '" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote" aria-pressed="' + (p.user_vote === 1) + '">▲</button>' +
             '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '">' + s + '</span>' +
-            '<button class="comm-vote-btn down" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote">▼</button>' +
+            '<button class="comm-vote-btn down' + (p.user_vote === -1 ? ' on' : '') + '" id="post-down-' + escHtml(p.id) + '" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote" aria-pressed="' + (p.user_vote === -1) + '">▼</button>' +
           '</div>' +
           // Content
           '<div style="flex:1;min-width:0;">' +
@@ -382,20 +382,36 @@
     } catch (err) { alert('Could not take down: ' + err.message); }
   }
 
+  function _paintVote(kind, id, v) {
+    var up = document.getElementById(kind + '-up-' + id);
+    var down = document.getElementById(kind + '-down-' + id);
+    if (up) { up.classList.toggle('on', v === 1); up.setAttribute('aria-pressed', v === 1); }
+    if (down) { down.classList.toggle('on', v === -1); down.setAttribute('aria-pressed', v === -1); }
+  }
+
   async function votePost(id, vote) {
     if (!isLoggedIn()) { navigate('/login.html'); return; }
     var post = posts.find(function(p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
     if (!post) return;
     var prev = netScore(post);
-    post.net_votes = prev + vote;
+    var prevVote = post.user_vote || 0;
+    var nextVote = prevVote === vote ? 0 : vote;
+    post.net_votes = prev - prevVote + nextVote;
+    post.user_vote = nextVote;
     _updatePostScore(id);
+    _paintVote('post', id, nextVote);
     try {
-      var result = await api('/community/posts/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote }) });
-      if (result) post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+      var result = await api('/community/posts/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
+      if (result) {
+        post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+        if (result.user_vote !== undefined) { post.user_vote = result.user_vote; _paintVote('post', id, result.user_vote); }
+      }
       _updatePostScore(id);
     } catch (err) {
       post.net_votes = prev;
+      post.user_vote = prevVote;
       _updatePostScore(id);
+      _paintVote('post', id, prevVote);
       if (err.message && err.message.includes('401')) navigate('/login.html');
     }
   }
@@ -475,9 +491,9 @@
           '<div style="display:flex;gap:16px;">' +
             // Vote
             '<div class="comm-vote-col">' +
-              '<button class="comm-vote-btn up" onclick="votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote">▲</button>' +
+              '<button class="comm-vote-btn up' + (p.user_vote === 1 ? ' on' : '') + '" id="post-up-' + escHtml(p.id) + '" onclick="votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote" aria-pressed="' + (p.user_vote === 1) + '">▲</button>' +
               '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '" style="font-size:16px;">' + s + '</span>' +
-              '<button class="comm-vote-btn down" onclick="votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote">▼</button>' +
+              '<button class="comm-vote-btn down' + (p.user_vote === -1 ? ' on' : '') + '" id="post-down-' + escHtml(p.id) + '" onclick="votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote" aria-pressed="' + (p.user_vote === -1) + '">▼</button>' +
             '</div>' +
             // Content
             '<div style="flex:1;min-width:0;">' +
@@ -554,9 +570,9 @@
             '</div>' +
             '<div style="font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:8px;">' + renderMd(c.body) + '</div>' +
             '<div style="display:flex;align-items:center;gap:2px;">' +
-              '<button class="comm-vote-btn up" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',1)">▲</button>' +
+              '<button class="comm-vote-btn up' + (c.user_vote === 1 ? ' on' : '') + '" id="comment-up-' + escHtml(c.id) + '" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',1)" aria-pressed="' + (c.user_vote === 1) + '">▲</button>' +
               '<span id="comment-score-' + escHtml(c.id) + '" style="font-size:12px;font-weight:600;color:var(--text-3);min-width:18px;text-align:center;">' + Math.max(0, s) + '</span>' +
-              '<button class="comm-vote-btn down" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',-1)">▼</button>' +
+              '<button class="comm-vote-btn down' + (c.user_vote === -1 ? ' on' : '') + '" id="comment-down-' + escHtml(c.id) + '" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',-1)" aria-pressed="' + (c.user_vote === -1) + '">▼</button>' +
               '<span style="width:8px;"></span>' +
               actionBtns +
             '</div>' +
@@ -628,16 +644,25 @@
     var c = currentComments.find(function(x) { return x.id === id; });
     if (!c) return;
     var prev = netScore(c);
-    c.net_votes = prev + vote;
+    var prevVote = c.user_vote || 0;
+    var nextVote = prevVote === vote ? 0 : vote;
+    c.net_votes = prev - prevVote + nextVote;
+    c.user_vote = nextVote;
     var el = document.getElementById('comment-score-' + id);
     if (el) el.textContent = Math.max(0, netScore(c));
+    _paintVote('comment', id, nextVote);
     try {
-      var result = await api('/community/comments/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote }) });
-      if (result) c.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+      var result = await api('/community/comments/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
+      if (result) {
+        c.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+        if (result.user_vote !== undefined) { c.user_vote = result.user_vote; _paintVote('comment', id, result.user_vote); }
+      }
       if (el) el.textContent = Math.max(0, netScore(c));
     } catch (err) {
       c.net_votes = prev;
+      c.user_vote = prevVote;
       if (el) el.textContent = Math.max(0, netScore(c));
+      _paintVote('comment', id, prevVote);
     }
   }
 

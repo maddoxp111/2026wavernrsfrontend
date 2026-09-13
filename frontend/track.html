@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — edit</title>
-  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
+  <link rel="stylesheet" href="/css/style.css?v=4f033efd623e">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=922f4ba78a89"></script>
-<script src="/js/layout.js?v=922f4ba78a89"></script>
-<script src="/js/player.js?v=922f4ba78a89"></script>
-<script src="/js/router.js?v=922f4ba78a89"></script>
-<script src="/js/playlists.js?v=922f4ba78a89"></script>
-<script src="/js/ratings.js?v=922f4ba78a89"></script>
+<script src="/js/api.js?v=4f033efd623e"></script>
+<script src="/js/layout.js?v=4f033efd623e"></script>
+<script src="/js/player.js?v=4f033efd623e"></script>
+<script src="/js/router.js?v=4f033efd623e"></script>
+<script src="/js/playlists.js?v=4f033efd623e"></script>
+<script src="/js/ratings.js?v=4f033efd623e"></script>
 <script>
   initPlayer();
 
@@ -31,6 +31,9 @@
   // Map commentId -> user's vote (1 or -1 or 0)
   var myVotes = {};
 
+  // Without an id there is nothing to load; go home instead of asking the
+  // server for a record that cannot exist.
+  var _missingId = !trackId;
   if (!trackId) navigate('/index.html');
 
   function escHtml(s) {
@@ -275,6 +278,7 @@
       const comments = await api(`/tracks/${trackId}/comments`);
       const el = document.getElementById('comments-list');
       if (!el) return;
+      comments.forEach(c => { if (c.user_vote) myVotes[c.id] = c.user_vote; });
       _tsComments = comments.filter(c => c.track_time != null);
       renderTsTimeline();
       if (!comments.length) {
@@ -315,7 +319,15 @@
           </div>`;
         }).join('') +
       '</div>';
-    } catch (_) {}
+    } catch (err) {
+      // A failed load used to leave the spinner spinning for good.
+      const el = document.getElementById('comments-list');
+      if (el) {
+        el.innerHTML = '<div class="empty-state" style="padding:24px 0;">' +
+          '<div class="empty-title" style="font-size:14px;">Comments could not load</div>' +
+          '<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="loadComments()">Try again</button></div>';
+      }
+    }
   }
 
   function _applyVoteStyle(btn, active, isUp) {
@@ -342,8 +354,9 @@
         method: 'POST',
         body: JSON.stringify({ vote }),
       });
-      // Toggle: if same vote, remove it
-      myVotes[commentId] = myVotes[commentId] === vote ? 0 : vote;
+      myVotes[commentId] = (res && res.user_vote !== undefined)
+        ? res.user_vote
+        : (myVotes[commentId] === vote ? 0 : vote);
 
       // Update displayed counts
       if (res.upvotes !== undefined) {
@@ -588,7 +601,7 @@
     '</div>';
   }
 
-  loadTrack();
+  if (!_missingId) loadTrack();
 </script>
 </body>
 </html>

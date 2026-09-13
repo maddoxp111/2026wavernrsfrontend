@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=922f4ba78a89">
+  <link rel="stylesheet" href="/css/style.css?v=4f033efd623e">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=922f4ba78a89"></script>
-<script src="/js/layout.js?v=922f4ba78a89"></script>
-<script src="/js/player.js?v=922f4ba78a89"></script>
-<script src="/js/router.js?v=922f4ba78a89"></script>
-<script src="/js/playlists.js?v=922f4ba78a89"></script>
-<script src="/js/ratings.js?v=922f4ba78a89"></script>
+<script src="/js/api.js?v=4f033efd623e"></script>
+<script src="/js/layout.js?v=4f033efd623e"></script>
+<script src="/js/player.js?v=4f033efd623e"></script>
+<script src="/js/router.js?v=4f033efd623e"></script>
+<script src="/js/playlists.js?v=4f033efd623e"></script>
+<script src="/js/ratings.js?v=4f033efd623e"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -36,6 +36,9 @@
   initPlayer();
 
   var albumId = new URLSearchParams(location.search).get('id');
+  // Without an id there is nothing to load; go home instead of asking the
+  // server for a record that cannot exist.
+  var _missingId = !albumId;
   if (!albumId) navigate('/index.html');
 
   var album = null;
@@ -825,7 +828,7 @@
     } catch (e) { box.innerHTML = ''; }
   }
 
-  loadAlbum();
+  if (!_missingId) loadAlbum();
 </script>
 </body>
 </html>
