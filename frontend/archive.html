@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=1755d5ae33eb">
+  <link rel="stylesheet" href="/css/style.css?v=a70c4301f5b3">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=1755d5ae33eb"></script>
-<script src="/js/layout.js?v=1755d5ae33eb"></script>
-<script src="/js/player.js?v=1755d5ae33eb"></script>
-<script src="/js/router.js?v=1755d5ae33eb"></script>
+<script src="/js/api.js?v=a70c4301f5b3"></script>
+<script src="/js/layout.js?v=a70c4301f5b3"></script>
+<script src="/js/player.js?v=a70c4301f5b3"></script>
+<script src="/js/router.js?v=a70c4301f5b3"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -368,8 +368,7 @@ function renderTrackerCards() {
   }
   grid.className = 'wv-tracker-grid';
   grid.innerHTML = _trackers.map(function (t) {
-    var have = t.have || 0, total = t.entries || 0;
-    var pct = total ? Math.round(have / total * 100) : 0;
+    var total = t.entries || 0;
     return '<div class="wv-tracker-card" onclick="navigate(\'/tracker.html?t=' + encodeURIComponent(t.slug) + '\')">' +
       '<div class="wv-tracker-art" style="background:' + coverGradient(t.name || '') + ';">' +
         (t.cover ? '<img src="' + escHtml(t.cover) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
@@ -377,8 +376,7 @@ function renderTrackerCards() {
       '<div class="wv-tracker-body">' +
         '<div class="wv-tracker-name">' + escHtml(t.name) + '</div>' +
         (t.blurb ? '<div class="wv-tracker-blurb">' + escHtml(t.blurb) + '</div>' : '') +
-        '<div class="wv-tracker-stats">' + total.toLocaleString() + ' listed · ' + have.toLocaleString() + ' here · ' + (t.eras || 0) + ' eras</div>' +
-        '<div class="wv-tracker-bar" title="' + pct + '% of this tracker is on wavernrs"><span style="width:' + pct + '%"></span></div>' +
+        '<div class="wv-tracker-stats">' + total.toLocaleString() + ' comps and edits · ' + (t.eras || 0) + ' eras</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -437,8 +435,12 @@ function topCard(i) {
   var bg = coverGradient(i.title || '');
   var missing = !i.on_site;
   var sub = [i.creator, i.era, i.track_count ? i.track_count + ' tracks' : ''].filter(Boolean).join(' · ');
-  var click = missing ? '' : ' onclick="navigate(\'/album.html?id=' + i.album_id + '\')"';
-  return '<div class="wv-top-card' + (missing ? ' missing' : '') + '"' + click + '>' +
+  // A comp we have not archived yet still opens a search for it, rather than
+  // sitting there dimmed and dead.
+  var click = missing
+    ? ' onclick="navigate(\'/archive.html?q=' + encodeURIComponent(i.listed_as || i.title || '') + '\')"'
+    : ' onclick="navigate(\'/album.html?id=' + i.album_id + '\')"';
+  return '<div class="wv-top-card"' + click + '>' +
     '<div class="wv-top-rank">' + i.rank + '</div>' +
     '<div class="wv-top-art" style="background:' + bg + ';">' +
       (i.cover_url ? '<img src="' + escHtml(i.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
@@ -447,7 +449,7 @@ function topCard(i) {
     '</div>' +
     '<div class="wv-top-meta">' +
       '<div class="wv-top-title">' + escHtml(i.title || 'Untitled') + '</div>' +
-      '<div class="wv-top-sub">' + escHtml(sub) + (missing ? ' <span class="wv-top-missing">not here yet</span>' : '') + '</div>' +
+      '<div class="wv-top-sub">' + escHtml(sub) + '</div>' +
     '</div>' +
   '</div>';
 }
