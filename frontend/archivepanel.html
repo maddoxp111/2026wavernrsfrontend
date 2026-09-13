@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=e46c16a1262c">
+  <link rel="stylesheet" href="/css/style.css?v=be079f4a4877">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -23,10 +23,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=e46c16a1262c"></script>
-<script src="/js/layout.js?v=e46c16a1262c"></script>
-<script src="/js/player.js?v=e46c16a1262c"></script>
-<script src="/js/router.js?v=e46c16a1262c"></script>
+<script src="/js/api.js?v=be079f4a4877"></script>
+<script src="/js/layout.js?v=be079f4a4877"></script>
+<script src="/js/player.js?v=be079f4a4877"></script>
+<script src="/js/router.js?v=be079f4a4877"></script>
 <script>
   initPlayer();
 
@@ -286,6 +286,11 @@
             '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
           '</div>' +
           '<div id="mg-trackers" style="display:none;">' +
+            '<div class="wv-card" style="padding:14px;margin-bottom:16px;">' +
+              '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Tracker covers</div>' +
+              '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">The picture each tracker shows on the archive page. Upload a file or paste an image link — either way we keep our own copy, so it cannot break later.</div>' +
+              '<div id="mg-tcovers" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
+            '</div>' +
             '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Tracker comps that have no album on the site yet. Search for the right comp and hit Match: the album takes the tracker\'s title and creator name and gets the tracker badge. A comp sitting on its own creator\'s profile stays there; one claimed by someone else goes back to the archive.</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
               '<input id="mg-tq" class="wv-input" placeholder="Filter tracker entries…" style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgTrackersRender()">' +
@@ -1465,10 +1470,85 @@
     document.getElementById('mg-tab-trackers').classList.toggle('on', t === 'trackers');
     if (t === 'artists' && !_mg.artists.length) mgArtistsLoad();
     if (t === 'trackers' && !_mg.trackers) mgTrackersLoad();
+    if (t === 'trackers' && !_mg.trackerList) mgCoversLoad();
   };
 
   // ── Tracker hand-matching ─────────────────────────────────────────────
   _mg.trackers = null; _mg.tpick = {}; _mg.ttimer = {};
+  window.mgCoversLoad = async function() {
+    var box = document.getElementById('mg-tcovers'); if (!box) return;
+    try {
+      var d = await api('/trackers');
+      _mg.trackerList = (d && d.trackers) || [];
+    } catch (e) {
+      box.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>';
+      return;
+    }
+    mgCoversRender();
+  };
+
+  window.mgCoversRender = function() {
+    var box = document.getElementById('mg-tcovers');
+    if (!box || !_mg.trackerList) return;
+    box.innerHTML = _mg.trackerList.map(function(t) {
+      return '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+        '<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--surface-3);">' +
+          (t.cover ? '<img id="mg-cov-img-' + escHtml(t.slug) + '" src="' + escHtml(t.cover) + '" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') +
+        '</div>' +
+        '<div style="min-width:150px;flex:1;">' +
+          '<div style="font-size:13.5px;font-weight:600;color:var(--text);">' + escHtml(t.name) + '</div>' +
+          '<div style="font-size:11.5px;color:var(--text-3);">' + escHtml(t.slug) + '</div>' +
+        '</div>' +
+        '<input id="mg-cov-url-' + escHtml(t.slug) + '" class="wv-input" placeholder="Paste an image link…" style="flex:2;min-width:200px;padding:7px 11px;font-size:12.5px;">' +
+        '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;" onclick="mgCoverSet(\'' + escHtml(t.slug) + '\')">Save link</button>' +
+        '<label class="wv-pill" style="font-size:12.5px;padding:7px 14px;cursor:pointer;">Upload' +
+          '<input type="file" accept="image/*" style="display:none;" onchange="mgCoverUpload(\'' + escHtml(t.slug) + '\', this)">' +
+        '</label>' +
+        '<span id="mg-cov-msg-' + escHtml(t.slug) + '" style="font-size:12px;color:var(--text-3);"></span>' +
+      '</div>';
+    }).join('');
+  };
+
+  function _mgCoverDone(slug, url, msg, bad) {
+    var el = document.getElementById('mg-cov-msg-' + slug);
+    if (el) { el.textContent = msg; el.style.color = bad ? 'var(--red)' : 'var(--green)'; }
+    if (url && _mg.trackerList) {
+      _mg.trackerList.forEach(function(t) { if (t.slug === slug) t.cover = url; });
+      var img = document.getElementById('mg-cov-img-' + slug);
+      if (img) img.src = url;
+      else mgCoversRender();
+    }
+  }
+
+  window.mgCoverSet = async function(slug) {
+    var inp = document.getElementById('mg-cov-url-' + slug);
+    var url = inp ? inp.value.trim() : '';
+    if (!url) return _mgCoverDone(slug, null, 'Paste a link first', true);
+    _mgCoverDone(slug, null, 'Saving…');
+    try {
+      var r = await api('/archive-manage/tracker-covers/' + encodeURIComponent(slug), { method: 'POST', body: JSON.stringify({ url: url }) });
+      if (inp) inp.value = '';
+      _mgCoverDone(slug, r.cover, 'Saved');
+    } catch (e) { _mgCoverDone(slug, null, e.message || 'Failed', true); }
+  };
+
+  window.mgCoverUpload = async function(slug, input) {
+    var f = input && input.files && input.files[0];
+    if (!f) return;
+    _mgCoverDone(slug, null, 'Uploading…');
+    var fd = new FormData();
+    fd.append('cover', f);
+    try {
+      var res = await fetch(API_BASE + '/archive-manage/tracker-covers/' + encodeURIComponent(slug), {
+        method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd,
+      });
+      var d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Upload failed');
+      _mgCoverDone(slug, d.cover, 'Saved');
+    } catch (e) { _mgCoverDone(slug, null, e.message || 'Failed', true); }
+    input.value = '';
+  };
+
   window.mgTrackersLoad = async function() {
     var list = document.getElementById('mg-tlist'); if (!list) return;
     list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';

@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=e46c16a1262c">
+  <link rel="stylesheet" href="/css/style.css?v=be079f4a4877">
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=e46c16a1262c"></script>
-<script src="/js/layout.js?v=e46c16a1262c"></script>
-<script src="/js/player.js?v=e46c16a1262c"></script>
-<script src="/js/router.js?v=e46c16a1262c"></script>
+<script src="/js/api.js?v=be079f4a4877"></script>
+<script src="/js/layout.js?v=be079f4a4877"></script>
+<script src="/js/player.js?v=be079f4a4877"></script>
+<script src="/js/router.js?v=be079f4a4877"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -65,8 +65,11 @@ async function initArchive() {
       '<button id="arc-view-edits" onclick="arcSetView(\'edits\')">Edits</button>' +
       '<button id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
     '</div>' +
-    '<div id="arc-tracker-tabs" class="wv-seg" style="align-self:flex-start;display:none;"></div>' +
-    '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
+    '<div class="wv-seg" style="align-self:flex-start;">' +
+      '<button id="arc-view-top" onclick="arcSetView(\'top\')">Top 150</button>' +
+      '<button id="arc-view-trackers" onclick="arcSetView(\'trackers\')">Trackers</button>' +
+    '</div>' +
+    '<div id="arc-filters" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
       '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
         'style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;font-size:14px;" oninput="arcSearchInput()">' +
       '<select id="arc-sort" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSortChange()">' +
@@ -147,6 +150,7 @@ async function arcLoadMore() {
       (typeof knownTotal === 'number' && _arcItems.length >= knownTotal);
     var grid = document.getElementById('archive-grid');
     if (!grid) return;
+    grid.className = 'wv-tile-grid';
     var trackCards = (first && Array.isArray(page.tracks) && page.tracks.length) ? page.tracks.map(archiveTrackCardHTML).join('') : '';
     if (first) {
       if (!_arcItems.length && trackCards) { grid.innerHTML = trackCards; return; }
@@ -283,6 +287,8 @@ async function loadArtists(reset) {
 
 var _arcArtistList = [];
 function renderArtists() {
+  var g0 = document.getElementById('archive-grid');
+  if (g0) g0.className = 'wv-tile-grid';
   var grid = document.getElementById('archive-grid');
   if (!grid) return;
   var artists = _archiveArtists;
@@ -303,17 +309,31 @@ function arcSetView(view) {
   _arcView = view;
   arcApplyView();
   if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
-  _arcKind = view; // all | comps | edits
+  if (view === 'top') return loadTopComps();
+  if (view === 'trackers') return renderTrackerCards();
+  _arcKind = view;
   arcReload();
 }
 
+var ARC_VIEWS = ['all', 'comps', 'edits', 'artists', 'top', 'trackers'];
+
 function arcApplyView() {
-  ['all', 'comps', 'edits', 'artists'].forEach(function(v) { var b = document.getElementById('arc-view-' + v); if (b) b.classList.toggle('on', _arcView === v); });
-  var listView = _arcView !== 'artists';
+  ARC_VIEWS.forEach(function(v) { var b = document.getElementById('arc-view-' + v); if (b) b.classList.toggle('on', _arcView === v); });
+  // The Top 150 and Trackers views are their own thing: the filter bar and the
+  // endless grid do not apply to either.
+  var curated = _arcView === 'top' || _arcView === 'trackers';
+  var listView = _arcView !== 'artists' && !curated;
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = listView ? '' : 'none';
+  var eraEl = document.getElementById('arc-era');
+  if (eraEl && curated) eraEl.style.display = 'none';
+  else if (eraEl && _arcEras.length > 1) eraEl.style.display = '';
+  var filters = document.getElementById('arc-filters');
+  if (filters) filters.style.display = curated ? 'none' : 'flex';
   var search = document.getElementById('arc-search');
   if (search) search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
+  var sentinel = document.getElementById('archive-sentinel');
+  if (sentinel) sentinel.style.display = curated ? 'none' : '';
 }
 
 // Near the bottom: next server page for comps, next chunk of tiles for artists.
@@ -332,17 +352,133 @@ function _arcWatchSentinel() {
 // ── Tracker tabs (second row) ────────────────────────────────────────────────
 var _trackers = null;
 async function loadTrackerTabs() {
-  var bar = document.getElementById('arc-tracker-tabs');
-  if (!bar) return;
   try {
     var d = await api('/trackers');
     _trackers = (d && d.trackers) || [];
-  } catch (e) { return; }
-  if (!_trackers.length) return;
-  bar.innerHTML = _trackers.map(function (t) {
-    return '<button onclick="navigate(\'/tracker.html?t=' + encodeURIComponent(t.slug) + '\')">' + escHtml(t.name) + '</button>';
+  } catch (e) { _trackers = []; }
+  if (_arcView === 'trackers') renderTrackerCards();
+}
+
+function renderTrackerCards() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid) return;
+  if (!_trackers.length) {
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    return;
+  }
+  grid.className = 'wv-tracker-grid';
+  grid.innerHTML = _trackers.map(function (t) {
+    var have = t.have || 0, total = t.entries || 0;
+    var pct = total ? Math.round(have / total * 100) : 0;
+    return '<div class="wv-tracker-card" onclick="navigate(\'/tracker.html?t=' + encodeURIComponent(t.slug) + '\')">' +
+      '<div class="wv-tracker-art" style="background:' + coverGradient(t.name || '') + ';">' +
+        (t.cover ? '<img src="' + escHtml(t.cover) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+      '</div>' +
+      '<div class="wv-tracker-body">' +
+        '<div class="wv-tracker-name">' + escHtml(t.name) + '</div>' +
+        (t.blurb ? '<div class="wv-tracker-blurb">' + escHtml(t.blurb) + '</div>' : '') +
+        '<div class="wv-tracker-stats">' + total.toLocaleString() + ' listed · ' + have.toLocaleString() + ' here · ' + (t.eras || 0) + ' eras</div>' +
+        '<div class="wv-tracker-bar" title="' + pct + '% of this tracker is on wavernrs"><span style="width:' + pct + '%"></span></div>' +
+      '</div>' +
+    '</div>';
   }).join('');
-  bar.style.display = '';
+}
+
+// The community ranking. Emphasis drops off in steps, so the very top of the
+// list reads as a shortlist rather than one long undifferentiated grid.
+var _topComps = null;
+var TOP_TIERS = [
+  { to: 3,   cls: 'tier1', label: 'The top 3' },
+  { to: 10,  cls: 'tier2', label: '4 – 10' },
+  { to: 25,  cls: 'tier3', label: '11 – 25' },
+  { to: 100, cls: 'tier4', label: '26 – 100' },
+  { to: 150, cls: 'tier5', label: '101 – 150' },
+];
+
+async function loadTopComps() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid) return;
+  grid.className = 'wv-top150';
+  if (!_topComps) {
+    grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try { _topComps = await api('/archive/top'); }
+    catch (err) { wvShowError(grid, err, "arcSetView('top')"); return; }
+  }
+  renderTopComps();
+}
+
+function renderTopComps() {
+  var grid = document.getElementById('archive-grid');
+  if (!grid || !_topComps) return;
+  var items = _topComps.items || [];
+  var head = '<div class="wv-top150-head">' +
+    '<h2>The 150 best comps</h2>' +
+    '<p>The community ranking, in order. ' + (_topComps.on_site || 0) + ' of ' + (_topComps.total || 0) + ' are on wavernrs — the rest have not been archived here yet.</p>' +
+    '<div class="wv-top150-actions">' +
+      '<button class="wv-btn-play" onclick="playTop(3)">Play the top 3</button>' +
+      '<button class="wv-pill" onclick="playTop(10)">Top 10</button>' +
+      '<button class="wv-pill" onclick="playTop(25)">Top 25</button>' +
+    '</div></div>';
+  var html = head;
+  var from = 1;
+  TOP_TIERS.forEach(function (tier) {
+    var slice = items.filter(function (i) { return i.rank >= from && i.rank <= tier.to; });
+    from = tier.to + 1;
+    if (!slice.length) return;
+    html += '<div class="wv-top150-tier">' +
+      '<div class="wv-top150-tier-head">' + escHtml(tier.label) + '</div>' +
+      '<div class="wv-top150-grid ' + tier.cls + '">' + slice.map(topCard).join('') + '</div>' +
+    '</div>';
+  });
+  grid.innerHTML = html;
+  var lead = items.find(function (i) { return i.cover_url; });
+  if (lead && typeof window.setPageBgImage === 'function') window.setPageBgImage(lead.cover_url, lead.title);
+}
+
+function topCard(i) {
+  var bg = coverGradient(i.title || '');
+  var missing = !i.on_site;
+  var sub = [i.creator, i.era, i.track_count ? i.track_count + ' tracks' : ''].filter(Boolean).join(' · ');
+  var click = missing ? '' : ' onclick="navigate(\'/album.html?id=' + i.album_id + '\')"';
+  return '<div class="wv-top-card' + (missing ? ' missing' : '') + '"' + click + '>' +
+    '<div class="wv-top-rank">' + i.rank + '</div>' +
+    '<div class="wv-top-art" style="background:' + bg + ';">' +
+      (i.cover_url ? '<img src="' + escHtml(i.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+      (missing ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(i.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + i.album_id + '\')">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>') +
+    '</div>' +
+    '<div class="wv-top-meta">' +
+      '<div class="wv-top-title">' + escHtml(i.title || 'Untitled') + '</div>' +
+      '<div class="wv-top-sub">' + escHtml(sub) + (missing ? ' <span class="wv-top-missing">not here yet</span>' : '') + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+// Queue one track from each of the top N, in rank order.
+async function playTop(n) {
+  if (!_topComps) return;
+  var picks = (_topComps.items || []).filter(function (i) { return i.on_site && i.rank <= n; });
+  if (!picks.length) { if (typeof wvToast === 'function') wvToast('None of those are on the site yet'); return; }
+  if (n <= 3) {
+    if (typeof wvToast === 'function') wvToast('Playing ' + picks[0].title);
+    return playCompById(picks[0].album_id, { album: { id: picks[0].album_id, title: picks[0].title, cover_url: picks[0].cover_url, is_archive: true, archive_artist_name: picks[0].creator }, quiet: true });
+  }
+  if (typeof wvToast === 'function') wvToast('Building a mix from the top ' + n + '…');
+  var batches = await Promise.all(picks.map(function (p) { return api('/albums/' + p.album_id + '/tracks').catch(function () { return []; }); }));
+  var queue = [];
+  batches.forEach(function (rows, idx) {
+    var p = picks[idx];
+    var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+    if (!tracks.length) return;
+    var t = tracks[Math.floor(Math.random() * tracks.length)];
+    queue.push({ id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || p.cover_url || null,
+      artist_name: p.creator || '', album_id: p.album_id, _album_id: p.album_id, _album_title: p.title,
+      _album_cover: p.cover_url || null, _archive_artist: p.creator || null });
+  });
+  if (!queue.length) { if (typeof wvToast === 'function') wvToast('Nothing playable in that range', 'error'); return; }
+  setPlayerQueue(queue, 0);
+  playQueueIndex(0);
+  if (typeof wvToast === 'function') wvToast('Playing ' + queue.length + ' from the top ' + n);
 }
 
 function artistCardHTML(a) {
