@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=4f033efd623e">
+  <link rel="stylesheet" href="/css/style.css?v=3ea855698aa2">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=4f033efd623e"></script>
-<script src="/js/layout.js?v=4f033efd623e"></script>
-<script src="/js/player.js?v=4f033efd623e"></script>
-<script src="/js/router.js?v=4f033efd623e"></script>
-<script src="/js/playlists.js?v=4f033efd623e"></script>
-<script src="/js/ratings.js?v=4f033efd623e"></script>
+<script src="/js/api.js?v=3ea855698aa2"></script>
+<script src="/js/layout.js?v=3ea855698aa2"></script>
+<script src="/js/player.js?v=3ea855698aa2"></script>
+<script src="/js/router.js?v=3ea855698aa2"></script>
+<script src="/js/playlists.js?v=3ea855698aa2"></script>
+<script src="/js/ratings.js?v=3ea855698aa2"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -278,7 +278,17 @@
 
   function playAll() {
     if (!albumTracks.length) return;
-    playAtIndex(0);
+    // A long comp picks up where it was left, not back at track one.
+    var resume = typeof getCompResume === 'function' ? getCompResume(album.id) : null;
+    var idx = 0;
+    if (resume && albumTracks.length > 4) {
+      var found = albumTracks.findIndex(function (item) { return (item.tracks || item).id === resume.track_id; });
+      if (found > 0) {
+        idx = found;
+        if (typeof wvToast === 'function') wvToast('Picking up at track ' + (found + 1));
+      }
+    }
+    playAtIndex(idx);
   }
 
   function _buildAlbumQueue() {
@@ -334,8 +344,12 @@
       var html = '';
       var creator = rel.creator || (album.artists && album.artists.display_name) || 'this creator';
       if (rel.versions && rel.versions.length) {
-        html += '<h2 class="section-title" style="margin-top:0;">Other versions of this comp</h2>' +
-          '<div class="wv-comp-grid wv-comp-grid-4">' + rel.versions.map(renderMoreCard).join('') + '</div>';
+        _versions = rel.versions;
+        html += '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-top:0;">' +
+            '<h2 class="section-title" style="margin:0;">Other versions of this comp</h2>' +
+            '<button class="wv-btn-ghost" style="padding:5px 12px;font-size:12.5px;" onclick="openCompare()">Compare tracklists</button>' +
+          '</div>' +
+          '<div class="wv-comp-grid wv-comp-grid-4" style="margin-top:14px;">' + rel.versions.map(renderMoreCard).join('') + '</div>';
       }
       if (rel.by_creator && rel.by_creator.length) {
         html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">More by ' + escHtml(creator) + '</h2>' +
@@ -348,6 +362,98 @@
       }
       el.innerHTML = html;
     } catch (_) { el.innerHTML = ''; }
+  }
+
+  // Versions of the same comp differ in ways that matter to this community —
+  // which edits made the cut. This lines two tracklists up side by side.
+  var _versions = [];
+  var _cmpCache = {};
+
+  function _cmpKey(t) {
+    return String(t || '').toLowerCase()
+      .replace(/\.(mp3|m4a|flac|wav|aiff?|ogg|opus)$/i, '')
+      .replace(/^\s*\d{1,2}[\s.\-_)]+/, '')
+      .replace(/[\(\[][^\)\]]*[\)\]]/g, ' ')
+      .replace(/\b(feat|ft|prod|remix|edit|version|mix)\b.*$/i, ' ')
+      .replace(/[^a-z0-9]+/g, '')
+      .trim();
+  }
+
+  async function _cmpTracks(id) {
+    if (_cmpCache[id]) return _cmpCache[id];
+    var rows = await api('/albums/' + id + '/tracks');
+    var list = (rows || []).map(function (r) { return r.tracks || r; }).filter(Boolean);
+    _cmpCache[id] = list;
+    return list;
+  }
+
+  window.openCompare = async function () {
+    if (!_versions.length) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'wv-cmp-overlay';
+    wrap.id = 'wv-cmp';
+    wrap.innerHTML = '<div class="wv-cmp-card" role="dialog" aria-label="Compare tracklists">' +
+      '<div class="wv-cmp-head"><span>Compare with</span>' +
+        '<select id="wv-cmp-pick" class="wv-input" style="padding:7px 10px;font-size:13px;width:auto;max-width:100%;">' +
+          _versions.map(function (v, i) {
+            var who = v.archive_artist_name || (v.artists && v.artists.display_name) || '';
+            return '<option value="' + i + '">' + escHtml(v.title) + (who ? ' — ' + escHtml(who) : '') + '</option>';
+          }).join('') +
+        '</select>' +
+        '<button class="wv-cmp-close" type="button" aria-label="Close">×</button>' +
+      '</div>' +
+      '<div class="wv-cmp-body" id="wv-cmp-body"><div class="loading"><div class="spinner"></div></div></div>' +
+    '</div>';
+    wrap.addEventListener('click', function (e) {
+      if (e.target === wrap || e.target.classList.contains('wv-cmp-close')) wrap.remove();
+    });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { wrap.remove(); document.removeEventListener('keydown', esc); } });
+    document.body.appendChild(wrap);
+    document.getElementById('wv-cmp-pick').addEventListener('change', function () { renderCompare(this.value); });
+    renderCompare(0);
+  };
+
+  async function renderCompare(i) {
+    var body = document.getElementById('wv-cmp-body');
+    if (!body) return;
+    var other = _versions[Number(i) || 0];
+    if (!other) return;
+    body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var mine = albumTracks.map(function (td) { return td.tracks || td; });
+      var theirs = await _cmpTracks(other.id);
+      var mineKeys = {}, theirKeys = {};
+      mine.forEach(function (t) { var k = _cmpKey(t.title); if (k) mineKeys[k] = t.title; });
+      theirs.forEach(function (t) { var k = _cmpKey(t.title); if (k) theirKeys[k] = t.title; });
+      var shared = Object.keys(mineKeys).filter(function (k) { return theirKeys[k]; });
+      var onlyMine = Object.keys(mineKeys).filter(function (k) { return !theirKeys[k]; });
+      var onlyTheirs = Object.keys(theirKeys).filter(function (k) { return !mineKeys[k]; });
+      var col = function (title, keys, src, cls) {
+        return '<div class="wv-cmp-col">' +
+          '<div class="wv-cmp-col-head ' + cls + '">' + escHtml(title) + ' <span>' + keys.length + '</span></div>' +
+          (keys.length
+            ? '<ol class="wv-cmp-list">' + keys.map(function (k) { return '<li>' + escHtml(src[k]) + '</li>'; }).join('') + '</ol>'
+            : '<div class="wv-cmp-none">None</div>') +
+        '</div>';
+      };
+      body.innerHTML =
+        '<div class="wv-cmp-summary">' +
+          '<b>' + escHtml(album.title) + '</b> has ' + mine.length + ' track' + (mine.length === 1 ? '' : 's') + ' · ' +
+          '<b>' + escHtml(other.title) + '</b> has ' + theirs.length + ' track' + (theirs.length === 1 ? '' : 's') + ' · ' +
+          shared.length + ' in common' +
+        '</div>' +
+        '<div class="wv-cmp-cols">' +
+          col('Only on this one', onlyMine, mineKeys, 'add') +
+          col('Only on ' + other.title, onlyTheirs, theirKeys, 'rem') +
+          col('On both', shared, mineKeys, 'same') +
+        '</div>' +
+        '<div class="wv-cmp-foot">' +
+          '<button class="wv-btn-ghost" onclick="playCompById(\'' + other.id + '\')">Play ' + escHtml(other.title) + '</button>' +
+          '<a class="wv-btn-ghost" href="/album.html?id=' + other.id + '" onclick="document.getElementById(\'wv-cmp\').remove();">Open it →</a>' +
+        '</div>';
+    } catch (e) {
+      body.innerHTML = '<div class="wv-empty">Could not load that tracklist.</div>';
+    }
   }
 
   // Everything /related returns is a comp row, so these always open album.html.

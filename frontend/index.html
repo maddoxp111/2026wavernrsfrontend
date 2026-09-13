@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=4f033efd623e">
+  <link rel="stylesheet" href="/css/style.css?v=3ea855698aa2">
 </head>
 <body>
 <div id="view">
@@ -22,11 +22,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=4f033efd623e"></script>
-<script src="/js/layout.js?v=4f033efd623e"></script>
-<script src="/js/player.js?v=4f033efd623e"></script>
-<script src="/js/router.js?v=4f033efd623e"></script>
-<script src="/js/playlists.js?v=4f033efd623e"></script>
+<script src="/js/api.js?v=3ea855698aa2"></script>
+<script src="/js/layout.js?v=3ea855698aa2"></script>
+<script src="/js/player.js?v=3ea855698aa2"></script>
+<script src="/js/router.js?v=3ea855698aa2"></script>
+<script src="/js/playlists.js?v=3ea855698aa2"></script>
 <script>
 initPlayer();
 
@@ -109,6 +109,9 @@ function renderHome() {
   var newComps = _home.recent.filter(function(i) { return i._type === 'album'; });
   var newEdits = _home.recent.filter(function(i) { return i._type !== 'album'; });
 
+  var mostPlayed = (typeof getPlayTally === 'function' ? getPlayTally({ days: 30, min: 2, limit: 12 }) : [])
+    .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
+  html += rail('Your most played this month', _filterItems(mostPlayed), '/history.html');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse.html?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts.html');
   if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse.html?tab=recent');

@@ -822,6 +822,44 @@ function initPlayer() {
     document.getElementById(id)?.addEventListener('input', e => setVolume(e.target.value));
   });
 
+  // Mini bar gestures: swipe sideways to skip, swipe up to open full screen.
+  (function () {
+    var mini = document.getElementById('player-mini');
+    if (!mini) return;
+    var x0 = 0, y0 = 0, t0 = 0, moved = false;
+    mini.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now(); moved = false;
+    }, { passive: true });
+    mini.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 1) return;
+      var dx = e.touches[0].clientX - x0;
+      var dy = e.touches[0].clientY - y0;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) < 140) {
+        mini.style.transform = 'translateX(' + (dx * 0.35) + 'px)';
+        mini.style.opacity = String(1 - Math.min(0.4, Math.abs(dx) / 320));
+      }
+    }, { passive: true });
+    var reset = function () { mini.style.transform = ''; mini.style.opacity = ''; };
+    mini.addEventListener('touchend', function (e) {
+      var t = e.changedTouches && e.changedTouches[0];
+      reset();
+      if (!t || !moved) return;
+      var dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+      if (dt > 700) return;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+        // A sideways flick is a skip, and it must not also count as a tap.
+        e.preventDefault();
+        if (dx < 0) skipNext(); else skipPrev();
+      } else if (dy < -60 && Math.abs(dy) > Math.abs(dx)) {
+        e.preventDefault();
+        openFullPlayer();
+      }
+    });
+    mini.addEventListener('touchcancel', reset, { passive: true });
+  })();
+
   // Bring the queue back after a reload or a login round-trip.
   try {
     const rawQ = localStorage.getItem(QUEUE_KEY);
@@ -917,6 +955,72 @@ function _onTimeUpdate() {
 
 // Register a stream, debounced per track so re-renders / quick replays of the
 // same track don't double-count. Fire-and-forget; failures are silent.
+// Comps run long. Remember which track of a comp was last playing so opening
+// it again picks up where the listener stopped.
+const RESUME_KEY = 'wv_comp_resume';
+function _readResume() {
+  try { return JSON.parse(localStorage.getItem(RESUME_KEY) || '{}') || {}; } catch (_) { return {}; }
+}
+function _rememberComp(track) {
+  var albumId = track && (track._album_id || track.album_id);
+  if (!albumId || !track.id) return;
+  try {
+    var all = _readResume();
+    all[albumId] = { track_id: track.id, at: Date.now() };
+    var keys = Object.keys(all);
+    if (keys.length > 60) {
+      keys.sort(function (a, b) { return (all[a].at || 0) - (all[b].at || 0); });
+      keys.slice(0, keys.length - 60).forEach(function (k) { delete all[k]; });
+    }
+    localStorage.setItem(RESUME_KEY, JSON.stringify(all));
+  } catch (_) {}
+}
+// A running count of what this browser plays, so the site can say "your most
+// played" without a server-side history table.
+const TALLY_KEY = 'wv_play_tally';
+function _tally(entry) {
+  if (!entry || !entry.id) return;
+  try {
+    var all = JSON.parse(localStorage.getItem(TALLY_KEY) || '{}') || {};
+    var prev = all[entry.id] || { n: 0 };
+    // The same comp playing track after track is one listen, not twenty.
+    if (prev.last && Date.now() - prev.last < 4 * 60 * 1000 && prev._type === entry._type) {
+      prev.last = Date.now();
+    } else {
+      prev.n = (prev.n || 0) + 1;
+      prev.last = Date.now();
+    }
+    prev.id = entry.id;
+    prev._type = entry._type;
+    prev.title = entry.title;
+    prev.cover_url = entry.cover_url || prev.cover_url || '';
+    prev.artist_name = entry.artist_name || prev.artist_name || '';
+    all[entry.id] = prev;
+    var keys = Object.keys(all);
+    if (keys.length > 400) {
+      keys.sort(function (a, b) { return (all[a].last || 0) - (all[b].last || 0); });
+      keys.slice(0, keys.length - 400).forEach(function (k) { delete all[k]; });
+    }
+    localStorage.setItem(TALLY_KEY, JSON.stringify(all));
+  } catch (_) {}
+}
+window.getPlayTally = function (opts) {
+  var o = opts || {};
+  var all;
+  try { all = JSON.parse(localStorage.getItem(TALLY_KEY) || '{}') || {}; } catch (_) { return []; }
+  var since = o.days ? Date.now() - o.days * 86400000 : 0;
+  return Object.keys(all)
+    .map(function (k) { return all[k]; })
+    .filter(function (e) { return e && e.n >= (o.min || 2) && (!since || (e.last || 0) >= since); })
+    .sort(function (a, b) { return (b.n - a.n) || ((b.last || 0) - (a.last || 0)); })
+    .slice(0, o.limit || 12);
+};
+
+window.getCompResume = function (albumId) {
+  var e = _readResume()[albumId];
+  return e && e.track_id ? e : null;
+};
+
 var _audioFails = 0;
 var _lastPlayRegistered = { id: null, ts: 0 };
 var _playGate = { id: null, heard: 0, last: 0, sent: true };
@@ -1144,8 +1248,9 @@ function playTrack(track) {
     history = history.filter(h => h.id !== track.id);
   }
   history.unshift(historyEntry);
-  if (history.length > 30) history = history.slice(0, 30);
+  if (history.length > 60) history = history.slice(0, 60);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  _tally(historyEntry);
   if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
 
   // Cancel any pending restore-position listener so it doesn't seek this
@@ -1169,6 +1274,7 @@ function playTrack(track) {
   // in _onTimeUpdate), not the moment it is opened, so skipping past a track
   // never inflates its count.
   _playGate = { id: track.id || null, heard: 0, last: 0, sent: false };
+  _rememberComp(track);
 
   _renderAll(track);
   playerEl.classList.remove('hidden');
