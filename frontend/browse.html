@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — browse</title>
-  <link rel="stylesheet" href="/css/style.css?v=3ea855698aa2">
+  <link rel="stylesheet" href="/css/style.css?v=86bd8d09ae9f">
 </head>
 <body>
 <div id="view"><div class="loading"><div class="spinner"></div></div></div>
-<script src="/js/api.js?v=3ea855698aa2"></script>
-<script src="/js/layout.js?v=3ea855698aa2"></script>
-<script src="/js/player.js?v=3ea855698aa2"></script>
-<script src="/js/router.js?v=3ea855698aa2"></script>
-<script src="/js/playlists.js?v=3ea855698aa2"></script>
+<script src="/js/api.js?v=86bd8d09ae9f"></script>
+<script src="/js/layout.js?v=86bd8d09ae9f"></script>
+<script src="/js/player.js?v=86bd8d09ae9f"></script>
+<script src="/js/router.js?v=86bd8d09ae9f"></script>
+<script src="/js/playlists.js?v=86bd8d09ae9f"></script>
 <script>
 initPlayer();
 var _p = new URLSearchParams(location.search);
@@ -118,6 +118,16 @@ async function renderList() {
     '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse.html\')">‹ Browse</button></div>' +
     '<h1 class="wv-page-title">' + escHtml(title) + '</h1>' +
     '<div class="wv-filters" id="era-chips"></div>' +
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 14px;">' +
+      '<select id="br-sort" class="wv-input" style="padding:8px 12px;font-size:13px;width:auto;" onchange="setBrowseSort(this.value)">' +
+        '<option value="newest">Newest first</option>' +
+        '<option value="oldest">Oldest first</option>' +
+        '<option value="title">Title A–Z</option>' +
+        '<option value="artist">Creator A–Z</option>' +
+        '<option value="plays">Most played</option>' +
+      '</select>' +
+      '<span id="br-count" style="font-size:12px;color:var(--text-3);"></span>' +
+    '</div>' +
     '<div class="wv-tile-grid" id="grid">' + '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>'.repeat(8) + '</div>';
   if (_eras.length) {
     document.getElementById('era-chips').innerHTML =
@@ -135,16 +145,60 @@ async function renderList() {
     _items = Array.isArray(items) ? items : [];
     var withCover = _items.find(function(i) { return i.cover_url; });
     if (typeof window.setPageBgImage === 'function') window.setPageBgImage(withCover ? withCover.cover_url : '', title);
-    var grid = document.getElementById('grid');
-    grid.innerHTML = _items.length ? _items.map(card).join('') : '<div class="wv-empty" style="grid-column:1/-1;">Nothing here yet</div>';
+    var sel = document.getElementById('br-sort');
+    if (sel) sel.value = _sort;
+    paintGrid();
   } catch (err) {
     document.getElementById('grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Failed: ' + escHtml(err.message) + '</div>';
   }
 }
 
+var _sort = (function () { try { return localStorage.getItem('wv_browse_sort') || 'newest'; } catch (_) { return 'newest'; } })();
+var _shown = 60;
+
+window.setBrowseSort = function (v) {
+  _sort = v;
+  try { localStorage.setItem('wv_browse_sort', v); } catch (_) {}
+  _shown = 60;
+  paintGrid();
+};
+
+window.showMoreBrowse = function () { _shown += 60; paintGrid(); };
+
+function _sorted(list) {
+  var str = function (x) { return String(x || ''); };
+  var when = function (x) { return new Date(x.original_date || x.created_at || 0).getTime(); };
+  var who = function (x) { return x.archive_artist_name || (x.artists && x.artists.display_name) || ''; };
+  var out = list.slice();
+  if (_sort === 'oldest') out.sort(function (a, b) { return when(a) - when(b); });
+  else if (_sort === 'title') out.sort(function (a, b) { return str(a.title).localeCompare(str(b.title)); });
+  else if (_sort === 'artist') out.sort(function (a, b) { return who(a).localeCompare(who(b)) || str(a.title).localeCompare(str(b.title)); });
+  else if (_sort === 'plays') out.sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); });
+  else out.sort(function (a, b) { return when(b) - when(a); });
+  return out;
+}
+
+// A few hundred cards in one go is slow to paint and impossible to scan, so
+// the list grows on demand.
+function paintGrid() {
+  var grid = document.getElementById('grid');
+  if (!grid) return;
+  var all = _sorted(_items);
+  var page = all.slice(0, _shown);
+  grid.innerHTML = page.length
+    ? page.map(card).join('') +
+      (all.length > page.length
+        ? '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:12px 0;">' +
+          '<button class="wv-pill" style="padding:9px 20px;font-weight:700;" onclick="showMoreBrowse()">Show more (' + (all.length - page.length) + ' left)</button></div>'
+        : '')
+    : '<div class="wv-empty" style="grid-column:1/-1;">Nothing here yet</div>';
+  var c = document.getElementById('br-count');
+  if (c) c.textContent = all.length ? all.length.toLocaleString() + (all.length === 1 ? ' release' : ' releases') : '';
+}
+
 function card(item) {
   var isAlbum = item._type === 'album';
-  var artist = item.artists ? item.artists.display_name : 'Unknown';
+  var artist = item.archive_artist_name || (item.artists ? item.artists.display_name : '') || 'Unknown';
   var href = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
   var b = _badges || {};
   var hl = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
@@ -161,8 +215,16 @@ function card(item) {
 }
 window.play = function(id) {
   var it = _items.find(function(i) { return i.id === id; }); if (!it) return;
-  if (it._type === 'album') return navigate('/album.html?id=' + id + '&play=1');
-  playTrack({ id: it.id, title: it.title, artist_name: it.artists ? it.artists.display_name : '', ia_url: it.ia_url, cover_url: it.cover_url });
+  if (it._type === 'album') return playCompById(id, { album: it });
+  if (!it.ia_url) { if (typeof wvToast === 'function') wvToast('That edit has no audio yet'); return; }
+  var playable = _sorted(_items).filter(function (x) { return x._type !== 'album' && x.ia_url; });
+  var idx = playable.findIndex(function (x) { return x.id === id; });
+  var queue = playable.map(function (x) {
+    return { id: x.id, title: x.title, ia_url: x.ia_url, cover_url: x.cover_url || null,
+      artist_name: x.archive_artist_name || (x.artists && x.artists.display_name) || '', album_id: x.album_id || null };
+  });
+  setPlayerQueue(queue, Math.max(0, idx));
+  playQueueIndex(Math.max(0, idx));
 };
 init();
 </script>

@@ -497,11 +497,13 @@ function clearPlayerQueue() {
 }
 
 function removeQueueItem(i) {
+  _shuffleBag = [];
   if (i < 0 || i >= _pq.length) return;
   _pq.splice(i, 1);
   if (i < _pqIdx) _pqIdx--;
-  else if (i === _pqIdx) _pqIdx = Math.min(_pqIdx, _pq.length - 1); // keep playing current audio
+  else if (i === _pqIdx) _pqIdx = Math.min(_pqIdx, _pq.length - 1);
   _renderQueuePanel();
+  _saveQueue();
 }
 
 function _renderQueuePanel() {
@@ -527,11 +529,15 @@ function _renderQueuePanel() {
         <div class="wv-queue-row-title">${_esc(t.title || '—')}</div>
         <div class="wv-queue-row-artist">${_esc(artist)}</div>
       </div>
-      ${isNow
-        ? '<span class="wv-queue-now-dot" title="Now playing"></span>'
-        : `<button class="wv-queue-remove" onclick="event.stopPropagation();removeQueueItem(${i})" aria-label="Remove from queue">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          </button>`}
+      <div class="wv-queue-tools" onclick="event.stopPropagation()">
+        <button class="wv-queue-move" title="Move up" aria-label="Move up"${i === 0 ? ' disabled' : ''} onclick="moveQueueItem(${i}, ${i - 1})">↑</button>
+        <button class="wv-queue-move" title="Move down" aria-label="Move down"${i === _pq.length - 1 ? ' disabled' : ''} onclick="moveQueueItem(${i}, ${i + 1})">↓</button>
+        ${isNow
+          ? '<span class="wv-queue-now-dot" title="Now playing"></span>'
+          : `<button class="wv-queue-remove" onclick="removeQueueItem(${i})" aria-label="Remove from queue">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>`}
+      </div>
     </div>`;
   }).join('');
 
