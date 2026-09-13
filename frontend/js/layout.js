@@ -905,6 +905,10 @@
 (function () {
   if (typeof window.wvImg !== 'function') return;
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // If the CDN itself is down, stop sending every image through it after a few
+  // failures — covers then load straight from their origin.
+  var cdnFails = 0, cdnOff = false;
+  try { cdnOff = sessionStorage.getItem('wv_cdn_off') === '1'; } catch (_) {}
   function sizeFor(img) {
     var w = img.getAttribute('width') || img.dataset.size;
     if (w && !isNaN(+w)) return +w * DPR;
@@ -923,12 +927,24 @@
     try { if (new URL(src).origin === location.origin) return; } catch (_) { return; }
     img._wvCdn = true;
     img.dataset.wvOrig = src;
+    if (cdnOff) {
+      if (!img.getAttribute('loading')) img.loading = 'lazy';
+      if (!img.getAttribute('decoding')) img.decoding = 'async';
+      return;
+    }
     img.src = window.wvImg(src, sizeFor(img));
     if (!img.getAttribute('loading')) img.loading = 'lazy';
     if (!img.getAttribute('decoding')) img.decoding = 'async';
     img.addEventListener('error', function onErr() {
       img.removeEventListener('error', onErr);
-      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) img.src = img.dataset.wvOrig;
+      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) {
+        cdnFails++;
+        if (cdnFails >= 4 && !cdnOff) {
+          cdnOff = true;
+          try { sessionStorage.setItem('wv_cdn_off', '1'); } catch (_) {}
+        }
+        img.src = img.dataset.wvOrig;
+      }
     });
   }
   function scan(root) { (root.querySelectorAll ? root.querySelectorAll('img[src]') : []).forEach(apply); if (root.tagName === 'IMG') apply(root); }
