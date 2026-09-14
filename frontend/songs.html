@@ -97,7 +97,11 @@ async function loadOneSong(key) {
           '<div style="font-size:15px;font-weight:600;color:var(--text-2);margin-top:4px;">On ' + (d.total || items.length) + ' comp' + ((d.total || items.length) === 1 ? '' : 's') + ' in the archive' +
             ((d.total && items.length < d.total) ? ', showing ' + items.length : '') + '.</div>' +
         '</div>' +
-        '<div class="wv-comp-grid wv-comp-grid-4">' + items.map(_songCard).join('') + '</div>' +
+        (items.length
+          ? '<div class="wv-comp-grid wv-comp-grid-4">' + items.map(_songCard).join('') + '</div>'
+          : '<p style="color:var(--text-3);">' + (d.partial
+              ? 'The archive is busy right now — reload in a moment to see the comps.'
+              : 'No comps found for this song.') + '</p>') +
       '</div>';
   } catch (e) {
     view.innerHTML = '<p style="color:var(--text-3);">Could not load that song.</p>';
