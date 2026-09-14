@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=23b7e8087a1c">
+  <link rel="stylesheet" href="/css/style.css?v=5793b8fb502c">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=23b7e8087a1c"></script>
-<script src="/js/layout.js?v=23b7e8087a1c"></script>
-<script src="/js/player.js?v=23b7e8087a1c"></script>
-<script src="/js/router.js?v=23b7e8087a1c"></script>
-<script src="/js/playlists.js?v=23b7e8087a1c"></script>
-<script src="/js/ratings.js?v=23b7e8087a1c"></script>
+<script src="/js/api.js?v=5793b8fb502c"></script>
+<script src="/js/layout.js?v=5793b8fb502c"></script>
+<script src="/js/player.js?v=5793b8fb502c"></script>
+<script src="/js/router.js?v=5793b8fb502c"></script>
+<script src="/js/playlists.js?v=5793b8fb502c"></script>
+<script src="/js/ratings.js?v=5793b8fb502c"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -350,6 +350,11 @@
             '<button class="wv-btn-ghost" style="padding:5px 12px;font-size:12.5px;" onclick="openCompare()">Compare tracklists</button>' +
           '</div>' +
           '<div class="wv-comp-grid wv-comp-grid-4" style="margin-top:14px;">' + rel.versions.map(renderMoreCard).join('') + '</div>';
+      }
+      if (rel.other_takes && rel.other_takes.length) {
+        var takeName = rel.base_title ? rel.base_title.replace(/\b\w/g, function(c) { return c.toUpperCase(); }) : 'this comp';
+        html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">Other people\'s ' + escHtml(takeName) + ' comps</h2>' +
+          '<div class="wv-comp-grid wv-comp-grid-4">' + rel.other_takes.map(renderMoreCard).join('') + '</div>';
       }
       if (rel.by_creator && rel.by_creator.length) {
         html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">More by ' + escHtml(creator) + '</h2>' +
