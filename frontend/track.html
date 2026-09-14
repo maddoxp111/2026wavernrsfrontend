@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — edit</title>
-  <link rel="stylesheet" href="/css/style.css?v=c716d7787bcc">
+  <link rel="stylesheet" href="/css/style.css?v=23b7e8087a1c">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=c716d7787bcc"></script>
-<script src="/js/layout.js?v=c716d7787bcc"></script>
-<script src="/js/player.js?v=c716d7787bcc"></script>
-<script src="/js/router.js?v=c716d7787bcc"></script>
-<script src="/js/playlists.js?v=c716d7787bcc"></script>
-<script src="/js/ratings.js?v=c716d7787bcc"></script>
+<script src="/js/api.js?v=23b7e8087a1c"></script>
+<script src="/js/layout.js?v=23b7e8087a1c"></script>
+<script src="/js/player.js?v=23b7e8087a1c"></script>
+<script src="/js/router.js?v=23b7e8087a1c"></script>
+<script src="/js/playlists.js?v=23b7e8087a1c"></script>
+<script src="/js/ratings.js?v=23b7e8087a1c"></script>
 <script>
   initPlayer();
 
@@ -540,12 +540,10 @@
         artistId ? api('/artists/' + artistId + '/tracks').catch(function() { return []; }) : Promise.resolve([]),
         artistId ? api('/albums/by-artist/' + artistId).catch(function() { return []; }) : Promise.resolve([]),
         eraTagId ? api('/discover/era/' + eraTagId).catch(function() { return []; }) : Promise.resolve([]),
-        api('/tracks/' + track.id + '/appears-on').catch(function() { return { items: [] }; }),
       ]);
       var artistTracks = results[0];
       var artistAlbums = results[1];
       var eraTracks = results[2];
-      var appears = (results[3] && results[3].items) || [];
 
       // Filter out current track, limit to 4 each
       var byArtist = [].concat(
@@ -561,19 +559,8 @@
 
       var html = '';
 
-      if (appears.length) {
-        html += '<h2 class="section-title" style="margin-top:0;">Comps with this song' +
-          ' <span style="font-weight:500;color:var(--text-3);font-size:14px;">' + appears.length + '</span></h2>' +
-          '<div class="wv-comp-grid wv-comp-grid-4">' + appears.slice(0, 12).map(function(a) {
-            return renderMoreCard({
-              _type: 'album', id: a.album_id, title: a.album_title, cover_url: a.cover_url,
-              track_count: a.track_count, is_archive: true, archive_artist_name: a.creator,
-            });
-          }).join('') + '</div>';
-      }
-
       if (byArtist.length) {
-        html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">More by ' + escHtml(artist.display_name || 'this artist') + '</h2>';
+        html += '<h2 class="section-title" style="margin-top:0;">More by ' + escHtml(artist.display_name || 'this artist') + '</h2>';
         html += '<div class="wv-comp-grid wv-comp-grid-4">' + byArtist.map(function(item) { return renderMoreCard(item); }).join('') + '</div>';
       }
 

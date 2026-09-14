@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=c716d7787bcc">
+  <link rel="stylesheet" href="/css/style.css?v=23b7e8087a1c">
 </head>
 <body>
 
@@ -16,12 +16,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=c716d7787bcc"></script>
-<script src="/js/layout.js?v=c716d7787bcc"></script>
-<script src="/js/player.js?v=c716d7787bcc"></script>
-<script src="/js/router.js?v=c716d7787bcc"></script>
-<script src="/js/playlists.js?v=c716d7787bcc"></script>
-<script src="/js/ratings.js?v=c716d7787bcc"></script>
+<script src="/js/api.js?v=23b7e8087a1c"></script>
+<script src="/js/layout.js?v=23b7e8087a1c"></script>
+<script src="/js/player.js?v=23b7e8087a1c"></script>
+<script src="/js/router.js?v=23b7e8087a1c"></script>
+<script src="/js/playlists.js?v=23b7e8087a1c"></script>
+<script src="/js/ratings.js?v=23b7e8087a1c"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -66,7 +66,6 @@
       if (new URLSearchParams(location.search).get('play') === '1' && albumTracks.length) { try { playAll(); } catch (_) {} }
     loadAlbumComments();
       loadMoreLikeThis();
-      annotateSongCounts();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
       loadTrackerPills(album.id);
       showDisown(album);
@@ -209,7 +208,6 @@
                     <div class="track-row-title">${escHtml(td.title || 'Unknown')}</div>
                     <div class="track-row-artist">${escHtml(album.is_archive ? (album.archive_artist_name || 'Unknown') : (td.artists?.display_name || artist.display_name || 'Unknown'))}</div>
                   </div>
-                  <span class="wv-song-onN" data-song="${_songKeyOf(td.title)}"></span>
                   <span class="track-row-plays">${fmtNum(td.play_count)} plays</span>
                   <button onclick="event.stopPropagation();openAddToPlaylist(${tdObjAttr})"
                     style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;" title="Save to playlist">＋</button>
@@ -308,36 +306,6 @@
     });
   }
 
-  // Normalised the same way the server builds the song index.
-  function _songKeyOf(t) {
-    return String(t || '').toLowerCase()
-      .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/\.(mp3|m4a|wav|flac|aac|ogg)$/i, '')
-      .replace(/^\s*\d{1,3}\s*[-._)]+\s*/, '')
-      .replace(/[\(\[][^\)\]]*[\)\]]/g, ' ')
-      .replace(/\b(feat|ft|featuring|prod|with)\b.*$/i, ' ')
-      .replace(/[^a-z0-9]+/g, '');
-  }
-
-  // Mark tracklist rows with how many other comps carry the same song.
-  async function annotateSongCounts() {
-    var slots = document.querySelectorAll('.wv-song-onN[data-song]');
-    if (!slots.length) return;
-    try {
-      var d = await api('/tracks/songs?limit=600');
-      var byKey = {};
-      (d.items || []).forEach(function(s) { byKey[s.key] = s.comps; });
-      slots.forEach(function(el) {
-        var k = el.getAttribute('data-song');
-        var n = k && byKey[k];
-        if (!n || n < 3) return;
-        el.innerHTML = '<a href="/songs.html?s=' + encodeURIComponent(k) + '"' +
-          ' onclick="event.stopPropagation();navigate(this.getAttribute(\'href\'));return false;"' +
-          ' title="See every comp with this song">on ' + n + ' comps</a>';
-      });
-    } catch (_) {}
-  }
-
   function _highlightAlbumRow(index) {
     document.querySelectorAll('#tracklist .track-row').forEach((row, i) => {
       row.classList.toggle('playing', i === index);
@@ -382,11 +350,6 @@
             '<button class="wv-btn-ghost" style="padding:5px 12px;font-size:12.5px;" onclick="openCompare()">Compare tracklists</button>' +
           '</div>' +
           '<div class="wv-comp-grid wv-comp-grid-4" style="margin-top:14px;">' + rel.versions.map(renderMoreCard).join('') + '</div>';
-      }
-      if (rel.other_takes && rel.other_takes.length) {
-        var takeName = rel.base_title ? rel.base_title.replace(/\b\w/g, function(c) { return c.toUpperCase(); }) : 'this comp';
-        html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">Other people\'s ' + escHtml(takeName) + ' comps</h2>' +
-          '<div class="wv-comp-grid wv-comp-grid-4">' + rel.other_takes.map(renderMoreCard).join('') + '</div>';
       }
       if (rel.by_creator && rel.by_creator.length) {
         html += '<h2 class="section-title" style="margin-top:' + (html ? '32px' : '0') + ';">More by ' + escHtml(creator) + '</h2>' +

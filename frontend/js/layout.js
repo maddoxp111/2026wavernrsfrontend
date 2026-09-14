@@ -51,7 +51,6 @@
     if (p.endsWith('/stats.html')) return 'stats';
     if (p.endsWith('/history.html')) return 'library';
     if (p.endsWith('/charts.html')) return 'charts';
-    if (p.endsWith('/songs.html')) return 'songs';
     if (p.endsWith('/archive.html')) return 'archive';
     if (p.endsWith('/archive-artist.html')) return 'archive';
     if (p.endsWith('/library.html')) return 'library';
@@ -100,7 +99,6 @@
     html += navItem('charts', 'Charts', '/charts.html', 'chart');
     html += navItem('artists', 'Artists', '/artists.html', 'profile');
     html += navItem('archive', 'Archive', '/archive.html', 'archive');
-    html += navItem('songs', 'Songs', '/songs.html', 'list');
     html += navItem('radio', 'Radio', '/radio.html', 'radio');
     html += navItem('community', 'Community', '/community.html', 'community');
     html += navItem('resources', 'Tracker', '/resources.html', 'resources');
