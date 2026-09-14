@@ -36,6 +36,11 @@
 
   function icon(name) { return ICONS[name] || ''; }
 
+  function _currentThemeIcon() {
+    var pref = typeof window.getThemePref === 'function' ? window.getThemePref() : 'system';
+    return typeof window._themeIcon === 'function' ? window._themeIcon(pref) : ICONS.sun;
+  }
+
   // ── Which page are we on? ─────────────────────────────────────
   function pageId() {
     var p = location.pathname;
@@ -250,7 +255,7 @@
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
       html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
-      html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvCycleTheme()" title="Theme" aria-label="Switch theme">' + icon('more') + '</button>';
+      html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvCycleTheme()" title="Theme" aria-label="Switch theme">' + _currentThemeIcon() + '</button>';
       html += '<a href="/register.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
       html += '<a href="/login.html" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
@@ -1468,10 +1473,21 @@ window.wvCycleTheme = function () {
 };
 
 function _themeIcon(pref) {
-  if (pref === 'light') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-13.5v2m0 16v2m8.5-10h-2m-13 0h-2M17.9 6.1l-1.4 1.4M7.5 16.5l-1.4 1.4m11.8 0-1.4-1.4M7.5 7.5 6.1 6.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
-  if (pref === 'dark') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 13.2A9 9 0 1 1 10.8 3a7 7 0 0 0 10.2 10.2Z"/></svg>';
-  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8" stroke-linecap="round"/></svg>';
+  if (pref === 'light') {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
+      '<circle cx="12" cy="12" r="4.2"/>' +
+      '<path d="M12 2.6v2.1M12 19.3v2.1M2.6 12h2.1M19.3 12h2.1M5.35 5.35l1.5 1.5M17.15 17.15l1.5 1.5M18.65 5.35l-1.5 1.5M6.85 17.15l-1.5 1.5"/>' +
+      '</svg>';
+  }
+  if (pref === 'dark') {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+      '<path d="M20.4 14.15A8.65 8.65 0 0 1 9.85 3.6a8.95 8.95 0 1 0 10.55 10.55Z"/></svg>';
+  }
+  return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="2.8" y="4.2" width="18.4" height="12.6" rx="2.2"/>' +
+    '<path d="M9 20.2h6" stroke-linecap="round"/></svg>';
 }
+window._themeIcon = _themeIcon;
 
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('wv-theme-btn');
