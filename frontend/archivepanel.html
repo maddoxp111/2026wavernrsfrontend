@@ -254,7 +254,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, profile it belongs to, description, cover, tracks. Move comps between profiles, merge comps, rename and merge profiles. Select several for bulk actions.</div></div>' +
-            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button></div>' +
+            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button><button id="mg-tab-top" onclick="mgTab(\'top\')">Top 150</button></div>' +
           '</div>' +
           '<div id="mg-comps">' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
@@ -297,6 +297,16 @@
               '<span id="mg-tcount" style="font-size:12px;color:var(--text-3);"></span>' +
             '</div>' +
             '<div id="mg-tlist" style="display:flex;flex-direction:column;gap:6px;"></div>' +
+          '</div>' +
+          '<div id="mg-top" style="display:none;">' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">The ranked list on the archive page. Match an entry to a comp, fix the listed title or creator, move it, or drop it. Rank numbers renumber themselves.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
+              '<input id="mg-topq" class="wv-input" placeholder="Filter the list…" style="flex:1;min-width:180px;max-width:320px;padding:8px 12px;font-size:13.5px;" oninput="mgTopRender()">' +
+              '<label style="font-size:12.5px;color:var(--text-2);display:flex;align-items:center;gap:5px;"><input type="checkbox" id="mg-toponly" style="width:auto;margin:0;" onchange="mgTopRender()"> Only unmatched</label>' +
+              '<span id="mg-topcount" style="font-size:12px;color:var(--text-3);"></span>' +
+              '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;" onclick="mgTopAdd()">Add an entry</button>' +
+            '</div>' +
+            '<div id="mg-toplist" style="display:flex;flex-direction:column;gap:6px;"></div>' +
           '</div>' +
           '<div id="mg-editor" style="display:none;margin-top:14px;"></div>' +
         '</div>' +
@@ -1462,15 +1472,126 @@
   var _mg = { items: [], total: 0, sel: {}, timer: null, artists: [], asel: {}, atimer: null, editing: null };
   function _mgCover(u) { return u ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(u, 48) : u) + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;" loading="lazy">' : '<div style="width:36px;height:36px;border-radius:6px;background:var(--surface-3);flex-shrink:0;"></div>'; }
   window.mgTab = function(t) {
-    document.getElementById('mg-comps').style.display = t === 'comps' ? '' : 'none';
-    document.getElementById('mg-artists').style.display = t === 'artists' ? '' : 'none';
-    document.getElementById('mg-trackers').style.display = t === 'trackers' ? '' : 'none';
-    document.getElementById('mg-tab-comps').classList.toggle('on', t === 'comps');
-    document.getElementById('mg-tab-artists').classList.toggle('on', t === 'artists');
-    document.getElementById('mg-tab-trackers').classList.toggle('on', t === 'trackers');
+    ['comps', 'artists', 'trackers', 'top'].forEach(function(x) {
+      var pane = document.getElementById('mg-' + x);
+      if (pane) pane.style.display = t === x ? '' : 'none';
+      var btn = document.getElementById('mg-tab-' + x);
+      if (btn) btn.classList.toggle('on', t === x);
+    });
     if (t === 'artists' && !_mg.artists.length) mgArtistsLoad();
     if (t === 'trackers' && !_mg.trackers) mgTrackersLoad();
     if (t === 'trackers' && !_mg.trackerList) mgCoversLoad();
+    if (t === 'top' && !_mg.top) mgTopLoad();
+  };
+
+  // ── The ranked top comps ──────────────────────────────────────────────
+  _mg.top = null; _mg.topSug = {}; _mg.topTimer = {};
+
+  window.mgTopLoad = async function() {
+    var box = document.getElementById('mg-toplist'); if (!box) return;
+    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try { _mg.top = await api('/archive-manage/top'); }
+    catch (e) { box.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    mgTopRender();
+  };
+
+  window.mgTopRender = function() {
+    var box = document.getElementById('mg-toplist');
+    if (!box || !_mg.top) return;
+    var q = ((document.getElementById('mg-topq') || {}).value || '').toLowerCase().trim();
+    var onlyUn = !!(document.getElementById('mg-toponly') || {}).checked;
+    var rows = _mg.top.items.filter(function(i) {
+      if (onlyUn && i.album) return false;
+      if (!q) return true;
+      return ((i.title || '') + ' ' + (i.creator || '') + ' ' + ((i.album && i.album.title) || '')).toLowerCase().indexOf(q) >= 0;
+    });
+    var c = document.getElementById('mg-topcount');
+    if (c) c.textContent = _mg.top.total + ' ranked · ' + _mg.top.matched + ' matched · ' + _mg.top.unmatched + ' unmatched' + (rows.length !== _mg.top.total ? ' · showing ' + rows.length : '');
+    box.innerHTML = rows.map(mgTopRow).join('') || '<div class="wv-empty">Nothing matches that.</div>';
+  };
+
+  function mgTopRow(i) {
+    var a = i.album;
+    var art = a && a.cover_url
+      ? '<img src="' + escHtml(a.cover_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;">' : '';
+    return '<div class="wv-card" style="padding:10px 12px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">' +
+      '<div style="font-size:15px;font-weight:800;color:var(--text-3);min-width:34px;text-align:right;">' + i.rank + '</div>' +
+      '<div style="width:44px;height:44px;border-radius:8px;overflow:hidden;background:var(--surface-3);flex-shrink:0;">' + art + '</div>' +
+      '<div style="flex:1;min-width:170px;">' +
+        '<input class="wv-input" value="' + escHtml(i.title || '') + '" style="padding:6px 9px;font-size:13px;margin-bottom:4px;" onchange="mgTopPatch(' + i.rank + ',{title:this.value})">' +
+        '<input class="wv-input" value="' + escHtml(i.creator || '') + '" placeholder="creator" style="padding:6px 9px;font-size:12px;" onchange="mgTopPatch(' + i.rank + ',{creator:this.value})">' +
+      '</div>' +
+      '<div style="flex:1.2;min-width:210px;">' +
+        (a
+          ? '<div style="font-size:12.5px;color:var(--text);font-weight:600;">' + escHtml(a.title) + '</div>' +
+            '<div style="font-size:11.5px;color:var(--text-3);margin-bottom:5px;">' + escHtml(a.creator || '') + ' · ' + (a.track_count || 0) + ' tracks</div>' +
+            '<button class="wv-pill" style="font-size:11.5px;padding:5px 11px;" onclick="mgTopPatch(' + i.rank + ',{album_id:\'\'})">Unmatch</button> ' +
+            '<a class="wv-pill" style="font-size:11.5px;padding:5px 11px;text-decoration:none;" href="/album.html?id=' + escHtml(a.id) + '" target="_blank" rel="noopener">Open</a>'
+          : (i.orphaned ? '<div style="font-size:12px;color:var(--red);margin-bottom:5px;">The comp it pointed at is gone.</div>' : '') +
+            '<input class="wv-input" id="mg-topsq-' + i.rank + '" placeholder="Search for the comp…" style="padding:6px 9px;font-size:12.5px;" oninput="mgTopSearch(' + i.rank + ')">' +
+            '<div id="mg-topsug-' + i.rank + '" style="margin-top:5px;display:flex;flex-direction:column;gap:3px;"></div>') +
+      '</div>' +
+      '<div style="display:flex;gap:5px;align-items:center;">' +
+        '<button class="wv-pill" style="font-size:11.5px;padding:5px 9px;" title="Move up" onclick="mgTopMove(' + i.rank + ',-1)">↑</button>' +
+        '<button class="wv-pill" style="font-size:11.5px;padding:5px 9px;" title="Move down" onclick="mgTopMove(' + i.rank + ',1)">↓</button>' +
+        '<button class="wv-pill" style="font-size:11.5px;padding:5px 9px;color:var(--red);" title="Remove" onclick="mgTopRemove(' + i.rank + ')">✕</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.mgTopSearch = function(rank) {
+    clearTimeout(_mg.topTimer[rank]);
+    _mg.topTimer[rank] = setTimeout(async function() {
+      var inp = document.getElementById('mg-topsq-' + rank);
+      var out = document.getElementById('mg-topsug-' + rank);
+      if (!inp || !out) return;
+      var it = _mg.top.items.find(function(x) { return x.rank === rank; }) || {};
+      var term = inp.value.trim() || it.title || '';
+      if (term.length < 2) { out.innerHTML = ''; return; }
+      out.innerHTML = '<div style="font-size:11.5px;color:var(--text-3);">Searching…</div>';
+      try {
+        var d = await api('/archive-manage/top/suggest?title=' + encodeURIComponent(term) + '&creator=' + encodeURIComponent(it.creator || ''));
+        out.innerHTML = (d.items || []).slice(0, 8).map(function(a) {
+          return '<button class="wv-pill" style="font-size:11.5px;padding:5px 9px;text-align:left;" onclick="mgTopPatch(' + rank + ',{album_id:\'' + escHtml(a.id) + '\'})">' +
+            escHtml(a.title) + ' · ' + escHtml(a.creator || '?') + ' · ' + (a.track_count || 0) + 'tr</button>';
+        }).join('') || '<div style="font-size:11.5px;color:var(--text-3);">No comp matches that.</div>';
+      } catch (e) { out.innerHTML = '<div style="font-size:11.5px;color:var(--red);">' + escHtml(e.message) + '</div>'; }
+    }, 320);
+  };
+
+  window.mgTopPatch = async function(rank, body) {
+    try {
+      await api('/archive-manage/top/' + rank, { method: 'PATCH', body: JSON.stringify(body) });
+      await mgTopLoad();
+    } catch (e) { alert(e.message); }
+  };
+
+  window.mgTopMove = async function(rank, delta) {
+    var to = rank + delta;
+    if (to < 1 || to > (_mg.top ? _mg.top.total : 0)) return;
+    try {
+      await api('/archive-manage/top/move', { method: 'POST', body: JSON.stringify({ rank: rank, to: to }) });
+      await mgTopLoad();
+    } catch (e) { alert(e.message); }
+  };
+
+  window.mgTopRemove = async function(rank) {
+    if (!confirm('Remove #' + rank + ' from the ranking?')) return;
+    try {
+      await api('/archive-manage/top/' + rank, { method: 'DELETE' });
+      await mgTopLoad();
+    } catch (e) { alert(e.message); }
+  };
+
+  window.mgTopAdd = async function() {
+    var title = prompt('Comp title as it should be listed:');
+    if (!title) return;
+    var creator = prompt('Creator:') || '';
+    var at = prompt('Put it at which rank? (blank = the end)') || '';
+    try {
+      await api('/archive-manage/top', { method: 'POST', body: JSON.stringify({ title: title, creator: creator, rank: at ? parseInt(at, 10) : undefined }) });
+      await mgTopLoad();
+    } catch (e) { alert(e.message); }
   };
 
   // ── Tracker hand-matching ─────────────────────────────────────────────
