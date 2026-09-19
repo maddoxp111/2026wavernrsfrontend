@@ -44,6 +44,16 @@
     #view .tk-part { opacity:.9; }
     #view .tk-tag { font-size:10.5px; font-weight:700; color:var(--text-3); border:1px solid var(--border);
       border-radius:99px; padding:2px 8px; white-space:nowrap; }
+    #view .tk-art { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:22px 16px; }
+    #view .tk-art .pc { display:block; text-decoration:none; color:inherit; }
+    #view .tk-art .cv { aspect-ratio:1; border-radius:10px; overflow:hidden; margin-bottom:8px;
+      box-shadow:0 4px 14px rgba(0,0,0,.25); transition:transform .16s; background:var(--surface-2); }
+    #view .tk-art .pc:hover .cv { transform:translateY(-3px); }
+    #view .tk-art .cv img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .tk-art .nm { font-size:13.5px; font-weight:700; line-height:1.3; }
+    #view .tk-art .pl { font-size:11.5px; font-weight:700; color:var(--brand); margin-top:2px; }
+    #view .tk-art .ds { font-size:11.5px; color:var(--text-3); margin-top:2px; line-height:1.4;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
     #view .tk-hero { display:flex; gap:16px; align-items:center; margin-bottom:6px; }
     #view .tk-hero .art { width:96px; height:96px; border-radius:12px; overflow:hidden; flex-shrink:0;
       box-shadow:0 8px 24px rgba(0,0,0,.35); }
@@ -153,11 +163,11 @@
       var rest = d.items.filter(function (x) { return !x.group; });
       if (placed.length) {
         html += '<div class="tk-sec-head">Best art<span>' + placed.length + '</span></div>' +
-          '<div class="tk-list">' + placed.map(tkArtRow).join('') + '</div>';
+          '<div class="tk-art">' + placed.map(tkArtCard).join('') + '</div>';
       }
       if (rest.length) {
-        if (placed.length) html += '<div class="tk-sec-head">Everyone else<span>' + rest.length + '</span></div>';
-        html += '<div class="tk-list">' + rest.map(tkArtRow).join('') + '</div>';
+        if (placed.length) html += '<div class="tk-sec-head" style="margin-top:26px;">Everyone else<span>' + rest.length + '</span></div>';
+        html += '<div class="tk-art">' + rest.map(tkArtCard).join('') + '</div>';
       }
       b.innerHTML = html;
       window.scrollTo(0, 0);
@@ -176,18 +186,16 @@
     window.scrollTo(0, 0);
   };
 
-  function tkArtRow(x) {
+  function tkArtCard(x) {
     var link = (x.links && x.links.length) ? x.links[0] : '';
-    return '<div class="tk-row' + (link ? ' hit' : '') + '"' +
-        (link ? ' onclick="window.open(\'' + esc(link) + '\',\'_blank\',\'noopener\')"' : '') + '>' +
-        '<div class="cv" style="background:' + grad(x.name) + ';"></div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="nm">' + esc(x.name) + '</div>' +
-          (x.group ? '<div class="by">' + esc(x.group) + '</div>' : '') +
-          (x.note ? '<div class="ds">' + esc(x.note) + '</div>' : '') +
-        '</div>' +
-        (link ? '<span class="tk-tag">open →</span>' : '') +
-        '</div>';
+    var open = link ? '<a class="pc" href="' + esc(link) + '" target="_blank" rel="noopener">' : '<div class="pc">';
+    return open +
+        '<div class="cv" style="background:' + grad(x.name) + ';">' +
+          (x.image ? '<img src="' + esc(x.image) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
+        '<div class="nm">' + esc(x.name) + '</div>' +
+        (x.group ? '<div class="pl">' + esc(x.group) + '</div>' : '') +
+        (x.note ? '<div class="ds">' + esc(x.note) + '</div>' : '') +
+        (link ? '</a>' : '</div>');
   }
 
   function tkRow(x) {
