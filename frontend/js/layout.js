@@ -601,7 +601,7 @@
       _applyWash(typeof coverHues === 'function' ? coverHues(seed || url) : null);
     }
   };
-  // Theme: 'system' follows the device, otherwise the stored choice wins.
+  // Theme: dark unless someone has picked otherwise. 'system' follows the device.
   // Applied to body + app root without a reload, and available logged out.
   function _systemTheme() {
     try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (_) { return 'dark'; }
@@ -609,7 +609,7 @@
   function _storedTheme() {
     var v;
     try { v = localStorage.getItem('wv_theme'); } catch (_) { v = null; }
-    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'dark';
   }
   function _paintTheme(t) {
     [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
