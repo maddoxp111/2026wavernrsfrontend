@@ -67,17 +67,27 @@
 
   var _slug = null, _kind = 'comp', _cache = {};
 
+  function kindWord(kind, n) {
+    var one = kind === 'comp' ? 'comp' : kind === 'edit' ? 'edit' : 'piece of art';
+    if (n === 1) return one;
+    return kind === 'art' ? 'pieces of art' : one + 's';
+  }
+
+  function kindLabel(kind) { return kind === 'comp' ? 'Comps' : kind === 'edit' ? 'Edits' : 'Art'; }
+
   function header(t, kind) {
     return '<div class="tk-back" onclick="navigate(\'/archive.html\')">← Archive</div>' +
       '<div class="tk-top">' +
         '<div style="flex:1;min-width:200px;">' +
           '<h1>' + esc(t.name) + '</h1>' +
           '<div class="tk-sub">' + t.comps.toLocaleString() + ' comps · ' + t.edits.toLocaleString() + ' edits' +
+            (t.art ? ' · ' + t.art.toLocaleString() + ' pieces of art' : '') +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
         '</div>' +
         '<div class="tk-tabs">' +
           '<button class="' + (kind === 'comp' ? 'on' : '') + '" onclick="tkKind(\'comp\')">Comps</button>' +
           '<button class="' + (kind === 'edit' ? 'on' : '') + '" onclick="tkKind(\'edit\')">Edits</button>' +
+          (t.art ? '<button class="' + (kind === 'art' ? 'on' : '') + '" onclick="tkKind(\'art\')">Art</button>' : '') +
         '</div>' +
       '</div>';
   }
@@ -94,7 +104,7 @@
     if (_slug !== slug || _kind !== kind) return;
     document.title = 'wavernrs — ' + d.tracker.name;
     var html = header(d.tracker, kind);
-    if (!d.groups.length) html += '<div class="wv-empty">No ' + (kind === 'comp' ? 'comps' : 'edits') + ' in this tracker.</div>';
+    if (!d.groups.length) html += '<div class="wv-empty">No ' + kindWord(kind, 2) + ' in this tracker.</div>';
     (d.groups || []).forEach(function (g, gi) {
       if (d.groups.length > 1 || g.name !== 'Eras') html += '<div class="tk-group">' + esc(g.name) + '</div>';
       else if (gi === 0) html += '<div style="height:6px;"></div>';
@@ -103,11 +113,11 @@
           '<div class="cv" style="background:' + grad(e.name) + ';">' +
             (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" onerror="this.style.opacity=0">' : '') + '</div>' +
           '<div class="nm">' + esc(e.name) + '</div>' +
-          '<div class="mt">' + e.n + (kind === 'comp' ? ' comp' : ' edit') + (e.n !== 1 ? 's' : '') + '</div></div>';
+          '<div class="mt">' + e.n + ' ' + kindWord(kind, e.n) + '</div></div>';
       }).join('') + '</div>';
     });
     b.innerHTML = html;
-    history.replaceState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + (kind === 'edit' ? '&kind=edit' : ''));
+    history.replaceState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind));
   }
 
   window.tkKind = function (kind) { renderTracker(_slug, kind); window.scrollTo(0, 0); };
@@ -121,7 +131,7 @@
     catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this era.</div>'; return; }
     var t = d.tracker, era = d.era;
     document.title = 'wavernrs — ' + era.name;
-    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'edit' ? '&kind=edit' : ''));
+    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'comp' ? '' : '&kind=' + kind));
     var extraCount = d.items.filter(function (x) { return x.tier === 'additional'; }).length;
     var html = '<div class="tk-back" onclick="tkBack()">← ' + esc(t.name) + '</div>' +
       '<div class="tk-hero">' +
@@ -129,15 +139,31 @@
           (era.cover ? '<img src="' + esc(era.cover) + '" onerror="this.style.opacity=0">' : '') + '</div>' +
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">' +
-            esc(t.name) + ' · ' + (kind === 'comp' ? 'Comps' : 'Edits') + '</div>' +
+            esc(t.name) + ' · ' + kindLabel(kind) + '</div>' +
           '<h1 style="margin:3px 0 4px;font-size:30px;font-weight:800;letter-spacing:-.03em;">' + esc(era.name) + '</h1>' +
-          '<div class="tk-sub">' + d.items.length + (d.items.length === 1 ? ' comp' : ' comps') +
+          '<div class="tk-sub">' + d.items.length + ' ' + kindWord(kind, d.items.length) +
             (extraCount ? ' · ' + extraCount + ' additional' : '') + '</div>' +
         '</div></div>' +
       '<div style="height:14px;"></div>';
 
     // The tracker keeps a curated main list and a separate additional list of
     // comps that did not make the cut, so show them apart rather than merged.
+    if (kind === 'art') {
+      var placed = d.items.filter(function (x) { return x.group; });
+      var rest = d.items.filter(function (x) { return !x.group; });
+      if (placed.length) {
+        html += '<div class="tk-sec-head">Best art<span>' + placed.length + '</span></div>' +
+          '<div class="tk-list">' + placed.map(tkArtRow).join('') + '</div>';
+      }
+      if (rest.length) {
+        if (placed.length) html += '<div class="tk-sec-head">Everyone else<span>' + rest.length + '</span></div>';
+        html += '<div class="tk-list">' + rest.map(tkArtRow).join('') + '</div>';
+      }
+      b.innerHTML = html;
+      window.scrollTo(0, 0);
+      return;
+    }
+
     var mainItems = d.items.filter(function (x) { return x.tier !== 'additional'; });
     var extraItems = d.items.filter(function (x) { return x.tier === 'additional'; });
     html += '<div class="tk-list">' + mainItems.map(tkRow).join('') + '</div>';
@@ -149,6 +175,20 @@
     b.innerHTML = html;
     window.scrollTo(0, 0);
   };
+
+  function tkArtRow(x) {
+    var link = (x.links && x.links.length) ? x.links[0] : '';
+    return '<div class="tk-row' + (link ? ' hit' : '') + '"' +
+        (link ? ' onclick="window.open(\'' + esc(link) + '\',\'_blank\',\'noopener\')"' : '') + '>' +
+        '<div class="cv" style="background:' + grad(x.name) + ';"></div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="nm">' + esc(x.name) + '</div>' +
+          (x.group ? '<div class="by">' + esc(x.group) + '</div>' : '') +
+          (x.note ? '<div class="ds">' + esc(x.note) + '</div>' : '') +
+        '</div>' +
+        (link ? '<span class="tk-tag">open →</span>' : '') +
+        '</div>';
+  }
 
   function tkRow(x) {
     var a = x.album;
@@ -173,7 +213,8 @@
   (function boot() {
     var p = new URLSearchParams(location.search);
     var slug = p.get('t'), era = p.get('era');
-    var kind = p.get('kind') === 'edit' ? 'edit' : 'comp';
+    var qk = p.get('kind');
+    var kind = (qk === 'edit' || qk === 'art') ? qk : 'comp';
     if (!slug) { navigate('/archive.html'); return; }
     if (typeof initPlayer === 'function') initPlayer();
     _slug = slug; _kind = kind;
