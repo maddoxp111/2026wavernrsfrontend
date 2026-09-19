@@ -611,6 +611,17 @@
     try { v = localStorage.getItem('wv_theme'); } catch (_) { v = null; }
     return v === 'light' || v === 'dark' || v === 'system' ? v : 'dark';
   }
+  // One-off move to dark for anyone still on light or following their device.
+  // Runs once per browser; after that whatever they pick is respected.
+  (function _migrateToDark() {
+    try {
+      if (localStorage.getItem('wv_theme_dark_default') === '1') return;
+      localStorage.setItem('wv_theme_dark_default', '1');
+      var cur = localStorage.getItem('wv_theme');
+      if (cur !== 'dark') localStorage.setItem('wv_theme', 'dark');
+    } catch (_) {}
+  })();
+
   function _paintTheme(t) {
     [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
       if (!el) return;
