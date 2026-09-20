@@ -1,8 +1,12 @@
 (function () {
   var PASS = 'waverunnersapp2026';
   var KEY = 'wv_down_bypass';
+  var SEEN = 'wv_down_state';
   if (/\/status(\.html)?$/.test(location.pathname)) return;
   try { if (localStorage.getItem(KEY) === PASS) return; } catch (_) {}
+
+  function remember(on) { try { localStorage.setItem(SEEN, on ? '1' : '0'); } catch (_) {} }
+  function remembered() { try { return localStorage.getItem(SEEN) === '1'; } catch (_) { return false; } }
 
   var style = document.createElement('style');
   style.textContent = '#wv-down{position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;overflow-y:auto;' +
@@ -22,7 +26,10 @@
     'font-size:14px;font-family:inherit;text-align:center;width:210px;}' +
     'html.wv-down-on,body.wv-down-on{overflow:hidden !important;}';
 
+  var on = false;
+
   function build() {
+    if (!on) return;
     document.documentElement.classList.add('wv-down-on');
     if (document.body) document.body.classList.add('wv-down-on');
     if (!style.parentNode) (document.head || document.documentElement).appendChild(style);
@@ -38,8 +45,7 @@
       '</div>' +
       '<div class="gate"><button type="button" id="wv-down-toggle">password</button></div>';
     (document.body || document.documentElement).appendChild(box);
-
-    fill();
+    if (_doc) paint(_doc);
 
     var gate = box.querySelector('.gate');
     document.getElementById('wv-down-toggle').onclick = function () {
@@ -58,26 +64,47 @@
     };
   }
 
-  var filled = false;
-  function fill() {
-    if (filled || !window.wvStatus) return;
-    filled = true;
+  function teardown() {
+    on = false;
+    document.documentElement.classList.remove('wv-down-on');
+    if (document.body) document.body.classList.remove('wv-down-on');
+    var el = document.getElementById('wv-down');
+    if (el) el.remove();
+  }
+
+  var _doc = null;
+  function paint(d) {
+    if (!window.wvStatus) return;
     var card = document.getElementById('wv-down-card');
     if (!card) return;
     wvStatus.styleOnce();
-    wvStatus.load().then(function (d) {
-      card.innerHTML = wvStatus.render(d);
-    }).catch(function () { filled = false; });
+    card.innerHTML = wvStatus.render(d);
   }
 
   function stopMedia() {
+    if (!on) return;
     try {
       var m = document.querySelectorAll('audio,video');
       for (var i = 0; i < m.length; i++) { m[i].pause(); m[i].removeAttribute('src'); }
     } catch (_) {}
   }
 
-  if (document.body) build();
-  else document.addEventListener('DOMContentLoaded', build);
-  setInterval(function () { build(); fill(); stopMedia(); }, 700);
+  function start() {
+    if (remembered()) { on = true; build(); }
+    var tries = 0;
+    var tick = setInterval(function () {
+      if (!window.wvStatus) { if (++tries > 40) clearInterval(tick); return; }
+      clearInterval(tick);
+      wvStatus.load().then(function (d) {
+        _doc = d;
+        remember(!!d.locked);
+        if (d.locked) { on = true; build(); paint(d); }
+        else if (on) teardown();
+      }).catch(function () {});
+    }, 100);
+  }
+
+  if (document.body) start();
+  else document.addEventListener('DOMContentLoaded', start);
+  setInterval(function () { build(); stopMedia(); }, 700);
 })();

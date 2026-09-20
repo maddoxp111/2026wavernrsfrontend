@@ -93,11 +93,18 @@
     (doc.head || doc.documentElement).appendChild(el);
   }
 
-  function load() {
-    return fetch('/status.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+  var API = 'https://2026wavernrs-production.up.railway.app/api';
+
+  function _get(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('status ' + r.status);
       return r.json();
     });
+  }
+
+  function load() {
+    return _get(API + '/site/status?t=' + Date.now())
+      .catch(function () { return _get('/status.json?t=' + Date.now()); });
   }
 
   window.wvStatus = { render: render, styleOnce: styleOnce, load: load, states: STATES };
