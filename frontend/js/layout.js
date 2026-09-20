@@ -135,6 +135,7 @@
     }
     html += '<a href="/stats.html" data-page="stats">Stats</a>';
     html += '<a href="/about.html" data-page="about">About</a>';
+    html += '<a href="/status.html" data-page="status">Status</a>';
     html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener">Discord</a>';
     html += '</div>';
     return html;
