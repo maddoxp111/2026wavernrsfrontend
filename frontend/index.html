@@ -139,8 +139,9 @@ function eraStrip() {
   var eras = (_home.eras || []).filter(function (e) { return (e.total || 0) > 0; });
   if (eras.length < 4) return '';
   eras = eras.slice().sort(function (a, b) { return (b.total || 0) - (a.total || 0); }).slice(0, 14);
-  return '<div class="wv-rail-head"><h2 class="section-title">Browse by era</h2>' +
-      '<span class="wv-see-all" onclick="navigate(\'/eras.html\')">See all</span></div>' +
+  return '<div class="home-section">' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/eras.html\')">Browse by era</h2>' +
+      '<button class="wv-see-all" onclick="navigate(\'/eras.html\')">Show all</button></div>' +
     '<div class="wv-era-strip">' + eras.map(function (e) {
       var n = (e.total || 0).toLocaleString();
       return '<div class="wv-era-chip" onclick="navigate(\'/archive.html?era=' + encodeURIComponent(e.id) + '\')">' +
@@ -149,7 +150,7 @@ function eraStrip() {
         '</div>' +
         '<div class="wv-era-chip-text"><b>' + escHtml(e.name) + '</b><span>' + n + '</span></div>' +
       '</div>';
-    }).join('') + '</div>';
+    }).join('') + '</div></div>';
 }
 
 // One click from the home page into something nobody was looking for.
