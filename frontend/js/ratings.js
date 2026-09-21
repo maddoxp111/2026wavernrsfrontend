@@ -48,11 +48,11 @@
 
     container.innerHTML =
       '<div style="display:flex;align-items:center;gap:6px;">' +
-        '<div id="wv-stars" style="display:flex;align-items:center;">' + starsHtml + '</div>' +
+        '<div id="wv-rating-stars" style="display:flex;align-items:center;">' + starsHtml + '</div>' +
         '<div id="wv-rating-summary">' + summaryHtml + '</div>' +
       '</div>';
 
-    var starsEl = document.getElementById('wv-stars');
+    var starsEl = container.querySelector('#wv-rating-stars');
     if (!starsEl) return;
 
     // Hover preview (desktop only — ignored on touch)
@@ -79,8 +79,9 @@
   }
 
   function _fillUpTo(n) {
-    var btns = document.querySelectorAll('#wv-stars button[data-s]');
-    btns.forEach(function (btn) {
+    var wrap = document.getElementById('rating-widget');
+    var btns = wrap ? wrap.querySelectorAll('#wv-rating-stars button[data-s]') : [];
+    Array.prototype.forEach.call(btns, function (btn) {
       btn.innerHTML = _starSvg(parseInt(btn.getAttribute('data-s'), 10) <= n);
     });
   }
