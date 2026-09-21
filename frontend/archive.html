@@ -93,12 +93,17 @@ async function initArchive() {
     '<div id="archive-sentinel" style="height:1px;"></div>' +
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading more…</div>' +
     '</div>';
-  var _q0 = new URLSearchParams(location.search).get('q');
+  var _p0 = new URLSearchParams(location.search);
+  var _q0 = _p0.get('q');
   if (_q0) {
     _arcQuery = _q0.trim();
     var si = document.getElementById('arc-search');
     if (si) si.value = _arcQuery;
   }
+  var _e0 = _p0.get('era');
+  if (_e0) _arcEra = _e0.trim();
+  var _v0 = _p0.get('view');
+  if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers') _arcKind = _v0; }
   arcApplyView();
   _arcWatchSentinel();
   arcReload();
@@ -203,6 +208,10 @@ async function loadArcEras() {
       r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
     sel.value = _arcEra;
     sel.style.display = '';
+    if (_arcEra) {
+      var cur = r.items.find(function (e) { return e.id === _arcEra; });
+      if (cur && cur.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(cur.cover, cur.name);
+    }
   } catch (_) {}
 }
 

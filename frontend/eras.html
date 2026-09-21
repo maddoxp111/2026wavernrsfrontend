@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — eras</title>
+  <link rel="stylesheet" href="/css/style.css?v=db844f40ba53">
+  <script src="/js/status-card.js?v=st1"></script>
+  <script src="/js/down.js?v=down2"></script>
+</head>
+<body>
+
+<div id="view">
+  <style>
+    #view .er-top { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+    #view .er-top h1 { margin:0; font-size:32px; font-weight:800; letter-spacing:-.03em; }
+    #view .er-sub { font-size:13px; color:var(--text-3); margin-top:4px; }
+    #view .er-seg { display:inline-flex; background:var(--surface-2); border-radius:99px; padding:4px; gap:2px; margin:16px 0 20px; }
+    #view .er-seg button { border:none; background:transparent; color:var(--text-2); font-size:13.5px; font-weight:700;
+      padding:7px 18px; border-radius:99px; cursor:pointer; transition:background .15s,color .15s; }
+    #view .er-seg button:hover { color:var(--text); }
+    #view .er-seg button.on { background:var(--brand); color:#14121c; }
+    .theme-light #view .er-seg button.on { color:#fff; }
+    #view .er-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:22px 16px; }
+    #view .er-card { cursor:pointer; }
+    #view .er-card .cv { aspect-ratio:1; border-radius:12px; overflow:hidden; margin-bottom:9px; position:relative;
+      box-shadow:0 4px 14px rgba(0,0,0,.28); transition:transform .16s; }
+    #view .er-card:hover .cv { transform:translateY(-3px); }
+    #view .er-card .cv img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .er-card .nm { font-size:14px; font-weight:700; line-height:1.3; }
+    #view .er-card .mt { font-size:11.5px; color:var(--text-3); margin-top:3px; }
+    #view .er-bar { position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(0,0,0,.35); }
+    #view .er-bar i { display:block; height:100%; background:var(--brand); }
+  </style>
+
+  <div class="container" style="max-width:1200px;">
+    <div class="er-top">
+      <div>
+        <h1>Eras</h1>
+        <div class="er-sub" id="er-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="er-seg">
+      <button id="er-sort-time" onclick="erSort('time')">Chronological</button>
+      <button id="er-sort-size" class="on" onclick="erSort('size')">Most comps</button>
+    </div>
+    <div id="er-grid" class="er-grid"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=db844f40ba53"></script>
+<script src="/js/layout.js?v=db844f40ba53"></script>
+<script src="/js/player.js?v=db844f40ba53"></script>
+<script src="/js/router.js?v=db844f40ba53"></script>
+<script>
+(function () {
+  var esc = window.escHtml || function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); };
+  function grad(seed) { return window.coverGradient ? window.coverGradient(seed || '') : 'linear-gradient(135deg,#2a2a34,#15151b)'; }
+
+  var _eras = [];
+  var _sort = 'size';
+
+  function render() {
+    var box = document.getElementById('er-grid');
+    if (!box) return;
+    if (!_eras.length) { box.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No eras yet.</div>'; return; }
+
+    var list = _eras.slice();
+    if (_sort === 'time') list.sort(function (a, b) { return (b.position || 0) - (a.position || 0); });
+    else list.sort(function (a, b) { return (b.comps || 0) - (a.comps || 0) || (b.total || 0) - (a.total || 0); });
+
+    var most = list.reduce(function (m, e) { return Math.max(m, e.total || 0); }, 1);
+
+    box.innerHTML = list.map(function (e) {
+      var pct = Math.max(3, Math.round(100 * (e.total || 0) / most));
+      var bits = [];
+      if (e.comps) bits.push(e.comps.toLocaleString() + ' comp' + (e.comps === 1 ? '' : 's'));
+      if (e.edits) bits.push(e.edits.toLocaleString() + ' edit' + (e.edits === 1 ? '' : 's'));
+      return '<div class="er-card" onclick="navigate(\'/archive.html?era=' + encodeURIComponent(e.id) + '\')">' +
+        '<div class="cv" style="background:' + grad(e.name) + ';">' +
+          (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" onerror="this.style.opacity=0">' : '') +
+          '<div class="er-bar"><i style="width:' + pct + '%"></i></div>' +
+        '</div>' +
+        '<div class="nm">' + esc(e.name) + '</div>' +
+        '<div class="mt">' + (bits.join(' · ') || 'nothing yet') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  window.erSort = function (mode) {
+    _sort = mode;
+    ['time', 'size'].forEach(function (m) {
+      var b = document.getElementById('er-sort-' + m);
+      if (b) b.classList.toggle('on', m === mode);
+    });
+    render();
+  };
+
+  (function boot() {
+    if (typeof initPlayer === 'function') initPlayer();
+    api('/archive/eras').then(function (d) {
+      _eras = (d && d.items) || [];
+      var comps = _eras.reduce(function (s, e) { return s + (e.comps || 0); }, 0);
+      var all = _eras.reduce(function (s, e) { return s + (e.total || 0); }, 0);
+      var sub = document.getElementById('er-sub');
+      if (sub) sub.textContent = _eras.length + ' eras · ' + comps.toLocaleString() + ' comps · ' +
+        (all - comps).toLocaleString() + ' edits';
+      render();
+    }).catch(function (e) {
+      var box = document.getElementById('er-grid');
+      if (box) box.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load eras.</div>';
+    });
+  })();
+})();
+</script>
+</body>
+</html>

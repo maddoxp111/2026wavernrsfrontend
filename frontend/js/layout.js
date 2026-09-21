@@ -16,6 +16,7 @@
     profile:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.7" r="4.4"/><path d="M12 13.8c-4.35 0-7.9 2.63-7.9 5.87 0 .9.73 1.63 1.63 1.63h12.54c.9 0 1.63-.73 1.63-1.63 0-3.24-3.54-5.87-7.9-5.87Z"/></svg>',
     feed:      '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="8.9" cy="8" r="3.7"/><path d="M8.9 13.5c-3.65 0-6.65 2.2-6.65 4.95 0 .8.65 1.45 1.45 1.45h10.4c.8 0 1.45-.65 1.45-1.45 0-2.75-3-4.95-6.65-4.95Z"/><circle cx="17.5" cy="9.5" r="2.85"/><path d="M17.5 13.9c-.72 0-1.4.09-2.02.26a6.6 6.6 0 0 1 2.12 4.29c0 .3-.03.6-.1.89h3.26c.8 0 1.45-.65 1.45-1.45 0-2.2-2.11-3.99-4.71-3.99Z"/></svg>',
     community: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 3.3h9A4.7 4.7 0 0 1 22.2 8v4.3a4.7 4.7 0 0 1-4.7 4.7h-.6l-3.16 2.96a1 1 0 0 1-1.69-.73V17H8.5a4.7 4.7 0 0 1-4.7-4.7V8a4.7 4.7 0 0 1 4.7-4.7Z"/></svg>',
+    eras:      '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="7" cy="7" r="3.1"/><circle cx="17" cy="7" r="3.1"/><circle cx="7" cy="17" r="3.1"/><circle cx="17" cy="17" r="3.1"/></svg>',
     archive:   '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2.7" y="3.5" width="18.6" height="4.7" rx="1.7"/><path fill-rule="evenodd" d="M4.35 9.9h15.3v8.2a2.7 2.7 0 0 1-2.7 2.7H7.05a2.7 2.7 0 0 1-2.7-2.7Zm4.9 2.95a1.25 1.25 0 1 0 0 2.5h5.5a1.25 1.25 0 0 0 0-2.5Z"/></svg>',
     resources: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.1 6.35A2.65 2.65 0 0 1 5.75 3.7h3.3c.7 0 1.38.28 1.87.78l1.1 1.1h6.23a2.65 2.65 0 0 1 2.65 2.65v9.42a2.65 2.65 0 0 1-2.65 2.65H5.75A2.65 2.65 0 0 1 3.1 17.65Z"/></svg>',
     upload:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.7c.35 0 .68.14.92.39l4.2 4.2a1.3 1.3 0 0 1-1.84 1.84l-1.98-1.98V15a1.3 1.3 0 0 1-2.6 0V7.15L8.72 9.13A1.3 1.3 0 1 1 6.88 7.29l4.2-4.2c.24-.25.57-.39.92-.39Z"/><path d="M4.4 14.4a1.3 1.3 0 0 1 1.3 1.3v2.45c0 .28.22.5.5.5h11.6c.28 0 .5-.22.5-.5V15.7a1.3 1.3 0 1 1 2.6 0v2.45a3.1 3.1 0 0 1-3.1 3.1H6.2a3.1 3.1 0 0 1-3.1-3.1V15.7a1.3 1.3 0 0 1 1.3-1.3Z"/></svg>',
@@ -99,6 +100,7 @@
     html += navItem('charts', 'Charts', '/charts.html', 'chart');
     html += navItem('artists', 'Artists', '/artists.html', 'profile');
     html += navItem('archive', 'Archive', '/archive.html', 'archive');
+    html += navItem('eras', 'Eras', '/eras.html', 'eras');
     html += navItem('radio', 'Radio', '/radio.html', 'radio');
     html += navItem('community', 'Community', '/community.html', 'community');
     html += navItem('resources', 'Tracker', '/resources.html', 'resources');
