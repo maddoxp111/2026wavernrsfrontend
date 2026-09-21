@@ -45,6 +45,7 @@
             <option value="rename">Wrong name — rename the profile my comps are under</option>
             <option value="transfer">Move these comps to my wavernrs account</option>
             <option value="stolen">Someone posted my comp as theirs</option>
+            <option value="misattributed">This is credited to me but I didn't make it</option>
             <option value="remove">Takedown request — remove this comp or edit from the site</option>
             <option value="other">Something else</option>
           </select></label>
@@ -56,7 +57,7 @@
           <label style="font-size:12.5px;color:var(--text-3);display:block;">Name you want (for renames)
             <input id="cf-wanted" class="wv-input" style="margin-top:6px;" placeholder="Your artist name"></label>
         </div>
-        <label style="font-size:12.5px;color:var(--text-3);display:block;">Proof it's yours (links, screenshots, original posts)
+        <label id="cf-proof-label" style="font-size:12.5px;color:var(--text-3);display:block;">Proof it's yours (links, screenshots, original posts)
           <textarea id="cf-proof" class="wv-input" style="margin-top:6px;min-height:100px;" placeholder="Link to the original Reddit post / untitled project / Discord message from your account, screenshot links, anything that shows you made it."></textarea></label>
         <div style="font-size:12.5px;color:var(--text-3);">Photos or videos as proof (screenshots of your library, a screen recording — up to 100 MB each)
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
@@ -90,7 +91,7 @@
 <script>
   initPlayer();
   function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  var LABELS = { rename: 'Rename', transfer: 'Move to my account', stolen: 'Posted by someone else', remove: 'Take down', other: 'Other' };
+  var LABELS = { rename: 'Rename', transfer: 'Move to my account', stolen: 'Posted by someone else', remove: 'Take down', misattributed: 'Not mine', other: 'Other' };
   async function loadMine() {
     var card = document.getElementById('claim-mine'), list = document.getElementById('claim-mine-list');
     try {
@@ -139,8 +140,24 @@
     return false;
   };
   (function() {
-    var pre = new URLSearchParams(location.search).get('type');
-    if (pre) { var sel = document.getElementById('cf-type'); if (sel) sel.value = pre; if (pre === 'remove') { var c = document.getElementById('claim-form-card'); if (c) c.scrollIntoView({ block: 'start' }); } }
+    var qs = new URLSearchParams(location.search);
+    var pre = qs.get('type');
+    var sel = document.getElementById('cf-type');
+    if (pre && sel) { sel.value = pre; if (pre === 'remove' || pre === 'misattributed') { var c = document.getElementById('claim-form-card'); if (c) c.scrollIntoView({ block: 'start' }); } }
+    if (qs.get('links')) { var l = document.getElementById('cf-links'); if (l) l.value = qs.get('links'); }
+    if (qs.get('listed')) { var li = document.getElementById('cf-listed'); if (li) li.value = qs.get('listed'); }
+
+    function syncProof() {
+      var isNotMine = sel && sel.value === 'misattributed';
+      var lab = document.getElementById('cf-proof-label');
+      if (lab) lab.firstChild.nodeValue = isNotMine
+        ? 'Anything that helps us check (optional) '
+        : "Proof it's yours (links, screenshots, original posts) ";
+      var w = document.getElementById('cf-wanted');
+      if (w) w.closest('label').style.opacity = isNotMine ? '.45' : '';
+    }
+    if (sel) sel.addEventListener('change', syncProof);
+    syncProof();
     if (isLoggedIn()) { document.getElementById('claim-form').style.display = 'flex'; loadMine(); }
     else document.getElementById('claim-login').style.display = '';
   })();

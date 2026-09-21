@@ -902,7 +902,18 @@
 
   function showDisown(album) {
     var box = document.getElementById('wv-disown');
-    if (!box || album.is_archive) return;
+    if (!box) return;
+
+    if (album.is_archive) {
+      var url = location.origin + '/album.html?id=' + album.id;
+      var listed = album.archive_artist_name || '';
+      box.style.display = '';
+      box.innerHTML = '<a class="wv-pill" style="font-size:12px;padding:6px 12px;text-decoration:none;" href="/claim.html?type=misattributed' +
+          '&links=' + encodeURIComponent(url) + '&listed=' + encodeURIComponent(listed) + '">Wrong creator?</a>' +
+        '<span style="font-size:11.5px;color:var(--text-3);margin-left:8px;">Tell us if this is credited to the wrong person.</span>';
+      return;
+    }
+
     var me = null;
     try { me = JSON.parse(localStorage.getItem('user')); } catch (_) {}
     if (!me || !album.artists || album.artists.user_id !== me.id) return;
