@@ -89,6 +89,7 @@ async function initArchive() {
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcShuffleResults()" title="Queue a track from each comp shown">Shuffle these</button>' +
       '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
     '</div>' +
+    '<div id="arc-era-hero" style="display:none;"></div>' +
     '<div id="archive-grid" class="wv-tile-grid"><div class="loading"><div class="spinner"></div></div></div>' +
     '<div id="archive-sentinel" style="height:1px;"></div>' +
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">Loading more…</div>' +
@@ -211,6 +212,7 @@ async function loadArcEras() {
     if (_arcEra) {
       var cur = r.items.find(function (e) { return e.id === _arcEra; });
       if (cur && cur.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(cur.cover, cur.name);
+      arcEraHero();
     }
   } catch (_) {}
 }
@@ -221,8 +223,43 @@ function arcEraChange() {
   // Wash the page in the era's own cover while you are filtered to it.
   var era = _arcEras.find(function (e) { return e.id === _arcEra; });
   if (typeof window.setPageBgImage === 'function' && era && era.cover) window.setPageBgImage(era.cover, era.name);
+  arcEraHero();
   arcReload();
 }
+
+// When you are filtered to one era, say so properly instead of leaving it
+// to a dropdown nobody looks at.
+function arcEraHero() {
+  var box = document.getElementById('arc-era-hero');
+  if (!box) return;
+  var era = _arcEras.find(function (e) { return e.id === _arcEra; });
+  if (!era) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  var bits = [];
+  if (era.comps) bits.push(era.comps.toLocaleString() + ' comp' + (era.comps === 1 ? '' : 's'));
+  if (era.edits) bits.push(era.edits.toLocaleString() + ' edit' + (era.edits === 1 ? '' : 's'));
+  box.style.display = '';
+  box.innerHTML =
+    '<div style="display:flex;gap:16px;align-items:center;margin:4px 0 20px;flex-wrap:wrap;">' +
+      '<div style="width:88px;height:88px;border-radius:12px;overflow:hidden;flex-shrink:0;background:' + coverGradient(era.name || '') + ';box-shadow:0 8px 24px rgba(0,0,0,.35);">' +
+        (era.cover ? '<img src="' + escHtml(era.cover) + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove()">' : '') +
+      '</div>' +
+      '<div style="min-width:0;flex:1;">' +
+        '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Era</div>' +
+        '<h2 style="margin:3px 0 4px;font-size:27px;font-weight:800;letter-spacing:-.03em;">' + escHtml(era.name) + '</h2>' +
+        '<div style="font-size:12.5px;color:var(--text-3);">' + (bits.join(' · ') || 'nothing yet') + '</div>' +
+      '</div>' +
+      '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="arcClearEra()">Clear</button>' +
+      '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/eras.html\')">All eras</button>' +
+    '</div>';
+}
+
+window.arcClearEra = function () {
+  _arcEra = '';
+  var sel = document.getElementById('arc-era');
+  if (sel) sel.value = '';
+  arcEraHero();
+  arcReload();
+};
 
 // Build a mixtape out of whatever the grid is currently showing: one track
 // from each comp, shuffled.
@@ -345,6 +382,8 @@ function arcApplyView() {
   if (search) search.placeholder = _arcView === 'artists' ? 'Search artists…' : 'Search title or artist…';
   var sentinel = document.getElementById('archive-sentinel');
   if (sentinel) sentinel.style.display = curated ? 'none' : '';
+  var hero = document.getElementById('arc-era-hero');
+  if (hero && curated) hero.style.display = 'none';
 }
 
 // Near the bottom: next server page for comps, next chunk of tiles for artists.
