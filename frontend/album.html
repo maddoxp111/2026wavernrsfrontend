@@ -151,7 +151,9 @@
                 ? `<a href="/archive-artist.html?a=${encodeURIComponent(archiveArtistSlug(album.archive_artist_name || 'Unknown'))}">${escHtml(album.archive_artist_name || 'Unknown')}</a>`
                 : `<a href="/artist.html?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>`}
             </div>
-            <div class="wv-hero-meta">${eraName ? escHtml(eraName) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
+            <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
+                ? '<a href="/eras.html" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive.html?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
+                : escHtml(eraName)) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
             ${album.description ? `<div class="wv-hero-desc">${escHtml(album.description)}</div>` : ''}
             <div class="wv-hero-actions">
               <button class="wv-btn-play" onclick="playAll()">

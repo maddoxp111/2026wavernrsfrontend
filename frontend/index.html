@@ -33,7 +33,7 @@
 initPlayer();
 
 // ── State ──────────────────────────────────────────────────────
-var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [], justAdded: [] };
+var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [], justAdded: [], eras: [] };
 var _homeFilter = 'all';      // all | comps | edits
 var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
 var _allItems = {};           // id -> item, for play buttons
@@ -62,6 +62,7 @@ async function loadHome() {
       api('/archive?limit=12').catch(function() { return null; }),
       getBadgeData().catch(function() { return null; }),
       api('/archive/recent?limit=14').catch(function() { return null; }),
+      api('/archive/eras').catch(function() { return null; }),
     ]);
     _home.recent = (r[0] && r[0].recent) || [];
     _home.trending = Array.isArray(r[1]) ? r[1] : [];
@@ -70,6 +71,7 @@ async function loadHome() {
     _home.archive = r[4] ? (Array.isArray(r[4]) ? r[4] : (r[4].items || [])) : [];
     _badges = r[5] || _badges;
     _home.justAdded = (r[6] && r[6].items) || [];
+    _home.eras = (r[7] && r[7].items) || [];
     [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive, _home.justAdded).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
     renderHome();
   } catch (err) {
@@ -94,6 +96,8 @@ function renderHome() {
     '<span class="wv-chip" onclick="navigate(\'/archive.html\')">Archive</span>' +
     '<span class="wv-chip" onclick="homeSurprise()" title="Play a comp at random">Surprise me</span>' +
     '</div>';
+
+  html += eraStrip();
 
   // Jump back in — dense 2×4 tile grid, first screen
   if (recent.length) {
@@ -128,6 +132,24 @@ function renderHome() {
   }), '/library.html');
 
   view.innerHTML = html;
+}
+
+// A quick way into the archive by era, using the covers we already have.
+function eraStrip() {
+  var eras = (_home.eras || []).filter(function (e) { return (e.total || 0) > 0; });
+  if (eras.length < 4) return '';
+  eras = eras.slice().sort(function (a, b) { return (b.total || 0) - (a.total || 0); }).slice(0, 14);
+  return '<div class="wv-rail-head"><h2 class="section-title">Browse by era</h2>' +
+      '<span class="wv-see-all" onclick="navigate(\'/eras.html\')">See all</span></div>' +
+    '<div class="wv-era-strip">' + eras.map(function (e) {
+      var n = (e.total || 0).toLocaleString();
+      return '<div class="wv-era-chip" onclick="navigate(\'/archive.html?era=' + encodeURIComponent(e.id) + '\')">' +
+        '<div class="wv-era-chip-cover" style="background:' + coverGradient(e.name || '') + ';">' +
+          (e.cover ? '<img src="' + escHtml(e.cover) + '" loading="lazy" onerror="this.remove()">' : '') +
+        '</div>' +
+        '<div class="wv-era-chip-text"><b>' + escHtml(e.name) + '</b><span>' + n + '</span></div>' +
+      '</div>';
+    }).join('') + '</div>';
 }
 
 // One click from the home page into something nobody was looking for.
