@@ -638,6 +638,7 @@
 
   function showContentTab(tab) {
     activeContentTab = tab;
+    _contentPage = 0; _contentQuery = '';
     document.getElementById('content-tab-edits').classList.toggle('active', tab === 'edits');
     document.getElementById('content-tab-comps').classList.toggle('active', tab === 'comps');
     loadContent();
@@ -709,11 +710,11 @@
     try {
       var tags = eraTagsCache.length ? eraTagsCache : await fetch(API_BASE + '/eratags').then(function(r){return r.json();});
       var [tracks, albums] = await Promise.all([
-        fetch(API_BASE + '/admin/tracks?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
-        fetch(API_BASE + '/admin/albums?limit=500', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
+        fetch(API_BASE + '/admin/tracks?untagged=1&limit=200', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
+        fetch(API_BASE + '/admin/albums?untagged=1&limit=200', { headers: { 'X-Admin-Password': adminPw } }).then(function(r){return r.json();}),
       ]);
-      var untaggedTracks = (Array.isArray(tracks) ? tracks : []).filter(function(t){ return !t.era_tag_id && !t.album_id; });
-      var untaggedAlbums = (Array.isArray(albums) ? albums : []).filter(function(a){ return !a.era_tag_id; });
+      var untaggedTracks = Array.isArray(tracks) ? tracks : [];
+      var untaggedAlbums = Array.isArray(albums) ? albums : [];
       if (!untaggedTracks.length && !untaggedAlbums.length) {
         el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">All content has an era tag.</div>';
         return;
@@ -969,25 +970,62 @@
     } catch (err) { showMsg('admin-alert', err.message); }
   }
 
+  // The tables hold six figures of rows, so the panel asks for a page at a
+  // time and searches on the server rather than pulling the lot.
+  var _contentPage = 0, _contentPageSize = 100, _contentQuery = '', _contentFocusSearch = false, _contentSearchTimer = null;
+
+  function contentToolbarHTML(isEdits, shown) {
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">' +
+      '<input id="content-search" class="wv-input" placeholder="Search ' + (isEdits ? 'edits' : 'comps') + ' by title…" ' +
+        'value="' + escHtml(_contentQuery) + '" oninput="contentSearchInput(this.value)" ' +
+        'style="flex:1;min-width:200px;max-width:340px;padding:8px 12px;font-size:13px;">' +
+      '<span style="font-size:12px;color:var(--text-3);">' +
+        (shown ? 'Showing ' + shown + ' · page ' + (_contentPage + 1) : '') +
+      '</span></div>';
+  }
+
+  function contentPagerHTML(shown) {
+    var atEnd = shown < _contentPageSize;
+    return '<div style="display:flex;gap:8px;align-items:center;margin-top:14px;">' +
+      '<button class="btn btn-secondary btn-sm" onclick="contentPage(-1)"' + (_contentPage === 0 ? ' disabled' : '') + '>Previous</button>' +
+      '<button class="btn btn-secondary btn-sm" onclick="contentPage(1)"' + (atEnd ? ' disabled' : '') + '>Next</button>' +
+      '</div>';
+  }
+
+  window.contentPage = function(dir) {
+    var next = _contentPage + dir;
+    if (next < 0) return;
+    _contentPage = next;
+    loadContent();
+  };
+
+  window.contentSearchInput = function(v) {
+    _contentQuery = v;
+    _contentFocusSearch = true;
+    clearTimeout(_contentSearchTimer);
+    _contentSearchTimer = setTimeout(function() { _contentPage = 0; loadContent(); }, 350);
+  };
+
   async function loadContent() {
     var el = document.getElementById('content-list');
     _selectedIds.clear();
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      var items, isEdits = activeContentTab === 'edits';
-
-      if (isEdits) {
-        items = await adminApi('/admin/tracks');
-      } else {
-        items = await adminApi('/admin/albums');
-      }
+      var isEdits = activeContentTab === 'edits';
+      var qs = '?limit=' + _contentPageSize + '&offset=' + (_contentPage * _contentPageSize) +
+        (_contentQuery ? '&q=' + encodeURIComponent(_contentQuery) : '');
+      var items = await adminApi((isEdits ? '/admin/tracks' : '/admin/albums') + qs);
+      if (!Array.isArray(items)) items = [];
 
       if (!items.length) {
-        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No ' + (isEdits ? 'edits' : 'comps') + '.</div>';
+        el.innerHTML = contentToolbarHTML(isEdits, 0) +
+          '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">' +
+          (_contentQuery ? 'Nothing matches that.' : (_contentPage ? 'No more ' : 'No ') + (isEdits ? 'edits' : 'comps') + '.') +
+          '</div>';
         return;
       }
 
-      var html =
+      var html = contentToolbarHTML(isEdits, items.length) +
         // Bulk action toolbar (hidden until selection)
         '<div id="bulk-bar" style="display:none;align-items:center;gap:12px;padding:10px 14px;margin-bottom:12px;' +
           'background:var(--surface-2);border:1px solid var(--hair-strong);border-radius:12px;">' +
@@ -1026,7 +1064,10 @@
       });
 
       html += '</tbody></table>';
+      html += contentPagerHTML(items.length);
       el.innerHTML = html;
+      var box = document.getElementById('content-search');
+      if (box && _contentFocusSearch) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); _contentFocusSearch = false; }
     } catch (err) {
       el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
