@@ -1356,6 +1356,9 @@ function _renderAll(track) {
   _refreshLike();
   const fsEl = document.getElementById('player-fullscreen');
   if (fsEl && fsEl.classList.contains('open')) _paintFsWash();
+  if (typeof window._wvNowPlaying === 'function') {
+    try { window._wvNowPlaying({ title, artist, cover, bg, track }); } catch (_) {}
+  }
 }
 
 // Whether the listener wants sound. In-app browsers (Discord, Instagram,

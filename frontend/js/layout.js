@@ -145,16 +145,33 @@
 
   function _sidebarSpotify(isLoggedIn, profileHref) {
     var html = '';
-    html += '<div class="wv-panel wv-panel-nav">';
-    html += _logoHTML();
-    html += '<nav class="wv-sidebar-nav">';
-    html += navItem('home', 'Home', '/index', 'home');
-    html += navItem('search', 'Search', '/search', 'search');
-    html += '</nav>';
-    html += '</div>';
+    html += '<div class="wv-panel wv-lib sp-lib">';
 
-    html += '<div class="wv-panel wv-lib">';
-    html += _libBlockHTML(isLoggedIn);
+    html += '<div class="sp-lib-head">' +
+      '<a class="sp-lib-title" href="/library" onclick="navigate(\'/library\');return false;">' +
+        icon('list') + '<span>Your Library</span></a>' +
+      '<div class="sp-lib-head-tools">' +
+        (isLoggedIn
+          ? '<button class="sp-create" onclick="navigate(\'/upload\')">' + icon('plus') + '<span>Create</span></button>'
+          : '<button class="sp-create" onclick="navigate(\'/register\')">' + icon('plus') + '<span>Create</span></button>') +
+        '<button class="sp-lib-icon" title="History" onclick="navigate(\'/history\')">' + icon('history') + '</button>' +
+      '</div></div>';
+
+    html += '<div class="sp-lib-chips" id="wv-lib-chips">' +
+      '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recents</span>' +
+      '<span class="wv-chip" data-k="comps" onclick="window._libFilter(\'comps\')">Comps</span>' +
+      '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
+      '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
+      '</div>';
+
+    html += '<div class="sp-lib-bar">' +
+      '<div class="sp-lib-find">' + icon('search') +
+        '<input id="wv-lib-q" placeholder="Search in Your Library" oninput="window._libSearch(this.value)">' +
+      '</div>' +
+      '<span class="sp-lib-sort">Recents ' + icon('list') + '</span>' +
+      '</div>';
+
+    html += '<div class="sp-lib-scroll">';
     html += '<div class="sp-pinned">';
     NAV_MAIN.forEach(function (n) {
       if (n[0] === 'home') return;
@@ -164,6 +181,7 @@
     html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
     html += '</div>';
 
+    html += '</div>';
     html += _footHTML(isLoggedIn, profileHref);
     return html;
   }
@@ -206,10 +224,13 @@
     return html;
   }
 
-  function buildSidebarHTML() {
+  // The mobile drawer always uses the default shape: the skins reshape the
+  // desktop shell only, and the drawer is the one way to reach everything
+  // on a phone.
+  function buildSidebarHTML(forDrawer) {
     var isLoggedIn = !!localStorage.getItem('token');
     var profileHref = getProfileHref();
-    var skin = _skin();
+    var skin = forDrawer ? '' : _skin();
     if (skin === 'spotify') return _sidebarSpotify(isLoggedIn, profileHref);
     if (skin === 'apple') return _sidebarApple(isLoggedIn, profileHref);
 
@@ -312,33 +333,13 @@
   window._sidebarLibRender = _renderLib;
 
   // ── Topbar HTML ───────────────────────────────────────────────
-  function buildTopbarHTML() {
-    var user = null;
-    try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
-    var isLoggedIn = !!localStorage.getItem('token');
-
-    var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
-    html += '<div class="wv-topbar-nav">' +
-      '<button onclick="history.back()" aria-label="Back" title="Back">‹</button>' +
-      '<button onclick="history.forward()" aria-label="Forward" title="Forward">›</button>' +
-      '</div>';
-
-    html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
-
-    html += '<div class="wv-topbar-search">' +
-      '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
-      icon('search') +
-      '<input id="wv-search-inp" placeholder="What do you want to play?" autocomplete="off" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;padding:0;" ' +
-      'oninput="window._topbarSuggest(this)" onfocus="window._topbarSuggest(this)" ' +
-      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q){document.getElementById(\'wv-suggest\')&&document.getElementById(\'wv-suggest\').remove();navSearch(q);}}">' +
-      '</div></div>';
-    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
-
-    html += '<div class="wv-topbar-right">';
+  // The account cluster on the right of the top bar, shared by all shapes.
+  function _topRightHTML(isLoggedIn, user, extra) {
+    var html = '<div class="wv-topbar-right">';
     html += '<div id="wv-presence" class="wv-presence" style="display:none;"></div>';
+    html += extra || '';
     html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvOpenThemePicker()" title="Theme" aria-label="Choose a theme">' + _currentThemeIcon() + '</button>';
     if (isLoggedIn && user) {
-      html += '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>';
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
               '<span id="wv-notif-dot" style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--brand);display:none;"></span>' +
@@ -351,6 +352,63 @@
       html += '<a href="/login" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
     html += '</div>';
+    return html;
+  }
+
+  function _searchInputHTML(placeholder) {
+    return icon('search') +
+      '<input id="wv-search-inp" placeholder="' + placeholder + '" autocomplete="off" ' +
+      'oninput="window._topbarSuggest(this)" onfocus="window._topbarSuggest(this)" ' +
+      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q){document.getElementById(\'wv-suggest\')&&document.getElementById(\'wv-suggest\').remove();navSearch(q);}}">';
+  }
+
+  // Spotify: one bar across the whole window. Mark on the left, Home and the
+  // search pill dead centre, account cluster on the right.
+  function _topbarSpotify(isLoggedIn, user) {
+    var cur = pageId();
+    var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
+    html += '<div class="sp-top-l">' +
+      '<a href="/index" class="sp-mark" onclick="navigate(\'/index\');return false;" aria-label="wavernrs">' +
+      '<img src="/logo.png" srcset="/logo.png 1x, /logo@2x.png 2x" alt="" width="32" height="32"></a>' +
+      '</div>';
+    html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
+    html += '<div class="sp-top-c">' +
+      '<a href="/index" class="sp-home' + (cur === 'home' ? ' is-active' : '') + '" title="Home" ' +
+        'onclick="navigate(\'/index\');return false;">' + icon('home') + '</a>' +
+      '<div class="wv-topbar-search sp-search-wrap">' +
+        '<div class="wv-input wv-search-wrap sp-search" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
+        _searchInputHTML('What do you want to play?') +
+        '<span class="sp-search-div"></span>' +
+        '<a href="/browse" class="sp-search-browse" title="Browse" onclick="navigate(\'/browse\');return false;">' + icon('archive') + '</a>' +
+        '</div></div>' +
+      '</div>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += _topRightHTML(isLoggedIn, user,
+      '<button class="sp-np-toggle wv-icon-circle" onclick="window._wvToggleNP()" title="Now playing view">' + icon('feed') + '</button>');
+    return html;
+  }
+
+  function buildTopbarHTML() {
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(e){}
+    var isLoggedIn = !!localStorage.getItem('token');
+    if (_skin() === 'spotify') return _topbarSpotify(isLoggedIn, user);
+
+    var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
+    html += '<div class="wv-topbar-nav">' +
+      '<button onclick="history.back()" aria-label="Back" title="Back">‹</button>' +
+      '<button onclick="history.forward()" aria-label="Forward" title="Forward">›</button>' +
+      '</div>';
+
+    html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
+
+    html += '<div class="wv-topbar-search">' +
+      '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
+      _searchInputHTML('What do you want to play?') +
+      '</div></div>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += _topRightHTML(isLoggedIn, user,
+      isLoggedIn && user ? '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>' : '');
     return html;
   }
 
@@ -790,10 +848,11 @@
     var side = document.getElementById('wv-sidebar');
     if (side) side.innerHTML = buildSidebarHTML();
     var drawer = document.getElementById('wv-drawer');
-    if (drawer) drawer.innerHTML = buildSidebarHTML();
+    if (drawer) drawer.innerHTML = buildSidebarHTML(true);
     if (typeof window._checkMobileTopbar === 'function') window._checkMobileTopbar();
     try { _renderLib(); } catch (_) {}
     if (typeof window._presenceRefresh === 'function') window._presenceRefresh();
+    if (typeof window._wvRenderNP === 'function') window._wvRenderNP();
   }
   window._reskin = _reskin;
 
@@ -859,13 +918,15 @@
       '<aside id="wv-sidebar" class="wv-sidebar lg-large">' + buildSidebarHTML() + '</aside>' +
       // Main content
       '<div id="wv-content"><div id="wv-banners"></div><div id="view">' + viewContent + '</div></div>' +
+      // Now-playing column, used by the Spotify shell
+      '<aside id="wv-np" class="sp-np" hidden></aside>' +
       // Player slot
       '<div id="wv-player-slot"></div>' +
       // Mobile-only elements (hidden on desktop via CSS)
       '<nav id="wv-mobile-tabs" class="wv-mobile-tabs">' + buildMobileTabsHTML() + '</nav>' +
       '<div id="wv-drawer-overlay" class="wv-drawer-overlay" onclick="window.closeMobileDrawer()"></div>' +
       '<aside id="wv-drawer" class="wv-drawer">' +
-        buildSidebarHTML() +
+        buildSidebarHTML(true) +
       '</aside>';
 
     // Also apply theme class to body so anything appended outside #wv-root
@@ -1791,4 +1852,66 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
+})();
+
+
+// ── Now playing, the third column of the Spotify shell ──────────────────────
+(function () {
+  var cur = null;
+
+  function open() {
+    try { return localStorage.getItem('wv_np_open') !== '0'; } catch (_) { return true; }
+  }
+
+  function render() {
+    var el = document.getElementById('wv-np');
+    var root = document.getElementById('wv-root');
+    if (!el || !root) return;
+    var on = (typeof window._wvSkin === 'function' ? window._wvSkin() : '') === 'spotify' && !!cur && open();
+    el.hidden = !on;
+    root.classList.toggle('np-open', on);
+    if (!on) { el.innerHTML = ''; return; }
+
+    var art = cur.cover
+      ? '<img src="' + escHtml(cur.cover) + '" alt="" onerror="this.remove()">'
+      : '';
+    el.innerHTML =
+      '<div class="sp-np-head">' +
+        '<b>' + escHtml(cur.title) + '</b>' +
+        '<button class="sp-np-x" onclick="window._wvToggleNP()" aria-label="Close">&times;</button>' +
+      '</div>' +
+      '<div class="sp-np-art" style="background:' + (cur.bg || 'var(--surface-2)') + '">' + art + '</div>' +
+      '<div class="sp-np-meta">' +
+        '<div class="sp-np-t" onclick="goToCurrentTrack&&goToCurrentTrack()">' + escHtml(cur.title) + '</div>' +
+        '<div class="sp-np-a">' + escHtml(cur.artist) + '</div>' +
+      '</div>' +
+      '<div class="sp-np-card">' +
+        '<div class="sp-np-card-h">Next in queue</div>' +
+        '<div class="sp-np-card-b">' + escHtml(_nextUp()) + '</div>' +
+      '</div>';
+  }
+
+  function _nextUp() {
+    try {
+      var q = window.playerQueue || window._queue;
+      if (q && q.length) {
+        var i = (window.queueIndex != null ? window.queueIndex : 0) + 1;
+        if (q[i] && q[i].title) return q[i].title;
+      }
+    } catch (_) {}
+    return 'Nothing queued';
+  }
+
+  window._wvNowPlaying = function (d) {
+    cur = d && d.title && d.title !== '—' ? d : null;
+    render();
+  };
+  window._wvRenderNP = render;
+  window._wvToggleNP = function () {
+    try { localStorage.setItem('wv_np_open', open() ? '0' : '1'); } catch (_) {}
+    render();
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
+  else render();
 })();
