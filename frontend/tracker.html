@@ -88,7 +88,7 @@
   function kindLabel(kind) { return kind === 'comp' ? 'Comps' : kind === 'edit' ? 'Edits' : 'Art'; }
 
   function header(t, kind) {
-    return '<div class="tk-back" onclick="navigate(\'/archive.html\')">← Archive</div>' +
+    return '<div class="tk-back" onclick="navigate(\'/archive\')">← Archive</div>' +
       '<div class="tk-top">' +
         '<div style="flex:1;min-width:200px;">' +
           '<h1>' + esc(t.name) + '</h1>' +
@@ -129,7 +129,7 @@
       }).join('') + '</div>';
     });
     b.innerHTML = html;
-    history.replaceState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind));
+    history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind));
   }
 
   window.tkKind = function (kind) { renderTracker(_slug, kind); window.scrollTo(0, 0); };
@@ -143,7 +143,7 @@
     catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this era.</div>'; return; }
     var t = d.tracker, era = d.era;
     document.title = 'wavernrs — ' + era.name;
-    history.pushState(null, '', '/tracker.html?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'comp' ? '' : '&kind=' + kind));
+    history.pushState(null, '', '/tracker?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'comp' ? '' : '&kind=' + kind));
     var extraCount = d.items.filter(function (x) { return x.tier === 'additional'; }).length;
     var html = '<div class="tk-back" onclick="tkBack()">← ' + esc(t.name) + '</div>' +
       '<div class="tk-hero">' +
@@ -202,8 +202,8 @@
 
   function tkRow(x) {
     var a = x.album;
-    var searchUrl = '/archive.html?q=' + encodeURIComponent(x.name);
-    var go = a ? 'navigate(\'/album.html?id=' + a.id + '\')' : 'navigate(\'' + searchUrl + '\')';
+    var searchUrl = '/archive?q=' + encodeURIComponent(x.name);
+    var go = a ? 'navigate(\'/album?id=' + a.id + '\')' : 'navigate(\'' + searchUrl + '\')';
     return '<div class="tk-row ' + (a ? 'hit' : 'hit tk-part') + '"' +
           (go ? ' onclick="' + go + '"' : '') + '>' +
         '<div class="cv" style="background:' + grad(x.name) + ';">' +
@@ -225,7 +225,7 @@
     var slug = p.get('t'), era = p.get('era');
     var qk = p.get('kind');
     var kind = (qk === 'edit' || qk === 'art') ? qk : 'comp';
-    if (!slug) { navigate('/archive.html'); return; }
+    if (!slug) { navigate('/archive'); return; }
     if (typeof initPlayer === 'function') initPlayer();
     _slug = slug; _kind = kind;
     if (era) window.tkEra(era); else renderTracker(slug, kind);

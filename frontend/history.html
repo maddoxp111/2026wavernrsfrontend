@@ -37,7 +37,7 @@ function renderTopPlayed() {
   var max = top[0].n || 1;
   el.innerHTML = '<h2 class="wv-sec-title" style="margin:18px 0 10px;">Your most played</h2>' +
     '<div class="wv-top-list">' + top.map(function (e) {
-      var href = e._type === 'album' ? '/album.html?id=' + e.id : '/track.html?id=' + e.id;
+      var href = e._type === 'album' ? '/album?id=' + e.id : '/track?id=' + e.id;
       var pct = Math.max(8, Math.round((e.n / max) * 100));
       return '<div class="wv-top-row" onclick="navigate(\'' + href + '\')">' +
         '<div class="wv-trow-art" style="background:' + coverGradient(e.title || '') + ';">' +
@@ -57,14 +57,14 @@ function renderHistory() {
   var items = _hist().filter(function(t) { return t.id; });
   var el = document.getElementById('hi-body');
   if (!items.length) {
-    el.innerHTML = '<div class="wv-empty" style="padding:60px 0;"><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Nothing here yet</div>Play something and it will show up here.<div style="margin-top:16px;"><button class="wv-btn-play" onclick="navigate(\'/browse.html\')">Browse</button></div></div>';
+    el.innerHTML = '<div class="wv-empty" style="padding:60px 0;"><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Nothing here yet</div>Play something and it will show up here.<div style="margin-top:16px;"><button class="wv-btn-play" onclick="navigate(\'/browse\')">Browse</button></div></div>';
     return;
   }
   var first = items.find(function(t) { return t.cover_url; });
   if (first && typeof window.setPageBgImage === 'function') window.setPageBgImage(first.cover_url, first.title);
   el.innerHTML = '<div class="wv-rows">' + items.map(function(t, i) {
     var isAlbum = t._type === 'album';
-    var href = isAlbum ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+    var href = isAlbum ? '/album?id=' + t.id : '/track?id=' + t.id;
     return '<div class="wv-trow" onclick="navigate(\'' + href + '\')">' +
       '<div class="wv-trow-num">' + (i + 1) + '</div>' +
       '<div class="wv-trow-art" style="background:' + coverGradient(t.title || '') + ';">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +

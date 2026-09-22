@@ -93,7 +93,7 @@ function renderHome() {
   html += '<h1 class="wv-page-title" style="margin-bottom:12px;">' + _greeting() + (user && user.username ? ', ' + escHtml(user.display_name || user.username) : '') + '</h1>';
   html += '<div class="wv-home-chips">' +
     chip('all', 'All') + chip('comps', 'Comps') + chip('edits', 'Edits') +
-    '<span class="wv-chip" onclick="navigate(\'/archive.html\')">Archive</span>' +
+    '<span class="wv-chip" onclick="navigate(\'/archive\')">Archive</span>' +
     '<span class="wv-chip" onclick="homeSurprise()" title="Play a comp at random">Surprise me</span>' +
     '</div>';
 
@@ -102,7 +102,7 @@ function renderHome() {
   // Jump back in — dense 2×4 tile grid, first screen
   if (recent.length) {
     html += '<div class="wv-quick-grid">' + recent.slice(0, 8).map(function(t, i) {
-      var href = t._type === 'album' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+      var href = t._type === 'album' ? '/album?id=' + t.id : '/track?id=' + t.id;
       return '<div class="wv-quick-item" onclick="navigate(\'' + href + '\')">' +
         '<div class="wv-quick-cover" style="background:' + coverGradient(t.title || '') + ';">' +
           (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') +
@@ -117,19 +117,19 @@ function renderHome() {
 
   var mostPlayed = (typeof getPlayTally === 'function' ? getPlayTally({ days: 30, min: 2, limit: 12 }) : [])
     .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
-  html += rail('Your most played this month', _filterItems(mostPlayed), '/history.html');
-  html += rail('Made for you', _filterItems(_home.highlighted), '/browse.html?tab=highlighted');
-  html += rail('Trending now', _filterItems(_home.trending), '/charts.html');
-  if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse.html?tab=recent');
-  if (_homeFilter !== 'comps') html += rail('New edits', newEdits, '/browse.html?tab=recent');
+  html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
+  html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
+  html += rail('Trending now', _filterItems(_home.trending), '/charts');
+  if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse?tab=recent');
+  if (_homeFilter !== 'comps') html += rail('New edits', newEdits, '/browse?tab=recent');
   html += chartsBlock();
   if (_homeFilter !== 'edits') {
-    html += rail('Just added to the archive', _home.justAdded.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive.html?sort=newest');
+    html += rail('Just added to the archive', _home.justAdded.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive?sort=newest');
   }
-  html += rail('From the archive', _home.archive.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive.html');
+  html += rail('From the archive', _home.archive.map(function(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }), '/archive');
   html += rail('Recently played', recent.slice(0, 20).map(function(t) {
     return { id: t.id, _type: t._type, title: t.title, cover_url: t.cover_url, ia_url: t.ia_url, artists: { display_name: t.artist_name } };
-  }), '/library.html');
+  }), '/library');
 
   view.innerHTML = html;
 }
@@ -140,11 +140,11 @@ function eraStrip() {
   if (eras.length < 4) return '';
   eras = eras.slice().sort(function (a, b) { return (b.total || 0) - (a.total || 0); }).slice(0, 14);
   return '<div class="home-section">' +
-    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/eras.html\')">Browse by era</h2>' +
-      '<button class="wv-see-all" onclick="navigate(\'/eras.html\')">Show all</button></div>' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/eras\')">Browse by era</h2>' +
+      '<button class="wv-see-all" onclick="navigate(\'/eras\')">Show all</button></div>' +
     '<div class="wv-era-strip">' + eras.map(function (e) {
       var n = (e.total || 0).toLocaleString();
-      return '<div class="wv-era-chip" onclick="navigate(\'/archive.html?era=' + encodeURIComponent(e.id) + '\')">' +
+      return '<div class="wv-era-chip" onclick="navigate(\'/archive?era=' + encodeURIComponent(e.id) + '\')">' +
         '<div class="wv-era-chip-cover" style="background:' + coverGradient(e.name || '') + ';">' +
           (e.cover ? '<img src="' + escHtml(e.cover) + '" loading="lazy" onerror="this.remove()">' : '') +
         '</div>' +
@@ -184,7 +184,7 @@ function compCardHTML(item) {
   var artist = item._archive ? (item.archive_artist_name || item.artist_name || 'Archive')
              : (item.artists ? (item.artists.display_name || '') : (item.artist_name || 'Unknown'));
   var artistId = item.artists ? item.artists.id : null;
-  var href = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
+  var href = isAlbum ? '/album?id=' + item.id : '/track?id=' + item.id;
   var b = _badges || {};
   var isVerified = artistId && (b.verified_artists || []).indexOf(artistId) !== -1;
   var isHighlighted = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
@@ -207,8 +207,8 @@ function compCardHTML(item) {
 window.playItem = function(id) {
   var item = _allItems[id];
   if (!item) return;
-  if (item._type === 'album') { navigate('/album.html?id=' + id + '&play=1'); return; }
-  if (!item.ia_url) { navigate('/track.html?id=' + id); return; }
+  if (item._type === 'album') { navigate('/album?id=' + id + '&play=1'); return; }
+  if (!item.ia_url) { navigate('/track?id=' + id); return; }
   playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : (item.artist_name || ''), ia_url: item.ia_url, cover_url: item.cover_url });
 };
 
@@ -222,7 +222,7 @@ function chartsBlock() {
     if (!list.length) return '';
     var top = list.slice().sort(function(a, b) { return (b.play_count || 0) - (a.play_count || 0); }).slice(0, 5);
     return '<div><div class="wv-colhead">' + title + '</div>' + top.map(function(t, i) {
-      var href = kind === 'comp' ? '/album.html?id=' + t.id : '/track.html?id=' + t.id;
+      var href = kind === 'comp' ? '/album?id=' + t.id : '/track?id=' + t.id;
       var artist = t.artists ? t.artists.display_name : (t.archive_artist_name || '');
       return '<div class="wv-trow" onclick="navigate(\'' + href + '\')">' +
         '<div class="wv-trow-num">' + (i + 1) + '</div>' +
@@ -233,7 +233,7 @@ function chartsBlock() {
     }).join('') + '</div>';
   }
   return '<div class="home-section">' +
-    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/charts.html\')">Top charts</h2><button class="wv-see-all" onclick="navigate(\'/charts.html\')">Show all</button></div>' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/charts\')">Top charts</h2><button class="wv-see-all" onclick="navigate(\'/charts\')">Show all</button></div>' +
     '<div class="wv-cols2">' + col('Edits · all time', edits, 'edit') + col('Comps · all time', comps, 'comp') + '</div>' +
   '</div>';
 }

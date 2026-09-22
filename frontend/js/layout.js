@@ -44,36 +44,22 @@
 
   // ── Which page are we on? ─────────────────────────────────────
   function pageId() {
-    var p = location.pathname;
-    if (p === '/' || p.endsWith('/index.html')) return 'home';
-    if (p.endsWith('/discover.html')) return 'browse';
-    if (p.endsWith('/browse.html')) return 'browse';
-    if (p.endsWith('/artists.html')) return 'artists';
-    if (p.endsWith('/stats.html')) return 'stats';
-    if (p.endsWith('/history.html')) return 'library';
-    if (p.endsWith('/charts.html')) return 'charts';
-    if (p.endsWith('/archive.html')) return 'archive';
-    if (p.endsWith('/archive-artist.html')) return 'archive';
-    if (p.endsWith('/library.html')) return 'library';
-    if (p.endsWith('/resources.html')) return 'resources';
-    if (p.endsWith('/feed.html')) return 'feed';
-    if (p.endsWith('/playlists.html')) return 'playlists';
-    if (p.endsWith('/playlist.html')) return 'playlist';
-    if (p.endsWith('/dashboard.html')) return 'profile';
-    if (p.endsWith('/upload.html')) return 'upload';
-    if (p.endsWith('/settings.html')) return 'settings';
-    if (p.endsWith('/about.html')) return 'about';
-    if (p.endsWith('/album.html')) return 'album';
-    if (p.endsWith('/track.html')) return 'track';
-    if (p.endsWith('/artist.html')) return 'artist';
-    if (p.endsWith('/search.html')) return 'search';
-    if (p.endsWith('/community.html')) return 'community';
-    if (p.endsWith('/radio.html')) return 'radio';
-    if (p.endsWith('/radiopanel.html')) return 'radiopanel';
-    if (p.endsWith('/adminpanel.html')) return 'admin';
-    if (p.endsWith('/modpanel.html')) return 'modpanel';
-    if (p.endsWith('/archivepanel.html')) return 'archivepanel';
-    return '';
+    var p = location.pathname.replace(/\/+$/, '');
+    p = p.replace(/\.html$/, '');
+    var name = p.slice(p.lastIndexOf('/') + 1);
+    if (!name || name === 'index') return 'home';
+    var ALIAS = {
+      discover: 'browse',
+      history: 'library',
+      'archive-artist': 'archive',
+      dashboard: 'profile',
+      adminpanel: 'admin',
+    };
+    var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
+      'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
+      'search', 'community', 'radio', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin'];
+    if (ALIAS[name]) return ALIAS[name];
+    return KNOWN.indexOf(name) >= 0 ? name : '';
   }
 
   // ── Nav item — pill-style button rendered as <a> ─────────────
@@ -93,26 +79,26 @@
     var html = '';
 
     html += '<div class="wv-panel wv-panel-nav">';
-    html += '<a href="/index.html" class="wv-sidebar-logo"><span class="mark">w</span>wavernrs</a>';
+    html += '<a href="/index" class="wv-sidebar-logo"><span class="mark">w</span>wavernrs</a>';
     html += '<nav class="wv-sidebar-nav">';
-    html += navItem('home', 'Home', '/index.html', 'home');
-    html += navItem('browse', 'Browse', '/browse.html', 'discover');
-    html += navItem('charts', 'Charts', '/charts.html', 'chart');
-    html += navItem('artists', 'Artists', '/artists.html', 'profile');
-    html += navItem('archive', 'Archive', '/archive.html', 'archive');
-    html += navItem('eras', 'Eras', '/eras.html', 'eras');
-    html += navItem('radio', 'Radio', '/radio.html', 'radio');
-    html += navItem('community', 'Community', '/community.html', 'community');
-    html += navItem('resources', 'Tracker', '/resources.html', 'resources');
+    html += navItem('home', 'Home', '/index', 'home');
+    html += navItem('browse', 'Browse', '/browse', 'discover');
+    html += navItem('charts', 'Charts', '/charts', 'chart');
+    html += navItem('artists', 'Artists', '/artists', 'profile');
+    html += navItem('archive', 'Archive', '/archive', 'archive');
+    html += navItem('eras', 'Eras', '/eras', 'eras');
+    html += navItem('radio', 'Radio', '/radio', 'radio');
+    html += navItem('community', 'Community', '/community', 'community');
+    html += navItem('resources', 'Tracker', '/resources', 'resources');
     html += '</nav>';
     html += '</div>';
 
     html += '<div class="wv-panel wv-lib">';
     html += '<div class="wv-lib-head">' +
-      '<a href="/library.html" onclick="navigate(\'/library.html\');return false;">' + icon('list') + '<span>Your Library</span></a>' +
+      '<a href="/library" onclick="navigate(\'/library\');return false;">' + icon('list') + '<span>Your Library</span></a>' +
       '<div class="wv-lib-tools">' +
-        '<button class="wv-lib-add" title="History" onclick="navigate(\'/history.html\')">' + icon('history') + '</button>' +
-        (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload.html\')">' + icon('plus') + '</button>' : '') +
+        '<button class="wv-lib-add" title="History" onclick="navigate(\'/history\')">' + icon('history') + '</button>' +
+        (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload\')">' + icon('plus') + '</button>' : '') +
       '</div></div>';
     html += '<div class="wv-lib-chips" id="wv-lib-chips">' +
       '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
@@ -126,18 +112,18 @@
 
     html += '<div class="wv-side-foot">';
     if (isLoggedIn) {
-      html += '<a href="/feed.html" data-page="feed">Following</a>';
+      html += '<a href="/feed" data-page="feed">Following</a>';
       html += '<a href="' + profileHref + '" data-page="profile">Profile</a>';
-      html += '<a href="/settings.html" data-page="settings">Settings</a>';
-      if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel.html" data-page="modpanel">Mod panel</a>';
-      if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel.html" data-page="archivepanel">Archive panel</a>';
-      if (sessionStorage.getItem('wv_is_radio') === 'true') html += '<a href="/radiopanel.html" data-page="radiopanel">Radio panel</a>';
+      html += '<a href="/settings" data-page="settings">Settings</a>';
+      if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel" data-page="modpanel">Mod panel</a>';
+      if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel" data-page="archivepanel">Archive panel</a>';
+      if (sessionStorage.getItem('wv_is_radio') === 'true') html += '<a href="/radiopanel" data-page="radiopanel">Radio panel</a>';
     } else {
-      html += '<a href="/login.html">Log in</a><a href="/register.html">Sign up</a>';
+      html += '<a href="/login">Log in</a><a href="/register">Sign up</a>';
     }
-    html += '<a href="/stats.html" data-page="stats">Stats</a>';
-    html += '<a href="/about.html" data-page="about">About</a>';
-    html += '<a href="/status.html" data-page="status">Status</a>';
+    html += '<a href="/stats" data-page="stats">Stats</a>';
+    html += '<a href="/about" data-page="about">About</a>';
+    html += '<a href="/status" data-page="status">Status</a>';
     html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener">Discord</a>';
     html += '</div>';
     return html;
@@ -155,7 +141,7 @@
   }
   function _libRow(it) {
     var isAlbum = it._type === 'album';
-    var href = it.href || (isAlbum ? '/album.html?id=' + it.id : it._type === 'playlist' ? '/playlist.html?id=' + it.id : '/track.html?id=' + it.id);
+    var href = it.href || (isAlbum ? '/album?id=' + it.id : it._type === 'playlist' ? '/playlist?id=' + it.id : '/track?id=' + it.id);
     var sub = it.sub || (isAlbum ? 'Comp' : it._type === 'playlist' ? 'Playlist' : 'Edit') + (it.artist_name ? ' · ' + it.artist_name : '');
     var art = it.cover_url
       ? '<img src="' + _escL(it.cover_url) + '" loading="lazy" onerror="this.remove()">'
@@ -173,13 +159,13 @@
         items = _libRecent().filter(function(t) { return t.id; }).slice(0, 30);
         if (!items.length) {
           list.innerHTML = '<div class="wv-lib-empty"><b>Nothing played yet</b><p>Play a comp or edit and it shows up here.</p>' +
-            '<a class="btn btn-secondary btn-sm" href="/browse.html" onclick="navigate(\'/browse.html\');return false;">Browse</a></div>';
+            '<a class="btn btn-secondary btn-sm" href="/browse" onclick="navigate(\'/browse\');return false;">Browse</a></div>';
           return;
         }
       } else {
         if (!loggedIn) {
           list.innerHTML = '<div class="wv-lib-empty"><b>Sign in to see your library</b><p>Liked comps, edits and playlists live here.</p>' +
-            '<a class="btn btn-primary btn-sm" href="/login.html">Log in</a></div>';
+            '<a class="btn btn-primary btn-sm" href="/login">Log in</a></div>';
           return;
         }
         if (!_libData) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">Loading…</div>'; return; }
@@ -245,11 +231,11 @@
       'oninput="window._topbarSuggest(this)" onfocus="window._topbarSuggest(this)" ' +
       'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q){document.getElementById(\'wv-suggest\')&&document.getElementById(\'wv-suggest\').remove();navSearch(q);}}">' +
       '</div></div>';
-    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search.html\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
 
     html += '<div class="wv-topbar-right">';
     if (isLoggedIn && user) {
-      html += '<a href="/upload.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload.html\');return false;">Upload</a>';
+      html += '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>';
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
               '<span id="wv-notif-dot" style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--brand);display:none;"></span>' +
@@ -259,8 +245,8 @@
       html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
       html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvCycleTheme()" title="Theme" aria-label="Switch theme">' + _currentThemeIcon() + '</button>';
-      html += '<a href="/register.html" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
-      html += '<a href="/login.html" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
+      html += '<a href="/register" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
+      html += '<a href="/login" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
     html += '</div>';
     return html;
@@ -286,17 +272,17 @@
         .then(function(d) {
           if (!d || seq !== _sugSeq || document.activeElement !== inp) return;
           var rows = [];
-          (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist.html?id=' + a.id, a.profile_image_url, a.display_name, 'Artist', true)); });
-          (d.albums || []).slice(0, 4).forEach(function(a) { rows.push(_sugRow('/album.html?id=' + a.id, a.cover_url, a.title, 'Comp · ' + (a.artists ? a.artists.display_name : ''))); });
-          (d.tracks || []).slice(0, 4).forEach(function(t) { rows.push(_sugRow('/track.html?id=' + t.id, t.cover_url || (t.albums && t.albums.cover_url), t.title, 'Edit · ' + (t.artists ? t.artists.display_name : ''))); });
-          (d.archived || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/album.html?id=' + a.id, a.cover_url, a.title, 'Archive · ' + (a.archive_artist_name || ''))); });
+          (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist?id=' + a.id, a.profile_image_url, a.display_name, 'Artist', true)); });
+          (d.albums || []).slice(0, 4).forEach(function(a) { rows.push(_sugRow('/album?id=' + a.id, a.cover_url, a.title, 'Comp · ' + (a.artists ? a.artists.display_name : ''))); });
+          (d.tracks || []).slice(0, 4).forEach(function(t) { rows.push(_sugRow('/track?id=' + t.id, t.cover_url || (t.albums && t.albums.cover_url), t.title, 'Edit · ' + (t.artists ? t.artists.display_name : ''))); });
+          (d.archived || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/album?id=' + a.id, a.cover_url, a.title, 'Archive · ' + (a.archive_artist_name || ''))); });
           var el = document.getElementById('wv-suggest');
           if (!el) {
             el = document.createElement('div'); el.id = 'wv-suggest';
             var wrap = inp.closest('.wv-topbar-search'); (wrap || document.body).appendChild(el);
           }
           el.innerHTML = (rows.length ? rows.join('') : '<div class="wv-lib-s" style="padding:12px 14px;">No matches</div>') +
-            '<a class="wv-sug-all" href="/search.html?q=' + encodeURIComponent(q) + '" onclick="navSearch(' + JSON.stringify(q).replace(/"/g, '&quot;') + ');return false;">See all results for “' + _escL(q) + '”</a>';
+            '<a class="wv-sug-all" href="/search?q=' + encodeURIComponent(q) + '" onclick="navSearch(' + JSON.stringify(q).replace(/"/g, '&quot;') + ');return false;">See all results for “' + _escL(q) + '”</a>';
         }).catch(function() {});
     }, 180);
   };
@@ -306,7 +292,7 @@
 
   // ── Shared helper: resolve the current user's public profile URL ──
   function getProfileHref() {
-    return '/dashboard.html';
+    return '/dashboard';
   }
   window.getProfileHref = getProfileHref;
 
@@ -314,10 +300,10 @@
   function buildMobileTabsHTML() {
     var cur = pageId();
     var tabs = [
-      { id: 'home', label: 'Home', href: '/index.html', ic: 'home' },
-      { id: 'browse', label: 'Browse', href: '/browse.html', ic: 'discover' },
-      { id: 'search', label: 'Search', href: '/search.html', ic: 'search' },
-      { id: 'library', label: 'Library', href: '/library.html', ic: 'list' },
+      { id: 'home', label: 'Home', href: '/index', ic: 'home' },
+      { id: 'browse', label: 'Browse', href: '/browse', ic: 'discover' },
+      { id: 'search', label: 'Search', href: '/search', ic: 'search' },
+      { id: 'library', label: 'Library', href: '/library', ic: 'list' },
     ];
     return tabs.map(function(t) {
       var active = cur === t.id ? ' active' : '';
@@ -357,8 +343,8 @@
 
     var isLight = document.body.classList.contains('theme-light');
     var items = [
-      ['Profile', function() { navigate('/dashboard.html'); }],
-      ['Settings', function() { navigate('/settings.html'); }],
+      ['Profile', function() { navigate('/dashboard'); }],
+      ['Settings', function() { navigate('/settings'); }],
       [isLight ? 'Dark mode' : 'Light mode', function() { window.setTheme(isLight ? 'dark' : 'light'); }],
       ['Match my device', function() { window.setTheme('system'); if (typeof wvToast === 'function') wvToast('Theme follows your device'); }],
       ['Sign out', function() { logout(); }],
@@ -413,9 +399,9 @@
 
   function _notifHref(n) {
     if (!n || !n.entity_id) return '';
-    if (n.entity_type === 'track') return '/track.html?id=' + n.entity_id;
-    if (n.entity_type === 'album') return '/album.html?id=' + n.entity_id;
-    if (n.entity_type === 'artist') return '/artist.html?id=' + n.entity_id;
+    if (n.entity_type === 'track') return '/track?id=' + n.entity_id;
+    if (n.entity_type === 'album') return '/album?id=' + n.entity_id;
+    if (n.entity_type === 'artist') return '/artist?id=' + n.entity_id;
     return '';
   }
 
@@ -668,7 +654,7 @@
     var themePref = _storedTheme();
     var theme = themePref === 'system' ? _systemTheme() : themePref;
 
-    var isAuthPage = location.pathname.endsWith('/login.html') || location.pathname.endsWith('/register.html');
+    var isAuthPage = location.pathname.endsWith('/login') || location.pathname.endsWith('/register');
 
     var viewEl = document.getElementById('view');
     var viewContent = viewEl ? viewEl.innerHTML : '';
@@ -751,7 +737,7 @@
 
     // ── Site lockdown check ───────────────────────────────────────
     // Admin panel is always accessible regardless of lockdown
-    var isAdminPage = location.pathname.endsWith('/adminpanel.html');
+    var isAdminPage = location.pathname.endsWith('/adminpanel');
     if (!isAdminPage) {
       _checkSiteLock(theme);
     }
@@ -1094,9 +1080,9 @@
           '<div class="wv-cd-unit"><span id="wv-cd-secs">00</span><label>seconds</label></div>' +
         '</div>' +
         '<div class="wv-cd-links">' +
-          '<button onclick="location.assign(\'/community.html\')" class="wv-pill brand">Community</button>' +
-          '<button onclick="location.assign(\'/login.html\')" class="wv-pill">Log in</button>' +
-          '<button onclick="location.assign(\'/register.html\')" class="wv-pill">Sign up</button>' +
+          '<button onclick="location.assign(\'/community\')" class="wv-pill brand">Community</button>' +
+          '<button onclick="location.assign(\'/login\')" class="wv-pill">Log in</button>' +
+          '<button onclick="location.assign(\'/register\')" class="wv-pill">Sign up</button>' +
         '</div>' +
         (hasPassword
           ? '<div class="wv-cd-pw-wrap">' +
@@ -1310,7 +1296,7 @@
         '<button class="wv-pill" style="flex:1;padding:11px;font-weight:700;" onclick="wvReview(false)">Not mine</button>' +
       '</div>' +
       '<div style="font-size:11.5px;color:var(--text-3);text-align:center;margin-top:12px;">' + (at + 1) + ' of ' + items.length +
-        ' · <a href="/album.html?id=' + esc(it.id) + '" target="_blank" style="color:var(--brand);">open it</a></div>' +
+        ' · <a href="/album?id=' + esc(it.id) + '" target="_blank" style="color:var(--brand);">open it</a></div>' +
       '</div>';
   }
 
@@ -1466,7 +1452,7 @@ document.addEventListener('keydown', function (e) {
   var t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   var box = document.getElementById('wv-search-inp');
-  if (!box && typeof navigate === 'function' && !/\/search\.html$/.test(location.pathname)) { e.preventDefault(); navigate('/search.html'); return; }
+  if (!box && typeof navigate === 'function' && !/\/search\.html$/.test(location.pathname)) { e.preventDefault(); navigate('/search'); return; }
   if (!box) return;
   e.preventDefault();
   box.focus();

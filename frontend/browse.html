@@ -32,12 +32,12 @@ var CATS = [
   { k: 'highlighted', l: 'Highlighted',  h: 42 },
   { k: 'comps',       l: 'Comps',        h: 200 },
   { k: 'edits',       l: 'Edits',        h: 330 },
-  { href: '/charts.html',    l: 'Charts',    h: 150 },
-  { href: '/artists.html',   l: 'Artists',   h: 275 },
-  { href: '/stats.html',     l: 'Stats',     h: 190 },
-  { href: '/archive.html',   l: 'Archive',   h: 220 },
-  { href: '/community.html', l: 'Community', h: 95 },
-  { href: '/resources.html', l: 'Tracker',   h: 300 },
+  { href: '/charts',    l: 'Charts',    h: 150 },
+  { href: '/artists',   l: 'Artists',   h: 275 },
+  { href: '/stats',     l: 'Stats',     h: 190 },
+  { href: '/archive',   l: 'Archive',   h: 220 },
+  { href: '/community', l: 'Community', h: 95 },
+  { href: '/resources', l: 'Tracker',   h: 300 },
 ];
 
 function tileBg(h) { return 'linear-gradient(135deg, hsl(' + h + ',55%,42%), hsl(' + ((h + 40) % 360) + ',60%,26%))'; }
@@ -95,9 +95,9 @@ async function fillTileCovers() {
   setTileCover('trending', pick(trending));
   setTileCover('comps', pick(recent, function(x) { return x._type === 'album'; }));
   setTileCover('edits', pick(recent, function(x) { return x._type === 'track'; }));
-  setTileCover('/charts.html', pick(trending));
-  setTileCover('/artists.html', pick(recent));
-  setTileCover('/stats.html', pick(recent));
+  setTileCover('/charts', pick(trending));
+  setTileCover('/artists', pick(recent));
+  setTileCover('/stats', pick(recent));
   _eras.forEach(function(t) { if (!t.cover) setTileCover('era:' + t.id, pick(recent, function(x) { return String(x.era_tag_id) === String(t.id); })); });
   try { var hl = await api('/discover/highlighted'); setTileCover('highlighted', pick(hl || [])); } catch (e) {}
   var missing = _eras.filter(function(t) { return !t.cover && !document.querySelector('.wv-browse-tile[data-tile="era:' + t.id + '"] img'); }).slice(0, 12);
@@ -120,7 +120,7 @@ async function renderList() {
   var eraObj = _era ? _eras.find(function(t) { return String(t.id) === String(_era); }) : null;
   var title = eraObj ? eraObj.name : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[_tab] || 'Browse');
   view.innerHTML =
-    '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse.html\')">‹ Browse</button></div>' +
+    '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse\')">‹ Browse</button></div>' +
     '<h1 class="wv-page-title">' + escHtml(title) + '</h1>' +
     '<div class="wv-filters" id="era-chips"></div>' +
     '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 14px;">' +
@@ -205,7 +205,7 @@ function paintGrid() {
 function card(item) {
   var isAlbum = item._type === 'album';
   var artist = item.archive_artist_name || (item.artists ? item.artists.display_name : '') || 'Unknown';
-  var href = isAlbum ? '/album.html?id=' + item.id : '/track.html?id=' + item.id;
+  var href = isAlbum ? '/album?id=' + item.id : '/track?id=' + item.id;
   var b = _badges || {};
   var hl = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
   var ex = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1 : (b.exclusive_tracks || []).indexOf(item.id) !== -1;

@@ -55,7 +55,7 @@
       renderTabs();
       body.innerHTML = _empty('🔒', 'Sign in to see your library',
         'Your liked edits, comps, and playlists live here.',
-        '<a href="/login.html" class="btn btn-primary" style="margin-top:16px;">Log in</a>');
+        '<a href="/login" class="btn btn-primary" style="margin-top:16px;">Log in</a>');
       return;
     }
     try {
@@ -136,8 +136,8 @@
           '<button class="wv-icon-btn" title="Add to a playlist" aria-label="Add to a playlist" onclick="libAddToPlaylist(' + i + ')">' +
             '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm19.5-4.5L23 13l-6.99 7-4.51-4.5L13 14l3.01 3 5.49-5.5z"/></svg></button>' +
           '<button class="wv-icon-btn" title="Remove from your likes" aria-label="Remove from your likes" onclick="libUnlikeTrack(\'' + escHtml(t.id) + '\', this)">♥</button>' +
-          '<a class="btn btn-secondary btn-sm" href="/track.html?id=' + escHtml(t.id) + '" ' +
-            'onclick="navigate(\'/track.html?id=' + escHtml(t.id) + '\');return false;" style="text-decoration:none;">Open</a>' +
+          '<a class="btn btn-secondary btn-sm" href="/track?id=' + escHtml(t.id) + '" ' +
+            'onclick="navigate(\'/track?id=' + escHtml(t.id) + '\');return false;" style="text-decoration:none;">Open</a>' +
         '</div>' +
       '</div>';
     });
@@ -214,7 +214,7 @@
           ? (a.archive_artist_name || 'Unknown')
           : ((a.artists && a.artists.display_name) || 'Unknown');
         var bg = coverGradient(a.title || '');
-        return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + escHtml(a.id) + '\')">' +
+        return '<div class="wv-comp-card" onclick="navigate(\'/album?id=' + escHtml(a.id) + '\')">' +
           '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
             (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
             '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(a.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + escHtml(a.id) + '\')">' +
@@ -231,12 +231,12 @@
   function _renderPlaylists(pls) {
     if (!pls.length) {
       return _empty('🎵', 'No playlists yet', 'Build one from any edit\'s menu.',
-        '<a href="/playlists.html" class="btn btn-primary" style="margin-top:16px;" onclick="navigate(\'/playlists.html\');return false;">Go to playlists</a>');
+        '<a href="/playlists" class="btn btn-primary" style="margin-top:16px;" onclick="navigate(\'/playlists\');return false;">Go to playlists</a>');
     }
     return '<div class="wv-pl-grid">' + pls.map(function(p) {
       var cnt = p.track_count || 0;
       var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
-      return '<div class="wv-playlist-card" onclick="navigate(\'/playlist.html?id=' + escHtml(p.id) + '\')">' +
+      return '<div class="wv-playlist-card" onclick="navigate(\'/playlist?id=' + escHtml(p.id) + '\')">' +
         '<div class="wv-playlist-cover">🎵</div>' +
         '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
         '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
@@ -251,7 +251,7 @@
     }
     return '<div class="wv-tile-grid">' +
       items.map(function(it) {
-        var href = it._type === 'album' ? '/album.html?id=' + it.id : '/track.html?id=' + it.id;
+        var href = it._type === 'album' ? '/album?id=' + it.id : '/track?id=' + it.id;
         var bg = coverGradient(it.title || '');
         return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
           '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +

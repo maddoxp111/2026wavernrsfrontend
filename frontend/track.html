@@ -36,7 +36,7 @@
   // Without an id there is nothing to load; go home instead of asking the
   // server for a record that cannot exist.
   var _missingId = !trackId;
-  if (!trackId) navigate('/index.html');
+  if (!trackId) navigate('/index');
 
   function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -49,7 +49,7 @@
       track = await api(`/tracks/${trackId}`);
     } catch (err) {
       document.getElementById('track-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
       return;
     }
     try {
@@ -91,10 +91,10 @@
     const fromArchive = track.is_archive || (track.albums && track.albums.is_archive);
     const archiveName = track.archive_artist_name || (track.albums && track.albums.archive_artist_name) || null;
     if (fromArchive && archiveName) {
-      return { name: archiveName, href: '/archive-artist.html?a=' + encodeURIComponent(typeof archiveArtistSlug === 'function' ? archiveArtistSlug(archiveName) : archiveName), archive: true };
+      return { name: archiveName, href: '/archive-artist?a=' + encodeURIComponent(typeof archiveArtistSlug === 'function' ? archiveArtistSlug(archiveName) : archiveName), archive: true };
     }
     const a = track.artists || {};
-    return { name: a.display_name || 'Unknown', href: a.id ? '/artist.html?id=' + a.id : '', archive: false };
+    return { name: a.display_name || 'Unknown', href: a.id ? '/artist?id=' + a.id : '', archive: false };
   }
 
   function _playable() {
@@ -157,7 +157,7 @@
               </button>
             </div>
             <div id="rating-widget" style="margin-top:10px;">${ratingPlaceholder}</div>
-            ${track.albums && track.albums.id ? `<a href="/album.html?id=${track.albums.id}" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:12px;margin-top:16px;padding:10px 16px 10px 10px;font-weight:700;">${track.albums.cover_url ? `<img src="${escHtml(track.albums.cover_url)}" alt="" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : ''}<span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase;">From the comp</span><span style="font-size:15px;">${escHtml(track.albums.title)} →</span></span></a>` : ''}
+            ${track.albums && track.albums.id ? `<a href="/album?id=${track.albums.id}" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:12px;margin-top:16px;padding:10px 16px 10px 10px;font-weight:700;">${track.albums.cover_url ? `<img src="${escHtml(track.albums.cover_url)}" alt="" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : ''}<span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase;">From the comp</span><span style="font-size:15px;">${escHtml(track.albums.title)} →</span></span></a>` : ''}
             <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
               <button class="btn btn-primary" onclick="playThisTrack()" id="main-play-btn">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -217,7 +217,7 @@
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
-              <a href="/login.html" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
+              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
             </p>`}
           </div>
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -260,7 +260,7 @@
   }
 
   async function toggleLike() {
-    if (!isLoggedIn()) return navigate('/login.html');
+    if (!isLoggedIn()) return navigate('/login');
     try {
       const res = await api(`/tracks/${trackId}/like`, { method: 'POST' });
       liked = res.liked;
@@ -350,7 +350,7 @@
   }
 
   async function voteComment(commentId, vote) {
-    if (!isLoggedIn()) return navigate('/login.html');
+    if (!isLoggedIn()) return navigate('/login');
     try {
       const res = await api(`/tracks/${trackId}/comments/${commentId}/vote`, {
         method: 'POST',
@@ -583,8 +583,8 @@
       ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
       : '';
     var clickAction = isAlbum
-      ? "navigate('/album.html?id=" + item.id + "')"
-      : "navigate('/track.html?id=" + item.id + "')";
+      ? "navigate('/album?id=" + item.id + "')"
+      : "navigate('/track?id=" + item.id + "')";
     var artistName = item.artists ? (item.artists.display_name || '') : '';
 
     return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
@@ -593,7 +593,7 @@
           '' +
           (isAlbum ? '' : '') +
           coverImg +
-          (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();navigate(\'/track.html?id=' + item.id + '\')">' +
+          (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();navigate(\'/track?id=' + item.id + '\')">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
           '</button>' : '') +
         '</div>' +

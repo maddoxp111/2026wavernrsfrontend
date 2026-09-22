@@ -41,7 +41,7 @@
   // Without an id there is nothing to load; go home instead of asking the
   // server for a record that cannot exist.
   var _missingId = !albumId;
-  if (!albumId) navigate('/index.html');
+  if (!albumId) navigate('/index');
 
   var album = null;
   var albumTracks = [];
@@ -54,11 +54,11 @@
       album = await api(`/albums/${albumId}`);
       if (album && album.id && album.id !== albumId) {
         albumId = album.id;
-        try { history.replaceState(null, '', '/album.html?id=' + albumId + location.hash); } catch (_) {}
+        try { history.replaceState(null, '', '/album?id=' + albumId + location.hash); } catch (_) {}
       }
     } catch (err) {
       document.getElementById('album-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Comp not found</div><a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+        `<div class="empty-state"><div class="empty-title">Comp not found</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
       return;
     }
     try {
@@ -144,15 +144,15 @@
             <div id="wv-tracker-pills" style="margin:6px 0 2px;"></div>
             <div id="wv-disown" style="margin:8px 0 2px;display:none;"></div>
             <div id="wv-addcover" style="margin:8px 0 2px;display:none;"></div>
-            ${isLowQualityCover ? `<div style="margin:8px 0 2px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);background:var(--surface-2);border-radius:8px;padding:7px 11px;max-width:420px;line-height:1.4;"><span style="font-size:13px;">🖼️</span><span>Low quality cover — taken from the Yedits tracker. Got the original? <a href="/claim.html" style="color:var(--brand);font-weight:600;">Send it in</a>.</span></div>` : ''}
+            ${isLowQualityCover ? `<div style="margin:8px 0 2px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-3);background:var(--surface-2);border-radius:8px;padding:7px 11px;max-width:420px;line-height:1.4;"><span style="font-size:13px;">🖼️</span><span>Low quality cover — taken from the Yedits tracker. Got the original? <a href="/claim" style="color:var(--brand);font-weight:600;">Send it in</a>.</span></div>` : ''}
             <div class="wv-hero-title">${escHtml(album.title)}</div>
             <div class="wv-hero-sub">
               ${album.is_archive
-                ? `<a href="/archive-artist.html?a=${encodeURIComponent(archiveArtistSlug(album.archive_artist_name || 'Unknown'))}">${escHtml(album.archive_artist_name || 'Unknown')}</a>`
-                : `<a href="/artist.html?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>`}
+                ? `<a href="/archive-artist?a=${encodeURIComponent(archiveArtistSlug(album.archive_artist_name || 'Unknown'))}">${escHtml(album.archive_artist_name || 'Unknown')}</a>`
+                : `<a href="/artist?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>`}
             </div>
             <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
-                ? '<a href="/eras.html" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive.html?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
+                ? '<a href="/eras" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
                 : escHtml(eraName)) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
             ${album.description ? `<div class="wv-hero-desc">${escHtml(album.description)}</div>` : ''}
             <div class="wv-hero-actions">
@@ -215,7 +215,7 @@
                   <span class="track-row-plays">${fmtNum(td.play_count)} plays</span>
                   <button onclick="event.stopPropagation();openAddToPlaylist(${tdObjAttr})"
                     style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;" title="Save to playlist">＋</button>
-                  <a href="/track.html?id=${td.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-3);padding:4px 8px;white-space:nowrap;">Open</a>
+                  <a href="/track?id=${td.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-3);padding:4px 8px;white-space:nowrap;">Open</a>
                 </div>`;
             }).join('')}
         </div>
@@ -235,7 +235,7 @@
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
-              <a href="/login.html" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
+              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
             </p>`}
           </div>
           <div id="album-comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -254,7 +254,7 @@
 
   var _albumLikeCount = 0;
   async function toggleLike() {
-    if (!isLoggedIn()) { navigate('/login.html'); return; }
+    if (!isLoggedIn()) { navigate('/login'); return; }
     try {
       const res = await api(`/albums/${albumId}/like`, { method: 'POST' });
       albumLiked = res.liked;
@@ -453,7 +453,7 @@
         '</div>' +
         '<div class="wv-cmp-foot">' +
           '<button class="wv-btn-ghost" onclick="playCompById(\'' + other.id + '\')">Play ' + escHtml(other.title) + '</button>' +
-          '<a class="wv-btn-ghost" href="/album.html?id=' + other.id + '" onclick="document.getElementById(\'wv-cmp\').remove();">Open it →</a>' +
+          '<a class="wv-btn-ghost" href="/album?id=' + other.id + '" onclick="document.getElementById(\'wv-cmp\').remove();">Open it →</a>' +
         '</div>';
     } catch (e) {
       body.innerHTML = '<div class="wv-empty">Could not load that tracklist.</div>';
@@ -469,7 +469,7 @@
     var who = item.archive_artist_name || (item.artists ? (item.artists.display_name || '') : '');
     var n = item.track_count || 0;
     var sub = who + (n > 1 ? ' · ' + n + ' tracks' : '');
-    return '<div class="wv-comp-card" onclick="navigate(\'/album.html?id=' + item.id + '\')">' +
+    return '<div class="wv-comp-card" onclick="navigate(\'/album?id=' + item.id + '\')">' +
       '<div class="wv-comp-card-cover">' +
         '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
           coverImg +
@@ -764,7 +764,7 @@
     var box = document.getElementById('acreply-box-' + parentId);
     if (!box) return;
     if (box.style.display !== 'none') { box.style.display = 'none'; return; }
-    if (!isLoggedIn()) { navigate('/login.html'); return; }
+    if (!isLoggedIn()) { navigate('/login'); return; }
     box.style.display = '';
     box.innerHTML =
       '<div style="display:flex;gap:8px;">' +
@@ -907,10 +907,10 @@
     if (!box) return;
 
     if (album.is_archive) {
-      var url = location.origin + '/album.html?id=' + album.id;
+      var url = location.origin + '/album?id=' + album.id;
       var listed = album.archive_artist_name || '';
       box.style.display = '';
-      box.innerHTML = '<a class="wv-pill" style="font-size:12px;padding:6px 12px;text-decoration:none;" href="/claim.html?type=misattributed' +
+      box.innerHTML = '<a class="wv-pill" style="font-size:12px;padding:6px 12px;text-decoration:none;" href="/claim?type=misattributed' +
           '&links=' + encodeURIComponent(url) + '&listed=' + encodeURIComponent(listed) + '">Wrong creator?</a>' +
         '<span style="font-size:11.5px;color:var(--text-3);margin-left:8px;">Tell us if this is credited to the wrong person.</span>';
       return;
@@ -946,7 +946,7 @@
         // pill carries a short one and the full name lives in the tooltip.
         var short = String(x.tn || '').replace(/\s*Tracker$/i, '').replace(/^Sophie's Curated Comps & Edits$/i, "Sophie's CET");
         if (short.length > 26) short = short.slice(0, 25).trim() + '…';
-        return '<a href="/tracker.html?t=' + encodeURIComponent(x.t) + '&era=' + encodeURIComponent(x.es) + '" ' +
+        return '<a href="/tracker?t=' + encodeURIComponent(x.t) + '&era=' + encodeURIComponent(x.es) + '" ' +
           'class="wv-badge-pill wv-badge-highlight" style="text-decoration:none;" ' +
           'title="Listed in ' + escHtml(x.tn) + ' · ' + escHtml(x.era) + '">' + (x.s ? '⭐ ' : '') + '📋 ' + escHtml(short) + ' · ' + escHtml(x.era) + '</a>';
       }).join('');

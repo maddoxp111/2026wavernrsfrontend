@@ -18,7 +18,7 @@ function _clearAuthStorage() {
 
 function logout() {
   _clearAuthStorage();
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 // Sessions don't expire anymore, but a token can still stop working — one
@@ -35,9 +35,9 @@ function _handleAuthFailure(res, data) {
   _clearAuthStorage();
   if (typeof updateNav === 'function') { try { updateNav(); } catch (_) {} }
   // Already on the login page? Just clear — don't bounce in a loop.
-  if (location.pathname.endsWith('/login.html')) return;
+  if (location.pathname.endsWith('/login')) return;
   const reason = code === 'token_expired' ? 'expired' : 'invalid';
-  location.href = '/login.html?session=' + reason +
+  location.href = '/login?session=' + reason +
     '&next=' + encodeURIComponent(location.pathname + location.search);
 }
 
@@ -170,7 +170,7 @@ function navSearch(q) {
   if (!q || q.length < 2) return;
   // Check both that doSearch exists AND that we're actually on the search page
   // (doSearch stays defined globally after SPA navigation away from search.html)
-  if (typeof doSearch === 'function' && location.pathname.endsWith('/search.html')) {
+  if (typeof doSearch === 'function' && location.pathname.endsWith('/search')) {
     // Already on the search page — update URL and run search in-place
     const u = new URL(location.href);
     u.searchParams.set('q', q);
@@ -179,7 +179,7 @@ function navSearch(q) {
     if (el) el.value = q;
     doSearch(q);
   } else {
-    navigate('/search.html?q=' + encodeURIComponent(q));
+    navigate('/search?q=' + encodeURIComponent(q));
   }
 }
 
@@ -191,13 +191,13 @@ function updateNav() {
 
   if (user) {
     navRight.innerHTML = `
-      <a href="/dashboard.html" class="btn btn-ghost btn-sm">Dashboard</a>
+      <a href="/dashboard" class="btn btn-ghost btn-sm">Dashboard</a>
       <button onclick="logout()" class="btn btn-secondary btn-sm">Log out</button>
     `;
   } else {
     navRight.innerHTML = `
-      <a href="/login.html" class="btn btn-secondary btn-sm">Log in</a>
-      <a href="/register.html" class="btn btn-primary btn-sm">Sign up</a>
+      <a href="/login" class="btn btn-secondary btn-sm">Log in</a>
+      <a href="/register" class="btn btn-primary btn-sm">Sign up</a>
     `;
   }
 }
@@ -507,14 +507,14 @@ async function renderSiteBanners() {
 function renderNav(activePage = '') {
   return `
   <nav>
-    <a href="/index.html" class="nav-logo">wavernrs stream</a>
+    <a href="/index" class="nav-logo">wavernrs stream</a>
     <div class="nav-links">
-      <a href="/index.html" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-      <a href="/discover.html" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
+      <a href="/index" class="${activePage === 'home' ? 'active' : ''}">Home</a>
+      <a href="/discover" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
     </div>
     <div style="flex:1;max-width:260px;" class="nav-search-wrap">
       <input type="text" id="nav-search" placeholder="Search edits, artists…"
-        onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search.html?q='+encodeURIComponent(q);}">
+        onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search?q='+encodeURIComponent(q);}">
     </div>
     <div class="nav-right" id="nav-right"></div>
   </nav>`;

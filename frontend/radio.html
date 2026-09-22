@@ -152,7 +152,7 @@ async function openStation(slug) {
   _slug = slug; _lyrics = null; _lyricTrack = null; _lyricsOn = false; _now = null; _up = [];
   var fs = fsEl(); fs.style.display = ''; document.body.style.overflow = 'hidden';
   document.getElementById('rd-lyrics').classList.remove('on'); document.getElementById('rd-lyr-btn').classList.remove('on'); fs.classList.remove('lyr-on');
-  history.replaceState(null, '', '/radio.html?s=' + encodeURIComponent(slug));
+  history.replaceState(null, '', '/radio?s=' + encodeURIComponent(slug));
   try {
     var d = await api('/radio/stations/' + encodeURIComponent(slug));
     if (_slug !== slug) return;
@@ -161,7 +161,7 @@ async function openStation(slug) {
     document.title = _st.name + ' — wavernrs radio';
     document.getElementById('rd-title').textContent = _st.name;
     document.getElementById('rd-likes').textContent = fmtN(_likes);
-    document.getElementById('rd-foot').innerHTML = (_st.owner ? 'Station by <a href="/artist.html?id=' + escHtml(_st.owner.artist_id) + '">' + escHtml(_st.owner.name) + '</a>' : '') + (d.can_control ? ' · <a href="/radiopanel.html?s=' + encodeURIComponent(_st.id) + '">Manage</a>' : '');
+    document.getElementById('rd-foot').innerHTML = (_st.owner ? 'Station by <a href="/artist?id=' + escHtml(_st.owner.artist_id) + '">' + escHtml(_st.owner.name) + '</a>' : '') + (d.can_control ? ' · <a href="/radiopanel?s=' + encodeURIComponent(_st.id) + '">Manage</a>' : '');
     _listening = typeof window.radioSlug === 'function' && window.radioSlug() === slug;
     document.getElementById('rd-listen').style.display = _listening ? 'none' : '';
     renderNow();
@@ -174,11 +174,11 @@ async function openStation(slug) {
 function closeStation() {
   var fs = fsEl(); fs.style.display = 'none'; document.body.style.overflow = '';
   clearInterval(_poll); clearInterval(_tick); _poll = _tick = null;
-  history.replaceState(null, '', '/radio.html');
+  history.replaceState(null, '', '/radio');
   document.title = 'wavernrs — radio';
   loadList();
 }
-function shareStation() { var u = location.origin + '/radio.html?s=' + encodeURIComponent(_slug); if (navigator.share) navigator.share({ title: _st ? _st.name : 'wavernrs radio', url: u }).catch(function() {}); else { navigator.clipboard && navigator.clipboard.writeText(u); } }
+function shareStation() { var u = location.origin + '/radio?s=' + encodeURIComponent(_slug); if (navigator.share) navigator.share({ title: _st ? _st.name : 'wavernrs radio', url: u }).catch(function() {}); else { navigator.clipboard && navigator.clipboard.writeText(u); } }
 
 function serverNow() { return Date.now() + _offset; }
 function posSec() { if (!_now) return 0; return Math.max(0, (serverNow() - Date.parse(_now.started_at)) / 1000); }

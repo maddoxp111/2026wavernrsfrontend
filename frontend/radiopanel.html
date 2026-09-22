@@ -96,7 +96,7 @@ function renderShell() {
   var canCreate = _isMod || (_mine.is_host && !_mine.stations.length);
   setView(
     '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;"><h1 class="wv-page-title" style="margin:0;">Radio panel</h1>' +
-      (_st ? '<a class="wv-pill" style="margin-left:auto;font-size:12px;" href="/radio.html?s=' + encodeURIComponent(_st.slug) + '">Open station ↗</a>' : '') + '</div>' +
+      (_st ? '<a class="wv-pill" style="margin-left:auto;font-size:12px;" href="/radio?s=' + encodeURIComponent(_st.slug) + '">Open station ↗</a>' : '') + '</div>' +
     '<div style="color:var(--text-2);font-size:13.5px;margin:0 0 14px;">Anything you queue plays next. When the queue is empty the playlist loops, forever.</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' +
       (pills || '<span class="rp-empty">' + (_mine.is_host ? 'You have a station waiting.' : 'You haven\'t been given a station yet. Ask a moderator.') + '</span>') +
@@ -122,7 +122,7 @@ async function createStation() {
 
 async function openStation(id) {
   _stId = id;
-  history.replaceState(null, '', '/radiopanel.html?s=' + encodeURIComponent(id));
+  history.replaceState(null, '', '/radiopanel?s=' + encodeURIComponent(id));
   var d = await api('/radio/stations/' + id);
   _st = d.station; _st._now = d.now;
   renderShell();

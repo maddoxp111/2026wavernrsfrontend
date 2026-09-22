@@ -24,7 +24,7 @@ var _feedPage = 1;
 initPlayer();
 
 async function initFeed() {
-  if (!isLoggedIn()) { navigate('/login.html'); return; }
+  if (!isLoggedIn()) { navigate('/login'); return; }
   var view = document.getElementById('view');
   view.innerHTML =
     '<div style="display:flex;flex-direction:column;gap:32px;padding-bottom:40px;">' +
@@ -55,7 +55,7 @@ async function loadFeed() {
         '<div class="wv-empty" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px 0;">' +
         '<div style="font-size:48px;">&#x1F465;</div>' +
         '<div style="font-size:16px;font-weight:600;color:var(--text);">Follow artists to see their latest releases here</div>' +
-        '<button class="wv-pill brand" onclick="navigate(\'/discover.html\')">Discover artists</button>' +
+        '<button class="wv-pill brand" onclick="navigate(\'/discover\')">Discover artists</button>' +
         '</div>';
       return;
     }
@@ -93,7 +93,7 @@ function renderArtistSection(artist, items) {
     pfpInner + '</div>';
 
   var header =
-    '<div class="wv-sec-head" style="justify-content:flex-start;gap:12px;cursor:pointer;" onclick="navigate(\'/artist.html?id=' + artistId + '\')">' +
+    '<div class="wv-sec-head" style="justify-content:flex-start;gap:12px;cursor:pointer;" onclick="navigate(\'/artist?id=' + artistId + '\')">' +
     pfpHtml +
     '<div>' +
       '<div style="font-size:17px;font-weight:700;letter-spacing:-0.02em;color:var(--text);">' + name + '</div>' +
@@ -112,8 +112,8 @@ function feedCardHTML(item) {
   var isAlbum = item._type === 'album';
   var bg = coverGradient(item.title || '');
   var action = isAlbum
-    ? "navigate('/album.html?id=" + item.id + "')"
-    : "navigate('/track.html?id=" + item.id + "')";
+    ? "navigate('/album?id=" + item.id + "')"
+    : "navigate('/track?id=" + item.id + "')";
   var coverImg = item.cover_url
     ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
     : '';
@@ -140,7 +140,7 @@ function feedCardHTML(item) {
 function playFeedItem(id) {
   var item = _feedItems.find(function(i) { return i.id === id; });
   if (!item) return;
-  if (item._type === 'album') { navigate('/album.html?id=' + id); return; }
+  if (item._type === 'album') { navigate('/album?id=' + id); return; }
   playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
 }
 

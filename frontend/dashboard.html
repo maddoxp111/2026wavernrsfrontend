@@ -129,7 +129,7 @@
 <script src="/js/router.js?v=db844f40ba53"></script>
 <script src="/js/playlists.js?v=db844f40ba53"></script>
 <script>
-  if (!isLoggedIn()) navigate('/login.html');
+  if (!isLoggedIn()) navigate('/login');
 
   initPlayer();
 
@@ -169,7 +169,7 @@
       render();
       try { renderStatsCharts(); } catch(_) {}
     } catch (err) {
-      if (err.message.includes('401')) return navigate('/login.html');
+      if (err.message.includes('401')) return navigate('/login');
       showAlert('alert-container', 'Failed to load dashboard: ' + err.message);
     }
   }
@@ -257,7 +257,7 @@
             <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${uploads.length}</strong><br>uploads</div>
             <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${fmtNum(totalPlays)}</strong><br>plays</div>
           </div>
-          ${artist && artist.id ? `<a href="/artist.html?id=${artist.id}" class="btn btn-secondary btn-sm" style="margin-top:14px;width:100%;justify-content:center;">View public page</a>` : ''}
+          ${artist && artist.id ? `<a href="/artist?id=${artist.id}" class="btn btn-secondary btn-sm" style="margin-top:14px;width:100%;justify-content:center;">View public page</a>` : ''}
         </div>
 
         <!-- Edit profile -->
@@ -314,7 +314,7 @@
             <div style="font-size:15px;font-weight:600;margin-bottom:2px;">Upload Music</div>
             <div style="font-size:13px;color:var(--text-2);">Share an edit or comp with the community</div>
           </div>
-          <a href="/upload.html" class="wv-pill brand" style="padding:10px 20px;text-decoration:none;">Upload</a>
+          <a href="/upload" class="wv-pill brand" style="padding:10px 20px;text-decoration:none;">Upload</a>
         </div>
 
         <!-- Your Uploads -->
@@ -357,7 +357,7 @@
       const sub = isAlbum
         ? `Comp · ${timeAgo(item.created_at)}`
         : `${fmtNum(item.play_count)} plays · ${timeAgo(item.created_at)}`;
-      const openHref = isAlbum ? `/album.html?id=${item.id}` : `/track.html?id=${item.id}`;
+      const openHref = isAlbum ? `/album?id=${item.id}` : `/track?id=${item.id}`;
       return `
         <div class="track-row">
           <div class="track-row-cover">${cover}</div>
@@ -397,14 +397,14 @@
       return;
     }
     el.innerHTML = '<div class="track-list">' + _myPlaylists.map(function(p) {
-      return '<div class="track-row" style="cursor:pointer;" onclick="navigate(\'/playlist.html?id=' + p.id + '\')">' +
+      return '<div class="track-row" style="cursor:pointer;" onclick="navigate(\'/playlist?id=' + p.id + '\')">' +
         '<div class="track-row-cover" style="font-size:20px;display:flex;align-items:center;justify-content:center;">🎶</div>' +
         '<div class="track-row-info">' +
           '<div class="track-row-title">' + escHtml(p.title) + '</div>' +
           '<div class="track-row-artist">' + (p.track_count || 0) + ' track' + ((p.track_count || 0) !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private') + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-left:auto;">' +
-          '<a href="/playlist.html?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Open</a>' +
+          '<a href="/playlist?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Open</a>' +
           '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteDashboardPlaylist(\'' + p.id + '\')">Delete</button>' +
         '</div>' +
       '</div>';
@@ -431,7 +431,7 @@
       if (inp) inp.value = '';
       toggleNewPlaylistForm();
       if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
-      navigate('/playlist.html?id=' + pl.id);
+      navigate('/playlist?id=' + pl.id);
     } catch (err) {
       alert('Could not create playlist: ' + err.message);
     }

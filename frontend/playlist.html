@@ -49,7 +49,7 @@
   initPlayer();
 
   var playlistId = new URLSearchParams(location.search).get('id');
-  if (!playlistId) navigate('/index.html');
+  if (!playlistId) navigate('/index');
 
   var playlist = null;
   var tracks = [];
@@ -84,8 +84,8 @@
           ? (isLoggedIn() ? 'Only its owner can open it.' : 'Log in as its owner to open it.')
           : 'It may have been deleted.') + '</div>' +
         (priv && !isLoggedIn()
-          ? '<a href="/login.html?next=' + encodeURIComponent(location.pathname + location.search) + '" class="btn btn-primary" style="margin-top:16px">Log in</a>'
-          : '<a href="/index.html" class="btn btn-primary" style="margin-top:16px">Go home</a>') +
+          ? '<a href="/login?next=' + encodeURIComponent(location.pathname + location.search) + '" class="btn btn-primary" style="margin-top:16px">Log in</a>'
+          : '<a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a>') +
         '</div>';
     }
   }
@@ -213,7 +213,7 @@
   }
 
   function sharePlaylist() {
-    var url = location.origin + '/playlist.html?id=' + playlistId;
+    var url = location.origin + '/playlist?id=' + playlistId;
     if (!playlist.is_public && isOwner && typeof wvToast === 'function') {
       wvToast('This playlist is private — make it public in Edit so others can open it');
     }
@@ -230,7 +230,7 @@
   function exportPlaylist() {
     var lines = [playlist.title || 'Playlist', ''];
     tracks.forEach(function (t, i) { lines.push((i + 1) + '. ' + (t.title || 'Unknown') + ' — ' + (t.artist_name || 'Unknown')); });
-    lines.push('', location.origin + '/playlist.html?id=' + playlistId);
+    lines.push('', location.origin + '/playlist?id=' + playlistId);
     var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -333,7 +333,7 @@
     try {
       await api('/playlists/' + playlistId, { method: 'DELETE' });
       invalidatePlaylistCache();
-      navigate('/dashboard.html');
+      navigate('/dashboard');
     } catch (err) {
       alert('Failed to delete playlist: ' + (err.message || 'error'));
     }

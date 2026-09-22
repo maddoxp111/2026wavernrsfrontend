@@ -11,7 +11,7 @@ window.navigate = async function(url) {
 
   // Auth pages are standalone (no #view) — always do a full navigation
   const path = target.pathname;
-  if (path.endsWith('/login.html') || path.endsWith('/register.html')) {
+  if (/\/(login|register)(\.html)?$/.test(path)) {
     location.assign(url);
     return;
   }

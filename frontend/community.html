@@ -125,7 +125,7 @@
   function usernameLink(username, artistId) {
     var name = '@' + escHtml(username || 'unknown');
     if (artistId) {
-      return '<a onclick="event.stopPropagation();navigate(\'/artist.html?id=' + escHtml(artistId) + '\')" style="font-weight:600;color:var(--text-2);text-decoration:none;cursor:pointer;" onmouseenter="this.style.textDecoration=\'underline\'" onmouseleave="this.style.textDecoration=\'none\'">' + name + '</a>';
+      return '<a onclick="event.stopPropagation();navigate(\'/artist?id=' + escHtml(artistId) + '\')" style="font-weight:600;color:var(--text-2);text-decoration:none;cursor:pointer;" onmouseenter="this.style.textDecoration=\'underline\'" onmouseleave="this.style.textDecoration=\'none\'">' + name + '</a>';
     }
     return '<span style="font-weight:600;color:var(--text-2);">' + name + '</span>';
   }
@@ -392,7 +392,7 @@
   }
 
   async function votePost(id, vote) {
-    if (!isLoggedIn()) { navigate('/login.html'); return; }
+    if (!isLoggedIn()) { navigate('/login'); return; }
     var post = posts.find(function(p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
     if (!post) return;
     var prev = netScore(post);
@@ -414,7 +414,7 @@
       post.user_vote = prevVote;
       _updatePostScore(id);
       _paintVote('post', id, prevVote);
-      if (err.message && err.message.includes('401')) navigate('/login.html');
+      if (err.message && err.message.includes('401')) navigate('/login');
     }
   }
   function _updatePostScore(id) {
@@ -477,7 +477,7 @@
           '</div>' +
         '</div>'
       : '<div style="margin-bottom:24px;font-size:13px;color:var(--text-2);">' +
-          '<a href="/login.html" style="color:var(--brand,var(--purple));">Log in</a> to comment.' +
+          '<a href="/login" style="color:var(--brand,var(--purple));">Log in</a> to comment.' +
         '</div>';
 
     view.innerHTML =
@@ -642,7 +642,7 @@
   }
 
   async function voteComment(id, vote) {
-    if (!isLoggedIn()) { navigate('/login.html'); return; }
+    if (!isLoggedIn()) { navigate('/login'); return; }
     var c = currentComments.find(function(x) { return x.id === id; });
     if (!c) return;
     var prev = netScore(c);

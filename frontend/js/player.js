@@ -202,7 +202,7 @@ function _refreshLike() {
 }
 function toggleCurrentLike() {
   if (!currentTrack || !currentTrack.id) return;
-  if (!localStorage.getItem('token')) { location.assign('/login.html?next=' + encodeURIComponent(location.pathname + location.search)); return; }
+  if (!localStorage.getItem('token')) { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; }
   _setLikeUI(!_liked);
   api('/tracks/' + currentTrack.id + '/like', { method: 'POST' }).then(r => { _setLikeUI(r && r.liked); if (typeof window.refreshSidebarLibrary === 'function') window.refreshSidebarLibrary(); }).catch(() => _setLikeUI(!_liked));
 }
@@ -213,18 +213,18 @@ function addCurrentToPlaylist() {
 function goToCurrentTrack() {
   if (!currentTrack || !currentTrack.id) return;
   closeFullPlayer();
-  navigate(currentTrack._album_id ? '/album.html?id=' + currentTrack._album_id : '/track.html?id=' + currentTrack.id);
+  navigate(currentTrack._album_id ? '/album?id=' + currentTrack._album_id : '/track?id=' + currentTrack.id);
 }
 function goToCurrentArtist() {
   if (!currentTrack) return;
-  if (currentTrack._archive_artist && typeof archiveArtistSlug === 'function') { closeFullPlayer(); return navigate('/archive-artist.html?a=' + encodeURIComponent(archiveArtistSlug(currentTrack._archive_artist))); }
+  if (currentTrack._archive_artist && typeof archiveArtistSlug === 'function') { closeFullPlayer(); return navigate('/archive-artist?a=' + encodeURIComponent(archiveArtistSlug(currentTrack._archive_artist))); }
   const aid = currentTrack.artist_id || (currentTrack.artists && currentTrack.artists.id);
   if (!aid) return goToCurrentTrack();
-  closeFullPlayer(); navigate('/artist.html?id=' + aid);
+  closeFullPlayer(); navigate('/artist?id=' + aid);
 }
 function shareCurrent() {
   if (!currentTrack || !currentTrack.id) return;
-  const url = location.origin + (currentTrack._album_id ? '/album.html?id=' + currentTrack._album_id : '/track.html?id=' + currentTrack.id);
+  const url = location.origin + (currentTrack._album_id ? '/album?id=' + currentTrack._album_id : '/track?id=' + currentTrack.id);
   if (navigator.share) navigator.share({ title: currentTrack.title, url }).catch(() => {});
   else navigator.clipboard.writeText(url).then(() => { if (typeof showAlert === 'function') showAlert('Link copied', 'success'); }).catch(() => {});
 }
@@ -682,8 +682,8 @@ function skipNext() {
 function openFullPlayer(withLyrics) {
   if (_radio && _radio.slug) {
     if (typeof window.openStation === 'function' && /\/radio\.html$/.test(location.pathname)) return window.openStation(_radio.slug);
-    if (typeof navigate === 'function') return navigate('/radio.html?s=' + encodeURIComponent(_radio.slug));
-    location.assign('/radio.html?s=' + encodeURIComponent(_radio.slug)); return;
+    if (typeof navigate === 'function') return navigate('/radio?s=' + encodeURIComponent(_radio.slug));
+    location.assign('/radio?s=' + encodeURIComponent(_radio.slug)); return;
   }
   const fs = document.getElementById('player-fullscreen');
   if (!fs) return;

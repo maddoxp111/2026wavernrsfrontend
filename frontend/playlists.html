@@ -71,7 +71,7 @@
       el.innerHTML = '<div class="empty-state">' +
         '<div class="empty-icon">🎵</div>' +
         '<div class="empty-title">Sign in to see your playlists</div>' +
-        '<a href="/login.html" class="btn btn-primary" style="margin-top:16px;">Log in</a>' +
+        '<a href="/login" class="btn btn-primary" style="margin-top:16px;">Log in</a>' +
         '</div>';
       return;
     }
@@ -105,12 +105,12 @@
       playlists.map(function(p, i) {
         var cnt = p.track_count || 0;
         var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
-        return '<div class="wv-playlist-card" onclick="navigate(\'/playlist.html?id=' + p.id + '\')">' +
+        return '<div class="wv-playlist-card" onclick="navigate(\'/playlist?id=' + p.id + '\')">' +
           '<div class="wv-playlist-cover" style="background:' + coverGradient(p.title || '') + ';"></div>' +
           '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
           '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
           '<div class="wv-pl-card-actions" onclick="event.stopPropagation()">' +
-            '<a href="/playlist.html?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigate(\'/playlist.html?id=' + p.id + '\');return false;">Open</a>' +
+            '<a href="/playlist?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigate(\'/playlist?id=' + p.id + '\');return false;">Open</a>' +
             '<button onclick="deletePlaylist(\'' + p.id + '\',' + i + ')" class="btn btn-danger btn-sm">Delete</button>' +
           '</div>' +
         '</div>';
@@ -145,7 +145,7 @@
         body: JSON.stringify({ title: title, description: desc || null, is_public: isPublic }),
       });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
-      navigate('/playlist.html?id=' + pl.id);
+      navigate('/playlist?id=' + pl.id);
     } catch (err) {
       var a = document.getElementById('new-pl-alert');
       if (a) a.innerHTML = '<span style="color:var(--red);">' + escHtml(err.message || 'Failed') + '</span>';

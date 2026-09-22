@@ -80,7 +80,7 @@
     if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
       document.getElementById('atp-list').innerHTML =
         '<p style="font-size:13px;color:var(--text-secondary);text-align:center;">' +
-        '<a href="/login.html" style="color:var(--purple-light);">Log in</a> to save to a playlist.</p>';
+        '<a href="/login" style="color:var(--purple-light);">Log in</a> to save to a playlist.</p>';
       return;
     }
 

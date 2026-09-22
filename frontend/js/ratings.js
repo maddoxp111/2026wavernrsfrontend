@@ -71,7 +71,7 @@
       if (!btn) return;
       var val = parseInt(btn.getAttribute('data-s'), 10);
       if (!loggedIn) {
-        if (typeof navigate === 'function') navigate('/login.html');
+        if (typeof navigate === 'function') navigate('/login');
         return;
       }
       _rC(val);
@@ -91,7 +91,7 @@
     if (!_entityType || !_entityId) return;
     var token = localStorage.getItem('token');
     if (!token) {
-      if (typeof navigate === 'function') navigate('/login.html');
+      if (typeof navigate === 'function') navigate('/login');
       return;
     }
 

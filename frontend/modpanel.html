@@ -23,7 +23,7 @@
   // ── Auth + mod check ──────────────────────────────────────────────────────
   (function init() {
     var token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login.html'; return; }
+    if (!token) { window.location.href = '/login'; return; }
 
     fetch(API_BASE + '/mod/check', {
       headers: { 'Authorization': 'Bearer ' + token },
@@ -36,7 +36,7 @@
             '<div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px;">Access denied</div>' +
             '<div style="font-size:14px;color:var(--text-2);">You do not have moderator permissions.</div>' +
             '</div>';
-          setTimeout(function() { window.location.href = '/index.html'; }, 2500);
+          setTimeout(function() { window.location.href = '/index'; }, 2500);
           return;
         }
         // Mod confirmed. Require a password re-auth before opening the panel
@@ -771,7 +771,7 @@
             var msg = 'Archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + '.';
             if (evt.failed && evt.failed.length) msg += ' ' + evt.failed.length + ' failed.';
             _arcStatus('arc-import-status', msg + ' Opening…', 'var(--green)');
-            setTimeout(function() { navigate('/album.html?id=' + evt.albumId); }, 900);
+            setTimeout(function() { navigate('/album?id=' + evt.albumId); }, 900);
             return;
           } else if (evt.type === 'error') {
             _arcStatus('arc-import-status', 'Error: ' + evt.message, 'var(--red)');
@@ -827,7 +827,7 @@
       }
 
       _arcStatus('arc-upload-status', '✓ Archive comp uploaded. Opening…', 'var(--green)');
-      setTimeout(function() { navigate('/album.html?id=' + album.id); }, 900);
+      setTimeout(function() { navigate('/album?id=' + album.id); }, 900);
     } catch (err) {
       _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), 'var(--red)');
       btn.disabled = false;
@@ -888,7 +888,7 @@
               (a.is_archive ? ' · archive' : '') +
             '</div>' +
           '</div>' +
-          '<a href="/album.html?id=' + escHtml(a.id) + '" target="_blank" rel="noopener" ' +
+          '<a href="/album?id=' + escHtml(a.id) + '" target="_blank" rel="noopener" ' +
             'onclick="event.stopPropagation()" class="wv-pill" style="font-size:11px;padding:3px 10px;flex-shrink:0;">View</a>' +
         '</label>';
       }).join('');
@@ -1069,7 +1069,7 @@
           '</div>' +
           // Album link
           (row.album_id
-            ? '<div style="font-size:12px;margin-bottom:4px;"><a href="/album.html?id=' + escHtml(row.album_id) + '" style="color:var(--purple-light);">→ View comp</a></div>'
+            ? '<div style="font-size:12px;margin-bottom:4px;"><a href="/album?id=' + escHtml(row.album_id) + '" style="color:var(--purple-light);">→ View comp</a></div>'
             : '') +
           // Error
           (row.error_message
