@@ -78,8 +78,9 @@ async function artist(id) {
   return {
     title: a.display_name + ' on wavernrs',
     description: a.bio || joinParts([
-      'Artist',
-      num(a.album_count) ? num(a.album_count) + ' comps' : null,
+      a.users && a.users.username ? '@' + a.users.username : 'Artist',
+      num(a.track_count) ? num(a.track_count) + ' edits' : null,
+      num(a.follower_count) ? num(a.follower_count) + ' followers' : null,
       'on wavernrs',
     ]),
     image: a.profile_image_url || FALLBACK_IMAGE,
