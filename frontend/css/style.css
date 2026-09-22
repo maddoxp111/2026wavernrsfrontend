@@ -2715,14 +2715,16 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .wv-theme-swatch i { position: absolute; display: block; border-radius: 50%; }
 .wv-theme-swatch i:first-child { width: 14px; height: 14px; left: 6px; top: 9px; }
 .wv-theme-swatch i:last-child { width: 10px; height: 10px; right: 7px; top: 11px; }
-.wv-theme-meta { display: flex; flex-direction: column; line-height: 1.3; flex: 1; min-width: 0; }
-.wv-theme-meta b { font-size: 14px; font-weight: 700; }
-.wv-theme-meta span { font-size: 11.5px; color: var(--text-3); }
+.wv-theme-meta { display: flex; align-items: center; flex: 1; min-width: 0; }
+.wv-theme-meta b { font-size: 14px; font-weight: 600; }
 .wv-theme-tick { color: var(--brand); opacity: 0; flex-shrink: 0; display: grid; place-items: center; }
 .wv-theme-card.is-active .wv-theme-tick { opacity: 1; }
 
+
 /* =========================================================
-   Skin: Spotify — black chrome, green accent, rounded content panel
+   Skin: Spotify
+   Black gutter, rounded panels, Home + Search only in the nav,
+   everything else pinned into the library.
    ========================================================= */
 .theme-spotify {
   --font-sans: "Circular", "Circular Std", "Gotham", Montserrat, -apple-system,
@@ -2783,32 +2785,64 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .theme-spotify .wv-sidebar-logo,
 .theme-spotify .wv-topbar-mobile-logo { letter-spacing: -0.04em; font-weight: 900; }
 .theme-spotify .wv-sidebar-logo .mark { border-radius: 50%; }
+.theme-spotify .wv-panel { background: #121212; box-shadow: none; }
 .theme-spotify .wv-nav-item { font-weight: 700; letter-spacing: 0; }
-.theme-spotify .wv-nav-item:hover { background: transparent; }
-.theme-spotify .wv-nav-item.is-active { background: #232323; color: #fff; }
+.theme-spotify .wv-nav-item:hover { background: transparent; color: #fff; }
+.theme-spotify .wv-nav-item.is-active { background: transparent; color: #fff; }
 .theme-spotify .wv-nav-item.is-active svg { color: #fff; }
+
+/* Pinned sections read as library rows, the way Spotify pins playlists. */
+/* The whole library column scrolls as one, with a sticky header, so the
+   pinned sections and the played list share the height. */
+.theme-spotify .wv-lib { overflow-y: auto; }
+.theme-spotify .wv-lib-head,
+.theme-spotify .wv-lib-chips { position: sticky; z-index: 2; background: #121212; }
+.theme-spotify .wv-lib-head { top: 0; }
+.theme-spotify .wv-lib-chips { top: 38px; }
+.theme-spotify .wv-lib-list { overflow: visible; flex: 0 0 auto; min-height: 0; }
+.sp-pinned { display: flex; flex-direction: column; gap: 1px; }
+.sp-pin-art {
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #4a2f8f, #1db954);
+}
+.sp-pin-art svg { width: 20px; height: 20px; }
+.theme-spotify .wv-lib-row { border-radius: 4px; padding: 6px; }
+.theme-spotify .wv-lib-row:hover { background: #1f1f1f; }
+.theme-spotify .wv-lib-row.now .wv-lib-t { color: #1ed760; }
+.theme-spotify .wv-lib-art { border-radius: 4px; }
+.theme-spotify .wv-lib-t { font-weight: 500; }
+.theme-spotify .wv-lib-s { color: #a7a7a7; }
+
 .theme-spotify .wv-card-play { background: #1ed760; color: #000; width: 48px; height: 48px; }
 .theme-spotify .wv-card, .theme-spotify .card { background: #181818; }
 .theme-spotify .wv-card:hover, .theme-spotify .card:hover { background: #282828; }
 .theme-spotify .wv-icon-circle { background: rgba(0,0,0,0.7); }
 .theme-spotify .wv-pill.is-active,
 .theme-spotify .wv-topbar .wv-pill.is-active { background: #fff; color: #000; font-weight: 700; }
+.theme-spotify .wv-chip.acc { background: #fff; color: #000; }
 .theme-spotify .player-bar { background: #000; border-top: 0; }
 .theme-spotify .player-cover { border-radius: 4px; }
+.theme-spotify .player-btn-play { background: #fff; color: #000; }
+.theme-spotify .progress-fill { background: #fff; }
+.theme-spotify .progress-bar:hover .progress-fill { background: #1ed760; }
 .theme-spotify .wv-face { border-color: #000; }
 .theme-spotify h1, .theme-spotify h2, .theme-spotify h3 { letter-spacing: -0.04em; font-weight: 900; }
 
 /* Spotify floats the content as a rounded panel inside a black gutter. */
 @media (min-width: 769px) {
   .wv-app.theme-spotify { background: #000; column-gap: 8px; padding: 0 8px 8px; }
-  .theme-spotify .wv-sidebar { border-right: 0; border-radius: 8px; }
+  .theme-spotify .wv-sidebar { border-right: 0; border-radius: 8px; padding: 0; gap: 8px; background: transparent; }
+  .theme-spotify .wv-sidebar > .wv-panel { border-radius: 8px; }
   .theme-spotify .wv-topbar { border-radius: 8px 8px 0 0; }
   .theme-spotify #wv-content { border-radius: 0 0 8px 8px; }
   .theme-spotify .player-bar { padding: 0 8px; }
+  .theme-spotify .wv-side-foot { padding: 0 12px; }
 }
 
 /* =========================================================
-   Skin: Apple Music — white chrome, hairlines, red accent
+   Skin: Apple Music
+   The player becomes the toolbar across the top with a centred LCD,
+   the sidebar carries the search field and labelled sections.
    ========================================================= */
 .theme-apple {
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
@@ -2866,25 +2900,42 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   --purple-bg: rgba(250,35,59,0.10);
 
   --avatar-bg: #d8d8dc;
-  --wv-wash: #f7f7f8;
+  --wv-wash: #ffffff;
 }
-.theme-apple .wv-topbar {
-  background: rgba(247,247,248,0.86);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--chrome-border);
+.theme-apple .wv-sidebar { background: #f7f7f8; border-right: 1px solid var(--chrome-border); padding: 12px 10px 8px; gap: 0; }
+.theme-apple .wv-panel { background: transparent; box-shadow: none; padding: 0; }
+.theme-apple .wv-sidebar-logo { color: #fa233b; font-size: 17px; letter-spacing: -0.02em; padding: 2px 8px 12px; }
+.theme-apple .wv-sidebar-logo .mark { width: 22px; height: 22px; border-radius: 5px; }
+
+.am-search {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(0,0,0,0.05); border-radius: 6px;
+  padding: 5px 9px; margin: 0 2px 16px; color: #86868b;
 }
-.theme-apple .wv-sidebar { border-right: 1px solid var(--chrome-border); }
-.theme-apple .wv-sidebar-logo { color: #fa233b; letter-spacing: -0.02em; }
-.theme-apple .wv-sidebar-logo .mark { border-radius: 6px; }
-.theme-apple .wv-nav-item { font-size: 13.5px; font-weight: 600; padding: 7px 10px; }
-.theme-apple .wv-nav-item:hover { background: rgba(0,0,0,0.04); }
-.theme-apple .wv-nav-item.is-active { background: rgba(250,35,59,0.10); color: #fa233b; }
+.am-search svg { width: 14px; height: 14px; flex-shrink: 0; }
+.am-search-inp {
+  flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+  font-family: inherit; font-size: 13px; color: var(--text); padding: 0;
+}
+.am-search-inp::placeholder { color: #86868b; }
+.am-sec { margin-bottom: 18px; }
+.am-sec-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #86868b; padding: 0 8px 5px;
+}
+.am-sec-grow { flex: 1 1 auto !important; min-height: 0; display: flex; flex-direction: column; margin-bottom: 8px; }
+.am-sec-grow .wv-lib-head, .am-sec-grow .wv-lib-find { display: none; }
+.am-sec-grow .wv-lib-chips { padding: 0 6px 8px; }
+.am-sec-grow .wv-lib-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+.theme-apple .wv-nav-item { font-size: 13.5px; font-weight: 600; padding: 6px 8px; gap: 10px; border-radius: 6px; }
+.theme-apple .wv-nav-item svg { width: 17px; height: 17px; color: #fa233b; opacity: 1; }
+.theme-apple .wv-nav-item:hover { background: rgba(0,0,0,0.045); }
+.theme-apple .wv-nav-item.is-active { background: rgba(0,0,0,0.075); color: #000; }
 .theme-apple .wv-nav-item.is-active svg { color: #fa233b; }
-.theme-apple .wv-sidebar-label { color: #86868b; letter-spacing: 0.02em; text-transform: none; font-size: 12px; }
-.theme-apple .wv-card, .theme-apple .card {
-  background: transparent; box-shadow: none;
-}
+.theme-apple .wv-side-foot { padding-top: 6px; border-top: 1px solid var(--chrome-border); }
+
+.theme-apple .wv-card, .theme-apple .card { background: transparent; box-shadow: none; }
 .theme-apple .wv-cover-wrap, .theme-apple .wv-lib-art, .theme-apple .player-cover {
   box-shadow: 0 4px 14px rgba(0,0,0,0.14);
 }
@@ -2895,16 +2946,68 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .theme-apple .wv-pill { border-radius: 6px; font-weight: 600; }
 .theme-apple .wv-pill.is-active,
 .theme-apple .wv-topbar .wv-pill.is-active { background: #fa233b; color: #fff; }
-.theme-apple .player-bar {
-  background: rgba(247,247,248,0.92);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  border-top: 1px solid var(--chrome-border);
-}
+.theme-apple .wv-chip.acc { background: #fa233b; color: #fff; }
 .theme-apple .wv-face { border-color: #f7f7f8; }
 .theme-apple h1, .theme-apple h2, .theme-apple h3 { letter-spacing: -0.02em; font-weight: 700; }
 .theme-apple ::selection { background: rgba(250,35,59,0.22); color: #000; }
-.theme-apple .wv-lib-chips .wv-chip.acc { background: #fa233b; color: #fff; }
-.theme-apple .wv-chip.acc { background: #fa233b; color: #fff; }
-.theme-apple .wv-lib { box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-.theme-apple .wv-settings-title, .theme-apple .wv-lib-head a { color: #000; }
+.theme-apple .progress-fill { background: #48484a; }
+.theme-apple .progress-bar { background: #d8d8dc; }
+
+/* Desktop only: the player moves up to become the window toolbar. */
+@media (min-width: 769px) {
+  .wv-app.theme-apple { grid-template-columns: 258px 1fr; grid-template-rows: 0 52px 1fr; }
+  .wv-app.theme-apple:has(.player-bar:not(.hidden)) { grid-template-rows: 64px 52px 1fr; }
+  .theme-apple #wv-player-slot, .theme-apple .wv-player-bar { grid-column: 1 / 3; grid-row: 1 / 2; }
+  .theme-apple .wv-sidebar { grid-column: 1 / 2; grid-row: 2 / 4; }
+  .theme-apple .wv-topbar  { grid-column: 2 / 3; grid-row: 2 / 3; }
+  .theme-apple #wv-content { grid-column: 2 / 3; grid-row: 3 / 4; }
+
+  .theme-apple .wv-topbar {
+    background: #ffffff; -webkit-backdrop-filter: none; backdrop-filter: none;
+    border-bottom: 1px solid var(--chrome-border); padding: 0 22px;
+  }
+  .theme-apple .wv-topbar-search { display: none; }
+
+  .theme-apple .player-bar {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 460px) 1fr;
+    grid-template-rows: auto auto;
+    align-items: center;
+    gap: 0 18px;
+    height: 100%;
+    padding: 0 16px;
+    background: #f7f7f8;
+    border-top: 0;
+    border-bottom: 1px solid var(--chrome-border);
+  }
+  .theme-apple .player-center { display: contents; }
+  .theme-apple .player-controls {
+    grid-column: 1; grid-row: 1 / 3; justify-self: start;
+    gap: 4px; max-width: 100%; overflow: hidden;
+  }
+  .theme-apple .player-volume {
+    grid-column: 3; grid-row: 1 / 3; justify-self: end;
+    gap: 4px; max-width: 100%; overflow: hidden;
+  }
+  /* The two halves of the LCD: track on top, progress line underneath. */
+  .theme-apple .player-track {
+    grid-column: 2; grid-row: 1; flex: none; width: 100%; min-width: 0;
+    background: #ffffff; border: 1px solid var(--chrome-border); border-bottom: 0;
+    border-radius: 6px 6px 0 0; padding: 4px 10px 1px; gap: 9px;
+  }
+  .theme-apple .player-progress {
+    grid-column: 2; grid-row: 2; width: 100%; margin: 0;
+    background: #ffffff; border: 1px solid var(--chrome-border); border-top: 0;
+    border-radius: 0 0 6px 6px; padding: 0 10px 4px; gap: 7px;
+  }
+  .theme-apple .player-track-actions { display: none; }
+  .theme-apple .player-cover { width: 30px; height: 30px; border-radius: 4px; box-shadow: none; }
+  .theme-apple .player-track-text { flex: 1; min-width: 0; text-align: center; }
+  .theme-apple .player-title { font-size: 12.5px; font-weight: 600; }
+  .theme-apple .player-artist { font-size: 11px; }
+  .theme-apple .player-time { font-size: 10px; color: #86868b; }
+  .theme-apple .progress-bar { height: 3px; }
+  .theme-apple .player-btn-play { background: transparent; color: #1d1d1f; width: 30px; height: 30px; }
+  .theme-apple .player-btn-play svg { width: 22px; height: 22px; }
+  .theme-apple #volume-slider { width: 74px; }
+}

@@ -70,46 +70,51 @@
   }
 
   // ── Sidebar HTML ─────────────────────────────────────────────
-  // Two panels on a black gutter: navigation on top, the library below.
-  // Account links live in a compact footer so the library gets the height.
-  function buildSidebarHTML() {
-    var isLoggedIn = !!localStorage.getItem('token');
-    var profileHref = getProfileHref();
-    var html = '';
+  // Three shapes, chosen by theme. The default is two panels on a black
+  // gutter. Spotify keeps only Home and Search up top and pins everything
+  // else into the library. Apple Music uses a search field over labelled
+  // sections.
+  var NAV_MAIN = [
+    ['home',      'Home',      '/index',     'home'],
+    ['browse',    'Browse',    '/browse',    'discover'],
+    ['charts',    'Charts',    '/charts',    'chart'],
+    ['artists',   'Artists',   '/artists',   'profile'],
+    ['archive',   'Archive',   '/archive',   'archive'],
+    ['eras',      'Eras',      '/eras',      'eras'],
+    ['radio',     'Radio',     '/radio',     'radio'],
+    ['community', 'Community', '/community', 'community'],
+    ['resources', 'Tracker',   '/resources', 'resources'],
+  ];
 
-    html += '<div class="wv-panel wv-panel-nav">';
-    html += '<a href="/index" class="wv-sidebar-logo"><img class="mark" src="/logo.png" srcset="/logo.png 1x, /logo@2x.png 2x" alt="" width="26" height="26">wavernrs</a>';
-    html += '<nav class="wv-sidebar-nav">';
-    html += navItem('home', 'Home', '/index', 'home');
-    html += navItem('browse', 'Browse', '/browse', 'discover');
-    html += navItem('charts', 'Charts', '/charts', 'chart');
-    html += navItem('artists', 'Artists', '/artists', 'profile');
-    html += navItem('archive', 'Archive', '/archive', 'archive');
-    html += navItem('eras', 'Eras', '/eras', 'eras');
-    html += navItem('radio', 'Radio', '/radio', 'radio');
-    html += navItem('community', 'Community', '/community', 'community');
-    html += navItem('resources', 'Tracker', '/resources', 'resources');
-    html += '</nav>';
-    html += '</div>';
+  function _skin() {
+    var t = _storedTheme();
+    return (t === 'spotify' || t === 'apple') ? t : '';
+  }
+  window._wvSkin = _skin;
 
-    html += '<div class="wv-panel wv-lib">';
-    html += '<div class="wv-lib-head">' +
+  function _logoHTML() {
+    return '<a href="/index" class="wv-sidebar-logo"><img class="mark" src="/logo.png" ' +
+      'srcset="/logo.png 1x, /logo@2x.png 2x" alt="" width="26" height="26">wavernrs</a>';
+  }
+
+  function _libBlockHTML(isLoggedIn) {
+    return '<div class="wv-lib-head">' +
       '<a href="/library" onclick="navigate(\'/library\');return false;">' + icon('list') + '<span>Your Library</span></a>' +
       '<div class="wv-lib-tools">' +
         '<button class="wv-lib-add" title="History" onclick="navigate(\'/history\')">' + icon('history') + '</button>' +
         (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload\')">' + icon('plus') + '</button>' : '') +
-      '</div></div>';
-    html += '<div class="wv-lib-chips" id="wv-lib-chips">' +
-      '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
-      '<span class="wv-chip" data-k="comps" onclick="window._libFilter(\'comps\')">Comps</span>' +
-      '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
-      '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
-      '</div>';
-    html += '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="Search in your library" oninput="window._libSearch(this.value)"></div>';
-    html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
-    html += '</div>';
+      '</div></div>' +
+      '<div class="wv-lib-chips" id="wv-lib-chips">' +
+        '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
+        '<span class="wv-chip" data-k="comps" onclick="window._libFilter(\'comps\')">Comps</span>' +
+        '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
+        '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
+      '</div>' +
+      '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="Search in your library" oninput="window._libSearch(this.value)"></div>';
+  }
 
-    html += '<div class="wv-side-foot">';
+  function _footHTML(isLoggedIn, profileHref) {
+    var html = '<div class="wv-side-foot">';
     if (isLoggedIn) {
       html += '<a href="/feed" data-page="feed">Following</a>';
       html += '<a href="' + profileHref + '" data-page="profile">Profile</a>';
@@ -125,6 +130,103 @@
     html += '<a href="/status" data-page="status">Status</a>';
     html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener">Discord</a>';
     html += '</div>';
+    return html;
+  }
+
+  // Spotify pins sections into the library list as rows with square art.
+  function _spPinRow(id, label, href, iconName) {
+    var cur = pageId();
+    return '<a href="' + href + '" class="wv-lib-row sp-pin' + (cur === id ? ' now' : '') + '" data-page="' + id + '" ' +
+      'onclick="navigate(\'' + href + '\');return false;">' +
+      '<div class="wv-lib-art sp-pin-art">' + icon(iconName) + '</div>' +
+      '<div class="wv-lib-meta"><div class="wv-lib-t">' + label + '</div>' +
+      '<div class="wv-lib-s">Section · wavernrs</div></div></a>';
+  }
+
+  function _sidebarSpotify(isLoggedIn, profileHref) {
+    var html = '';
+    html += '<div class="wv-panel wv-panel-nav">';
+    html += _logoHTML();
+    html += '<nav class="wv-sidebar-nav">';
+    html += navItem('home', 'Home', '/index', 'home');
+    html += navItem('search', 'Search', '/search', 'search');
+    html += '</nav>';
+    html += '</div>';
+
+    html += '<div class="wv-panel wv-lib">';
+    html += _libBlockHTML(isLoggedIn);
+    html += '<div class="sp-pinned">';
+    NAV_MAIN.forEach(function (n) {
+      if (n[0] === 'home') return;
+      html += _spPinRow(n[0], n[1], n[2], n[3]);
+    });
+    html += '</div>';
+    html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
+    html += '</div>';
+
+    html += _footHTML(isLoggedIn, profileHref);
+    return html;
+  }
+
+  function _amSection(label, items) {
+    var html = '<div class="am-sec"><div class="am-sec-label">' + label + '</div><nav class="wv-sidebar-nav">';
+    items.forEach(function (n) { html += navItem(n[0], n[1], n[2], n[3]); });
+    return html + '</nav></div>';
+  }
+
+  function _sidebarApple(isLoggedIn, profileHref) {
+    var html = '';
+    html += _logoHTML();
+    html += '<div class="am-search">' + icon('search') +
+      '<input class="am-search-inp" placeholder="Search" autocomplete="off" ' +
+      'onkeydown="if(event.key===\'Enter\'){var q=this.value.trim();if(q)navSearch(q);}">' +
+      '</div>';
+
+    html += _amSection('Apple Music', [
+      ['home', 'Home', '/index', 'home'],
+      ['browse', 'Browse', '/browse', 'discover'],
+      ['radio', 'Radio', '/radio', 'radio'],
+      ['charts', 'Charts', '/charts', 'chart'],
+      ['community', 'Community', '/community', 'community'],
+    ]);
+    html += _amSection('Library', [
+      ['library', 'Recently Added', '/library', 'list'],
+      ['artists', 'Artists', '/artists', 'profile'],
+      ['archive', 'Archive', '/archive', 'archive'],
+      ['eras', 'Eras', '/eras', 'eras'],
+      ['resources', 'Tracker', '/resources', 'resources'],
+    ]);
+
+    html += '<div class="am-sec am-sec-grow"><div class="am-sec-label">Playlists</div>';
+    html += _libBlockHTML(isLoggedIn);
+    html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
+    html += '</div>';
+
+    html += _footHTML(isLoggedIn, profileHref);
+    return html;
+  }
+
+  function buildSidebarHTML() {
+    var isLoggedIn = !!localStorage.getItem('token');
+    var profileHref = getProfileHref();
+    var skin = _skin();
+    if (skin === 'spotify') return _sidebarSpotify(isLoggedIn, profileHref);
+    if (skin === 'apple') return _sidebarApple(isLoggedIn, profileHref);
+
+    var html = '';
+    html += '<div class="wv-panel wv-panel-nav">';
+    html += _logoHTML();
+    html += '<nav class="wv-sidebar-nav">';
+    NAV_MAIN.forEach(function (n) { html += navItem(n[0], n[1], n[2], n[3]); });
+    html += '</nav>';
+    html += '</div>';
+
+    html += '<div class="wv-panel wv-lib">';
+    html += _libBlockHTML(isLoggedIn);
+    html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
+    html += '</div>';
+
+    html += _footHTML(isLoggedIn, profileHref);
     return html;
   }
 
@@ -594,11 +696,11 @@
   // Two of them are full skins that restyle the shell, not just recolour it.
   // Applied to body + app root without a reload, and available logged out.
   var THEMES = {
-    dark:    { label: 'Default',     sub: 'wavernrs black',    base: 'dark',  meta: '#0d0d15' },
-    light:   { label: 'White',       sub: 'Paper light',       base: 'light', meta: '#f7f7fb' },
-    spotify: { label: 'Spotify',     sub: 'Green on black',    base: 'dark',  meta: '#000000' },
-    apple:   { label: 'Apple Music', sub: 'Red on white',      base: 'light', meta: '#fafafa' },
-    system:  { label: 'Match device', sub: 'Follows your system', base: 'dark', meta: '#0d0d15' },
+    dark:    { label: 'Default',      base: 'dark',  meta: '#0d0d15' },
+    light:   { label: 'White',        base: 'light', meta: '#f7f7fb' },
+    spotify: { label: 'Spotify',      base: 'dark',  meta: '#000000' },
+    apple:   { label: 'Apple Music',  base: 'light', meta: '#fafafa' },
+    system:  { label: 'Match device', base: 'dark',  meta: '#0d0d15' },
   };
   var SKINS = ['spotify', 'apple'];
   var THEME_ORDER = ['dark', 'light', 'spotify', 'apple', 'system'];
@@ -655,8 +757,46 @@
     document.querySelectorAll('.wv-theme-card').forEach(function(c) {
       c.classList.toggle('is-active', c.getAttribute('data-theme') === t);
     });
+    _reskin();
     try { document.dispatchEvent(new CustomEvent('wv-theme-change', { detail: { theme: t } })); } catch (_) {}
   };
+  // Spotify and Apple Music change the shell, not just the palette, so a
+  // switch between skins rebuilds the top bar, sidebar and drawer in place.
+  var _lastSkin = null;
+  function _applyPlayerSkin(tries) {
+    var bar = document.querySelector('.player-bar');
+    if (!bar) { if ((tries || 0) < 25) setTimeout(function () { _applyPlayerSkin((tries || 0) + 1); }, 400); return; }
+    var controls = bar.querySelector('.player-controls');
+    var vol = bar.querySelector('.player-volume');
+    var mute = document.getElementById('player-mute-btn');
+    var slider = document.getElementById('volume-slider');
+    if (!controls || !vol || !mute || !slider) return;
+    if (_skin() === 'apple') {
+      if (mute.parentNode !== controls) { controls.appendChild(mute); controls.appendChild(slider); }
+    } else if (mute.parentNode !== vol) {
+      vol.insertBefore(slider, vol.firstChild);
+      vol.insertBefore(mute, vol.firstChild);
+    }
+  }
+  window._applyPlayerSkin = _applyPlayerSkin;
+
+  function _reskin() {
+    var now = _skin();
+    _applyPlayerSkin();
+    if (now === _lastSkin) return;
+    _lastSkin = now;
+    var top = document.getElementById('wv-topbar');
+    if (top) top.innerHTML = buildTopbarHTML();
+    var side = document.getElementById('wv-sidebar');
+    if (side) side.innerHTML = buildSidebarHTML();
+    var drawer = document.getElementById('wv-drawer');
+    if (drawer) drawer.innerHTML = buildSidebarHTML();
+    if (typeof window._checkMobileTopbar === 'function') window._checkMobileTopbar();
+    try { _renderLib(); } catch (_) {}
+    if (typeof window._presenceRefresh === 'function') window._presenceRefresh();
+  }
+  window._reskin = _reskin;
+
   window.getTheme = function() {
     var t = _storedTheme();
     if (t === 'system') t = _systemTheme();
@@ -754,6 +894,8 @@
     };
     checkMobile();
     mq.addListener(checkMobile);
+    _lastSkin = _skin();
+    _applyPlayerSkin();
     _renderLib();
     if (localStorage.getItem('token')) _loadLibData();
 
@@ -1525,7 +1667,7 @@ function _themeCardHTML(name) {
     '<span class="wv-theme-swatch" style="background:' + sw[0] + ';">' +
       '<i style="background:' + sw[1] + ';"></i><i style="background:' + sw[2] + ';"></i>' +
     '</span>' +
-    '<span class="wv-theme-meta"><b>' + def.label + '</b><span>' + def.sub + '</span></span>' +
+    '<span class="wv-theme-meta"><b>' + def.label + '</b></span>' +
     '<span class="wv-theme-tick" aria-hidden="true">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8 9.5 17.8 19.5 6.6"/></svg>' +
     '</span></button>';
