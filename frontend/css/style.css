@@ -2677,3 +2677,234 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .wv-presence-row:hover { background: var(--surface-3); }
 .wv-presence-row .wv-face { margin-left: 0; border: none; }
 @media (max-width: 720px) { .wv-presence { display: none !important; } }
+
+/* =========================================================
+   Theme picker — palette button in the top bar
+   ========================================================= */
+.wv-theme-picker {
+  position: fixed; inset: 0; z-index: 4000;
+  background: rgba(0,0,0,0.55);
+  display: grid; place-items: center;
+  padding: 20px;
+}
+.wv-theme-panel {
+  width: 100%; max-width: 360px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.5);
+}
+.wv-theme-head {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-3); padding: 0 4px 12px;
+}
+.wv-theme-grid { display: flex; flex-direction: column; gap: 6px; }
+.wv-theme-card {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 9px 10px;
+  background: transparent; border: 1px solid transparent; border-radius: 10px;
+  color: var(--text); cursor: pointer; text-align: left;
+  font-family: inherit;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+}
+.wv-theme-card:hover { background: var(--surface-2); }
+.wv-theme-card.is-active { border-color: var(--brand); background: var(--brand-bg); }
+.wv-theme-swatch {
+  position: relative; width: 44px; height: 32px; border-radius: 7px;
+  border: 1px solid var(--border); overflow: hidden; flex-shrink: 0;
+}
+.wv-theme-swatch i { position: absolute; display: block; border-radius: 50%; }
+.wv-theme-swatch i:first-child { width: 14px; height: 14px; left: 6px; top: 9px; }
+.wv-theme-swatch i:last-child { width: 10px; height: 10px; right: 7px; top: 11px; }
+.wv-theme-meta { display: flex; flex-direction: column; line-height: 1.3; flex: 1; min-width: 0; }
+.wv-theme-meta b { font-size: 14px; font-weight: 700; }
+.wv-theme-meta span { font-size: 11.5px; color: var(--text-3); }
+.wv-theme-tick { color: var(--brand); opacity: 0; flex-shrink: 0; display: grid; place-items: center; }
+.wv-theme-card.is-active .wv-theme-tick { opacity: 1; }
+
+/* =========================================================
+   Skin: Spotify — black chrome, green accent, rounded content panel
+   ========================================================= */
+.theme-spotify {
+  --font-sans: "Circular", "Circular Std", "Gotham", Montserrat, -apple-system,
+               BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --r-pill: 9999px;
+  --r-xl: 8px;
+  --r-lg: 8px;
+  --r-md: 4px;
+  --r-sm: 4px;
+  --r-art: 4px;
+
+  --text: #ffffff;
+  --text-1: #ffffff;
+  --text-primary: #ffffff;
+  --text-2: #b3b3b3;
+  --text-3: #a7a7a7;
+  --text-4: #6a6a6a;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #a7a7a7;
+
+  --page-bg-base: #121212;
+  --page-bg: #121212;
+  --chrome: #000000;
+  --chrome-border: #000000;
+  --surface: #181818;
+  --surface-1: #181818;
+  --surface-2: #232323;
+  --surface-3: #2a2a2a;
+  --surface-hover: #282828;
+  --elevated: #282828;
+
+  --hair: rgba(255,255,255,0.07);
+  --hair-strong: rgba(255,255,255,0.18);
+  --border: rgba(255,255,255,0.08);
+
+  --glass-large-bg: #121212;
+  --glass-medium-bg: #181818;
+  --glass-small-bg: #232323;
+  --glass-pill-bg: #232323;
+  --glass-pill-bg-hover: #2a2a2a;
+  --glass-pill-bg-active: #ffffff;
+  --veil: #000000;
+  --veil-border: #000000;
+
+  --brand: #1db954;
+  --brand-2: #1ed760;
+  --brand-bg: rgba(29,185,84,0.16);
+  --brand-text: #1ed760;
+  --on-brand: #000000;
+  --purple: #1db954;
+  --purple-light: #1ed760;
+  --purple-bg: rgba(29,185,84,0.16);
+
+  --avatar-bg: #535353;
+  --wv-wash: #1f1f1f;
+}
+.theme-spotify .wv-sidebar-logo,
+.theme-spotify .wv-topbar-mobile-logo { letter-spacing: -0.04em; font-weight: 900; }
+.theme-spotify .wv-sidebar-logo .mark { border-radius: 50%; }
+.theme-spotify .wv-nav-item { font-weight: 700; letter-spacing: 0; }
+.theme-spotify .wv-nav-item:hover { background: transparent; }
+.theme-spotify .wv-nav-item.is-active { background: #232323; color: #fff; }
+.theme-spotify .wv-nav-item.is-active svg { color: #fff; }
+.theme-spotify .wv-card-play { background: #1ed760; color: #000; width: 48px; height: 48px; }
+.theme-spotify .wv-card, .theme-spotify .card { background: #181818; }
+.theme-spotify .wv-card:hover, .theme-spotify .card:hover { background: #282828; }
+.theme-spotify .wv-icon-circle { background: rgba(0,0,0,0.7); }
+.theme-spotify .wv-pill.is-active,
+.theme-spotify .wv-topbar .wv-pill.is-active { background: #fff; color: #000; font-weight: 700; }
+.theme-spotify .player-bar { background: #000; border-top: 0; }
+.theme-spotify .player-cover { border-radius: 4px; }
+.theme-spotify .wv-face { border-color: #000; }
+.theme-spotify h1, .theme-spotify h2, .theme-spotify h3 { letter-spacing: -0.04em; font-weight: 900; }
+
+/* Spotify floats the content as a rounded panel inside a black gutter. */
+@media (min-width: 769px) {
+  .wv-app.theme-spotify { background: #000; column-gap: 8px; padding: 0 8px 8px; }
+  .theme-spotify .wv-sidebar { border-right: 0; border-radius: 8px; }
+  .theme-spotify .wv-topbar { border-radius: 8px 8px 0 0; }
+  .theme-spotify #wv-content { border-radius: 0 0 8px 8px; }
+  .theme-spotify .player-bar { padding: 0 8px; }
+}
+
+/* =========================================================
+   Skin: Apple Music — white chrome, hairlines, red accent
+   ========================================================= */
+.theme-apple {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+               "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --r-pill: 9999px;
+  --r-xl: 10px;
+  --r-lg: 8px;
+  --r-md: 6px;
+  --r-sm: 5px;
+  --r-art: 6px;
+
+  --lg-shadow: 0 6px 20px rgba(0,0,0,0.10);
+
+  --text: #000000;
+  --text-1: #000000;
+  --text-primary: #000000;
+  --text-2: #6e6e73;
+  --text-3: #86868b;
+  --text-4: #b0b0b5;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+
+  --page-bg-base: #ffffff;
+  --page-bg: #ffffff;
+  --chrome: #f7f7f8;
+  --chrome-border: #dededf;
+  --surface: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f1f1f3;
+  --surface-3: #e7e7ea;
+  --surface-hover: #f4f4f6;
+  --elevated: #ffffff;
+
+  --hair: rgba(0,0,0,0.07);
+  --hair-strong: rgba(0,0,0,0.14);
+  --border: rgba(0,0,0,0.10);
+
+  --glass-large-bg: #ffffff;
+  --glass-medium-bg: #ffffff;
+  --glass-small-bg: #f1f1f3;
+  --glass-pill-bg: #f1f1f3;
+  --glass-pill-bg-hover: #e7e7ea;
+  --glass-pill-bg-active: #fa233b;
+  --veil: #ffffff;
+  --veil-border: #dededf;
+
+  --brand: #fa233b;
+  --brand-2: #d81c31;
+  --brand-bg: rgba(250,35,59,0.10);
+  --brand-text: #d81c31;
+  --on-brand: #ffffff;
+  --purple: #fa233b;
+  --purple-light: #ff5a6e;
+  --purple-bg: rgba(250,35,59,0.10);
+
+  --avatar-bg: #d8d8dc;
+  --wv-wash: #f7f7f8;
+}
+.theme-apple .wv-topbar {
+  background: rgba(247,247,248,0.86);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--chrome-border);
+}
+.theme-apple .wv-sidebar { border-right: 1px solid var(--chrome-border); }
+.theme-apple .wv-sidebar-logo { color: #fa233b; letter-spacing: -0.02em; }
+.theme-apple .wv-sidebar-logo .mark { border-radius: 6px; }
+.theme-apple .wv-nav-item { font-size: 13.5px; font-weight: 600; padding: 7px 10px; }
+.theme-apple .wv-nav-item:hover { background: rgba(0,0,0,0.04); }
+.theme-apple .wv-nav-item.is-active { background: rgba(250,35,59,0.10); color: #fa233b; }
+.theme-apple .wv-nav-item.is-active svg { color: #fa233b; }
+.theme-apple .wv-sidebar-label { color: #86868b; letter-spacing: 0.02em; text-transform: none; font-size: 12px; }
+.theme-apple .wv-card, .theme-apple .card {
+  background: transparent; box-shadow: none;
+}
+.theme-apple .wv-cover-wrap, .theme-apple .wv-lib-art, .theme-apple .player-cover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+}
+.theme-apple .wv-card-play { background: rgba(255,255,255,0.92); color: #fa233b; box-shadow: 0 3px 12px rgba(0,0,0,0.22); }
+.theme-apple .wv-card-title { font-weight: 500; }
+.theme-apple .wv-icon-circle { background: rgba(0,0,0,0.05); color: #6e6e73; }
+.theme-apple .wv-icon-circle:hover { background: rgba(0,0,0,0.09); color: #000; }
+.theme-apple .wv-pill { border-radius: 6px; font-weight: 600; }
+.theme-apple .wv-pill.is-active,
+.theme-apple .wv-topbar .wv-pill.is-active { background: #fa233b; color: #fff; }
+.theme-apple .player-bar {
+  background: rgba(247,247,248,0.92);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--chrome-border);
+}
+.theme-apple .wv-face { border-color: #f7f7f8; }
+.theme-apple h1, .theme-apple h2, .theme-apple h3 { letter-spacing: -0.02em; font-weight: 700; }
+.theme-apple ::selection { background: rgba(250,35,59,0.22); color: #000; }
+.theme-apple .wv-lib-chips .wv-chip.acc { background: #fa233b; color: #fff; }
+.theme-apple .wv-chip.acc { background: #fa233b; color: #fff; }
+.theme-apple .wv-lib { box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+.theme-apple .wv-settings-title, .theme-apple .wv-lib-head a { color: #000; }

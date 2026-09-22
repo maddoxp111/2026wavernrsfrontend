@@ -38,8 +38,7 @@
   function icon(name) { return ICONS[name] || ''; }
 
   function _currentThemeIcon() {
-    var pref = typeof window.getThemePref === 'function' ? window.getThemePref() : 'system';
-    return typeof window._themeIcon === 'function' ? window._themeIcon(pref) : ICONS.sun;
+    return typeof window._themeIcon === 'function' ? window._themeIcon() : ICONS.sun;
   }
 
   // ── Which page are we on? ─────────────────────────────────────
@@ -235,6 +234,7 @@
 
     html += '<div class="wv-topbar-right">';
     html += '<div id="wv-presence" class="wv-presence" style="display:none;"></div>';
+    html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvOpenThemePicker()" title="Theme" aria-label="Choose a theme">' + _currentThemeIcon() + '</button>';
     if (isLoggedIn && user) {
       html += '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>';
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
@@ -245,7 +245,6 @@
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
       html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
     } else {
-      html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvCycleTheme()" title="Theme" aria-label="Switch theme">' + _currentThemeIcon() + '</button>';
       html += '<a href="/register" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
       html += '<a href="/login" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
@@ -592,15 +591,38 @@
     }
   };
   // Theme: dark unless someone has picked otherwise. 'system' follows the device.
+  // Two of them are full skins that restyle the shell, not just recolour it.
   // Applied to body + app root without a reload, and available logged out.
+  var THEMES = {
+    dark:    { label: 'Default',     sub: 'wavernrs black',    base: 'dark',  meta: '#0d0d15' },
+    light:   { label: 'White',       sub: 'Paper light',       base: 'light', meta: '#f7f7fb' },
+    spotify: { label: 'Spotify',     sub: 'Green on black',    base: 'dark',  meta: '#000000' },
+    apple:   { label: 'Apple Music', sub: 'Red on white',      base: 'light', meta: '#fafafa' },
+    system:  { label: 'Match device', sub: 'Follows your system', base: 'dark', meta: '#0d0d15' },
+  };
+  var SKINS = ['spotify', 'apple'];
+  var THEME_ORDER = ['dark', 'light', 'spotify', 'apple', 'system'];
+  window.WV_THEMES = THEMES;
+  window.WV_THEME_ORDER = THEME_ORDER;
+
   function _systemTheme() {
     try { return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (_) { return 'dark'; }
   }
   function _storedTheme() {
     var v;
     try { v = localStorage.getItem('wv_theme'); } catch (_) { v = null; }
-    return v === 'light' || v === 'dark' || v === 'system' ? v : 'dark';
+    return THEMES[v] ? v : 'dark';
   }
+  // Every theme carries a light/dark base so the older .theme-light rules
+  // keep working underneath a skin.
+  function _themeClasses(t) {
+    var def = THEMES[t] || THEMES.dark;
+    var out = ['theme-' + def.base];
+    if (SKINS.indexOf(t) >= 0) out.push('theme-' + t);
+    return out;
+  }
+  window._themeClasses = function (t) { return _themeClasses(t).join(' '); };
+
   // One-off move to dark for anyone still on light or following their device.
   // Runs once per browser; after that whatever they pick is respected.
   (function _migrateToDark() {
@@ -613,22 +635,34 @@
   })();
 
   function _paintTheme(t) {
+    var def = THEMES[t] || THEMES.dark;
+    var add = _themeClasses(t);
     [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
       if (!el) return;
-      el.classList.remove('theme-light', 'theme-dark');
-      el.classList.add('theme-' + t);
+      el.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple');
+      add.forEach(function(c) { el.classList.add(c); });
     });
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', t === 'light' ? '#f7f7fb' : '#0d0d15');
-    document.documentElement.style.colorScheme = t;
+    if (meta) meta.setAttribute('content', def.meta);
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.style.colorScheme = def.base;
   }
   window.setTheme = function(t) {
-    t = (t === 'light' || t === 'dark' || t === 'system') ? t : 'dark';
+    t = THEMES[t] ? t : 'dark';
     try { localStorage.setItem('wv_theme', t); } catch (_) {}
     _paintTheme(t === 'system' ? _systemTheme() : t);
     document.querySelectorAll('input[name="wv-theme"]').forEach(function(r) { r.checked = r.value === t; });
+    document.querySelectorAll('.wv-theme-card').forEach(function(c) {
+      c.classList.toggle('is-active', c.getAttribute('data-theme') === t);
+    });
+    try { document.dispatchEvent(new CustomEvent('wv-theme-change', { detail: { theme: t } })); } catch (_) {}
   };
-  window.getTheme = function() { var t = _storedTheme(); return t === 'system' ? _systemTheme() : t; };
+  window.getTheme = function() {
+    var t = _storedTheme();
+    if (t === 'system') t = _systemTheme();
+    return (THEMES[t] || THEMES.dark).base;
+  };
+  window.getThemeName = function() { var t = _storedTheme(); return t === 'system' ? _systemTheme() : t; };
   window.getThemePref = function() { return _storedTheme(); };
   try {
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () {
@@ -667,13 +701,14 @@
     if (oldMobile) oldMobile.remove();
 
     if (isAuthPage) {
-      document.body.classList.add('wv-auth-body', 'theme-' + theme);
+      document.body.classList.add('wv-auth-body');
+      _themeClasses(theme).forEach(function (c) { document.body.classList.add(c); });
       return;
     }
 
     var root = document.createElement('div');
     root.id = 'wv-root';
-    root.className = 'wv-app theme-' + theme;
+    root.className = 'wv-app ' + _themeClasses(theme).join(' ');
 
     root.innerHTML =
       // Animated page background
@@ -695,8 +730,8 @@
 
     // Also apply theme class to body so anything appended outside #wv-root
     // (modals, dropdown menus) also inherits the CSS custom properties
-    document.body.classList.remove('theme-light', 'theme-dark');
-    document.body.classList.add('theme-' + theme);
+    document.body.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple');
+    _themeClasses(theme).forEach(function (c) { document.body.classList.add(c); });
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflow = 'hidden';
@@ -1460,39 +1495,76 @@ document.addEventListener('keydown', function (e) {
   box.select && box.select();
 });
 
-// Anyone can switch themes, signed in or not: device → light → dark → device.
-window.wvCycleTheme = function () {
-  var order = ['system', 'light', 'dark'];
-  var cur = typeof window.getThemePref === 'function' ? window.getThemePref() : 'dark';
-  var next = order[(order.indexOf(cur) + 1) % order.length];
-  window.setTheme(next);
-  if (typeof wvToast === 'function') {
-    wvToast(next === 'system' ? 'Theme follows your device' : next === 'light' ? 'Light mode' : 'Dark mode');
-  }
-  var btn = document.getElementById('wv-theme-btn');
-  if (btn) btn.innerHTML = _themeIcon(next);
+// Anyone can switch themes, signed in or not. The palette button in the top
+// bar opens a picker; Spotify and Apple Music are full skins, not recolours.
+var WV_THEME_SWATCH = {
+  dark:    ['#121212', '#a78bfa', '#242424'],
+  light:   ['#f6f6f6', '#6d4ee0', '#c9c9cf'],
+  spotify: ['#000000', '#1db954', '#181818'],
+  apple:   ['#fafafa', '#fa233b', '#d8d8dc'],
+  system:  ['#121212', '#f6f6f6', '#a78bfa'],
 };
 
-function _themeIcon(pref) {
-  if (pref === 'light') {
-    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
-      '<circle cx="12" cy="12" r="4.2"/>' +
-      '<path d="M12 2.6v2.1M12 19.3v2.1M2.6 12h2.1M19.3 12h2.1M5.35 5.35l1.5 1.5M17.15 17.15l1.5 1.5M18.65 5.35l-1.5 1.5M6.85 17.15l-1.5 1.5"/>' +
-      '</svg>';
-  }
-  if (pref === 'dark') {
-    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
-      '<path d="M20.4 14.15A8.65 8.65 0 0 1 9.85 3.6a8.95 8.95 0 1 0 10.55 10.55Z"/></svg>';
-  }
-  return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">' +
-    '<rect x="2.8" y="4.2" width="18.4" height="12.6" rx="2.2"/>' +
-    '<path d="M9 20.2h6" stroke-linecap="round"/></svg>';
+function _themeIcon() {
+  return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M12 2.9a9.1 9.1 0 0 0 0 18.2c1.3 0 2.1-.85 2.1-1.95 0-.52-.2-.98-.5-1.32-.3-.35-.48-.77-.48-1.26 0-1.1.88-1.97 1.97-1.97h1.68A4.36 4.36 0 0 0 21.1 12c0-5.03-4.08-9.1-9.1-9.1Z"/>' +
+    '<circle cx="7.6" cy="12" r="1.05" fill="currentColor" stroke="none"/>' +
+    '<circle cx="9.9" cy="8.1" r="1.05" fill="currentColor" stroke="none"/>' +
+    '<circle cx="14.3" cy="7.7" r="1.05" fill="currentColor" stroke="none"/>' +
+    '<circle cx="17.3" cy="10.8" r="1.05" fill="currentColor" stroke="none"/>' +
+    '</svg>';
 }
 window._themeIcon = _themeIcon;
 
+function _themeCardHTML(name) {
+  var def = (window.WV_THEMES || {})[name];
+  if (!def) return '';
+  var sw = WV_THEME_SWATCH[name] || ['#121212', '#a78bfa', '#242424'];
+  var cur = typeof window.getThemePref === 'function' ? window.getThemePref() : 'dark';
+  return '<button type="button" class="wv-theme-card' + (cur === name ? ' is-active' : '') + '" data-theme="' + name + '">' +
+    '<span class="wv-theme-swatch" style="background:' + sw[0] + ';">' +
+      '<i style="background:' + sw[1] + ';"></i><i style="background:' + sw[2] + ';"></i>' +
+    '</span>' +
+    '<span class="wv-theme-meta"><b>' + def.label + '</b><span>' + def.sub + '</span></span>' +
+    '<span class="wv-theme-tick" aria-hidden="true">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8 9.5 17.8 19.5 6.6"/></svg>' +
+    '</span></button>';
+}
+
+window.wvOpenThemePicker = function () {
+  var existing = document.getElementById('wv-theme-picker');
+  if (existing) { existing.remove(); return; }
+  var order = window.WV_THEME_ORDER || ['dark', 'light', 'spotify', 'apple', 'system'];
+  var wrap = document.createElement('div');
+  wrap.id = 'wv-theme-picker';
+  wrap.className = 'wv-theme-picker';
+  wrap.innerHTML = '<div class="wv-theme-panel" role="dialog" aria-label="Choose a theme">' +
+    '<div class="wv-theme-head">Theme</div>' +
+    '<div class="wv-theme-grid">' + order.map(_themeCardHTML).join('') + '</div>' +
+    '</div>';
+  wrap.addEventListener('click', function (e) {
+    var card = e.target.closest ? e.target.closest('.wv-theme-card') : null;
+    if (card) {
+      var name = card.getAttribute('data-theme');
+      window.setTheme(name);
+      var def = (window.WV_THEMES || {})[name];
+      if (typeof wvToast === 'function' && def) wvToast(def.label + ' theme');
+      return;
+    }
+    if (e.target === wrap) wrap.remove();
+  });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { wrap.remove(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(wrap);
+};
+
+// Kept so older markup and shortcuts still land somewhere sensible.
+window.wvCycleTheme = function () { window.wvOpenThemePicker(); };
+
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('wv-theme-btn');
-  if (btn && typeof window.getThemePref === 'function') btn.innerHTML = _themeIcon(window.getThemePref());
+  if (btn) btn.innerHTML = _themeIcon();
 });
 
 // ── Who else is on the site right now ───────────────────────────────────────
