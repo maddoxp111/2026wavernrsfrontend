@@ -79,7 +79,7 @@
     var html = '';
 
     html += '<div class="wv-panel wv-panel-nav">';
-    html += '<a href="/index" class="wv-sidebar-logo"><span class="mark">w</span>wavernrs</a>';
+    html += '<a href="/index" class="wv-sidebar-logo"><img class="mark" src="/logo.png" srcset="/logo.png 1x, /logo@2x.png 2x" alt="" width="26" height="26">wavernrs</a>';
     html += '<nav class="wv-sidebar-nav">';
     html += navItem('home', 'Home', '/index', 'home');
     html += navItem('browse', 'Browse', '/browse', 'discover');
@@ -234,6 +234,7 @@
     html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
 
     html += '<div class="wv-topbar-right">';
+    html += '<div id="wv-presence" class="wv-presence" style="display:none;"></div>';
     if (isLoggedIn && user) {
       html += '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>';
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
@@ -1493,3 +1494,82 @@ document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('wv-theme-btn');
   if (btn && typeof window.getThemePref === 'function') btn.innerHTML = _themeIcon(window.getThemePref());
 });
+
+// ── Who else is on the site right now ───────────────────────────────────────
+(function () {
+  var FACES = 4;
+  var _people = [];
+  var _timer = null;
+
+  function initials(name) {
+    var n = String(name || '?').trim();
+    return (n[0] || '?').toUpperCase();
+  }
+
+  function face(p, size) {
+    var s = size || 26;
+    var title = p.username ? '@' + p.username : 'Someone';
+    var inner = p.avatar
+      ? '<img src="' + escHtml(p.avatar) + '" alt="" onerror="this.remove()">'
+      : '<span>' + escHtml(initials(p.username)) + '</span>';
+    var href = p.artist_id ? '/artist?id=' + encodeURIComponent(p.artist_id) : null;
+    var open = href ? '<a href="' + href + '" onclick="event.preventDefault();navigate(\'' + href + '\')"' : '<span';
+    return open + ' class="wv-face" style="width:' + s + 'px;height:' + s + 'px;" data-tip="' + escHtml(title) + '">' +
+      inner + (href ? '</a>' : '</span>');
+  }
+
+  function render() {
+    var box = document.getElementById('wv-presence');
+    if (!box) return;
+    if (!_people.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = '';
+    var shown = _people.slice(0, FACES);
+    var rest = _people.slice(FACES);
+    box.innerHTML =
+      '<div class="wv-faces">' + shown.map(function (p) { return face(p); }).join('') +
+        (rest.length ? '<button class="wv-face wv-face-more" onclick="window._togglePresence(event)">+' + rest.length + '</button>' : '') +
+      '</div>' +
+      (rest.length ? '<div class="wv-presence-menu" id="wv-presence-menu" hidden>' +
+        '<div class="wv-presence-head">' + _people.length + ' listening now</div>' +
+        _people.map(function (p) {
+          var href = p.artist_id ? '/artist?id=' + encodeURIComponent(p.artist_id) : null;
+          return '<' + (href ? 'a href="' + href + '" onclick="event.preventDefault();navigate(\'' + href + '\')"' : 'div') + ' class="wv-presence-row">' +
+            face(p, 22) + '<span>' + escHtml(p.username ? '@' + p.username : 'Someone') + '</span>' +
+            '</' + (href ? 'a' : 'div') + '>';
+        }).join('') + '</div>' : '');
+  }
+
+  window._togglePresence = function (e) {
+    if (e) e.stopPropagation();
+    var m = document.getElementById('wv-presence-menu');
+    if (m) m.hidden = !m.hidden;
+  };
+  document.addEventListener('click', function (e) {
+    var m = document.getElementById('wv-presence-menu');
+    if (m && !m.hidden && !e.target.closest('.wv-presence')) m.hidden = true;
+  });
+
+  async function beat() {
+    try {
+      var token = localStorage.getItem('token');
+      var r = await fetch(API_BASE + '/site/presence', {
+        method: token ? 'POST' : 'GET',
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+      });
+      if (!r.ok) return;
+      var d = await r.json();
+      _people = (d.online || []).filter(function (p) { return p && p.username; });
+      render();
+    } catch (_) {}
+  }
+
+  window._presenceRefresh = beat;
+  function start() {
+    if (_timer) return;
+    beat();
+    _timer = setInterval(beat, 30000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();

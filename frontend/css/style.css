@@ -338,8 +338,7 @@ img { display: block; }
 }
 .wv-sidebar-logo .mark {
   width: 26px; height: 26px; border-radius: 7px;
-  background: var(--brand); color: var(--on-brand);
-  display: inline-grid; place-items: center; font-size: 14px; font-weight: 900;
+  object-fit: cover; display: block; flex-shrink: 0;
 }
 .wv-sidebar-label {
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
@@ -1201,6 +1200,14 @@ img { display: block; }
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 32px;
+}
+/* The era strip sits directly above the jump-back-in tiles; without a gap
+   and a hairline the two read as one block. */
+.wv-era-strip + .wv-quick-grid,
+.home-section + .wv-quick-grid {
+  margin-top: 26px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
 }
 .wv-quick-item {
   display: flex;
@@ -2625,7 +2632,7 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 }
 .tk-sec-note { margin: 0 0 12px; font-size: 12.5px; color: var(--text-3); line-height: 1.45; max-width: 560px; }
 
-.wv-era-strip { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 10px; scrollbar-width:thin; }
+.wv-era-strip { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 10px; scrollbar-width:thin; margin-bottom:10px; }
 .wv-era-strip::-webkit-scrollbar { height:6px; }
 .wv-era-strip::-webkit-scrollbar-thumb { background:var(--surface-3); border-radius:99px; }
 .wv-era-chip { display:flex; align-items:center; gap:10px; flex:0 0 auto; cursor:pointer;
@@ -2636,3 +2643,37 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .wv-era-chip-text { display:flex; flex-direction:column; line-height:1.25; white-space:nowrap; }
 .wv-era-chip-text b { font-size:13px; font-weight:700; }
 .wv-era-chip-text span { font-size:11px; color:var(--text-3); }
+
+/* ── Who is on the site right now, in the top bar ───────────────────────── */
+.wv-presence { position: relative; display: flex; align-items: center; margin-right: 4px; }
+.wv-faces { display: flex; align-items: center; }
+.wv-face {
+  position: relative; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--surface-3); color: var(--text-2);
+  display: grid; place-items: center; font-size: 11px; font-weight: 800;
+  border: 2px solid var(--page-bg-base, #0b0b0f); margin-left: -8px;
+  text-decoration: none; cursor: pointer; padding: 0;
+}
+.wv-face:first-child { margin-left: 0; }
+.wv-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wv-face-more { width: 26px; height: 26px; font-size: 10.5px; background: var(--surface-2); color: var(--text); }
+.wv-face:hover { z-index: 3; }
+.wv-face[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  background: var(--surface-3); color: var(--text); font-size: 11.5px; font-weight: 600;
+  padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 40;
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.wv-presence-menu {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 8px; min-width: 210px; max-height: 320px; overflow-y: auto;
+  box-shadow: 0 14px 40px rgba(0,0,0,.45);
+}
+.wv-presence-head { font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-3); padding: 4px 8px 8px; }
+.wv-presence-row { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 8px;
+  font-size: 13px; color: var(--text); text-decoration: none; }
+.wv-presence-row:hover { background: var(--surface-3); }
+.wv-presence-row .wv-face { margin-left: 0; border: none; }
+@media (max-width: 720px) { .wv-presence { display: none !important; } }
