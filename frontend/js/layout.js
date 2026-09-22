@@ -1720,13 +1720,15 @@ document.addEventListener('DOMContentLoaded', function () {
     return (n[0] || '?').toUpperCase();
   }
 
-  function face(p, size) {
+  // plain skips the link, for use inside the dropdown rows, which are
+  // themselves links — an anchor inside an anchor tears the row apart.
+  function face(p, size, plain) {
     var s = size || 26;
     var title = p.username ? '@' + p.username : 'Someone';
     var inner = p.avatar
       ? '<img src="' + escHtml(p.avatar) + '" alt="" onerror="this.remove()">'
       : '<span>' + escHtml(initials(p.username)) + '</span>';
-    var href = p.artist_id ? '/artist?id=' + encodeURIComponent(p.artist_id) : null;
+    var href = !plain && p.artist_id ? '/artist?id=' + encodeURIComponent(p.artist_id) : null;
     var open = href ? '<a href="' + href + '" onclick="event.preventDefault();navigate(\'' + href + '\')"' : '<span';
     return open + ' class="wv-face" style="width:' + s + 'px;height:' + s + 'px;" data-tip="' + escHtml(title) + '">' +
       inner + (href ? '</a>' : '</span>');
@@ -1744,11 +1746,11 @@ document.addEventListener('DOMContentLoaded', function () {
         (rest.length ? '<button class="wv-face wv-face-more" onclick="window._togglePresence(event)">+' + rest.length + '</button>' : '') +
       '</div>' +
       (rest.length ? '<div class="wv-presence-menu" id="wv-presence-menu" hidden>' +
-        '<div class="wv-presence-head">' + _people.length + ' listening now</div>' +
+        '<div class="wv-presence-head">' + _people.length + ' online now</div>' +
         _people.map(function (p) {
           var href = p.artist_id ? '/artist?id=' + encodeURIComponent(p.artist_id) : null;
           return '<' + (href ? 'a href="' + href + '" onclick="event.preventDefault();navigate(\'' + href + '\')"' : 'div') + ' class="wv-presence-row">' +
-            face(p, 22) + '<span>' + escHtml(p.username ? '@' + p.username : 'Someone') + '</span>' +
+            face(p, 22, true) + '<span>' + escHtml(p.username ? '@' + p.username : 'Someone') + '</span>' +
             '</' + (href ? 'a' : 'div') + '>';
         }).join('') + '</div>' : '');
   }
@@ -1772,7 +1774,10 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       if (!r.ok) return;
       var d = await r.json();
-      _people = (d.online || []).filter(function (p) { return p && p.username; });
+      // Everyone signed in and active in the last minute or so, you excluded.
+      _people = (d.online || []).filter(function (p) {
+        return p && p.username && p.id !== d.me;
+      });
       render();
     } catch (_) {}
   }
