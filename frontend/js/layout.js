@@ -179,10 +179,10 @@
     });
     html += '</div>';
     html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
+    html += _footHTML(isLoggedIn, profileHref);
     html += '</div>';
 
     html += '</div>';
-    html += _footHTML(isLoggedIn, profileHref);
     return html;
   }
 
@@ -383,8 +383,7 @@
         '</div></div>' +
       '</div>';
     html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
-    html += _topRightHTML(isLoggedIn, user,
-      '<button class="sp-np-toggle wv-icon-circle" onclick="window._wvToggleNP()" title="Now playing view">' + icon('feed') + '</button>');
+    html += _topRightHTML(isLoggedIn, user, '');
     return html;
   }
 
@@ -821,9 +820,31 @@
   // Spotify and Apple Music change the shell, not just the palette, so a
   // switch between skins rebuilds the top bar, sidebar and drawer in place.
   var _lastSkin = null;
+  // Spotify's "now playing view" button, at the head of the right-hand
+  // group of the player. Hidden by CSS under the other themes.
+  var NP_ICON = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+    '<path d="M11.196 8 6 5v6l5.196-3z"/>' +
+    '<path d="M15.002 1.75A1.75 1.75 0 0 0 13.252 0h-10.5a1.75 1.75 0 0 0-1.75 1.75v12.5c0 .966.783 1.75 1.75 1.75h10.5a1.75 1.75 0 0 0 1.75-1.75V1.75zm-1.75-.25a.25.25 0 0 1 .25.25v12.5a.25.25 0 0 1-.25.25h-10.5a.25.25 0 0 1-.25-.25V1.75a.25.25 0 0 1 .25-.25h10.5z"/></svg>';
+
+  function _ensureNPButton(bar) {
+    var vol = bar.querySelector('.player-volume');
+    if (!vol || document.getElementById('sp-np-btn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'sp-np-btn';
+    btn.className = 'player-btn player-icon-btn sp-np-btn';
+    btn.type = 'button';
+    btn.title = 'Now playing view';
+    btn.setAttribute('aria-label', 'Now playing view');
+    btn.innerHTML = NP_ICON;
+    btn.onclick = function () { if (typeof window._wvToggleNP === 'function') window._wvToggleNP(); };
+    vol.insertBefore(btn, vol.firstChild);
+    if (typeof window._wvRenderNP === 'function') window._wvRenderNP();
+  }
+
   function _applyPlayerSkin(tries) {
     var bar = document.querySelector('.player-bar');
     if (!bar) { if ((tries || 0) < 25) setTimeout(function () { _applyPlayerSkin((tries || 0) + 1); }, 400); return; }
+    _ensureNPButton(bar);
     var controls = bar.querySelector('.player-controls');
     var vol = bar.querySelector('.player-volume');
     var mute = document.getElementById('player-mute-btn');
@@ -1920,6 +1941,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var on = (typeof window._wvSkin === 'function' ? window._wvSkin() : '') === 'spotify' && !!cur && open();
     el.hidden = !on;
     root.classList.toggle('np-open', on);
+    var btn = document.getElementById('sp-np-btn');
+    if (btn) {
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
     if (!on) { el.innerHTML = ''; return; }
 
     var art = cur.cover
@@ -1958,7 +1984,9 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   window._wvRenderNP = render;
   window._wvToggleNP = function () {
-    try { localStorage.setItem('wv_np_open', open() ? '0' : '1'); } catch (_) {}
+    var showing = !!cur && open();
+    try { localStorage.setItem('wv_np_open', showing ? '0' : '1'); } catch (_) {}
+    if (!showing && !cur && typeof wvToast === 'function') wvToast('Play something to see it here');
     render();
   };
 

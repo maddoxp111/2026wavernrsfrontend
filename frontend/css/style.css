@@ -2817,7 +2817,7 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @media (min-width: 769px) {
   .wv-app.theme-spotify {
     background: #000;
-    grid-template-columns: clamp(240px, 24vw, 420px) minmax(0, 1fr) 0px;
+    grid-template-columns: clamp(280px, 24vw, 420px) minmax(0, 1fr) 0px;
     grid-template-rows: 64px minmax(0, 1fr) 0;
     column-gap: 8px;
     row-gap: 8px;
@@ -2827,7 +2827,7 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     grid-template-rows: 64px minmax(0, 1fr) 72px;
   }
   .wv-app.theme-spotify.np-open {
-    grid-template-columns: clamp(240px, 24vw, 420px) minmax(0, 1fr) clamp(260px, 21vw, 380px);
+    grid-template-columns: clamp(280px, 24vw, 420px) minmax(0, 1fr) clamp(280px, 21vw, 380px);
   }
   .theme-spotify .wv-topbar      { grid-column: 1 / 4; grid-row: 1 / 2; margin: 0 -8px; }
   .theme-spotify .wv-sidebar     { grid-column: 1 / 2; grid-row: 2 / 3; }
@@ -2875,6 +2875,24 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .sp-lib {
     background: #121212; border-radius: 8px; padding: 12px 0 0;
     display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden;
+    container-type: inline-size; container-name: splib;
+  }
+  .sp-lib-title span { white-space: nowrap; }
+  .sp-lib-head { flex-wrap: nowrap; }
+  .sp-lib-title { min-width: 0; flex-shrink: 1; }
+  /* The chip row scrolls sideways; a fade on the right says so. */
+  .sp-lib-chips {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    padding-right: 28px !important;
+  }
+  .sp-lib-find input { text-overflow: ellipsis; }
+  /* A narrow library drops the words before anything collides. */
+  @container splib (max-width: 330px) {
+    .sp-create span { display: none; }
+    .sp-create { padding: 7px; }
+    .sp-lib-sort { font-size: 0; gap: 0; }
+    .sp-lib-sort svg { font-size: 13px; }
   }
   .sp-lib-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px 10px; }
   .sp-lib-title { display: flex; align-items: center; gap: 12px; color: #b3b3b3; font-size: 16px; font-weight: 700; }
@@ -2923,7 +2941,14 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .sp-pinned { display: flex; flex-direction: column; gap: 1px; }
   .sp-pin-art { display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #4a2f8f, #1db954); }
   .sp-pin-art svg { width: 22px; height: 22px; }
-  .theme-spotify .wv-side-foot { display: none; }
+  /* Account and site links sit at the foot of the library, as Spotify's
+     legal links do, rather than disappearing. */
+  .theme-spotify .sp-lib-scroll .wv-side-foot {
+    padding: 22px 8px 10px; margin-top: 10px; gap: 6px 14px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    font-size: 11.5px; font-weight: 500; color: #a7a7a7;
+  }
+  .theme-spotify .sp-lib-scroll .wv-side-foot a:hover { color: #fff; text-decoration: underline; }
 
   /* Now playing, the right column. */
   .sp-np {
@@ -2946,10 +2971,22 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .sp-np-card-b { font-size: 13px; color: #b3b3b3; }
 }
 
+/* Now playing view button in the player bar: Spotify only. */
+.sp-np-btn { display: none !important; }
+@media (min-width: 769px) {
+  .theme-spotify .sp-np-btn { display: flex !important; position: relative; color: #b3b3b3; }
+  .theme-spotify .sp-np-btn:hover { color: #fff; }
+  .theme-spotify .sp-np-btn.is-on { color: #1ed760; }
+  .theme-spotify .sp-np-btn.is-on::after {
+    content: ''; position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: #1ed760;
+  }
+}
+
 /* The Spotify-only top bar pieces collapse on phones, where the shared
    mobile shell takes over. */
 @media (max-width: 768px) {
-  .sp-top-l, .sp-top-c, .sp-np-toggle { display: none !important; }
+  .sp-top-l, .sp-top-c { display: none !important; }
   .sp-np { display: none !important; }
 }
 
