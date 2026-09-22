@@ -938,6 +938,11 @@
     document.body.style.overflow = 'hidden';
     document.body.insertBefore(root, document.body.firstChild);
 
+    // The page's original #view was copied into the shell above. Drop the
+    // stale one: it stays in the body off-screen otherwise, holding a second
+    // copy of every id on the page.
+    if (viewEl && viewEl.parentNode && !viewEl.closest('#wv-root')) viewEl.parentNode.removeChild(viewEl);
+
     // Mobile: show hamburger + search buttons in topbar
     var mq = window.matchMedia('(max-width: 768px)');
     function checkMobile() {
