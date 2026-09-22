@@ -140,6 +140,7 @@ async function openStation(id) {
           '<div class="rp-field"><label>Name</label><input class="wv-input" id="st-name" value="' + escHtml(_st.name) + '"></div>' +
           '<div class="rp-field"><label>Description</label><textarea class="wv-input" id="st-desc" rows="2">' + escHtml(_st.description || '') + '</textarea></div>' +
           '<div class="rp-field"><label>Cover image URL</label><input class="wv-input" id="st-cover" value="' + escHtml(_st.cover_url || '') + '" placeholder="Leave blank to use the playing track\'s cover"></div>' +
+          '<div class="rp-field"><label>Hearts</label><input class="wv-input" id="st-likes" type="number" min="0" value="' + (Number(_st.likes) || 0) + '"></div>' +
           (_isMod ? '<div class="rp-field"><label>Hand to username</label><input class="wv-input" id="st-owner" placeholder="username"></div>' : '') +
           '<div style="display:flex;gap:8px;align-items:center;margin-top:14px;"><button class="wv-pill brand" onclick="saveStation()">Save</button><span id="st-msg" style="font-size:12px;color:var(--text-3);"></span>' +
           (_isMod ? '<button class="wv-pill" style="margin-left:auto;color:var(--red);" onclick="deleteStation()">Delete station</button>' : '') + '</div>' +
@@ -185,6 +186,8 @@ async function refreshNow() { try { var d = await api('/radio/stations/' + _stId
 async function saveStation() {
   var msg = document.getElementById('st-msg'); msg.textContent = 'Saving…';
   var body = { name: document.getElementById('st-name').value, description: document.getElementById('st-desc').value, cover_url: document.getElementById('st-cover').value };
+  var lk = document.getElementById('st-likes');
+  if (lk && lk.value !== '' && Number(lk.value) !== Number(_st.likes)) body.likes = Math.max(0, Math.floor(Number(lk.value)));
   var ow = document.getElementById('st-owner'); if (ow && ow.value.trim()) body.owner_username = ow.value.trim();
   try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify(body) }); _st = Object.assign(_st, d.station); msg.textContent = 'Saved.'; _mine = await api('/radio/mine'); var keep = document.getElementById('station').innerHTML; renderShell(); document.getElementById('station').innerHTML = keep; }
   catch (e) { msg.textContent = e.message; }
