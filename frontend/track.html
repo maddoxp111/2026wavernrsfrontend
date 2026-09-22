@@ -60,6 +60,7 @@
       renderTracklist();
       loadComments();
       loadMoreLikeThis();
+      loadAlsoOn();
       if (typeof loadRatings === 'function') loadRatings('track', track.id);
     } catch (err) {
       console.error('track render error', err);
@@ -222,6 +223,8 @@
           </div>
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
         </div>
+
+        <div id="also-on" style="margin-top:44px;"></div>
 
         <div id="more-like-this" style="margin-top:48px;"></div>
       </div>`;
@@ -527,6 +530,35 @@
     var bub = document.getElementById('ts-bubble');
     if (bub && bub.style.display !== 'none' && Date.now() > _tsBubbleUntil) bub.style.display = 'none';
   }, 300);
+
+  // The same song often sits on a dozen different comps under slightly
+  // different spellings. Show where else it turns up.
+  async function loadAlsoOn() {
+    var el = document.getElementById('also-on');
+    if (!el || !track || !track.id) return;
+    try {
+      var d = await api('/tracks/' + track.id + '/also-on');
+      var list = (d && d.albums) || [];
+      if (!list.length) { el.remove(); return; }
+      var more = d.total > list.length ? ' · showing ' + list.length : '';
+      el.innerHTML =
+        '<h2 class="section-title" style="margin-top:0;">Also on</h2>' +
+        '<p style="margin:-6px 0 14px;font-size:12.5px;color:var(--text-3);">' +
+          'This song also appears on ' + d.total + (d.total === 1 ? ' other comp' : ' other comps') +
+          (d.capped ? ' or more' : '') + more +
+        '</p>' +
+        '<div class="wv-comp-grid wv-comp-grid-4">' +
+          list.map(function(a) {
+            return renderMoreCard(Object.assign({}, a, {
+              _type: 'album',
+              artists: { display_name: a.creator },
+            }));
+          }).join('') +
+        '</div>';
+    } catch (_) {
+      if (el) el.remove();
+    }
+  }
 
   async function loadMoreLikeThis() {
     if (!track) return;
