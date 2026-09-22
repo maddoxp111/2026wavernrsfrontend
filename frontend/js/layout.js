@@ -1674,6 +1674,7 @@ window.wvShortcutsHelp = function () {
     ['R', 'Repeat (queue → track → off)'],
     ['M', 'Mute'],
     ['/', 'Search'],
+    ['T', 'Theme picker'],
     ['?', 'This list'],
     ['Esc', 'Close what is open'],
   ];
@@ -1689,6 +1690,17 @@ window.wvShortcutsHelp = function () {
   document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { wrap.remove(); document.removeEventListener('keydown', esc); } });
   document.body.appendChild(wrap);
 };
+
+// "T" opens the theme picker, alongside the other single-key shortcuts.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 't' && e.key !== 'T') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (typeof window.wvOpenThemePicker !== 'function') return;
+  e.preventDefault();
+  window.wvOpenThemePicker();
+});
 
 // "/" focuses search the way it does on GitHub and Reddit.
 document.addEventListener('keydown', function (e) {
