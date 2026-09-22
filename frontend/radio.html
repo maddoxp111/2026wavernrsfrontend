@@ -108,7 +108,7 @@
 <script src="/js/router.js?v=a69fc684857b"></script>
 <script>
 var _lastLyricIdx = -2;
-var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _listening = false, _stations = [];
+var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _likeBusy = false, _listening = false, _stations = [];
 
 function fmtN(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n); }
 function setView(html) { var v = document.getElementById('view'); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
@@ -247,7 +247,7 @@ async function pollNow() {
     _offset = Date.parse(d.server_time) - Date.now();
     var changed = !_now !== !d.now || (_now && d.now && (_now.track.id !== d.now.track.id || _now.started_at !== d.now.started_at));
     _now = d.now; _up = d.up_next || [];
-    if (d.likes != null && !_pendingLikes) { _likes = d.likes; document.getElementById('rd-likes').textContent = fmtN(_likes); }
+    if (d.likes != null && !_pendingLikes && !_likeBusy) { _likes = d.likes; document.getElementById('rd-likes').textContent = fmtN(_likes); }
     if (d.name && _st && d.name !== _st.name) { _st.name = d.name; document.getElementById('rd-title').textContent = d.name; }
     if (changed) renderNow();
     var on = typeof window.radioSlug === 'function' && window.radioSlug() === _slug;
@@ -272,8 +272,17 @@ function likeTap(ev) {
   _likeTimer = setTimeout(flushLikes, 700);
 }
 async function flushLikes() {
-  var n = _pendingLikes; if (!n) return; _pendingLikes = 0;
-  try { var d = await api('/radio/stations/' + encodeURIComponent(_slug) + '/like', { method: 'POST', body: JSON.stringify({ n: n }) }); if (d.likes != null && !_pendingLikes) { _likes = d.likes; document.getElementById('rd-likes').textContent = fmtN(_likes); } } catch (e) {}
+  var n = _pendingLikes; if (!n || _likeBusy) return;
+  _pendingLikes = 0; _likeBusy = true;
+  try {
+    var d = await api('/radio/stations/' + encodeURIComponent(_slug) + '/like', { method: 'POST', body: JSON.stringify({ n: n }) });
+    if (d.likes != null && !_pendingLikes) { _likes = d.likes; document.getElementById('rd-likes').textContent = fmtN(_likes); }
+  } catch (e) {
+    _pendingLikes += n;
+  } finally {
+    _likeBusy = false;
+    if (_pendingLikes) { clearTimeout(_likeTimer); _likeTimer = setTimeout(flushLikes, 700); }
+  }
 }
 
 if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(_poll); clearInterval(_tick); var fs = fsEl(); if (fs) fs.remove(); document.body.style.overflow = ''; });
