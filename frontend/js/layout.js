@@ -345,9 +345,9 @@
               '</button>';
       html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
-      html += '<div class="wv-avatar" onclick="navigate(getProfileHref())" title="My profile">' + initials + '</div>';
+      html += '<div class="wv-avatar" onclick="window._wvAvatarTap()" title="My profile">' + initials + '</div>';
     } else {
-      html += '<a href="/register" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
+      html += '<a href="/register" class="wv-pill wv-signup-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
       html += '<a href="/login" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
     }
     html += '</div>';
@@ -406,9 +406,18 @@
       '</div></div>';
     html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
     html += _topRightHTML(isLoggedIn, user,
-      isLoggedIn && user ? '<a href="/upload" class="wv-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>' : '');
+      isLoggedIn && user ? '<a href="/upload" class="wv-pill wv-upload-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>' : '');
     return html;
   }
+
+  // Spotify's phone app opens its side menu from your picture, top left;
+  // everywhere else the picture goes to your profile.
+  window._wvAvatarTap = function () {
+    var phone = false;
+    try { phone = window.matchMedia('(max-width: 768px)').matches; } catch (_) {}
+    if (phone && _skin() === 'spotify' && typeof window.openMobileDrawer === 'function') { window.openMobileDrawer(); return; }
+    navigate(getProfileHref());
+  };
 
   // ── Topbar live search ───────────────────────────────────────
   // Debounced /api/search as you type; Enter still goes to the full page.
@@ -499,12 +508,12 @@
     menu.className = '';
     menu.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:14px;padding:6px 0;min-width:170px;z-index:9999;font-size:13px;';
 
-    var isLight = document.body.classList.contains('theme-light');
     var items = [
       ['Profile', function() { navigate('/dashboard'); }],
+      ['Upload', function() { navigate('/upload'); }],
+      ['New playlist', function() { if (window.wvNewPlaylist) window.wvNewPlaylist(); }],
+      ['Theme', function() { if (window.wvOpenThemePicker) window.wvOpenThemePicker(); }],
       ['Settings', function() { navigate('/settings'); }],
-      [isLight ? 'Dark mode' : 'Light mode', function() { window.setTheme(isLight ? 'dark' : 'light'); }],
-      ['Match my device', function() { window.setTheme('system'); if (typeof wvToast === 'function') wvToast('Theme follows your device'); }],
       ['Sign out', function() { logout(); }],
     ];
     items.forEach(function(item) {
@@ -840,10 +849,26 @@
     if (typeof window._wvRenderNP === 'function') window._wvRenderNP();
   }
 
+  // Apple Music's phone mini player has a skip button beside play.
+  // Hidden by CSS everywhere else.
+  function _ensureMiniNext(bar) {
+    var play = bar.querySelector('#player-mini-play-btn');
+    if (!play || document.getElementById('player-mini-next-btn')) return;
+    var btn = document.createElement('button');
+    btn.id = 'player-mini-next-btn';
+    btn.className = 'player-btn player-mini-next';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Next');
+    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.5 6.2v11.6c0 .8.9 1.3 1.6.8L12 13.9v3.9c0 .8.9 1.3 1.6.8l7.9-5.8c.5-.4.5-1.2 0-1.6l-7.9-5.8c-.7-.5-1.6 0-1.6.8v3.9L5.1 5.4c-.7-.5-1.6 0-1.6.8Z"/></svg>';
+    btn.onclick = function (e) { e.stopPropagation(); if (typeof skipNext === 'function') skipNext(); };
+    play.parentNode.insertBefore(btn, play.nextSibling);
+  }
+
   function _applyPlayerSkin(tries) {
     var bar = document.querySelector('.player-bar');
     if (!bar) { if ((tries || 0) < 25) setTimeout(function () { _applyPlayerSkin((tries || 0) + 1); }, 400); return; }
     _ensureNPButton(bar);
+    _ensureMiniNext(bar);
     var controls = bar.querySelector('.player-controls');
     var vol = bar.querySelector('.player-volume');
     var mute = document.getElementById('player-mute-btn');
