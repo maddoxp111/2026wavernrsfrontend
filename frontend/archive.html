@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=3ea1ea609cf9">
-  <script src="/js/status-card.js?v=3ea1ea609cf9"></script>
-  <script src="/js/down.js?v=3ea1ea609cf9"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7234fe1080d3">
+  <script src="/js/status-card.js?v=7234fe1080d3"></script>
+  <script src="/js/down.js?v=7234fe1080d3"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=3ea1ea609cf9"></script>
-<script src="/js/layout.js?v=3ea1ea609cf9"></script>
-<script src="/js/player.js?v=3ea1ea609cf9"></script>
-<script src="/js/router.js?v=3ea1ea609cf9"></script>
+<script src="/js/api.js?v=7234fe1080d3"></script>
+<script src="/js/layout.js?v=7234fe1080d3"></script>
+<script src="/js/player.js?v=7234fe1080d3"></script>
+<script src="/js/router.js?v=7234fe1080d3"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -85,6 +85,12 @@ async function initArchive() {
       '<select id="arc-era" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;display:none;" onchange="arcEraChange()">' +
         '<option value="">Every era</option>' +
       '</select>' +
+      '<select id="arc-source" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSourceChange()" title="Where the release was found">' +
+        '<option value="">Every source</option>' +
+        '<option value="discord">From Discord</option>' +
+        '<option value="reddit">From Reddit</option>' +
+        '<option value="other">Other sources</option>' +
+      '</select>' +
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcSurprise()" title="Play a comp at random">Surprise me</button>' +
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcShuffleResults()" title="Queue a track from each comp shown">Shuffle these</button>' +
       '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
@@ -103,6 +109,12 @@ async function initArchive() {
   }
   var _e0 = _p0.get('era');
   if (_e0) _arcEra = _e0.trim();
+  var _s0 = _p0.get('source');
+  if (_s0 && ARC_SOURCES.indexOf(_s0) >= 0) {
+    _arcSource = _s0;
+    var ss = document.getElementById('arc-source');
+    if (ss) ss.value = _s0;
+  }
   var _v0 = _p0.get('view');
   if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers') _arcKind = _v0; }
   arcApplyView();
@@ -137,7 +149,8 @@ async function arcLoadMore() {
   try {
     var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
       (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '') +
-      (_arcEra ? '&era=' + encodeURIComponent(_arcEra) : '');
+      (_arcEra ? '&era=' + encodeURIComponent(_arcEra) : '') +
+      (_arcSource ? '&source=' + encodeURIComponent(_arcSource) : '');
     var page = null;
     try { page = await api(url); }
     catch (e) {
@@ -198,6 +211,19 @@ function arcSearchInput() {
 }
 
 var _arcEra = '';
+// Where a release came from: Discord, Reddit, or anywhere else it was pulled.
+var _arcSource = '';
+var ARC_SOURCES = ['discord', 'reddit', 'other'];
+function arcSourceChange() {
+  var sel = document.getElementById('arc-source');
+  _arcSource = sel && ARC_SOURCES.indexOf(sel.value) >= 0 ? sel.value : '';
+  try {
+    var u = new URL(location.href);
+    if (_arcSource) u.searchParams.set('source', _arcSource); else u.searchParams.delete('source');
+    history.replaceState(null, '', u.pathname + u.search);
+  } catch (_) {}
+  arcReload();
+}
 var _arcEras = [];
 async function loadArcEras() {
   try {
@@ -373,6 +399,8 @@ function arcApplyView() {
   var listView = _arcView !== 'artists' && !curated;
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = listView ? '' : 'none';
+  var srcEl = document.getElementById('arc-source');
+  if (srcEl) srcEl.style.display = listView ? '' : 'none';
   var eraEl = document.getElementById('arc-era');
   if (eraEl && curated) eraEl.style.display = 'none';
   else if (eraEl && _arcEras.length > 1) eraEl.style.display = '';
@@ -417,7 +445,20 @@ function renderTrackerCards() {
     return;
   }
   grid.className = 'wv-tracker-grid';
-  grid.innerHTML = _trackers.map(function (t) {
+  var combined = '<div class="wv-tracker-card wv-tracker-all" onclick="navigate(\'/tracker?t=all\')">' +
+      '<div class="wv-tracker-art wv-tracker-mosaic">' +
+        _trackers.slice(0, 4).map(function (t) {
+          return '<span style="background:' + coverGradient(t.name || '') + ';">' +
+            (t.cover ? '<img src="' + escHtml(t.cover) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
+        }).join('') +
+      '</div>' +
+      '<div class="wv-tracker-body">' +
+        '<div class="wv-tracker-name">All trackers</div>' +
+        '<div class="wv-tracker-blurb">Every tracker in one list, era by era. A comp on more than one shows once, marked with each tracker that has it.</div>' +
+        '<div class="wv-tracker-stats">' + _trackers.length + ' trackers combined</div>' +
+      '</div>' +
+    '</div>';
+  grid.innerHTML = combined + _trackers.map(function (t) {
     var total = t.entries || 0;
     return '<div class="wv-tracker-card" onclick="navigate(\'/tracker?t=' + encodeURIComponent(t.slug) + '\')">' +
       '<div class="wv-tracker-art" style="background:' + coverGradient(t.name || '') + ';">' +

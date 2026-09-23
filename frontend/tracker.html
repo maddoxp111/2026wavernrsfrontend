@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — tracker</title>
-  <link rel="stylesheet" href="/css/style.css?v=3ea1ea609cf9">
-  <script src="/js/status-card.js?v=3ea1ea609cf9"></script>
-  <script src="/js/down.js?v=3ea1ea609cf9"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7234fe1080d3">
+  <script src="/js/status-card.js?v=7234fe1080d3"></script>
+  <script src="/js/down.js?v=7234fe1080d3"></script>
 </head>
 <body>
 
@@ -64,10 +64,10 @@
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<script src="/js/api.js?v=3ea1ea609cf9"></script>
-<script src="/js/layout.js?v=3ea1ea609cf9"></script>
-<script src="/js/player.js?v=3ea1ea609cf9"></script>
-<script src="/js/router.js?v=3ea1ea609cf9"></script>
+<script src="/js/api.js?v=7234fe1080d3"></script>
+<script src="/js/layout.js?v=7234fe1080d3"></script>
+<script src="/js/player.js?v=7234fe1080d3"></script>
+<script src="/js/router.js?v=7234fe1080d3"></script>
 <script>
   var TK_TAGS = { '\u2b50': 'Every edit is amazing', '\ud83d\uddd1': 'Only the leak is bad', '\ud83e\udd16': 'Every edit used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
   function tkTagHint(tag) { var out = []; for (var k in TK_TAGS) if (tag.indexOf(k) >= 0) out.push(TK_TAGS[k]); return out.join(' · ') || 'Tracker tag'; }
@@ -85,6 +85,18 @@
     return kind === 'art' ? 'pieces of art' : one + 's';
   }
 
+  function listNames(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; }
+
+  // Badges for the trackers that list an entry. Only the combined view sends them.
+  function sourceBadges(x) {
+    if (!x.sources || !x.sources.length) return '';
+    return '<div class="tk-srcs">' + x.sources.map(function (src) {
+      var cls = 'tk-src' + (src.starred ? ' star' : '') + (src.tier === 'additional' ? ' add' : '');
+      var tip = src.short + (src.starred ? ' · starred' : '') + (src.tier === 'additional' ? ' · additional list' : '');
+      return '<span class="' + cls + '" title="' + esc(tip) + '">' + (src.starred ? '⭐ ' : '') + esc(src.short) + '</span>';
+    }).join('') + '</div>';
+  }
+
   function kindLabel(kind) { return kind === 'comp' ? 'Comps' : kind === 'edit' ? 'Edits' : 'Art'; }
 
   function header(t, kind) {
@@ -95,6 +107,8 @@
           '<div class="tk-sub">' + t.comps.toLocaleString() + ' comps · ' + t.edits.toLocaleString() + ' edits' +
             (t.art ? ' · ' + t.art.toLocaleString() + ' pieces of art' : '') +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
+          (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">Combines ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
+            '. A comp on more than one shows once, with a badge for each tracker that has it.</div>' : '') +
         '</div>' +
         '<div class="tk-tabs">' +
           '<button class="' + (kind === 'comp' ? 'on' : '') + '" onclick="tkKind(\'comp\')">Comps</button>' +
@@ -212,6 +226,7 @@
           '<div class="nm">' + (x.starred ? '⭐ ' : '') + (x.tag ? '<span title="' + esc(tkTagHint(x.tag)) + '" style="cursor:help;">' + esc(x.tag) + '</span> ' : '') + esc(x.name) + '</div>' +
           (x.creator ? '<div class="by">' + esc(x.creator) + '</div>' : '') +
           (x.description ? '<div class="ds">' + esc(x.description) + '</div>' : '') +
+          sourceBadges(x) +
         '</div>' +
         (a ? '<span class="tk-tag">' + (a.track_count || 0) + ' track' + (a.track_count === 1 ? '' : 's') + '</span>'
            : '<span class="tk-tag">search →</span>') +
