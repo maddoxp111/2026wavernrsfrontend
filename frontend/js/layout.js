@@ -1103,16 +1103,9 @@
   };
 
   // ── Site banners ──────────────────────────────────────────────
-  // Escaped first, then links are made clickable, then a close button that
-  // remembers the banner id so it stays gone for that browser.
-  var BANNER_SEEN = 'wv_banners_dismissed';
-
-  function _bannersDismissed() {
-    try {
-      var v = JSON.parse(localStorage.getItem(BANNER_SEEN) || '[]');
-      return Array.isArray(v) ? v : [];
-    } catch (_) { return []; }
-  }
+  // Escaped first, then links are made clickable. Banners can't be closed:
+  // they stay up until an admin takes them down.
+  try { localStorage.removeItem('wv_banners_dismissed'); } catch (_) {}
 
   function _bannerBody(message) {
     var esc = String(message || '')
@@ -1124,14 +1117,6 @@
     });
   }
 
-  window._dismissBanner = function (id) {
-    var seen = _bannersDismissed();
-    if (seen.indexOf(id) < 0) seen.push(id);
-    try { localStorage.setItem(BANNER_SEEN, JSON.stringify(seen.slice(-60))); } catch (_) {}
-    var el = document.querySelector('.site-banner[data-id="' + id + '"]');
-    if (el) el.remove();
-  };
-
   window.renderSiteBanners = async function() {
     var container = document.getElementById('wv-banners');
     if (!container) return;
@@ -1139,13 +1124,9 @@
       var res = await fetch(API_BASE + '/site/banners');
       var banners = await res.json();
       if (!banners || !banners.length) { container.innerHTML = ''; return; }
-      var seen = _bannersDismissed();
-      var show = banners.filter(function (b) { return seen.indexOf(b.id) < 0; });
-      container.innerHTML = show.map(function(b) {
-        return '<div class="site-banner ' + (b.type || 'info') + '" data-id="' + String(b.id || '') + '">' +
+      container.innerHTML = banners.map(function(b) {
+        return '<div class="site-banner ' + (b.type || 'info') + '">' +
           '<span class="site-banner-text">' + _bannerBody(b.message) + '</span>' +
-          (b.id ? '<button class="site-banner-x" aria-label="Dismiss" title="Dismiss" ' +
-            'onclick="window._dismissBanner(\'' + String(b.id).replace(/'/g, '') + '\')">&times;</button>' : '') +
           '</div>';
       }).join('');
     } catch (e) {
