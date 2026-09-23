@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs stream — playlist builder</title>
+  <link rel="stylesheet" href="/css/style.css?v=4a6db435285f">
+  <script src="/js/status-card.js?v=4a6db435285f"></script>
+  <script src="/js/down.js?v=4a6db435285f"></script>
+</head>
+<body>
+
+<div id="view">
+  <div id="pb-root" class="pb-root">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div><!-- /view -->
+
+<script src="/js/api.js?v=4a6db435285f"></script>
+<script src="/js/layout.js?v=4a6db435285f"></script>
+<script src="/js/player.js?v=4a6db435285f"></script>
+<script src="/js/router.js?v=4a6db435285f"></script>
+<script src="/js/playlists.js?v=4a6db435285f"></script>
+<script>
+(function () {
+  if (typeof initPlayer === 'function') initPlayer();
+
+  var root = document.getElementById('pb-root');
+  var params = new URLSearchParams(location.search);
+  var pl = null;
+  var tracks = [];
+  var inList = new Set();
+  var searchTimer = null, saveTimer = null, orderTimer = null, searchSeq = 0;
+  var lastResults = { tracks: [], albums: [] };
+  var dragFrom = -1;
+  var alive = true;
+
+  if (window._pageCleanup) window._pageCleanup.push(function () {
+    alive = false;
+    clearTimeout(searchTimer); clearTimeout(saveTimer); clearTimeout(orderTimer);
+    document.removeEventListener('keydown', onKey);
+  });
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function toast(msg, kind) { if (typeof wvToast === 'function') wvToast(msg, kind); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function setSaved(text) {
+    var el = document.getElementById('pb-saved');
+    if (el) el.textContent = text;
+  }
+
+  var ICON = {
+    plus: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7Z"/></svg>',
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8 9.5 17.8 19.5 6.6"/></svg>',
+    play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
+    x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.32 4.86 4.86 6.32 10.54 12l-5.68 5.68 1.46 1.46L12 13.46l5.68 5.68 1.46-1.46L13.46 12l5.68-5.68-1.46-1.46L12 10.54Z"/></svg>',
+    grip: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.7 2.7a8.05 8.05 0 1 0 4.9 14.44l3.62 3.62a1.4 1.4 0 0 0 1.98-1.98l-3.62-3.62A8.05 8.05 0 0 0 10.7 2.7Zm0 2.8a5.25 5.25 0 1 1 0 10.5 5.25 5.25 0 0 1 0-10.5Z"/></svg>',
+  };
+
+  function art(url, title) {
+    var bg = typeof coverGradient === 'function' ? coverGradient(title || '') : 'var(--surface-2)';
+    return '<span class="pb-art" style="background:' + bg + '">' +
+      (url ? '<img src="' + esc(url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>';
+  }
+
+  // ── Entry: signed out, no playlist yet, or editing one ──────────────────
+  async function boot() {
+    if (!isLoggedIn()) {
+      root.innerHTML =
+        '<div class="empty-state" style="padding:60px 0;">' +
+          '<div class="empty-title">Build a playlist</div>' +
+          '<div class="empty-desc">Pick songs from any comp or the archive, put them in order, add a cover and publish it for everyone on wavernrs.</div>' +
+          '<a href="/login?next=' + encodeURIComponent('/playlist-builder') + '" class="btn btn-primary" style="margin-top:18px;">Log in to start</a>' +
+        '</div>';
+      return;
+    }
+    var id = params.get('id');
+    if (!id) return renderStart();
+    try {
+      await loadPlaylist(id);
+    } catch (e) {
+      root.innerHTML = '<div class="empty-state" style="padding:60px 0;"><div class="empty-title">Could not open that playlist</div>' +
+        '<div class="empty-desc">' + esc(e && e.message || 'It may have been deleted, or it is not yours.') + '</div>' +
+        '<button class="btn btn-primary" style="margin-top:18px;" onclick="navigate(\'/playlist-builder\')">Start a new one</button></div>';
+    }
+  }
+
+  async function renderStart() {
+    var suggested = params.get('title') || '';
+    root.innerHTML =
+      '<div class="pb-start">' +
+        '<h1 class="wv-page-title">New playlist</h1>' +
+        '<p class="pb-start-sub">Give it a name. You can change it later.</p>' +
+        '<div class="pb-start-row">' +
+          '<input id="pb-new-title" class="wv-input pb-start-input" maxlength="120" placeholder="Late night Donda" value="' + esc(suggested) + '" onkeydown="if(event.key===\'Enter\')pbCreate()">' +
+          '<button class="wv-btn-play" onclick="pbCreate()">Start building</button>' +
+        '</div>' +
+        '<div id="pb-start-err" class="pb-err"></div>' +
+        '<div id="pb-mine"></div>' +
+      '</div>';
+    var inp = document.getElementById('pb-new-title');
+    if (inp) setTimeout(function () { inp.focus(); }, 30);
+    try {
+      var mine = await api('/playlists/mine');
+      if (!alive || !mine || !mine.length) return;
+      var el = document.getElementById('pb-mine');
+      if (!el) return;
+      el.innerHTML = '<div class="pb-mine-head">Or keep working on one of yours</div><div class="pb-mine-list">' +
+        mine.slice(0, 12).map(function (p) {
+          return '<button class="pb-mine-chip" onclick="navigate(\'/playlist-builder?id=' + p.id + '\')">' +
+            esc(p.title) + ' <span>' + plural(p.track_count || 0, 'song') + '</span></button>';
+        }).join('') + '</div>';
+    } catch (_) {}
+  }
+
+  window.pbCreate = async function () {
+    var inp = document.getElementById('pb-new-title');
+    var title = inp ? inp.value.trim() : '';
+    var err = document.getElementById('pb-start-err');
+    if (!title) { if (err) err.textContent = 'Give it a name first.'; if (inp) inp.focus(); return; }
+    try {
+      var created = await api('/playlists', { method: 'POST', body: JSON.stringify({ title: title, is_public: false }) });
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      history.replaceState(null, '', '/playlist-builder?id=' + created.id);
+      params = new URLSearchParams(location.search);
+      await loadPlaylist(created.id);
+    } catch (e) {
+      if (err) err.textContent = (e && e.message) || 'Could not create it.';
+    }
+  };
+
+  async function loadPlaylist(id) {
+    var data = await api('/playlists/' + encodeURIComponent(id));
+    var me = null;
+    try { me = await api('/auth/me'); } catch (_) {}
+    if (!me || !data.owner || me.id !== data.owner.id) throw new Error('You can only build your own playlists.');
+    if (!alive) return;
+    pl = data;
+    tracks = data.tracks || [];
+    inList = new Set(tracks.map(function (t) { return t.id; }));
+    document.title = 'Building ' + pl.title + ' — wavernrs';
+    renderShell();
+  }
+
+  // ── Layout ───────────────────────────────────────────────────────────────
+  function renderShell() {
+    root.innerHTML =
+      '<div class="pb-grid">' +
+        '<section class="pb-pane pb-find" aria-label="Add songs">' +
+          '<div class="pb-pane-head">Add songs</div>' +
+          '<label class="pb-search">' + ICON.search +
+            '<input id="pb-q" type="search" autocomplete="off" placeholder="Search songs and comps" oninput="pbSearch(this.value)">' +
+          '</label>' +
+          '<div id="pb-results" class="pb-results"></div>' +
+        '</section>' +
+        '<section class="pb-pane pb-list" aria-label="Your playlist">' +
+          '<div class="pb-head">' +
+            '<button class="pb-cover" id="pb-cover" onclick="pbPickCover()" title="Change cover">' +
+              '<span class="pb-cover-art" id="pb-cover-art"></span>' +
+              '<span class="pb-cover-hint">Change cover</span>' +
+            '</button>' +
+            '<input type="file" id="pb-cover-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onchange="pbUploadCover(this)">' +
+            '<div class="pb-head-body">' +
+              '<div class="wv-kind" id="pb-kind"></div>' +
+              '<input id="pb-title" class="pb-title" maxlength="120" value="' + esc(pl.title) + '" oninput="pbFitTitle();pbQueueSave()" aria-label="Playlist name">' +
+              '<textarea id="pb-desc" class="pb-desc" maxlength="1000" rows="2" placeholder="Add a description" oninput="pbQueueSave()" aria-label="Description">' + esc(pl.description || '') + '</textarea>' +
+              '<div class="pb-meta"><span id="pb-count"></span><span id="pb-saved" class="pb-saved"></span></div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pb-actions" id="pb-actions"></div>' +
+          '<div id="pb-publish-note" class="pb-note"></div>' +
+          '<ol id="pb-tracks" class="pb-tracks"></ol>' +
+        '</section>' +
+      '</div>';
+    document.addEventListener('keydown', onKey);
+    pbFitTitle();
+    renderHead();
+    renderTracks();
+    renderResults();
+  }
+
+  function onKey(e) {
+    if (e.key === '/' && document.activeElement && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+      var q = document.getElementById('pb-q');
+      if (q) { e.preventDefault(); e.stopImmediatePropagation(); q.focus(); }
+    }
+  }
+
+  function renderHead() {
+    var coverEl = document.getElementById('pb-cover-art');
+    if (coverEl) coverEl.innerHTML = window.wvPlaylistCover({
+      title: pl.title, cover_url: pl.cover_url,
+      mosaic: tracks.map(function (t) { return t.cover_url; }).filter(function (u, i, a) { return u && a.indexOf(u) === i; }).slice(0, 4),
+    });
+    var kind = document.getElementById('pb-kind');
+    if (kind) kind.textContent = pl.published_at ? 'Published playlist' : (pl.is_public ? 'Playlist · anyone with the link' : 'Playlist · private');
+    var count = document.getElementById('pb-count');
+    if (count) count.textContent = plural(tracks.length, 'song');
+
+    var need = (pl.min_to_publish || 3) - tracks.length;
+    var actions = document.getElementById('pb-actions');
+    if (actions) {
+      actions.innerHTML =
+        '<button class="wv-btn-play" onclick="pbPlay(0)"' + (tracks.length ? '' : ' disabled') + '>' + ICON.play + 'Play</button>' +
+        (pl.published_at
+          ? '<button class="wv-btn-ghost pb-published" onclick="pbUnpublish()" title="Take it off the site">' + ICON.check + 'Published</button>'
+          : '<button class="wv-btn-ghost pb-publish" onclick="pbPublish()"' + (need > 0 ? ' disabled' : '') + '>Publish to wavernrs</button>') +
+        '<button class="wv-btn-ghost" onclick="navigate(\'/playlist?id=' + pl.id + '\')">View page</button>' +
+        (pl.cover_url ? '<button class="wv-btn-ghost" onclick="pbRemoveCover()">Remove cover</button>' : '') +
+        '<button class="wv-btn-ghost pb-danger" onclick="pbDelete()">Delete</button>';
+    }
+    var note = document.getElementById('pb-publish-note');
+    if (note) {
+      note.textContent = pl.published_at
+        ? 'It\'s on the playlists page for everyone. Changes you make here show up there straight away.'
+        : (need > 0 ? 'Add ' + plural(need, 'more song') + ' to publish it.' : 'Publishing puts it on the playlists page for everyone to find.');
+    }
+  }
+
+  function renderTracks() {
+    var ol = document.getElementById('pb-tracks');
+    if (!ol) return;
+    if (!tracks.length) {
+      ol.innerHTML = '<li class="pb-empty">Your playlist is empty. Search on the ' +
+        (window.matchMedia('(max-width: 860px)').matches ? 'top' : 'left') + ' to add songs.</li>';
+      return;
+    }
+    ol.innerHTML = tracks.map(function (t, i) {
+      return '<li class="pb-row" draggable="true" data-i="' + i + '" ' +
+          'ondragstart="pbDragStart(event,' + i + ')" ondragover="pbDragOver(event,' + i + ')" ondragleave="pbDragLeave(event)" ondrop="pbDrop(event,' + i + ')" ondragend="pbDragEnd()">' +
+        '<span class="pb-grip" title="Drag to reorder">' + ICON.grip + '</span>' +
+        '<span class="pb-num">' + (i + 1) + '</span>' +
+        art(t.cover_url, t.title) +
+        '<button class="pb-row-main" onclick="pbPlay(' + i + ')" title="Play from here">' +
+          '<span class="pb-row-t">' + esc(t.title || 'Untitled') + '</span>' +
+          '<span class="pb-row-s">' + esc(t.artist_name || 'Unknown') + (t.album_title ? ' · ' + esc(t.album_title) : '') + '</span>' +
+        '</button>' +
+        '<span class="pb-move">' +
+          '<button class="pb-icon" onclick="pbMove(' + i + ',-1)" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="pb-icon" onclick="pbMove(' + i + ',1)" aria-label="Move down"' + (i === tracks.length - 1 ? ' disabled' : '') + '>↓</button>' +
+        '</span>' +
+        '<button class="pb-icon pb-remove" onclick="pbRemove(' + i + ')" aria-label="Remove" title="Remove">' + ICON.x + '</button>' +
+      '</li>';
+    }).join('');
+  }
+
+  // ── Search ───────────────────────────────────────────────────────────────
+  window.pbSearch = function (q) {
+    clearTimeout(searchTimer);
+    q = String(q || '').trim();
+    if (q.length < 2) { lastResults = { tracks: [], albums: [] }; renderResults(); return; }
+    var el = document.getElementById('pb-results');
+    if (el && !el.querySelector('.pb-searching')) el.insertAdjacentHTML('afterbegin', '<div class="pb-searching">Searching…</div>');
+    searchTimer = setTimeout(async function () {
+      var seq = ++searchSeq;
+      try {
+        var d = await api('/playlists/search-tracks?q=' + encodeURIComponent(q));
+        if (!alive || seq !== searchSeq) return;
+        lastResults = d || { tracks: [], albums: [] };
+        lastResults.q = q;
+      } catch (e) {
+        if (!alive || seq !== searchSeq) return;
+        lastResults = { tracks: [], albums: [], error: (e && e.message) || 'Search failed' };
+      }
+      renderResults();
+    }, 280);
+  };
+
+  function recentSuggestions() {
+    var list = [];
+    try { list = JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (_) {}
+    return (Array.isArray(list) ? list : []).slice(0, 12);
+  }
+
+  function resultTrackRow(t) {
+    var added = inList.has(t.id);
+    return '<div class="pb-res" data-id="' + esc(t.id) + '">' +
+      art(t.cover_url, t.title) +
+      '<button class="pb-res-main" onclick="pbPreview(\'' + esc(t.id) + '\')" title="Preview">' +
+        '<span class="pb-row-t">' + esc(t.title) + '</span>' +
+        '<span class="pb-row-s">' + esc(t.artist || 'Unknown') + (t.album ? ' · ' + esc(t.album.title) : '') + '</span>' +
+      '</button>' +
+      '<button class="pb-add' + (added ? ' is-added' : '') + '" onclick="pbAdd(\'' + esc(t.id) + '\')"' + (added ? ' disabled aria-label="Added"' : ' aria-label="Add"') + '>' +
+        (added ? ICON.check : ICON.plus) + '</button>' +
+    '</div>';
+  }
+
+  function resultAlbumRow(a) {
+    return '<div class="pb-res pb-res-album">' +
+      art(a.cover_url, a.title) +
+      '<button class="pb-res-main" onclick="navigate(\'/album?id=' + esc(a.id) + '\')" title="Open comp">' +
+        '<span class="pb-row-t">' + esc(a.title) + '</span>' +
+        '<span class="pb-row-s">Comp · ' + esc(a.creator || 'Unknown') + (a.track_count ? ' · ' + plural(a.track_count, 'song') : '') + '</span>' +
+      '</button>' +
+      '<button class="pb-addall" onclick="pbAddAlbum(\'' + esc(a.id) + '\', this)">Add all</button>' +
+    '</div>';
+  }
+
+  function renderResults() {
+    var el = document.getElementById('pb-results');
+    if (!el) return;
+    var q = (document.getElementById('pb-q') || {}).value || '';
+    if (q.trim().length < 2) {
+      var recent = recentSuggestions();
+      if (!recent.length) {
+        el.innerHTML = '<div class="pb-hint">Search for a song, like <b>Hurricane</b>, or a comp to add all of it at once.</div>';
+        return;
+      }
+      el.innerHTML = '<div class="pb-sec">Recently played</div>' + recent.map(function (r) {
+        if (r._type === 'album') return resultAlbumRow({ id: r.id, title: r.title, cover_url: r.cover_url, creator: r.artist_name, track_count: r.track_count || 0 });
+        return resultTrackRow({ id: r.id, title: r.title, artist: r.artist_name, cover_url: r.cover_url, ia_url: r.ia_url });
+      }).join('');
+      return;
+    }
+    if (lastResults.error) { el.innerHTML = '<div class="pb-hint">' + esc(lastResults.error) + '</div>'; return; }
+    if (lastResults.q !== q.trim()) return;
+    var html = '';
+    if (lastResults.tracks.length) html += '<div class="pb-sec">Songs</div>' + lastResults.tracks.map(resultTrackRow).join('');
+    if (lastResults.albums.length) html += '<div class="pb-sec">Comps</div>' + lastResults.albums.map(resultAlbumRow).join('');
+    el.innerHTML = html || '<div class="pb-hint">Nothing matches “' + esc(q) + '”.</div>';
+  }
+
+  function findResult(id) {
+    for (var i = 0; i < lastResults.tracks.length; i++) if (lastResults.tracks[i].id === id) return lastResults.tracks[i];
+    var recent = recentSuggestions();
+    for (var j = 0; j < recent.length; j++) if (recent[j].id === id) return { id: recent[j].id, title: recent[j].title, artist: recent[j].artist_name, cover_url: recent[j].cover_url, ia_url: recent[j].ia_url };
+    return null;
+  }
+
+  // ── Changes ──────────────────────────────────────────────────────────────
+  async function refreshFromServer() {
+    var data = await api('/playlists/' + pl.id);
+    if (!alive) return;
+    pl = data;
+    tracks = data.tracks || [];
+    inList = new Set(tracks.map(function (t) { return t.id; }));
+    renderHead(); renderTracks(); renderResults();
+  }
+
+  window.pbAdd = async function (id) {
+    if (inList.has(id)) return;
+    if (tracks.length >= (pl.max_tracks || 500)) { toast('This playlist is full', 'error'); return; }
+    inList.add(id);
+    var r = findResult(id);
+    if (r) tracks.push({ id: r.id, title: r.title, artist_name: r.artist, cover_url: r.cover_url, ia_url: r.ia_url, album_title: r.album ? r.album.title : null });
+    renderHead(); renderTracks(); renderResults();
+    setSaved('Saving…');
+    try {
+      await api('/playlists/' + pl.id + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: [id] }) });
+      await refreshFromServer();
+      setSaved('Saved');
+    } catch (e) {
+      toast((e && e.message) || 'Could not add that song', 'error');
+      await refreshFromServer().catch(function () {});
+      setSaved('');
+    }
+  };
+
+  window.pbAddAlbum = async function (albumId, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+    setSaved('Saving…');
+    try {
+      var r = await api('/playlists/' + pl.id + '/tracks', { method: 'POST', body: JSON.stringify({ album_id: albumId }) });
+      await refreshFromServer();
+      setSaved('Saved');
+      toast(r.added ? 'Added ' + plural(r.added, 'song') + (r.skipped ? ' (' + r.skipped + ' already in it)' : '') : 'Everything from that comp is already in it');
+    } catch (e) {
+      toast((e && e.message) || 'Could not add that comp', 'error');
+      setSaved('');
+      if (btn) { btn.disabled = false; btn.textContent = 'Add all'; }
+    }
+  };
+
+  window.pbRemove = async function (i) {
+    var t = tracks[i];
+    if (!t) return;
+    tracks.splice(i, 1);
+    inList.delete(t.id);
+    renderHead(); renderTracks(); renderResults();
+    setSaved('Saving…');
+    try {
+      await api('/playlists/' + pl.id + '/tracks/' + t.id, { method: 'DELETE' });
+      if (pl.published_at && tracks.length < (pl.min_to_publish || 3)) toast('It stays published, but it now has fewer than ' + (pl.min_to_publish || 3) + ' songs');
+      setSaved('Saved');
+    } catch (e) {
+      toast((e && e.message) || 'Could not remove it', 'error');
+      await refreshFromServer().catch(function () {});
+      setSaved('');
+    }
+  };
+
+  function queueOrderSave() {
+    clearTimeout(orderTimer);
+    setSaved('Saving…');
+    orderTimer = setTimeout(async function () {
+      try {
+        await api('/playlists/' + pl.id + '/order', { method: 'PUT', body: JSON.stringify({ track_ids: tracks.map(function (t) { return t.id; }) }) });
+        if (alive) setSaved('Saved');
+      } catch (e) {
+        toast((e && e.message) || 'Could not save the new order', 'error');
+        await refreshFromServer().catch(function () {});
+      }
+    }, 450);
+  }
+
+  function moveTo(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= tracks.length || to >= tracks.length) return;
+    var t = tracks.splice(from, 1)[0];
+    tracks.splice(to, 0, t);
+    renderTracks(); renderHead();
+    queueOrderSave();
+  }
+
+  window.pbMove = function (i, dir) { moveTo(i, i + dir); };
+  window.pbDragStart = function (e, i) {
+    dragFrom = i;
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); } catch (_) {}
+    var row = e.currentTarget; if (row) row.classList.add('is-dragging');
+  };
+  window.pbDragOver = function (e, i) {
+    if (dragFrom < 0) return;
+    e.preventDefault();
+    var row = e.currentTarget;
+    document.querySelectorAll('.pb-row.drop-above, .pb-row.drop-below').forEach(function (r) { if (r !== row) r.classList.remove('drop-above', 'drop-below'); });
+    if (row) { row.classList.toggle('drop-above', i < dragFrom); row.classList.toggle('drop-below', i > dragFrom); }
+  };
+  window.pbDragLeave = function (e) { var row = e.currentTarget; if (row) row.classList.remove('drop-above', 'drop-below'); };
+  window.pbDrop = function (e, i) { e.preventDefault(); var from = dragFrom; dragFrom = -1; moveTo(from, i); };
+  window.pbDragEnd = function () {
+    dragFrom = -1;
+    document.querySelectorAll('.pb-row').forEach(function (r) { r.classList.remove('is-dragging', 'drop-above', 'drop-below'); });
+  };
+
+  // Big type for a short name, stepping down so a long one stays readable.
+  window.pbFitTitle = function () {
+    var t = document.getElementById('pb-title');
+    if (!t) return;
+    t.style.fontSize = '';
+    var size = parseFloat(getComputedStyle(t).fontSize) || 36;
+    while (t.scrollWidth > t.clientWidth + 1 && size > 18) { size -= 2; t.style.fontSize = size + 'px'; }
+  };
+
+  window.pbQueueSave = function () {
+    clearTimeout(saveTimer);
+    setSaved('Saving…');
+    saveTimer = setTimeout(async function () {
+      var title = (document.getElementById('pb-title') || {}).value || '';
+      var desc = (document.getElementById('pb-desc') || {}).value || '';
+      if (!title.trim()) { setSaved('Needs a name'); return; }
+      try {
+        var upd = await api('/playlists/' + pl.id, { method: 'PUT', body: JSON.stringify({ title: title, description: desc }) });
+        if (!alive) return;
+        pl.title = upd.title; pl.description = upd.description;
+        if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+        setSaved('Saved');
+      } catch (e) {
+        setSaved('');
+        toast((e && e.message) || 'Could not save', 'error');
+      }
+    }, 600);
+  };
+
+  window.pbPublish = async function () {
+    try {
+      var r = await api('/playlists/' + pl.id + '/publish', { method: 'POST' });
+      pl.published_at = r.published_at; pl.is_public = true;
+      renderHead();
+      toast('Published. It\'s on the playlists page now.');
+    } catch (e) { toast((e && e.message) || 'Could not publish', 'error'); }
+  };
+
+  window.pbUnpublish = async function () {
+    if (!confirm('Take this playlist off the site? The link will still work for anyone who has it.')) return;
+    try {
+      await api('/playlists/' + pl.id + '/unpublish', { method: 'POST' });
+      pl.published_at = null;
+      renderHead();
+      toast('Unpublished');
+    } catch (e) { toast((e && e.message) || 'Could not unpublish', 'error'); }
+  };
+
+  window.pbDelete = async function () {
+    if (!confirm('Delete "' + pl.title + '"? This can\'t be undone.')) return;
+    try {
+      await api('/playlists/' + pl.id, { method: 'DELETE' });
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      navigate('/playlists');
+    } catch (e) { toast((e && e.message) || 'Could not delete it', 'error'); }
+  };
+
+  window.pbPickCover = function () { var f = document.getElementById('pb-cover-file'); if (f) f.click(); };
+  window.pbUploadCover = async function (input) {
+    var file = input && input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { toast('That image is over 8 MB', 'error'); input.value = ''; return; }
+    var fd = new FormData(); fd.append('cover', file);
+    setSaved('Uploading cover…');
+    try {
+      var r = await apiUpload('/playlists/' + pl.id + '/cover', fd);
+      pl.cover_url = r.cover_url;
+      renderHead();
+      setSaved('Saved');
+    } catch (e) { setSaved(''); toast((e && e.message) || 'Could not upload that image', 'error'); }
+    input.value = '';
+  };
+  window.pbRemoveCover = async function () {
+    try {
+      await api('/playlists/' + pl.id + '/cover', { method: 'DELETE' });
+      pl.cover_url = null;
+      renderHead();
+    } catch (e) { toast((e && e.message) || 'Could not remove the cover', 'error'); }
+  };
+
+  // ── Playback ─────────────────────────────────────────────────────────────
+  function asQueue(list) {
+    return list.filter(function (t) { return t.ia_url; }).map(function (t) {
+      return { id: t.id, title: t.title, artist_name: t.artist_name || t.artist, ia_url: t.ia_url, cover_url: t.cover_url };
+    });
+  }
+  window.pbPlay = function (i) {
+    var q = asQueue(tracks);
+    if (!q.length || typeof setPlayerQueue !== 'function') return;
+    var start = Math.max(0, q.findIndex(function (t) { return t.id === (tracks[i] || {}).id; }));
+    setPlayerQueue(q, start);
+    playQueueIndex(start);
+  };
+  window.pbPreview = function (id) {
+    var r = findResult(id);
+    if (!r || !r.ia_url || typeof setPlayerQueue !== 'function') return;
+    setPlayerQueue(asQueue([r]), 0);
+    playQueueIndex(0);
+  };
+
+  boot();
+})();
+</script>
+</body>
+</html>

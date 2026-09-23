@@ -92,14 +92,16 @@ async function playlist(id) {
   const d = await getJSON('/playlists/' + encodeURIComponent(id));
   const pl = (d && d.playlist) || d;
   if (!pl || !pl.title) return null;
+  const n = pl.track_count || (Array.isArray(pl.tracks) ? pl.tracks.length : 0);
+  const mosaic = Array.isArray(pl.mosaic) ? pl.mosaic.filter(Boolean) : [];
   return {
     title: pl.title + ' — playlist',
     description: pl.description || joinParts([
-      'Playlist',
-      pl.track_count ? pl.track_count + ' tracks' : null,
+      pl.owner && pl.owner.username ? 'Playlist by @' + pl.owner.username : 'Playlist',
+      n ? n + (n === 1 ? ' song' : ' songs') : null,
       'on wavernrs',
     ]),
-    image: pl.cover_url || FALLBACK_IMAGE,
+    image: pl.cover_url || mosaic[0] || FALLBACK_IMAGE,
     type: 'music.playlist',
   };
 }

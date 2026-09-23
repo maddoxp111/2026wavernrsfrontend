@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=e0bd8fd745d4">
-  <script src="/js/status-card.js?v=e0bd8fd745d4"></script>
-  <script src="/js/down.js?v=e0bd8fd745d4"></script>
+  <link rel="stylesheet" href="/css/style.css?v=4a6db435285f">
+  <script src="/js/status-card.js?v=4a6db435285f"></script>
+  <script src="/js/down.js?v=4a6db435285f"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=e0bd8fd745d4"></script>
-<script src="/js/layout.js?v=e0bd8fd745d4"></script>
-<script src="/js/player.js?v=e0bd8fd745d4"></script>
-<script src="/js/router.js?v=e0bd8fd745d4"></script>
-<script src="/js/playlists.js?v=e0bd8fd745d4"></script>
+<script src="/js/api.js?v=4a6db435285f"></script>
+<script src="/js/layout.js?v=4a6db435285f"></script>
+<script src="/js/player.js?v=4a6db435285f"></script>
+<script src="/js/router.js?v=4a6db435285f"></script>
+<script src="/js/playlists.js?v=4a6db435285f"></script>
 <script>
 initPlayer();
 
@@ -63,6 +63,7 @@ async function loadHome() {
       getBadgeData().catch(function() { return null; }),
       api('/archive/recent?limit=14').catch(function() { return null; }),
       api('/archive/eras').catch(function() { return null; }),
+      api('/playlists/published?limit=16').catch(function() { return null; }),
     ]);
     _home.recent = (r[0] && r[0].recent) || [];
     _home.trending = Array.isArray(r[1]) ? r[1] : [];
@@ -72,6 +73,7 @@ async function loadHome() {
     _badges = r[5] || _badges;
     _home.justAdded = (r[6] && r[6].items) || [];
     _home.eras = (r[7] && r[7].items) || [];
+    _home.playlists = (r[8] && r[8].items) || [];
     [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive, _home.justAdded).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
     renderHome();
   } catch (err) {
@@ -120,6 +122,7 @@ function renderHome() {
   html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts');
+  html += playlistRail();
   if (_homeFilter !== 'edits') html += rail('New comps', newComps, '/browse?tab=recent');
   if (_homeFilter !== 'comps') html += rail('New edits', newEdits, '/browse?tab=recent');
   html += chartsBlock();
@@ -169,6 +172,18 @@ function chip(k, label) {
   return '<span class="wv-chip' + (_homeFilter === k ? ' acc' : '') + '" onclick="setHomeFilter(\'' + k + '\')">' + label + '</span>';
 }
 window.setHomeFilter = function(k) { _homeFilter = k; renderHome(); };
+
+// Published playlists from the community. Hidden until there are any, and
+// under the Comps and Edits filters.
+function playlistRail() {
+  var items = _home.playlists || [];
+  if (!items.length || _homeFilter !== 'all' || typeof window.wvPlaylistCardHTML !== 'function') return '';
+  return '<div class="home-section">' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/playlists\')">Community playlists</h2>' +
+      '<button class="wv-see-all" onclick="navigate(\'/playlists\')">Show all</button></div>' +
+    '<div class="wv-rail">' + items.map(window.wvPlaylistCardHTML).join('') + '</div>' +
+  '</div>';
+}
 
 function rail(title, items, href) {
   if (!items || !items.length) return '';

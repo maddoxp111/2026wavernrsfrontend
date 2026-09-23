@@ -53,10 +53,11 @@
       'archive-artist': 'archive',
       dashboard: 'profile',
       adminpanel: 'admin',
+      'playlist-builder': 'playlists',
     };
     var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
       'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
-      'search', 'community', 'radio', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin'];
+      'search', 'community', 'radio', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists'];
     if (ALIAS[name]) return ALIAS[name];
     return KNOWN.indexOf(name) >= 0 ? name : '';
   }
@@ -151,9 +152,7 @@
       '<a class="sp-lib-title" href="/library" onclick="navigate(\'/library\');return false;">' +
         icon('list') + '<span>Your Library</span></a>' +
       '<div class="sp-lib-head-tools">' +
-        (isLoggedIn
-          ? '<button class="sp-create" onclick="navigate(\'/upload\')">' + icon('plus') + '<span>Create</span></button>'
-          : '<button class="sp-create" onclick="navigate(\'/register\')">' + icon('plus') + '<span>Create</span></button>') +
+        '<button class="sp-create" onclick="window.wvNewPlaylist()" title="New playlist">' + icon('plus') + '<span>Create</span></button>' +
         '<button class="sp-lib-icon" title="History" onclick="navigate(\'/history\')">' + icon('history') + '</button>' +
       '</div></div>';
 
@@ -1992,4 +1991,47 @@ document.addEventListener('DOMContentLoaded', function () {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
   else render();
+})();
+
+// ── Playlist covers and cards, shared by every page that shows playlists ──
+// A custom cover wins; otherwise the first four song covers make a 2x2
+// mosaic, one cover fills the square, and an empty playlist gets a gradient.
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  var NOTE = '<svg width="34%" height="34%" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>';
+
+  window.wvPlaylistCover = function (pl) {
+    pl = pl || {};
+    var img = function (u) { return '<img src="' + esc(u) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'; };
+    if (pl.cover_url) return '<div class="wv-plc">' + img(pl.cover_url) + '</div>';
+    var m = Array.isArray(pl.mosaic) ? pl.mosaic.filter(Boolean) : [];
+    if (m.length >= 4) return '<div class="wv-plc wv-plc-4">' + m.slice(0, 4).map(img).join('') + '</div>';
+    if (m.length) return '<div class="wv-plc">' + img(m[0]) + '</div>';
+    var bg = typeof coverGradient === 'function' ? coverGradient(pl.title || 'playlist') : 'var(--surface-2)';
+    return '<div class="wv-plc wv-plc-empty" style="background:' + bg + '">' + NOTE + '</div>';
+  };
+
+  window.wvPlaylistCardHTML = function (pl) {
+    pl = pl || {};
+    var href = '/playlist?id=' + encodeURIComponent(pl.id || '');
+    var n = pl.track_count || 0;
+    var who = pl.owner && pl.owner.username ? '@' + pl.owner.username : 'Playlist';
+    return '<a class="wv-comp-card wv-pl-pub" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' +
+      '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner">' + window.wvPlaylistCover(pl) + '</div></div>' +
+      '<div class="wv-comp-card-title">' + esc(pl.title || 'Untitled') + '</div>' +
+      '<div class="wv-comp-card-artist">' + esc(who) + ' · ' + n + (n === 1 ? ' song' : ' songs') + '</div>' +
+      '</a>';
+  };
+
+  // Starts an empty private playlist and opens it in the builder.
+  window.wvNewPlaylist = async function (title) {
+    if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+      location.href = '/login?next=' + encodeURIComponent('/playlist-builder');
+      return;
+    }
+    if (typeof navigate === 'function') navigate('/playlist-builder' + (title ? '?title=' + encodeURIComponent(title) : ''));
+    else location.href = '/playlist-builder';
+  };
 })();

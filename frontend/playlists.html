@@ -4,45 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — playlists</title>
-  <link rel="stylesheet" href="/css/style.css?v=e0bd8fd745d4">
-  <script src="/js/status-card.js?v=e0bd8fd745d4"></script>
-  <script src="/js/down.js?v=e0bd8fd745d4"></script>
+  <link rel="stylesheet" href="/css/style.css?v=4a6db435285f">
+  <script src="/js/status-card.js?v=4a6db435285f"></script>
+  <script src="/js/down.js?v=4a6db435285f"></script>
 </head>
 <body>
 
 <div id="view">
 
-  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap;">
-    <h1 class="wv-page-title">My Playlists</h1>
-    <button class="btn btn-primary" onclick="toggleNewForm()">
+  <div class="pls-head">
+    <h1 class="wv-page-title">Playlists</h1>
+    <button class="wv-btn-play" onclick="window.wvNewPlaylist()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-      New Playlist
+      New playlist
     </button>
   </div>
 
-  <!-- New playlist form -->
-  <div id="new-pl-form" style="display:none;margin-bottom:28px;">
-    <div class="card" style="padding:20px;max-width:480px;">
-      <div class="form-group">
-        <label>Name *</label>
-        <input type="text" id="new-pl-title" placeholder="Name your playlist…"
-          onkeydown="if(event.key==='Enter')createPlaylist()">
-      </div>
-      <div class="form-group">
-        <label>Description</label>
-        <textarea id="new-pl-desc" rows="2" placeholder="Optional…" style="min-height:42px;"></textarea>
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="new-pl-public" checked> Public
-        </label>
-      </div>
-      <div id="new-pl-alert" style="margin-top:8px;"></div>
-      <div style="display:flex;gap:10px;margin-top:14px;">
-        <button class="btn btn-primary" onclick="createPlaylist()">Create</button>
-        <button class="btn btn-secondary" onclick="toggleNewForm()">Cancel</button>
-      </div>
-    </div>
+  <div class="pls-tabs" role="tablist">
+    <button class="wv-chip" data-tab="community" role="tab" onclick="plsTab('community')">Community</button>
+    <button class="wv-chip" data-tab="mine" role="tab" onclick="plsTab('mine')">Yours</button>
+    <span class="pls-sort" id="pls-sort">
+      <button class="pls-sort-btn" data-sort="new" onclick="plsSort('new')">Newest</button>
+      <button class="pls-sort-btn" data-sort="popular" onclick="plsSort('popular')">Most played</button>
+    </span>
   </div>
 
   <div id="playlists-container">
@@ -51,120 +35,131 @@
 
 </div><!-- /view -->
 
-<script src="/js/api.js?v=e0bd8fd745d4"></script>
-<script src="/js/layout.js?v=e0bd8fd745d4"></script>
-<script src="/js/player.js?v=e0bd8fd745d4"></script>
-<script src="/js/router.js?v=e0bd8fd745d4"></script>
-<script src="/js/playlists.js?v=e0bd8fd745d4"></script>
+<script src="/js/api.js?v=4a6db435285f"></script>
+<script src="/js/layout.js?v=4a6db435285f"></script>
+<script src="/js/player.js?v=4a6db435285f"></script>
+<script src="/js/router.js?v=4a6db435285f"></script>
+<script src="/js/playlists.js?v=4a6db435285f"></script>
 <script>
-  initPlayer();
+(function () {
+  if (typeof initPlayer === 'function') initPlayer();
 
-  var playlists = [];
+  var params = new URLSearchParams(location.search);
+  var tab = params.get('tab') === 'mine' ? 'mine' : 'community';
+  var sort = params.get('sort') === 'popular' ? 'popular' : 'new';
+  var community = [], offset = 0, more = false, mine = null, seq = 0;
+  var PAGE = 24;
 
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function el() { return document.getElementById('playlists-container'); }
+
+  function syncControls() {
+    document.querySelectorAll('.pls-tabs .wv-chip').forEach(function (b) {
+      var on = b.getAttribute('data-tab') === tab;
+      b.classList.toggle('acc', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var so = document.getElementById('pls-sort');
+    if (so) so.style.display = tab === 'community' ? '' : 'none';
+    document.querySelectorAll('.pls-sort-btn').forEach(function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-sort') === sort);
+    });
+    var q = tab === 'mine' ? '?tab=mine' : (sort === 'popular' ? '?sort=popular' : '');
+    if (location.search !== q) history.replaceState(null, '', '/playlists' + q);
   }
 
-  async function loadPlaylists() {
-    var el = document.getElementById('playlists-container');
+  window.plsTab = function (t) { if (t === tab) return; tab = t; syncControls(); load(); };
+  window.plsSort = function (s) { if (s === sort) return; sort = s; community = []; offset = 0; syncControls(); load(); };
+
+  async function load() {
+    var my = ++seq;
+    if (tab === 'mine') return loadMine(my);
+    if (!community.length) el().innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var d = await api('/playlists/published?sort=' + sort + '&limit=' + PAGE + '&offset=' + offset);
+      if (my !== seq) return;
+      var items = (d && d.items) || [];
+      community = community.concat(items);
+      more = items.length === PAGE;
+      renderCommunity();
+    } catch (e) {
+      if (my !== seq) return;
+      el().innerHTML = '<div class="empty-state"><div class="empty-title">Could not load playlists</div></div>';
+    }
+  }
+
+  window.plsMore = function () { offset += PAGE; load(); };
+
+  function renderCommunity() {
+    if (!community.length) {
+      el().innerHTML = '<div class="empty-state">' +
+        '<div class="empty-title">No playlists published yet</div>' +
+        '<div class="empty-desc">Build one from any comp or the archive and publish it. It will show up here for everyone.</div>' +
+        '<button class="wv-btn-play" style="margin-top:16px;" onclick="window.wvNewPlaylist()">Build the first one</button>' +
+        '</div>';
+      return;
+    }
+    el().innerHTML = '<div class="wv-comp-grid pls-grid">' + community.map(window.wvPlaylistCardHTML).join('') + '</div>' +
+      (more ? '<div style="text-align:center;margin:22px 0;"><button class="wv-btn-ghost" onclick="plsMore()">Show more</button></div>' : '');
+  }
+
+  async function loadMine(my) {
     if (!isLoggedIn()) {
-      el.innerHTML = '<div class="empty-state">' +
-        '<div class="empty-icon">🎵</div>' +
-        '<div class="empty-title">Sign in to see your playlists</div>' +
-        '<a href="/login" class="btn btn-primary" style="margin-top:16px;">Log in</a>' +
+      el().innerHTML = '<div class="empty-state">' +
+        '<div class="empty-title">Log in to see your playlists</div>' +
+        '<a href="/login?next=' + encodeURIComponent('/playlists?tab=mine') + '" class="btn btn-primary" style="margin-top:16px;">Log in</a>' +
         '</div>';
       return;
     }
+    el().innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      playlists = await api('/playlists/mine');
-      // Background from logged-in user's profile picture.
-      if (typeof window.setPageBgImage === 'function') {
-        api('/auth/me').then(function(me) {
-          var img = me && me.artist && (me.artist.profile_image_url || me.artist.banner_url);
-          window.setPageBgImage(img || '');
-        }).catch(function() {});
-      }
-      renderPlaylists();
-    } catch (err) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-title">Could not load playlists</div></div>';
+      mine = await api('/playlists/mine');
+      if (my !== seq) return;
+      renderMine();
+    } catch (e) {
+      if (my !== seq) return;
+      el().innerHTML = '<div class="empty-state"><div class="empty-title">Could not load your playlists</div></div>';
     }
   }
 
-  function renderPlaylists() {
-    var el = document.getElementById('playlists-container');
-    if (!playlists.length) {
-      el.innerHTML = '<div class="empty-state">' +
-        '<div class="empty-icon">🎵</div>' +
-        '<div class="empty-title">No playlists yet</div>' +
-        '<div class="empty-desc">Create your first playlist above.</div>' +
+  function renderMine() {
+    if (!mine || !mine.length) {
+      el().innerHTML = '<div class="empty-state">' +
+        '<div class="empty-title">You haven\'t made one yet</div>' +
+        '<div class="empty-desc">Search any song or comp, drag them into order, add a cover and publish.</div>' +
+        '<button class="wv-btn-play" style="margin-top:16px;" onclick="window.wvNewPlaylist()">New playlist</button>' +
         '</div>';
       return;
     }
-
-    el.innerHTML = '<div class="wv-pl-grid">' +
-      playlists.map(function(p, i) {
-        var cnt = p.track_count || 0;
-        var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
-        return '<div class="wv-playlist-card" onclick="navigate(\'/playlist?id=' + p.id + '\')">' +
-          '<div class="wv-playlist-cover" style="background:' + coverGradient(p.title || '') + ';"></div>' +
-          '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
-          '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
-          '<div class="wv-pl-card-actions" onclick="event.stopPropagation()">' +
-            '<a href="/playlist?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigate(\'/playlist?id=' + p.id + '\');return false;">Open</a>' +
-            '<button onclick="deletePlaylist(\'' + p.id + '\',' + i + ')" class="btn btn-danger btn-sm">Delete</button>' +
-          '</div>' +
-        '</div>';
-      }).join('') +
-    '</div>';
+    el().innerHTML = '<div class="wv-comp-grid pls-grid">' + mine.map(function (p, i) {
+      var state = p.published_at ? 'Published' : (p.is_public ? 'Link only' : 'Private');
+      return '<div class="pls-mine-card">' +
+        window.wvPlaylistCardHTML(Object.assign({}, p, { owner: null })) +
+        '<div class="pls-mine-foot"><span class="pls-state' + (p.published_at ? ' is-pub' : '') + '">' + state + '</span>' +
+          '<button class="pls-link" onclick="navigate(\'/playlist-builder?id=' + p.id + '\')">Edit</button>' +
+          '<button class="pls-link pls-del" onclick="plsDelete(\'' + p.id + '\',' + i + ')">Delete</button>' +
+        '</div></div>';
+    }).join('') + '</div>';
   }
 
-  function toggleNewForm() {
-    var f = document.getElementById('new-pl-form');
-    if (!f) return;
-    var visible = f.style.display !== 'none';
-    f.style.display = visible ? 'none' : '';
-    if (!visible) setTimeout(function() {
-      var inp = document.getElementById('new-pl-title');
-      if (inp) inp.focus();
-    }, 50);
-  }
-
-  async function createPlaylist() {
-    var titleEl = document.getElementById('new-pl-title');
-    var title = titleEl ? titleEl.value.trim() : '';
-    if (!title) {
-      var a = document.getElementById('new-pl-alert');
-      if (a) a.innerHTML = '<span style="color:var(--red);">Name is required</span>';
-      return;
-    }
-    var desc = document.getElementById('new-pl-desc') ? document.getElementById('new-pl-desc').value.trim() : '';
-    var isPublic = document.getElementById('new-pl-public') ? document.getElementById('new-pl-public').checked : true;
-    try {
-      var pl = await api('/playlists', {
-        method: 'POST',
-        body: JSON.stringify({ title: title, description: desc || null, is_public: isPublic }),
-      });
-      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
-      navigate('/playlist?id=' + pl.id);
-    } catch (err) {
-      var a = document.getElementById('new-pl-alert');
-      if (a) a.innerHTML = '<span style="color:var(--red);">' + escHtml(err.message || 'Failed') + '</span>';
-    }
-  }
-
-  async function deletePlaylist(id, index) {
-    if (!confirm('Delete this playlist?')) return;
+  window.plsDelete = async function (id, i) {
+    var p = mine && mine[i];
+    if (!p || !confirm('Delete "' + p.title + '"? This can\'t be undone.')) return;
     try {
       await api('/playlists/' + id, { method: 'DELETE' });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
-      playlists.splice(index, 1);
-      renderPlaylists();
-    } catch (err) {
-      alert('Failed to delete: ' + (err.message || 'error'));
+      mine.splice(i, 1);
+      renderMine();
+    } catch (e) {
+      if (typeof wvToast === 'function') wvToast((e && e.message) || 'Could not delete it', 'error');
     }
-  }
+  };
 
-  loadPlaylists();
+  syncControls();
+  load();
+})();
 </script>
 </body>
 </html>
