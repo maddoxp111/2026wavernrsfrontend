@@ -178,6 +178,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
               </button>
+              <span id="staff-cover-slot"></span>
               ${album.origin && album.origin.url ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
               ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
             </div>
@@ -245,6 +246,9 @@
       </div>`;
 
     // Wire IA CDN retry on all cover images (they may take 1-3 min to propagate)
+    renderStaffCoverButton();
+    setTimeout(renderStaffCoverButton, 2000);
+    setTimeout(renderStaffCoverButton, 6000);
     if (typeof wireIACoverRetry === 'function') {
       document.querySelectorAll('#album-container img').forEach(wireIACoverRetry);
     }
@@ -265,6 +269,40 @@
       if (typeof wvToast === 'function') wvToast(albumLiked ? 'Added to your likes' : 'Removed from your likes');
     } catch (e) { if (typeof wvToast === 'function') wvToast('Could not save that like', 'error'); }
   }
+
+  // Staff can pull a missing cover from where the comp was imported from
+  // (Drive, MEGA, Samply), for archive comps that came in without one.
+  function renderStaffCoverButton() {
+    var slot = document.getElementById('staff-cover-slot');
+    if (!slot || slot.dataset.done) return;
+    var a = album;
+    var staff = false;
+    try { staff = sessionStorage.getItem('wv_is_mod') === 'true' || sessionStorage.getItem('wv_is_archiver') === 'true'; } catch (_) {}
+    if (!a || !a.is_archive || a.cover_url || !a.source_url || !staff) return;
+    slot.dataset.done = '1';
+    slot.innerHTML = '<button class="wv-btn-ghost" id="staff-cover-btn" onclick="fetchCoverFromSource()" title="Staff: look for a cover image where this comp was imported from">Get cover from source</button>';
+  }
+
+  window.fetchCoverFromSource = async function () {
+    var btn = document.getElementById('staff-cover-btn');
+    var a = album;
+    if (!btn || !a) return;
+    btn.disabled = true; btn.textContent = 'Looking…';
+    try {
+      await api('/import/source-cover-backfill', { method: 'POST', body: JSON.stringify({ album_ids: [a.id], limit: 1, all: true }) });
+      var st = null;
+      for (var i = 0; i < 60; i++) {
+        await new Promise(function (r) { setTimeout(r, 2000); });
+        st = await api('/import/source-cover-backfill');
+        if (!st || st.status !== 'running') break;
+      }
+      if (st && st.fixed > 0) { if (typeof wvToast === 'function') wvToast('Cover found'); location.reload(); return; }
+      btn.textContent = st && st.status === 'running' ? 'Still looking…' : 'No cover found at the source';
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Get cover from source';
+      if (typeof wvToast === 'function') wvToast((e && e.message) || 'Could not start that', 'error');
+    }
+  };
 
   function copyLink() {
     var url = window.location.href;
