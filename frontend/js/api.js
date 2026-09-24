@@ -119,6 +119,7 @@ async function _apiOnce(path, options, navGen) {
     _handleAuthFailure(res, data);
     const err = new Error(friendlyError(data.error, res.status));
     err.status = res.status;
+    err.data = data;
     throw err;
   }
   return data;

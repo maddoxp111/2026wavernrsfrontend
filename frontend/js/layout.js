@@ -91,6 +91,9 @@
     var t = _storedTheme();
     return (t === 'spotify' || t === 'apple') ? t : '';
   }
+  window.wvIsVerified = function () {
+    try { return localStorage.getItem('wv_verified') === '1' && !!localStorage.getItem('token'); } catch (_) { return false; }
+  };
   window._wvSkin = _skin;
 
   function _logoHTML() {
@@ -129,7 +132,7 @@
     html += '<a href="/stats" data-page="stats">Stats</a>';
     html += '<a href="/about" data-page="about">About</a>';
     html += '<a href="/status" data-page="status">Status</a>';
-    html += '<a href="https://discord.gg/E99x3jhtr8" target="_blank" rel="noopener">Discord</a>';
+    html += '<a href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener">Discord</a>';
     html += '</div>';
     return html;
   }
@@ -765,10 +768,11 @@
     light:   { label: 'White',        base: 'light', meta: '#f7f7fb' },
     spotify: { label: 'Spotify',      base: 'dark',  meta: '#000000' },
     apple:   { label: 'Apple Music',  base: 'light', meta: '#fafafa' },
+    wave:    { label: 'Waverunners',  base: 'dark',  meta: '#04111f', members: true },
     system:  { label: 'Match device', base: 'dark',  meta: '#0d0d15' },
   };
-  var SKINS = ['spotify', 'apple'];
-  var THEME_ORDER = ['dark', 'light', 'spotify', 'apple', 'system'];
+  var SKINS = ['spotify', 'apple', 'wave'];
+  var THEME_ORDER = ['dark', 'light', 'spotify', 'apple', 'wave', 'system'];
   window.WV_THEMES = THEMES;
   window.WV_THEME_ORDER = THEME_ORDER;
 
@@ -778,6 +782,7 @@
   function _storedTheme() {
     var v;
     try { v = localStorage.getItem('wv_theme'); } catch (_) { v = null; }
+    if (v && THEMES[v] && THEMES[v].members && !window.wvIsVerified()) return 'dark';
     return THEMES[v] ? v : 'dark';
   }
   // Every theme carries a light/dark base so the older .theme-light rules
@@ -806,7 +811,7 @@
     var add = _themeClasses(t);
     [document.body, document.getElementById('wv-root'), document.getElementById('wv-lockscreen')].forEach(function(el) {
       if (!el) return;
-      el.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple');
+      el.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple', 'theme-wave');
       add.forEach(function(c) { el.classList.add(c); });
     });
     var meta = document.querySelector('meta[name="theme-color"]');
@@ -816,6 +821,10 @@
   }
   window.setTheme = function(t) {
     t = THEMES[t] ? t : 'dark';
+    if (THEMES[t].members && !window.wvIsVerified()) {
+      if (typeof wvToast === 'function') wvToast('Waverunners is for Discord-verified members. Verify in Settings.');
+      t = 'dark';
+    }
     try { localStorage.setItem('wv_theme', t); } catch (_) {}
     _paintTheme(t === 'system' ? _systemTheme() : t);
     document.querySelectorAll('input[name="wv-theme"]').forEach(function(r) { r.checked = r.value === t; });
@@ -976,7 +985,7 @@
 
     // Also apply theme class to body so anything appended outside #wv-root
     // (modals, dropdown menus) also inherits the CSS custom properties
-    document.body.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple');
+    document.body.classList.remove('theme-light', 'theme-dark', 'theme-spotify', 'theme-apple', 'theme-wave');
     _themeClasses(theme).forEach(function (c) { document.body.classList.add(c); });
     document.body.style.margin = '0';
     document.body.style.padding = '0';
@@ -1781,6 +1790,7 @@ var WV_THEME_SWATCH = {
   light:   ['#f6f6f6', '#6d4ee0', '#c9c9cf'],
   spotify: ['#000000', '#1db954', '#181818'],
   apple:   ['#fafafa', '#fa233b', '#d8d8dc'],
+  wave:    ['#04111f', '#38bdf8', '#0b2a44'],
   system:  ['#121212', '#f6f6f6', '#a78bfa'],
 };
 
@@ -1804,7 +1814,7 @@ function _themeCardHTML(name) {
     '<span class="wv-theme-swatch" style="background:' + sw[0] + ';">' +
       '<i style="background:' + sw[1] + ';"></i><i style="background:' + sw[2] + ';"></i>' +
     '</span>' +
-    '<span class="wv-theme-meta"><b>' + def.label + '</b></span>' +
+    '<span class="wv-theme-meta"><b>' + def.label + '</b>' + (def.members ? '<small class="wv-theme-lock">' + (window.wvIsVerified && window.wvIsVerified() ? 'Members' : '🔒 Members') + '</small>' : '') + '</span>' +
     '<span class="wv-theme-tick" aria-hidden="true">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8 9.5 17.8 19.5 6.6"/></svg>' +
     '</span></button>';
@@ -1825,6 +1835,13 @@ window.wvOpenThemePicker = function () {
     var card = e.target.closest ? e.target.closest('.wv-theme-card') : null;
     if (card) {
       var name = card.getAttribute('data-theme');
+      var tdef = (window.WV_THEMES || {})[name];
+      if (tdef && tdef.members && !window.wvIsVerified()) {
+        wrap.remove();
+        if (typeof wvToast === 'function') wvToast('Waverunners is for Discord-verified members');
+        if (typeof navigate === 'function') navigate('/settings#discord-verify'); else location.href = '/settings#discord-verify';
+        return;
+      }
       window.setTheme(name);
       var def = (window.WV_THEMES || {})[name];
       if (typeof wvToast === 'function' && def) wvToast(def.label + ' theme');
@@ -2027,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<a class="wv-comp-card wv-pl-pub" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' +
       '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner">' + window.wvPlaylistCover(pl) + '</div></div>' +
       '<div class="wv-comp-card-title">' + esc(pl.title || 'Untitled') + '</div>' +
-      '<div class="wv-comp-card-artist">' + esc(who) + ' · ' + n + (n === 1 ? ' song' : ' songs') + '</div>' +
+      '<div class="wv-comp-card-artist"><span data-wv-uid="' + esc((pl.owner && pl.owner.id) || '') + '">' + esc(who) + '</span> · ' + n + (n === 1 ? ' song' : ' songs') + '</div>' +
       '</a>';
   };
 
@@ -2041,3 +2058,113 @@ document.addEventListener('DOMContentLoaded', function () {
     else location.href = '/playlist-builder';
   };
 })();
+
+// ── Discord verification: badges next to names, and the member perks ──────
+(function () {
+  var BADGE = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#5865F2" d="M12 1.5l2.6 1.9 3.2-.1 1 3 2.6 1.9-1 3 1 3-2.6 1.9-1 3-3.2-.1L12 22.5l-2.6-1.9-3.2.1-1-3-2.6-1.9 1-3-1-3 2.6-1.9 1-3 3.2.1z"/><path fill="#fff" d="M8.3 9.2c1-.5 2-.7 3.1-.8l.2.4c-.5 0-1.2.2-1.8.5l.2.3c.6-.2 1.3-.3 2-.3s1.4.1 2 .3l.2-.3c-.6-.3-1.3-.5-1.8-.5l.2-.4c1.1.1 2.1.3 3.1.8.9 1.5 1.3 3 1.2 4.6-.9.7-1.8 1.1-2.7 1.4l-.5-.8c.4-.1.8-.3 1.1-.5l-.3-.2c-1.6.8-3.6.8-5.2 0l-.3.2c.3.2.7.4 1.1.5l-.5.8c-.9-.3-1.8-.7-2.7-1.4-.1-1.6.3-3.1 1.2-4.6zm2.3 2.6c-.4 0-.7.4-.7.8s.3.8.7.8.7-.4.7-.8-.3-.8-.7-.8zm2.8 0c-.4 0-.7.4-.7.8s.3.8.7.8.7-.4.7-.8-.3-.8-.7-.8z"/></svg>';
+  var _known = {};
+  var _pending = {};
+  var _timer = null;
+
+  function apply(el, v) {
+    el.setAttribute('data-wv-dec', '1');
+    if (!v) return;
+    if (v.color && !el.hasAttribute('data-wv-nocolor')) el.style.color = v.color;
+    if (el.querySelector('.wv-vbadge')) return;
+    var b = document.createElement('span');
+    b.className = 'wv-vbadge';
+    b.title = 'Discord verified member';
+    b.setAttribute('aria-label', 'Discord verified');
+    b.innerHTML = BADGE;
+    el.appendChild(b);
+  }
+
+  function flush() {
+    _timer = null;
+    var ids = Object.keys(_pending);
+    _pending = {};
+    if (!ids.length || typeof api !== 'function') return;
+    for (var i = 0; i < ids.length; i += 100) {
+      (function (chunk) {
+        api('/verify/users?ids=' + chunk.join(',')).then(function (d) {
+          var users = (d && d.users) || {};
+          chunk.forEach(function (id) { _known[id] = users[id] || null; });
+          scan(document);
+        }).catch(function () { chunk.forEach(function (id) { if (!(id in _known)) _known[id] = null; }); });
+      })(ids.slice(i, i + 100));
+    }
+  }
+
+  function scan(root) {
+    var els = (root || document).querySelectorAll('[data-wv-uid]:not([data-wv-dec])');
+    for (var i = 0; i < els.length; i++) {
+      var id = els[i].getAttribute('data-wv-uid');
+      if (!/^[0-9a-f-]{36}$/i.test(id || '')) { els[i].setAttribute('data-wv-dec', '1'); continue; }
+      if (id in _known) apply(els[i], _known[id]);
+      else _pending[id] = 1;
+    }
+    if (Object.keys(_pending).length && !_timer) _timer = setTimeout(flush, 120);
+  }
+  window.wvDecorateUsers = scan;
+  window.wvForgetVerified = function (id) { if (id) delete _known[id]; else _known = {}; };
+
+  var _obsTimer = null;
+  function watch() {
+    try {
+      new MutationObserver(function () {
+        if (_obsTimer) return;
+        _obsTimer = setTimeout(function () { _obsTimer = null; scan(document); }, 150);
+      }).observe(document.body, { childList: true, subtree: true });
+    } catch (_) {}
+    scan(document);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watch);
+  else watch();
+
+  window.wvRefreshVerification = function (force) {
+    if (typeof api !== 'function') return Promise.resolve(null);
+    var token = null;
+    try { token = localStorage.getItem('token'); } catch (_) {}
+    if (!token) { try { localStorage.removeItem('wv_verified'); } catch (_) {} return Promise.resolve(null); }
+    var last = 0;
+    try { last = +(sessionStorage.getItem('wv_verified_at') || 0); } catch (_) {}
+    if (!force && Date.now() - last < 10 * 60 * 1000) return Promise.resolve(null);
+    return api('/verify/status').then(function (d) {
+      try {
+        sessionStorage.setItem('wv_verified_at', String(Date.now()));
+        if (d && d.verified) localStorage.setItem('wv_verified', '1'); else localStorage.removeItem('wv_verified');
+      } catch (_) {}
+      var raw = null; try { raw = localStorage.getItem('wv_theme'); } catch (_) {}
+      if (raw === 'wave' && typeof setTheme === 'function') setTheme(d && d.verified ? 'wave' : 'dark');
+      return d;
+    }).catch(function () { return null; });
+  };
+  setTimeout(function () { window.wvRefreshVerification(false); }, 1500);
+})();
+
+window.wvVerifyPrompt = function (reason) {
+  var old = document.getElementById('wv-verify-prompt');
+  if (old) old.remove();
+  var esc = typeof escHtml === 'function' ? escHtml : function (x) { return String(x); };
+  var wrap = document.createElement('div');
+  wrap.id = 'wv-verify-prompt';
+  wrap.className = 'wv-vp-wrap';
+  wrap.innerHTML = '<div class="wv-vp" role="dialog" aria-label="Discord verification">' +
+    '<div class="wv-vp-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg></div>' +
+    '<div class="wv-vp-title">Get Discord verified</div>' +
+    '<div class="wv-vp-body">' + esc(reason || 'This is a perk for members of the wavernrs Discord.') + ' Join the server, link your Discord in Settings, and it unlocks along with a verified badge, the Waverunners theme and a name colour.</div>' +
+    '<div class="wv-vp-actions">' +
+      '<a class="wv-pill" href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener" style="text-decoration:none;">Join the Discord</a>' +
+      '<button class="wv-pill brand" id="wv-vp-go">Verify in Settings</button>' +
+    '</div>' +
+    '<button class="wv-vp-x" aria-label="Close">×</button>' +
+  '</div>';
+  wrap.addEventListener('click', function (e) {
+    if (e.target === wrap || (e.target.closest && e.target.closest('.wv-vp-x'))) { wrap.remove(); return; }
+    if (e.target.closest && e.target.closest('#wv-vp-go')) {
+      wrap.remove();
+      if (typeof navigate === 'function') navigate('/settings#discord-verify'); else location.href = '/settings#discord-verify';
+    }
+  });
+  document.body.appendChild(wrap);
+};

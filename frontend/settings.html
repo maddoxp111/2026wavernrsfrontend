@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — settings</title>
-  <link rel="stylesheet" href="/css/style.css?v=dbd8a22eb174">
-  <script src="/js/status-card.js?v=dbd8a22eb174"></script>
-  <script src="/js/down.js?v=dbd8a22eb174"></script>
+  <link rel="stylesheet" href="/css/style.css?v=c6e1b1639bb8">
+  <script src="/js/status-card.js?v=c6e1b1639bb8"></script>
+  <script src="/js/down.js?v=c6e1b1639bb8"></script>
 </head>
 <body>
 
@@ -26,7 +26,36 @@
         <label class="wv-pill" style="cursor:pointer;"><input type="radio" name="wv-theme" value="light" style="width:auto;margin:0 4px 0 0;" onchange="setTheme('light')"> White</label>
         <label class="wv-pill" style="cursor:pointer;"><input type="radio" name="wv-theme" value="spotify" style="width:auto;margin:0 4px 0 0;" onchange="setTheme('spotify')"> Spotify</label>
         <label class="wv-pill" style="cursor:pointer;"><input type="radio" name="wv-theme" value="apple" style="width:auto;margin:0 4px 0 0;" onchange="setTheme('apple')"> Apple Music</label>
+        <label class="wv-pill" style="cursor:pointer;"><input type="radio" name="wv-theme" value="wave" style="width:auto;margin:0 4px 0 0;" onchange="wvPickWave(this)"> Waverunners <span id="dv-wave-lock" style="font-size:11px;color:var(--text-3);margin-left:4px;">🔒 members</span></label>
         <script>(function(){var p=(typeof getThemePref==='function')?getThemePref():'dark';var el=document.querySelector('input[name="wv-theme"][value="'+p+'"]');if(el)el.checked=true;})();</script>
+      </div>
+    </div>
+
+    <!-- Discord verification -->
+    <div class="wv-settings-section" id="discord-verify">
+      <div class="wv-settings-title">Discord verification</div>
+      <div class="wv-card dv-card" style="padding:22px 24px;">
+        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+          <div id="dv-icon" style="width:52px;height:52px;border-radius:14px;background:#5865F2;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div id="dv-title" style="font-size:16px;font-weight:700;color:var(--text);">Join the Discord, get verified</div>
+            <div id="dv-sub" style="font-size:13px;color:var(--text-2);margin-top:2px;">Loading…</div>
+          </div>
+          <div id="dv-actions" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="dv-perks" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:18px;">
+          <div class="dv-perk"><b>Verified badge</b><span>Shown next to your name on your profile, comments and playlists.</span></div>
+          <div class="dv-perk"><b>Waverunners theme</b><span>A members-only look for the whole site.</span></div>
+          <div class="dv-perk"><b>Name colour</b><span>Pick the colour your name shows in.</span></div>
+          <div class="dv-perk"><b>Publish playlists</b><span>Put your playlists on the Community page for everyone.</span></div>
+        </div>
+        <div id="dv-colors" style="display:none;margin-top:18px;">
+          <div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:8px;">Name colour</div>
+          <div id="dv-color-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+        </div>
+        <div id="dv-msg" style="margin-top:12px;font-size:13px;color:var(--text-2);"></div>
       </div>
     </div>
 
@@ -208,10 +237,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=dbd8a22eb174"></script>
-<script src="/js/layout.js?v=dbd8a22eb174"></script>
-<script src="/js/player.js?v=dbd8a22eb174"></script>
-<script src="/js/router.js?v=dbd8a22eb174"></script>
+<script src="/js/api.js?v=c6e1b1639bb8"></script>
+<script src="/js/layout.js?v=c6e1b1639bb8"></script>
+<script src="/js/player.js?v=c6e1b1639bb8"></script>
+<script src="/js/router.js?v=c6e1b1639bb8"></script>
 <script>
   if (!isLoggedIn()) navigate('/login');
   initPlayer();
@@ -294,6 +323,81 @@
       if (statusEl) statusEl.textContent = 'Upload failed';
     }
   }
+
+  window.wvPickWave = function (el) {
+    if (window.wvIsVerified && window.wvIsVerified()) { setTheme('wave'); return; }
+    if (el) el.checked = false;
+    var cur = document.querySelector('input[name="wv-theme"][value="' + ((typeof getThemePref === 'function') ? getThemePref() : 'dark') + '"]');
+    if (cur) cur.checked = true;
+    var m = document.getElementById('dv-msg'); if (m) m.textContent = 'Waverunners unlocks once you are verified.';
+    var box = document.getElementById('discord-verify'); if (box && box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  var _dv = null;
+  function _dvWhen(iso) { try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return ''; } }
+  function _dvRender() {
+    var d = _dv || {};
+    var srv = d.server || {};
+    var title = document.getElementById('dv-title'), sub = document.getElementById('dv-sub'), act = document.getElementById('dv-actions');
+    if (!title) return;
+    var members = srv.members ? srv.members.toLocaleString() + ' members' : '';
+    var join = '<a class="wv-pill" href="' + escHtml(srv.invite || 'https://discord.gg/j2jGmw5CZH') + '" target="_blank" rel="noopener" style="text-decoration:none;">Join the Discord</a>';
+    var lock = document.getElementById('dv-wave-lock'); if (lock) lock.style.display = d.verified ? 'none' : '';
+    if (d.verified) {
+      title.innerHTML = 'Discord verified <span class="wv-vbadge" style="margin-left:4px;"></span>';
+      var b = title.querySelector('.wv-vbadge'); var ref = document.querySelector('.wv-vbadge svg');
+      b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#5865F2"/><path d="M7 12.5l3.2 3.2L17 9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      sub.textContent = 'Member of ' + (srv.name || 'the Discord') + (d.verified_at ? ' · verified ' + _dvWhen(d.verified_at) : '') + '. Your perks are on.';
+      act.innerHTML = '<button class="wv-pill" onclick="wvDvCheck()">Check again</button>';
+    } else if (!d.linked) {
+      title.textContent = 'Join the Discord, get verified';
+      sub.textContent = 'Join ' + (srv.name || 'our Discord') + (members ? ' (' + members + ')' : '') + ', link your Discord account here, and the perks below switch on.';
+      act.innerHTML = join + '<button class="wv-pill brand" onclick="wvDvLink()">Link Discord</button>';
+    } else {
+      title.textContent = 'Almost there';
+      sub.textContent = 'Your Discord is linked. Join ' + (srv.name || 'the server') + (members ? ' (' + members + ')' : '') + ', then press Verify.';
+      act.innerHTML = join + '<button class="wv-pill brand" onclick="wvDvCheck()">Verify</button>';
+    }
+    var colors = document.getElementById('dv-colors');
+    if (colors) colors.style.display = d.verified ? '' : 'none';
+    var row = document.getElementById('dv-color-row');
+    if (row && d.verified) {
+      var cur = d.name_color || '';
+      row.innerHTML = '<button class="dv-swatch' + (!cur ? ' on' : '') + '" onclick="wvDvColor(\'\')" title="Default" style="background:var(--surface-3);">×</button>' +
+        (d.colors || []).map(function (c) { return '<button class="dv-swatch' + (cur === c ? ' on' : '') + '" onclick="wvDvColor(\'' + c + '\')" title="' + c + '" style="background:' + c + ';"></button>'; }).join('') +
+        '<span style="margin-left:8px;font-weight:700;font-size:14px;color:' + (cur || 'var(--text)') + ';">' + escHtml((typeof getUser === 'function' && getUser() && getUser().username) || 'you') + '</span>';
+    }
+  }
+  window.wvDvLoad = async function () {
+    try { _dv = await api('/verify/status'); } catch (e) { var s0 = document.getElementById('dv-sub'); if (s0) s0.textContent = 'Could not load your status.'; return; }
+    try { if (_dv.verified) localStorage.setItem('wv_verified', '1'); else localStorage.removeItem('wv_verified'); } catch (_) {}
+    _dvRender();
+    if (location.hash === '#discord-verify') { var box = document.getElementById('discord-verify'); if (box && box.scrollIntoView) box.scrollIntoView({ block: 'start' }); }
+  };
+  window.wvDvLink = function () {
+    if (typeof toggleConnection === 'function') toggleConnection('discord');
+  };
+  window.wvDvCheck = async function () {
+    var m = document.getElementById('dv-msg');
+    m.style.color = 'var(--text-2)'; m.textContent = 'Checking with Discord…';
+    try {
+      var r = await api('/verify/check', { method: 'POST', body: '{}' });
+      if (typeof wvForgetVerified === 'function') wvForgetVerified();
+      if (typeof wvRefreshVerification === 'function') await wvRefreshVerification(true);
+      await wvDvLoad();
+      m.textContent = r.verified ? 'You are verified. Welcome in!' : 'We could not find you in the server yet. Join it, then press Verify again.';
+      m.style.color = r.verified ? 'var(--green)' : 'var(--text-2)';
+    } catch (e) { m.textContent = e.message || 'That did not work.'; m.style.color = 'var(--red)'; }
+  };
+  window.wvDvColor = async function (c) {
+    var m = document.getElementById('dv-msg');
+    try {
+      var r = await api('/verify/color', { method: 'POST', body: JSON.stringify({ color: c || null }) });
+      _dv.name_color = r.name_color; _dvRender();
+      if (typeof wvForgetVerified === 'function') wvForgetVerified();
+      m.textContent = 'Name colour saved.'; m.style.color = 'var(--text-2)';
+    } catch (e) { m.textContent = e.message; m.style.color = 'var(--red)'; }
+  };
+  wvDvLoad();
 
   var _connections = { discord: false, google: false, reddit: false };
 
