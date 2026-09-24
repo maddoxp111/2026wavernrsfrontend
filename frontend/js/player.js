@@ -107,10 +107,11 @@ window.playCompById = async function (albumId, opts) {
     if (!meta) { try { meta = await api('/albums/' + albumId); } catch (_) { meta = null; } }
     const who = meta ? ((meta.is_archive && meta.archive_artist_name) || (meta.artists && meta.artists.display_name) || '') : '';
     const cover = meta ? meta.cover_url : null;
-    const queue = tracks.map(t => ({
-      id: t.id, title: t.title, ia_url: t.ia_url,
+    const credits = (typeof wvEditCredits === 'function' && wvEditCredits(tracks.map(t => t.title), who)) || [];
+    const queue = tracks.map((t, i) => ({
+      id: t.id, title: credits[i] ? credits[i].title : t.title, ia_url: t.ia_url,
       cover_url: t.cover_url || cover || null,
-      artist_name: who || (t.artists && t.artists.display_name) || '',
+      artist_name: credits[i] ? credits[i].credit : (who || (t.artists && t.artists.display_name) || ''),
       album_id: albumId, artist_id: t.artist_id || null,
       _album_id: albumId,
       _album_title: meta ? meta.title : null,
@@ -1159,7 +1160,8 @@ async function _autoplayNext() {
     _autoplaySeen.add(al.id);
     if (_autoplaySeen.size > 200) _autoplaySeen.clear();
     _fromQueue = false;
-    playTrack({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
+    const cr = (typeof wvAlbumCredits === 'function' && wvAlbumCredits(al) || {})[t.id];
+    playTrack({ id: t.id, title: cr ? cr.title : t.title, artist_name: cr ? cr.credit : (al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown')), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
     const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = 'Autoplay · ' + (al.title || '');
   } catch (_) {}
 }
@@ -1181,7 +1183,8 @@ async function _autoplayPicks(n) {
       const tracks = (al.album_tracks || []).map(x => x.tracks || x).filter(t => t && t.ia_url && !heard.has(t.id));
       if (!tracks.length) return;
       const t = tracks[Math.floor(Math.random() * tracks.length)];
-      pool.push({ id: t.id, title: t.title, artist_name: al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown'), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
+      const cr = (typeof wvAlbumCredits === 'function' && wvAlbumCredits(al) || {})[t.id];
+      pool.push({ id: t.id, title: cr ? cr.title : t.title, artist_name: cr ? cr.credit : (al.is_archive ? (al.archive_artist_name || 'Archive') : ((al.artists && al.artists.display_name) || 'Unknown')), ia_url: t.ia_url, cover_url: t.cover_url || al.cover_url || null, _album_id: al.id, _album_title: al.title, _album_cover: al.cover_url || null, _archive_artist: al.is_archive ? (al.archive_artist_name || 'Unknown') : null, _autoplay: true });
     });
   } catch (_) {}
   const seen = new Set(_pq.map(x => x.id)); if (currentTrack) seen.add(currentTrack.id);

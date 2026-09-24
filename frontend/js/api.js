@@ -423,6 +423,48 @@ function archiveArtistSlug(name) {
   return key ? key.replace(/ /g, '-') : '';
 }
 
+// A comp made of other people's edits is a playlist: the comp stays credited to
+// whoever put it together, and each track goes to the editor named at the end of
+// its title, e.g. "A Star Is Born (Santino)". Returns one {title, credit} per
+// track (null where a title names nobody), or null when the album is not a playlist.
+var _WV_NOT_CREDIT = /\b(feat|ft|featuring|prod|produced|remix|mix|edit|version|vers|demo|remaster|remastered|live|intro|outro|interlude|skit|instrumental|acapella|cappella|reprise|part|pt|leak|leaked|snippet|og|cdq|hq|lq|extended|clean|explicit|original|alt|alternate|session|sessions|freestyle|bonus|deluxe|cover|vocals?|stems?|reference|ref|throwaway|unreleased|verse|chorus|hook|beat|sample|slowed|reverb|sped|radio|album|single|ep|mixtape|edition|extension|pack|mode|cut|take|with|w\/|vs|v\d(?:\.\d+)?|\d{2,4})\b/i;
+var _WV_SOFT_WORD = /\b(and|the|of|a|in|on|to|my|your|me|you|it|is|x)\b/i;
+function wvEditCredits(titles, creator) {
+  var list = (titles || []).map(function (t) {
+    var m = String(t || '').match(/^(.*\S)\s*\(([^()]{2,120})\)\s*$/);
+    if (!m) return null;
+    var names = m[2].trim();
+    if (_WV_NOT_CREDIT.test(names)) return null;
+    if (!/[,&]/.test(names) && names.split(/\s+/).length > 4) return null;
+    if (_WV_SOFT_WORD.test(names.replace(/\s*(,|&)\s*/g, ' '))) {
+      var parts = names.split(/\s*(?:,|&)\s*/);
+      if (parts.length < 2 || parts.some(function (p) { return !p || p.split(/\s+/).length > 3; })) return null;
+    }
+    return { title: m[1].trim(), credit: names };
+  });
+  var hits = list.filter(Boolean);
+  if (hits.length < 3 || hits.length < list.length * 0.6) return null;
+  var ck = archiveArtistSlug(creator || '');
+  var others = hits.filter(function (h) { return archiveArtistSlug(h.credit) !== ck; });
+  if (!others.length) return null;
+  return list;
+}
+function wvAlbumCredits(album) {
+  if (!album) return null;
+  var ts = (album.album_tracks || album.tracks || []).map(function (x) { return (x && x.tracks) || x; });
+  var r = wvEditCredits(ts.map(function (t) { return t && t.title; }), album.archive_artist_name || (album.artists && album.artists.display_name));
+  if (!r) return null;
+  var map = {};
+  ts.forEach(function (t, i) { if (t && r[i]) map[t.id] = r[i]; });
+  return map;
+}
+function wvCreditLinks(credit) {
+  return String(credit || '').split(/(\s*(?:,|&)\s*)/).map(function (part) {
+    if (/^\s*(?:,|&)\s*$/.test(part) || !part.trim()) return escHtml(part);
+    return '<a href="/archive-artist?a=' + encodeURIComponent(archiveArtistSlug(part)) + '" onclick="event.stopPropagation()" style="color:inherit;">' + escHtml(part) + '</a>';
+  }).join('');
+}
+
 // Escape HTML helper (shared across pages)
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

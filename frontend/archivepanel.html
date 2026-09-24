@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=7234fe1080d3">
+  <link rel="stylesheet" href="/css/style.css?v=dbd8a22eb174">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -17,18 +17,18 @@
       #view h1 { font-size: 30px !important; }
     }
   </style>
-  <script src="/js/status-card.js?v=7234fe1080d3"></script>
-  <script src="/js/down.js?v=7234fe1080d3"></script>
+  <script src="/js/status-card.js?v=dbd8a22eb174"></script>
+  <script src="/js/down.js?v=dbd8a22eb174"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=7234fe1080d3"></script>
-<script src="/js/layout.js?v=7234fe1080d3"></script>
-<script src="/js/player.js?v=7234fe1080d3"></script>
-<script src="/js/router.js?v=7234fe1080d3"></script>
+<script src="/js/api.js?v=dbd8a22eb174"></script>
+<script src="/js/layout.js?v=dbd8a22eb174"></script>
+<script src="/js/player.js?v=dbd8a22eb174"></script>
+<script src="/js/router.js?v=dbd8a22eb174"></script>
 <script>
   initPlayer();
 
@@ -292,6 +292,17 @@
             '<div id="mg-cleanup-body"><div class="loading"><div class="spinner"></div></div></div>' +
           '</div>' +
           '<div id="mg-trackers" style="display:none;">' +
+            '<div class="wv-card" style="padding:14px;margin-bottom:16px;">' +
+              '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Refresh the UYT from its sheet</div>' +
+              '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Reads the Kanye Comps and Additional Comps tabs and shows what would change before anything is saved. Comps keep their album links, and any comp the sheet links to a wavernrs album is linked straight to it. Edits and art are left as they are.</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+                '<input id="mg-rf-url" class="wv-input" placeholder="Link to the UYT Google Sheet…" style="flex:1;min-width:240px;padding:8px 12px;font-size:13px;">' +
+                '<button id="mg-rf-check" class="wv-pill" style="font-size:12.5px;padding:7px 14px;" onclick="mgRefreshRun(false)">Check for changes</button>' +
+                '<button id="mg-rf-undo" class="wv-pill" style="font-size:12.5px;padding:7px 14px;display:none;" onclick="mgRefreshUndo()">Undo last refresh</button>' +
+              '</div>' +
+              '<div id="mg-rf-msg" style="font-size:12px;color:var(--text-3);margin-top:8px;"></div>' +
+              '<div id="mg-rf-out"></div>' +
+            '</div>' +
             '<div class="wv-card" style="padding:14px;margin-bottom:16px;">' +
               '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Trackers</div>' +
               '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">The picture and description each tracker shows on the archive page. For the cover, upload a file or paste an image link — either way we keep our own copy, so it cannot break later.</div>' +
@@ -1487,6 +1498,7 @@
     if (t === 'artists' && !_mg.artists.length) mgArtistsLoad();
     if (t === 'trackers' && !_mg.trackers) mgTrackersLoad();
     if (t === 'trackers' && !_mg.trackerList) mgCoversLoad();
+    if (t === 'trackers' && !_mg.rfLoaded) mgRefreshLoad();
     if (t === 'top' && !_mg.top) mgTopLoad();
     if (t === 'cleanup' && !_mg.cleanup) mgCleanupLoad();
   };
@@ -1649,6 +1661,70 @@
       await api('/archive-manage/top', { method: 'POST', body: JSON.stringify({ title: title, creator: creator, rank: at ? parseInt(at, 10) : undefined }) });
       await mgTopLoad();
     } catch (e) { alert(e.message); }
+  };
+
+  // ── Refresh the UYT from its sheet ────────────────────────────────────
+  function _rfWhen(iso) { try { return new Date(iso).toLocaleString(); } catch (e) { return iso; } }
+  window.mgRefreshLoad = async function(keepMsg) {
+    _mg.rfLoaded = true;
+    try {
+      var d = await api('/trackers/refresh/source');
+      var inp = document.getElementById('mg-rf-url');
+      if (inp && d.url && !inp.value) inp.value = d.url;
+      var u = document.getElementById('mg-rf-undo'); if (u) u.style.display = d.can_undo ? '' : 'none';
+      var m = document.getElementById('mg-rf-msg');
+      if (m && !keepMsg) m.textContent = d.last ? 'Last refreshed ' + _rfWhen(d.last) + '.' : 'Not refreshed from the sheet yet.';
+    } catch (e) {}
+  };
+  function _rfList(title, items, total, note) {
+    if (!items || !items.length) return '';
+    var n = Math.max(total || 0, items.length);
+    return '<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text);">' + escHtml(title) + ' (' + n + (n > items.length ? ', first ' + items.length + ' shown' : '') + (note ? ', ' + note : '') + ')</summary>' +
+      '<div style="display:flex;flex-direction:column;gap:3px;margin-top:6px;max-height:260px;overflow:auto;">' + items.map(function(x) {
+        return '<div style="font-size:12px;color:var(--text-2);">' + escHtml(x.era || '') + ' · <b style="color:var(--text);">' + escHtml(x.name || '') + '</b> · ' + escHtml(x.creator || '') +
+          (x.tier === 'additional' ? ' · additional' : '') + (x.album ? ' · <a href="/album?id=' + encodeURIComponent(x.album) + '" target="_blank" style="color:var(--brand);">album</a>' : '') + '</div>';
+      }).join('') + '</div></details>';
+  }
+  window.mgRefreshRun = async function(apply) {
+    var url = (document.getElementById('mg-rf-url') || {}).value || '';
+    var msg = document.getElementById('mg-rf-msg'), out = document.getElementById('mg-rf-out');
+    var btn = document.getElementById('mg-rf-check');
+    if (!url.trim()) { msg.textContent = 'Paste the link to the UYT sheet first.'; return; }
+    if (apply && !confirm('Replace the UYT comps on the site with what is in the sheet now? You can undo this afterwards.')) return;
+    msg.textContent = apply ? 'Saving…' : 'Reading the sheet…'; if (btn) btn.disabled = true;
+    try {
+      var d = await api('/trackers/refresh', { method: 'POST', body: JSON.stringify({ url: url.trim(), apply: !!apply }) });
+      var s = d.stats || {}, sm = d.samples || {};
+      msg.textContent = apply ? 'Done. The UYT now matches the sheet.' : 'Nothing is saved yet. Here is what would change:';
+      out.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--text-2);">' +
+          '<span><b style="color:var(--text);">' + (s.total || 0) + '</b> comps (' + (s.main || 0) + ' main, ' + (s.additional || 0) + ' additional), was ' + (s.before || 0) + '</span>' +
+          '<span><b style="color:var(--text);">' + (s.new_entries || 0) + '</b> new</span>' +
+          '<span><b style="color:var(--text);">' + (s.dropped || 0) + '</b> no longer on the sheet</span>' +
+          '<span><b style="color:var(--text);">' + ((s.linked_from_sheet || 0) + (s.linked_from_before || 0)) + '</b> linked to albums</span>' +
+          '<span><b style="color:var(--text);">' + (s.unlinked || 0) + '</b> without an album</span>' +
+          ((s.new_eras || []).length ? '<span>New eras: ' + escHtml(s.new_eras.join(', ')) + '</span>' : '') +
+        '</div>' +
+        _rfList('New on the sheet', sm.added, s.new_entries) +
+        _rfList('No longer on the sheet', sm.dropped, s.dropped) +
+        _rfList('No album on the site yet', sm.unlinked, s.unlinked, 'match these below after saving') +
+        (apply ? '' : '<button class="wv-pill" style="margin-top:12px;font-size:12.5px;padding:7px 16px;background:var(--brand);color:#fff;border-color:transparent;" onclick="mgRefreshRun(true)">Save these changes</button>');
+      if (apply) { _mg.trackers = null; mgTrackersLoad(); mgRefreshLoad(true); }
+    } catch (e) {
+      msg.textContent = e.message || 'That did not work.';
+    }
+    if (btn) btn.disabled = false;
+  };
+  window.mgRefreshUndo = async function() {
+    if (!confirm('Put the UYT back the way it was before the last refresh?')) return;
+    var msg = document.getElementById('mg-rf-msg');
+    msg.textContent = 'Undoing…';
+    try {
+      await api('/trackers/refresh/undo', { method: 'POST', body: '{}' });
+      document.getElementById('mg-rf-out').innerHTML = '';
+      _mg.trackers = null; mgTrackersLoad();
+      await mgRefreshLoad();
+      msg.textContent = 'Back to how it was before the last refresh.';
+    } catch (e) { msg.textContent = e.message || 'That did not work.'; }
   };
 
   // ── Tracker hand-matching ─────────────────────────────────────────────
