@@ -2168,3 +2168,39 @@ window.wvVerifyPrompt = function (reason) {
   });
   document.body.appendChild(wrap);
 };
+
+// Asked once per browser, new or returning: join the Discord, or not now.
+(function () {
+  var KEY = 'wv_discord_invite_seen_v1';
+  function seen() { try { return localStorage.getItem(KEY) === '1'; } catch (_) { return true; } }
+  function mark() { try { localStorage.setItem(KEY, '1'); } catch (_) {} }
+  function show() {
+    if (seen() || document.getElementById('wv-join-pop')) return;
+    if (window.wvIsVerified && window.wvIsVerified()) { mark(); return; }
+    if (/bot|crawl|spider|slurp|headless|lighthouse/i.test(navigator.userAgent || '')) return;
+    if (document.getElementById('wv-lockscreen') && getComputedStyle(document.getElementById('wv-lockscreen')).display !== 'none') return;
+    if (document.getElementById('wv-verify-prompt')) return;
+    mark();
+    var wrap = document.createElement('div');
+    wrap.id = 'wv-join-pop';
+    wrap.className = 'wv-vp-wrap';
+    wrap.innerHTML = '<div class="wv-vp" role="dialog" aria-modal="true" aria-label="Join the Discord server">' +
+      '<div class="wv-vp-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg></div>' +
+      '<div class="wv-vp-title">Join the Discord server</div>' +
+      '<div class="wv-vp-body">Hang out with the wavernrs community, hear about new comps first, and get Discord verified for member perks.</div>' +
+      '<a class="wv-join-btn" id="wv-join-go" href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener">Join</a>' +
+      '<button class="wv-join-later" id="wv-join-later">Not now</button>' +
+    '</div>';
+    function close() { wrap.remove(); document.removeEventListener('keydown', onKey); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    wrap.addEventListener('click', function (e) {
+      if (e.target === wrap || e.target.id === 'wv-join-later') { close(); return; }
+      if (e.target.id === 'wv-join-go') setTimeout(close, 50);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(wrap);
+  }
+  function later() { setTimeout(show, 1500); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', later);
+  else later();
+})();
