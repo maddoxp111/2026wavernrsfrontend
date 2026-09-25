@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=dc69b50856aa">
-  <script src="/js/status-card.js?v=dc69b50856aa"></script>
-  <script src="/js/down.js?v=dc69b50856aa"></script>
+  <link rel="stylesheet" href="/css/style.css?v=fe5854d9373a">
+  <script src="/js/status-card.js?v=fe5854d9373a"></script>
+  <script src="/js/down.js?v=fe5854d9373a"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=dc69b50856aa"></script>
-<script src="/js/layout.js?v=dc69b50856aa"></script>
-<script src="/js/player.js?v=dc69b50856aa"></script>
-<script src="/js/router.js?v=dc69b50856aa"></script>
+<script src="/js/api.js?v=fe5854d9373a"></script>
+<script src="/js/layout.js?v=fe5854d9373a"></script>
+<script src="/js/player.js?v=fe5854d9373a"></script>
+<script src="/js/router.js?v=fe5854d9373a"></script>
 <script>
 initPlayer();
 
@@ -72,6 +72,7 @@ async function initArchiveArtist() {
       '</div>' +
       '<div class="wv-hero-body">' +
         '<div class="wv-kind">Archived artist</div>' +
+        '<div id="aa-otw" style="margin:0 0 4px;"></div>' +
         '<h1 class="wv-hero-title">' + escHtml(data.name) + '</h1>' +
         '<div class="wv-hero-sub">' + data.comp_count + ' release' + (data.comp_count !== 1 ? 's' : '') +
           (data.edit_count ? ' · ' + data.edit_count.toLocaleString() + ' single edit' + (data.edit_count !== 1 ? 's' : '') : '') +
@@ -103,6 +104,14 @@ async function initArchiveArtist() {
     '<div id="aa-edits" style="display:none;margin-top:8px;"><h2 class="wv-sec-title" style="margin:4px 0 12px;">Edits</h2><div class="wv-tile-grid" id="aa-grid-edits"></div></div>' +
     '<div id="aa-empty"></div>';
 
+  api('/awards/editor?name=' + encodeURIComponent(data.name)).then(function (d) {
+    var box = document.getElementById('aa-otw');
+    if (!box || !d || !d.awards || !d.awards.length) return;
+    box.innerHTML = d.awards.map(function (x) {
+      var wk = new Date(x.week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      return '<span class="wv-otw-badge wv-otw-yeditor">🏆 Yeditor of the Week · ' + escHtml(wk) + '</span>';
+    }).join('');
+  }).catch(function () {});
   renderComps();
 }
 

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=dc69b50856aa">
-  <script src="/js/status-card.js?v=dc69b50856aa"></script>
-  <script src="/js/down.js?v=dc69b50856aa"></script>
+  <link rel="stylesheet" href="/css/style.css?v=fe5854d9373a">
+  <script src="/js/status-card.js?v=fe5854d9373a"></script>
+  <script src="/js/down.js?v=fe5854d9373a"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=dc69b50856aa"></script>
-<script src="/js/layout.js?v=dc69b50856aa"></script>
-<script src="/js/player.js?v=dc69b50856aa"></script>
-<script src="/js/router.js?v=dc69b50856aa"></script>
-<script src="/js/playlists.js?v=dc69b50856aa"></script>
+<script src="/js/api.js?v=fe5854d9373a"></script>
+<script src="/js/layout.js?v=fe5854d9373a"></script>
+<script src="/js/player.js?v=fe5854d9373a"></script>
+<script src="/js/router.js?v=fe5854d9373a"></script>
+<script src="/js/playlists.js?v=fe5854d9373a"></script>
 <script>
 initPlayer();
 
@@ -64,6 +64,7 @@ async function loadHome() {
       api('/archive/recent?limit=14').catch(function() { return null; }),
       api('/archive/eras').catch(function() { return null; }),
       api('/playlists/published?limit=16').catch(function() { return null; }),
+      api('/awards/current').catch(function() { return null; }),
     ]);
     _home.recent = (r[0] && r[0].recent) || [];
     _home.trending = Array.isArray(r[1]) ? r[1] : [];
@@ -74,6 +75,7 @@ async function loadHome() {
     _home.justAdded = (r[6] && r[6].items) || [];
     _home.eras = (r[7] && r[7].items) || [];
     _home.playlists = (r[8] && r[8].items) || [];
+    _home.awards = (r[9] && r[9].picks) || [];
     [].concat(_home.recent, _home.trending, _home.highlighted, _home.archive, _home.justAdded).forEach(function(i) { if (i && i.id) _allItems[i.id] = i; });
     renderHome();
   } catch (err) {
@@ -119,6 +121,7 @@ function renderHome() {
 
   var mostPlayed = (typeof getPlayTally === 'function' ? getPlayTally({ days: 30, min: 2, limit: 12 }) : [])
     .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
+  html += awardsBlock();
   html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts');
@@ -172,6 +175,36 @@ function chip(k, label) {
   return '<span class="wv-chip' + (_homeFilter === k ? ' acc' : '') + '" onclick="setHomeFilter(\'' + k + '\')">' + label + '</span>';
 }
 window.setHomeFilter = function(k) { _homeFilter = k; renderHome(); };
+
+// Staff picks for the week: Edit, Comp, Album and Yeditor of the Week.
+var AWARD_SHORT = { edit: 'EOTW', comp: 'COTW', album: 'AOTW', yeditor: 'YOTW' };
+function awardsBlock() {
+  var picks = (_home.awards || []).filter(function(p) { return p.album || p.editor; });
+  if (!picks.length || _homeFilter !== 'all') return '';
+  var wk = picks[0].week ? new Date(picks[0].week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  return '<div class="home-section">' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title">This week\'s picks</h2>' + (wk ? '<span class="wv-otw-week">Week of ' + escHtml(wk) + '</span>' : '') + '</div>' +
+    '<div class="wv-otw-grid">' + picks.map(function(p) {
+      var chip = '<span class="wv-otw-chip wv-otw-' + p.category + '">' + escHtml(AWARD_SHORT[p.category] || '') + '</span>';
+      if (p.editor) {
+        var slug = typeof archiveArtistSlug === 'function' ? archiveArtistSlug(p.editor.name) : encodeURIComponent(p.editor.name);
+        var href = '/archive-artist?a=' + encodeURIComponent(slug);
+        return '<a class="wv-otw-card" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' +
+          '<div class="wv-otw-art wv-otw-person" style="background:' + coverGradient(p.editor.name) + ';"><span>' + escHtml((p.editor.name || '?').charAt(0).toUpperCase()) + '</span></div>' +
+          '<div class="wv-otw-body">' + chip + '<div class="wv-otw-label">' + escHtml(p.label) + '</div>' +
+          '<div class="wv-otw-title">' + escHtml(p.editor.name) + '</div>' +
+          (p.note ? '<div class="wv-otw-note">' + escHtml(p.note) + '</div>' : '') + '</div></a>';
+      }
+      var a = p.album, href2 = '/album?id=' + encodeURIComponent(a.id);
+      return '<a class="wv-otw-card" href="' + href2 + '" onclick="navigate(\'' + href2 + '\');return false;">' +
+        '<div class="wv-otw-art" style="background:' + coverGradient(a.title || '') + ';">' + (a.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.cover_url, 300) : a.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="wv-otw-body">' + chip + '<div class="wv-otw-label">' + escHtml(p.label) + '</div>' +
+        '<div class="wv-otw-title">' + escHtml(a.title || '') + '</div>' +
+        '<div class="wv-otw-sub">' + escHtml(a.creator || '') + '</div>' +
+        (p.note ? '<div class="wv-otw-note">' + escHtml(p.note) + '</div>' : '') + '</div></a>';
+    }).join('') + '</div>' +
+  '</div>';
+}
 
 // Published playlists from the community. Hidden until there are any, and
 // under the Comps and Edits filters.

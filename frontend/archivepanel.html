@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=dc69b50856aa">
+  <link rel="stylesheet" href="/css/style.css?v=fe5854d9373a">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -17,18 +17,18 @@
       #view h1 { font-size: 30px !important; }
     }
   </style>
-  <script src="/js/status-card.js?v=dc69b50856aa"></script>
-  <script src="/js/down.js?v=dc69b50856aa"></script>
+  <script src="/js/status-card.js?v=fe5854d9373a"></script>
+  <script src="/js/down.js?v=fe5854d9373a"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=dc69b50856aa"></script>
-<script src="/js/layout.js?v=dc69b50856aa"></script>
-<script src="/js/player.js?v=dc69b50856aa"></script>
-<script src="/js/router.js?v=dc69b50856aa"></script>
+<script src="/js/api.js?v=fe5854d9373a"></script>
+<script src="/js/layout.js?v=fe5854d9373a"></script>
+<script src="/js/player.js?v=fe5854d9373a"></script>
+<script src="/js/router.js?v=fe5854d9373a"></script>
 <script>
   initPlayer();
 
@@ -256,7 +256,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, profile it belongs to, description, cover, tracks. Move comps between profiles, merge comps, rename and merge profiles. Select several for bulk actions.</div></div>' +
-            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button><button id="mg-tab-top" onclick="mgTab(\'top\')">Top 150</button><button id="mg-tab-cleanup" onclick="mgTab(\'cleanup\')">Cleanup</button>' +
+            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button><button id="mg-tab-top" onclick="mgTab(\'top\')">Top 150</button><button id="mg-tab-otw" onclick="mgTab(\'otw\')">Of the Week</button><button id="mg-tab-cleanup" onclick="mgTab(\'cleanup\')">Cleanup</button>' +
             '</div>' +
           '</div>' +
           '<div id="mg-comps">' +
@@ -314,6 +314,22 @@
               '<span id="mg-tcount" style="font-size:12px;color:var(--text-3);"></span>' +
             '</div>' +
             '<div id="mg-tlist" style="display:flex;flex-direction:column;gap:6px;"></div>' +
+          '</div>' +
+          '<div id="mg-otw" style="display:none;">' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">This week\'s picks. Each list is built from the last 7 days on the site: listeners, plays and likes, with a boost for new releases. Recent winners are left out. Pick one per award; it goes up on the home page and gets a badge.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">' +
+              '<div class="wv-seg" id="mg-otw-cats"><button class="on" data-c="edit" onclick="mgOtwCat(\'edit\')">Edit</button><button data-c="comp" onclick="mgOtwCat(\'comp\')">Comp</button><button data-c="album" onclick="mgOtwCat(\'album\')">Album</button><button data-c="yeditor" onclick="mgOtwCat(\'yeditor\')">Yeditor</button></div>' +
+              '<span id="mg-otw-week" style="font-size:12px;color:var(--text-3);"></span>' +
+            '</div>' +
+            '<div id="mg-otw-pick"></div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 10px;">' +
+              '<input id="mg-otw-note" class="wv-input" maxlength="300" placeholder="Optional note shown with the pick, e.g. why it won…" style="flex:1;min-width:220px;padding:8px 12px;font-size:13px;">' +
+            '</div>' +
+            '<div id="mg-otw-list" style="display:flex;flex-direction:column;gap:6px;"></div>' +
+            '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+              '<input id="mg-otw-manual" class="wv-input" placeholder="Or paste an album link or ID (or an editor name for Yeditor)…" style="flex:1;min-width:240px;padding:8px 12px;font-size:13px;">' +
+              '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;" onclick="mgOtwManual()">Pick this</button>' +
+            '</div>' +
           '</div>' +
           '<div id="mg-top" style="display:none;">' +
             '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">The ranked list on the archive page. Match an entry to a comp, fix the listed title or creator, move it, or drop it. Rank numbers renumber themselves.</div>' +
@@ -1489,7 +1505,7 @@
   var _mg = { items: [], total: 0, sel: {}, timer: null, artists: [], asel: {}, atimer: null, editing: null };
   function _mgCover(u) { return u ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(u, 48) : u) + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;" loading="lazy">' : '<div style="width:36px;height:36px;border-radius:6px;background:var(--surface-3);flex-shrink:0;"></div>'; }
   window.mgTab = function(t) {
-    ['comps', 'artists', 'trackers', 'top', 'cleanup'].forEach(function(x) {
+    ['comps', 'artists', 'trackers', 'top', 'otw', 'cleanup'].forEach(function(x) {
       var pane = document.getElementById('mg-' + x);
       if (pane) pane.style.display = t === x ? '' : 'none';
       var btn = document.getElementById('mg-tab-' + x);
@@ -1501,6 +1517,95 @@
     if (t === 'trackers' && !_mg.rfLoaded) mgRefreshLoad();
     if (t === 'top' && !_mg.top) mgTopLoad();
     if (t === 'cleanup' && !_mg.cleanup) mgCleanupLoad();
+    if (t === 'otw') mgOtwLoad();
+  };
+
+  // ── Of the Week picks ────────────────────────────────────────────────
+  _mg.otwCat = 'edit';
+  _mg.otw = null;
+  window.mgOtwCat = function(c) {
+    _mg.otwCat = c;
+    var n = document.getElementById('mg-otw-note'); if (n) n.value = '';
+    var mm = document.getElementById('mg-otw-manual'); if (mm) mm.value = '';
+    document.querySelectorAll('#mg-otw-cats button').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-c') === c); });
+    mgOtwLoad();
+  };
+  window.mgOtwLoad = async function() {
+    var list = document.getElementById('mg-otw-list'); if (!list) return;
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    var cat = _mg.otwCat;
+    try { _mg.otw = await api('/awards/shortlist?category=' + cat); }
+    catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    if (cat !== _mg.otwCat) return;
+    mgOtwRender();
+  };
+  function _otwWeek(w) { try { return new Date(w + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return w; } }
+  function mgOtwRender() {
+    var d = _mg.otw || {}, cat = _mg.otwCat;
+    document.getElementById('mg-otw-week').textContent = 'Week of ' + _otwWeek(d.week) + (d.bootstrap ? ' · not much play data yet, so this uses recent releases' : '');
+    var pickBox = document.getElementById('mg-otw-pick');
+    var p = d.pick;
+    if (p && (p.album || p.editor)) {
+      pickBox.innerHTML = '<div class="wv-card" style="padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1px solid var(--brand);">' +
+        (p.album ? _mgCover(p.album.cover_url) : '') +
+        '<div style="flex:1;min-width:160px;"><div style="font-size:11.5px;color:var(--brand);font-weight:700;">🏆 ' + escHtml(d.label || '') + '</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text);">' + escHtml(p.album ? p.album.title : p.editor.name) + '</div>' +
+        (p.album ? '<div style="font-size:12px;color:var(--text-3);">' + escHtml(p.album.creator || '') + '</div>' : '') +
+        (p.note ? '<div style="font-size:12px;color:var(--text-2);font-style:italic;">' + escHtml(p.note) + '</div>' : '') + '</div>' +
+        '<button class="wv-pill" style="font-size:12px;padding:6px 12px;" onclick="mgOtwClear()">Remove pick</button></div>';
+      var n = document.getElementById('mg-otw-note'); if (n && !n.value && p.note) n.value = p.note;
+    } else {
+      pickBox.innerHTML = '<div style="font-size:12.5px;color:var(--text-3);">No ' + escHtml((d.label || '').toLowerCase()) + ' picked yet this week.</div>';
+    }
+    var list = document.getElementById('mg-otw-list');
+    var items = d.items || [];
+    if (!items.length) { list.innerHTML = '<div class="wv-empty">Nothing to suggest yet.</div>'; return; }
+    list.innerHTML = items.map(function(x, i) {
+      if (cat === 'yeditor') {
+        var picked = p && p.editor && p.editor.key === x.editor_key;
+        return '<div class="wv-card" style="padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+          '<div style="width:22px;font-weight:800;color:var(--text-3);">' + (i + 1) + '</div>' +
+          '<div style="flex:1;min-width:160px;"><div style="font-size:14px;font-weight:700;color:var(--text);">' + escHtml(x.editor_name) + '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);">' + x.listeners + ' listeners · ' + x.plays + ' plays · ' + x.likes + ' likes this week</div>' +
+          '<div style="font-size:12px;color:var(--text-2);">' + x.releases.map(function(r) { return '<a href="/album?id=' + encodeURIComponent(r.id) + '" target="_blank" style="color:inherit;">' + escHtml(r.title) + '</a>'; }).join(' · ') + '</div></div>' +
+          '<button class="wv-pill' + (picked ? '' : ' brand') + '" style="font-size:12px;padding:6px 14px;" ' + (picked ? 'disabled' : '') + ' onclick="mgOtwPick(null, ' + JSON.stringify(x.editor_name).replace(/"/g, '&quot;') + ')">' + (picked ? 'Picked' : 'Pick') + '</button></div>';
+      }
+      var a = x.album || {};
+      var picked2 = p && p.album && p.album.id === a.id;
+      return '<div class="wv-card" style="padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+        '<div style="width:22px;font-weight:800;color:var(--text-3);">' + (i + 1) + '</div>' + _mgCover(a.cover_url) +
+        '<div style="flex:1;min-width:160px;"><a href="/album?id=' + encodeURIComponent(a.id) + '" target="_blank" style="font-size:14px;font-weight:700;color:var(--text);text-decoration:none;">' + escHtml(a.title || '') + '</a>' +
+        (x.is_new ? ' <span class="wv-chip" style="font-size:10.5px;">new</span>' : '') +
+        '<div style="font-size:12px;color:var(--text-2);">' + escHtml(a.creator || '') + ' · ' + (a.track_count || 0) + ' track' + (a.track_count === 1 ? '' : 's') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);">' + x.week_listeners + ' listeners · ' + x.week_plays + ' plays · ' + x.week_likes + ' likes this week</div></div>' +
+        '<button class="wv-pill' + (picked2 ? '' : ' brand') + '" style="font-size:12px;padding:6px 14px;" ' + (picked2 ? 'disabled' : '') + ' onclick="mgOtwPick(\'' + a.id + '\')">' + (picked2 ? 'Picked' : 'Pick') + '</button></div>';
+    }).join('');
+  }
+  window.mgOtwPick = async function(albumId, editorName) {
+    var note = (document.getElementById('mg-otw-note') || {}).value || '';
+    var body = { category: _mg.otwCat, note: note.trim() || null };
+    if (albumId) body.album_id = albumId; else body.editor_name = editorName;
+    try {
+      await api('/awards/pick', { method: 'POST', body: JSON.stringify(body) });
+      if (typeof wvToast === 'function') wvToast('Picked');
+      mgOtwLoad();
+    } catch (e) { alert(e.message || 'Could not save the pick'); }
+  };
+  window.mgOtwManual = function() {
+    var v = ((document.getElementById('mg-otw-manual') || {}).value || '').trim();
+    if (!v) return;
+    if (_mg.otwCat === 'yeditor') return mgOtwPick(null, v);
+    var m = v.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if (!m) { alert('Paste an album link or its ID'); return; }
+    mgOtwPick(m[0].toLowerCase());
+  };
+  window.mgOtwClear = async function() {
+    if (!confirm('Remove this week\'s pick?')) return;
+    try {
+      await api('/awards/pick', { method: 'DELETE', body: JSON.stringify({ category: _mg.otwCat }) });
+      var n = document.getElementById('mg-otw-note'); if (n) n.value = '';
+      mgOtwLoad();
+    } catch (e) { alert(e.message); }
   };
 
   _mg.cleanup = null;
