@@ -161,6 +161,7 @@ async function arcLoadMore() {
       throw e;
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
+    if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers') return;
     var items = Array.isArray(page) ? page : (page.items || []);
     var knownTotal = Array.isArray(page) ? items.length
       : (page.total_known || typeof page.total === 'number' && page.total > 0) ? page.total : null;
@@ -354,7 +355,7 @@ async function loadArtists(reset) {
     _artistsLoaded = true;
   } catch (e) {
     if (gen !== _artistsGen) return;
-    if (!_archiveArtists.length && grid) grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load artists. <button class="wv-pill" style="margin-left:8px;" onclick="loadArtists(true)">Try again</button></div>';
+    if (!_archiveArtists.length && grid && _arcView === 'artists') grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load artists. <button class="wv-pill" style="margin-left:8px;" onclick="loadArtists(true)">Try again</button></div>';
   } finally {
     _artistsLoading = false;
   }
@@ -382,6 +383,8 @@ function _arcMoreArtists() {
 // ── View toggle ──────────────────────────────────────────────────────────────
 function arcSetView(view) {
   if (view === _arcView) return;
+  _arcGen++;
+  _arcLoading = false;
   _arcView = view;
   arcApplyView();
   if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
@@ -495,8 +498,9 @@ async function loadTopComps() {
   if (!_topComps) {
     grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try { _topComps = await api('/archive/top'); }
-    catch (err) { wvShowError(grid, err, "arcSetView('top')"); return; }
+    catch (err) { if (_arcView === 'top') wvShowError(grid, err, "arcSetView('top')"); return; }
   }
+  if (_arcView !== 'top') return;
   renderTopComps();
 }
 
