@@ -2204,3 +2204,34 @@ window.wvVerifyPrompt = function (reason) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', later);
   else later();
 })();
+
+// Imported descriptions can carry raw Discord markup: <@123> mentions, <#123>
+// channels, <:name:123> emoji. Show them the way Discord would, roughly.
+window.wvCleanDiscordText = function (s) {
+  return String(s || '')
+    .replace(/<a?:([A-Za-z0-9_~]+):\d+>/g, ':$1:')
+    .replace(/<@!?\d{15,22}>/g, '@member')
+    .replace(/<@&\d{15,22}>/g, '@role')
+    .replace(/<#\d{15,22}>/g, '#channel')
+    .replace(/<t:(\d{9,11})(?::[a-zA-Z])?>/g, function (_, t) { try { return new Date(+t * 1000).toLocaleDateString(); } catch (e) { return ''; } })
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+// Long descriptions stay at three lines until someone asks for the rest.
+window.wvClampDesc = function (el) {
+  if (!el || el.getAttribute('data-clamped')) return;
+  el.setAttribute('data-clamped', '1');
+  requestAnimationFrame(function () {
+    if (el.scrollHeight <= el.clientHeight + 2) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'wv-desc-more';
+    btn.textContent = 'Show more';
+    btn.onclick = function () {
+      var open = el.classList.toggle('is-open');
+      btn.textContent = open ? 'Show less' : 'Show more';
+    };
+    el.insertAdjacentElement('afterend', btn);
+  });
+};

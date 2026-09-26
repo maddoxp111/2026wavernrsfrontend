@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=8410219b6d47">
-  <script src="/js/status-card.js?v=8410219b6d47"></script>
-  <script src="/js/down.js?v=8410219b6d47"></script>
+  <link rel="stylesheet" href="/css/style.css?v=f1e6a2ea43a4">
+  <script src="/js/status-card.js?v=f1e6a2ea43a4"></script>
+  <script src="/js/down.js?v=f1e6a2ea43a4"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=8410219b6d47"></script>
-<script src="/js/layout.js?v=8410219b6d47"></script>
-<script src="/js/player.js?v=8410219b6d47"></script>
-<script src="/js/router.js?v=8410219b6d47"></script>
-<script src="/js/playlists.js?v=8410219b6d47"></script>
-<script src="/js/ratings.js?v=8410219b6d47"></script>
+<script src="/js/api.js?v=f1e6a2ea43a4"></script>
+<script src="/js/layout.js?v=f1e6a2ea43a4"></script>
+<script src="/js/player.js?v=f1e6a2ea43a4"></script>
+<script src="/js/router.js?v=f1e6a2ea43a4"></script>
+<script src="/js/playlists.js?v=f1e6a2ea43a4"></script>
+<script src="/js/ratings.js?v=f1e6a2ea43a4"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -72,6 +72,7 @@
       loadMoreLikeThis();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
       loadTrackerPills(album.id);
+      if (typeof wvClampDesc === 'function') wvClampDesc(document.querySelector('.wv-hero-desc'));
       loadAwardPills(album.id);
       showDisown(album);
       showAddCover(album);
@@ -158,7 +159,7 @@
             <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
                 ? '<a href="/eras" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
                 : escHtml(eraName)) + ' · ' : ''}${albumTracks.length} edit${albumTracks.length !== 1 ? 's' : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
-            ${album.description ? `<div class="wv-hero-desc">${escHtml(album.description)}</div>` : ''}
+            ${album.description ? `<div class="wv-hero-desc">${escHtml(typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(album.description) : album.description)}</div>` : ''}
             <div class="wv-hero-actions">
               <button class="wv-btn-play" onclick="playAll()">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play
