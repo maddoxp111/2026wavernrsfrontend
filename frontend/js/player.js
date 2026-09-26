@@ -657,6 +657,7 @@ function _nextQueueIndex() {
 }
 
 function skipPrev() {
+  if (_radio) return;
   if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
   if (_pq.length && _pqIdx >= 0) {
     if (_pqIdx > 0) window.playQueueIndex(_pqIdx - 1);
@@ -681,6 +682,10 @@ function skipNext() {
 }
 
 function openFullPlayer(withLyrics) {
+  if (_radio && _radio.lp) {
+    if (typeof navigate === 'function') return navigate('/lp?id=' + encodeURIComponent(_radio.slug));
+    location.assign('/lp?id=' + encodeURIComponent(_radio.slug)); return;
+  }
   if (_radio && _radio.slug) {
     if (typeof window.openStation === 'function' && /\/radio\.html$/.test(location.pathname)) return window.openStation(_radio.slug);
     if (typeof navigate === 'function') return navigate('/radio?s=' + encodeURIComponent(_radio.slug));
@@ -884,7 +889,7 @@ function initPlayer() {
   audio.addEventListener('loadedmetadata', _onTimeUpdate);
   audio.addEventListener('ended', () => {
     _setPlayBtns(false);
-    if (_radio) { setTimeout(() => _radioSync(true), 600); return; }
+    if (_radio) { const lp = _radio.lp; setTimeout(() => _radioSync(!lp), lp ? 400 : 600); return; }
     const moreInQueue = _pq.length && _pqIdx >= 0 && _pqIdx < _pq.length - 1;
     if (!moreInQueue) _wantPlaying = false;
     document.dispatchEvent(new CustomEvent('trackEnded', { detail: currentTrack }));
@@ -1107,8 +1112,18 @@ window.radioTuneIn = async function (slug) {
   clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 8000);
   await _radioSync(true);
 };
-window.radioStop = function () { _radio = null; clearInterval(_radioTimer); _radioTimer = null; };
-window.radioSlug = function () { return _radio ? _radio.slug : null; };
+window.radioStop = function () { const wasLp = _radio && _radio.lp; _radio = null; clearInterval(_radioTimer); _radioTimer = null; if (wasLp) document.dispatchEvent(new CustomEvent('lpLeft')); };
+window.radioSlug = function () { return _radio && !_radio.lp ? _radio.slug : null; };
+// Listening parties ride on the radio sync: the server clock says what is playing and where.
+window.lpTuneIn = async function (id) {
+  _radio = { slug: id, offset: 0, lp: true, hostPaused: false };
+  clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 3000);
+  await _radioSync(true);
+};
+window.lpId = function () { return _radio && _radio.lp ? _radio.slug : null; };
+function _lpCid() {
+  try { let c = sessionStorage.getItem('wv_lp_cid'); if (!c) { c = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('wv_lp_cid', c); } return c; } catch (_) { return 'anon'; }
+}
 async function _radioSync(force) {
   if (!_radio || _radioBusy || typeof api !== 'function') return;
   _radioBusy = true;
@@ -1116,22 +1131,49 @@ async function _radioSync(force) {
   try {
     // Plain fetch: api() drops responses across page navigations, which would freeze the station clock.
     const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 20000);
-    const r = await fetch(API_BASE + '/radio/stations/' + encodeURIComponent(slug) + '/now', { signal: ctrl.signal }).finally(() => clearTimeout(tm));
+    const isLp = !!_radio.lp;
+    let url = API_BASE + '/radio/stations/' + encodeURIComponent(slug) + '/now';
+    const headers = {};
+    if (isLp) {
+      url = API_BASE + '/lp/' + encodeURIComponent(slug) + '/now?c=' + encodeURIComponent(_lpCid());
+      if (_radio.dur && _radio.dur.d > 1) { url += '&dur=' + _radio.dur.d.toFixed(2) + '&di=' + encodeURIComponent(_radio.dur.item); _radio.dur = null; }
+      try { const tok = localStorage.getItem('token'); if (tok) headers.Authorization = 'Bearer ' + tok; } catch (_) {}
+    }
+    const r = await fetch(url, { signal: ctrl.signal, headers }).finally(() => clearTimeout(tm));
     const d = await r.json();
     if (!_radio || _radio.slug !== slug) return;
     _radio.offset = Date.parse(d.server_time) - Date.now();
+    if (isLp) {
+      window._lpLast = d;
+      document.dispatchEvent(new CustomEvent('lpState', { detail: d }));
+      if (!r.ok || d.status === 'ended') { if (audio && !audio.paused) audio.pause(); window.radioStop(); return; }
+    }
     if (!d.now || !d.now.track) { if (audio && !audio.paused) audio.pause(); return; }
     const t = d.now.track;
-    const pos = () => Math.max(0, (Date.now() + _radio.offset - Date.parse(d.now.started_at)) / 1000);
-    const same = currentTrack && currentTrack.id === t.id && currentTrack._radio === slug && currentTrack._radioStart === d.now.started_at;
+    const hostPaused = isLp && !!d.now.paused;
+    const pos = () => hostPaused ? (d.now.position_sec || 0) : Math.max(0, (Date.now() + _radio.offset - Date.parse(d.now.started_at)) / 1000);
+    const ident = isLp ? d.now.item_id : d.now.started_at;
+    const same = currentTrack && currentTrack.id === t.id && currentTrack._radio === slug && currentTrack._radioStart === ident;
+    const seekNow = () => { try { audio.currentTime = pos(); } catch (_) {} };
     if (!same || force) {
       _fromQueue = false;
-      playTrack({ id: t.id, title: t.title, artist_name: t.artist + ' · 📻 ' + d.name, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: d.now.started_at });
-      const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = '📻 ' + d.name;
-      const seek = () => { try { audio.currentTime = pos(); } catch (_) {} };
-      if (audio.readyState >= 1) seek(); else audio.addEventListener('loadedmetadata', seek, { once: true });
+      playTrack({ id: t.id, title: t.title, artist_name: t.artist + (isLp ? ' · 🎧 ' : ' · 📻 ') + d.name, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: ident });
+      const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = (isLp ? '🎧 ' : '📻 ') + d.name;
+      if (audio.readyState >= 1) seekNow(); else audio.addEventListener('loadedmetadata', seekNow, { once: true });
+      if (hostPaused) { _wantPlaying = false; audio.pause(); }
+    } else if (isLp) {
+      if (hostPaused) {
+        if (!audio.paused) { _wantPlaying = false; audio.pause(); }
+        if (audio.readyState >= 1 && Math.abs(audio.currentTime - pos()) > 1) seekNow();
+      } else if (_radio.hostPaused) {
+        seekNow(); _wantPlaying = true; const p = audio.play(); if (p) p.catch(() => {});
+      } else if (!audio.paused && audio.readyState >= 1 && Math.abs(audio.currentTime - pos()) > 2.5) seekNow();
     } else if (!audio.paused && audio.readyState >= 1 && Math.abs(audio.currentTime - pos()) > 4) {
-      try { audio.currentTime = pos(); } catch (_) {}
+      seekNow();
+    }
+    if (isLp) {
+      _radio.hostPaused = hostPaused;
+      if (d.now.need_duration && audio.duration && isFinite(audio.duration) && currentTrack && currentTrack._radioStart === d.now.item_id) _radio.dur = { item: d.now.item_id, d: audio.duration };
     }
   } catch (_) {} finally { _radioBusy = false; }
 }

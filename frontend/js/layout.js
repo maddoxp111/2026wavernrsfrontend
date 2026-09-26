@@ -5,6 +5,7 @@
 
   // ── SVG icon paths (Heroicons outline 24×24) ─────────────────
   var ICONS = {
+    headphones: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>',
     radio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>',
     // Purpose-drawn on a single 24 grid: solid shapes, matched corner
     // radii, one optical weight. Filled rather than hairline-outlined so
@@ -58,7 +59,7 @@
     };
     var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
       'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
-      'search', 'community', 'radio', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists'];
+      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists'];
     if (ALIAS[name]) return ALIAS[name];
     return KNOWN.indexOf(name) >= 0 ? name : '';
   }
@@ -85,6 +86,7 @@
     ['archive',   'Archive',   '/archive',   'archive'],
     ['eras',      'Eras',      '/eras',      'eras'],
     ['radio',     'Radio',     '/radio',     'radio'],
+    ['lp',        'Live LPs',  '/lp',        'headphones'],
     ['community', 'Community', '/community', 'community'],
     ['resources', 'Tracker',   '/resources', 'resources'],
   ];
@@ -208,6 +210,7 @@
       ['home', 'Home', '/index', 'home'],
       ['browse', 'Browse', '/browse', 'discover'],
       ['radio', 'Radio', '/radio', 'radio'],
+      ['lp', 'Live LPs', '/lp', 'headphones'],
       ['charts', 'Charts', '/charts', 'chart'],
       ['community', 'Community', '/community', 'community'],
     ]);
@@ -2465,4 +2468,25 @@ window.wvClampDesc = function (el) {
     renderWindow();
   };
   window.wvCloseThreadPanel = close;
+})();
+
+// ── Red dot on "Live LPs" while a listening party is live ─────────────────
+(function () {
+  var _live = 0;
+  function paint() {
+    document.querySelectorAll('[data-page="lp"]').forEach(function (a) {
+      var dot = a.querySelector('.wv-lp-live');
+      if (_live > 0) {
+        if (!dot) { dot = document.createElement('span'); dot.className = 'wv-lp-live'; a.appendChild(dot); }
+        dot.title = _live + ' live now';
+      } else if (dot) dot.remove();
+    });
+  }
+  function check() {
+    if (typeof API_BASE === 'undefined') return;
+    fetch(API_BASE + '/lp/live-count').then(function (r) { return r.json(); }).then(function (d) { _live = (d && d.live) || 0; paint(); }).catch(function () {});
+  }
+  setTimeout(check, 1500);
+  setInterval(check, 60000);
+  document.addEventListener('click', function () { setTimeout(paint, 400); }, true);
 })();
