@@ -79,7 +79,7 @@
     ['home',      'Home',      '/index',     'home'],
     ['browse',    'Browse',    '/browse',    'discover'],
     ['charts',    'Charts',    '/charts',    'chart'],
-    ['artists',   'Artists',   '/artists',   'profile'],
+    ['artists',   'Editors',   '/artists',   'profile'],
     ['archive',   'Archive',   '/archive',   'archive'],
     ['eras',      'Eras',      '/eras',      'eras'],
     ['radio',     'Radio',     '/radio',     'radio'],
@@ -211,7 +211,7 @@
     ]);
     html += _amSection('Library', [
       ['library', 'Recently Added', '/library', 'list'],
-      ['artists', 'Artists', '/artists', 'profile'],
+      ['artists', 'Editors', '/artists', 'profile'],
       ['archive', 'Archive', '/archive', 'archive'],
       ['eras', 'Eras', '/eras', 'eras'],
       ['resources', 'Tracker', '/resources', 'resources'],

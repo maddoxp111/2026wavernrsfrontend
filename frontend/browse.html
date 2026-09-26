@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — browse</title>
-  <link rel="stylesheet" href="/css/style.css?v=7215df128d4a">
-  <script src="/js/status-card.js?v=7215df128d4a"></script>
-  <script src="/js/down.js?v=7215df128d4a"></script>
+  <link rel="stylesheet" href="/css/style.css?v=92d67b346be2">
+  <script src="/js/status-card.js?v=92d67b346be2"></script>
+  <script src="/js/down.js?v=92d67b346be2"></script>
 </head>
 <body>
 <div id="view"><div class="loading"><div class="spinner"></div></div></div>
-<script src="/js/api.js?v=7215df128d4a"></script>
-<script src="/js/layout.js?v=7215df128d4a"></script>
-<script src="/js/player.js?v=7215df128d4a"></script>
-<script src="/js/router.js?v=7215df128d4a"></script>
-<script src="/js/playlists.js?v=7215df128d4a"></script>
+<script src="/js/api.js?v=92d67b346be2"></script>
+<script src="/js/layout.js?v=92d67b346be2"></script>
+<script src="/js/player.js?v=92d67b346be2"></script>
+<script src="/js/router.js?v=92d67b346be2"></script>
+<script src="/js/playlists.js?v=92d67b346be2"></script>
 <script>
 initPlayer();
 var _p = new URLSearchParams(location.search);
@@ -106,6 +106,21 @@ async function fillTileCovers() {
   }
 }
 
+function _eraList() { return String(_era || '').split(',').filter(Boolean); }
+window.toggleEra = function (id) {
+  var list = _eraList();
+  var i = list.indexOf(String(id));
+  if (i >= 0) list.splice(i, 1); else list.push(String(id));
+  if (!list.length) return go('tab', _tab || 'recent');
+  var u = new URL(location.href);
+  u.searchParams.delete('tab');
+  u.searchParams.set('era', list.join(','));
+  history.replaceState(null, '', u);
+  _tab = ''; _era = list.join(',');
+  _shown = 60;
+  renderList();
+};
+
 window.go = function(kind, v) {
   var u = new URL(location.href);
   u.searchParams.delete('tab'); u.searchParams.delete('era');
@@ -117,8 +132,10 @@ window.go = function(kind, v) {
 
 async function renderList() {
   var view = document.getElementById('view');
-  var eraObj = _era ? _eras.find(function(t) { return String(t.id) === String(_era); }) : null;
-  var title = eraObj ? eraObj.name : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[_tab] || 'Browse');
+  var picked = _eraList();
+  var pickedObjs = picked.map(function (id) { return _eras.find(function(t) { return String(t.id) === id; }); }).filter(Boolean);
+  var eraObj = pickedObjs.length === 1 ? pickedObjs[0] : null;
+  var title = pickedObjs.length ? pickedObjs.map(function (t) { return t.name; }).join(' + ') : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[_tab] || 'Browse');
   view.innerHTML =
     '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse\')">‹ Browse</button></div>' +
     '<h1 class="wv-page-title">' + escHtml(title) + '</h1>' +
@@ -136,12 +153,22 @@ async function renderList() {
     '<div class="wv-tile-grid" id="grid">' + '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>'.repeat(8) + '</div>';
   if (_eras.length) {
     document.getElementById('era-chips').innerHTML =
-      '<span class="wv-chip' + (!_era ? ' acc' : '') + '" onclick="go(\'tab\',\'' + (_tab || 'recent') + '\')">All</span>' +
-      _eras.map(function(t) { return '<span class="wv-chip' + (String(t.id) === String(_era) ? ' acc' : '') + '" onclick="go(\'era\',\'' + escHtml(t.id) + '\')">' + escHtml(t.name) + '</span>'; }).join('');
+      '<span class="wv-chip' + (!picked.length ? ' acc' : '') + '" onclick="go(\'tab\',\'' + (_tab || 'recent') + '\')">All</span>' +
+      _eras.map(function(t) { var on = picked.indexOf(String(t.id)) >= 0; return '<span class="wv-chip' + (on ? ' acc' : '') + '" role="button" aria-pressed="' + on + '" onclick="toggleEra(\'' + escHtml(t.id) + '\')">' + (on && picked.length > 1 ? '✓ ' : '') + escHtml(t.name) + '</span>'; }).join('') +
+      '<div style="flex-basis:100%;font-size:11.5px;color:var(--text-3);margin-top:2px;">' + (picked.length ? 'Tap more eras to add them, tap one again to remove it.' : 'Tap eras to pick one or more.') + '</div>';
   }
   try {
     var items = [];
-    if (_era) { items = await api('/discover/era/' + encodeURIComponent(_era)); }
+    if (picked.length) {
+      var lists = await Promise.all(picked.map(function (id) { return api('/discover/era/' + encodeURIComponent(id)).catch(function () { return []; }); }).concat(picked.map(function (id) {
+        return api('/archive?limit=120&sort=likes&kind=all&era=' + encodeURIComponent(id)).then(function (d) {
+          return ((d && d.items) || (Array.isArray(d) ? d : [])).map(function (a) { return Object.assign({}, a, { _type: 'album', is_archive: true, era_tag_id: id }); });
+        }).catch(function () { return []; });
+      })));
+      var seen = {};
+      items = [];
+      lists.forEach(function (l) { (Array.isArray(l) ? l : []).forEach(function (it) { var k = (it._type || '') + ':' + it.id; if (!seen[k]) { seen[k] = 1; items.push(it); } }); });
+    }
     else if (_tab === 'trending') items = await api('/discover/trending');
     else if (_tab === 'highlighted') items = await api('/discover/highlighted');
     else { var d = await api('/discover'); items = d.recent || []; }
