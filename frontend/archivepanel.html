@@ -248,7 +248,8 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Comp claims</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Sent from the Claim your comps page. Check the proof, fix the comps with the manager below, then approve or decline with a note the person can see.</div></div>' +
-            '<div class="wv-seg"><button class="on" id="cl-tab-open" onclick="clLoad(\'open\')">Open</button><button id="cl-tab-approved" onclick="clLoad(\'approved\')">Approved</button><button id="cl-tab-rejected" onclick="clLoad(\'rejected\')">Declined</button></div>' +
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button class="wv-pill" id="cl-ai-all" style="font-size:12px;padding:6px 12px;" onclick="clAiAll()" title="Have GPT review every open claim and show its plan on each one">✨ AI review all open</button>' +
+            '<div class="wv-seg"><button class="on" id="cl-tab-open" onclick="clLoad(\'open\')">Open</button><button id="cl-tab-approved" onclick="clLoad(\'approved\')">Approved</button><button id="cl-tab-rejected" onclick="clLoad(\'rejected\')">Declined</button></div></div>' +
           '</div>' +
           '<div id="cl-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
         '</div>' +
@@ -363,6 +364,7 @@
     if (!window._ovPoll) window._ovPoll = setInterval(function() { if (document.getElementById('ov-total')) { loadOverview(); rdLoad(true); } }, 30000);
     if (!window._mjPoll) window._mjPoll = setInterval(function() { if (document.getElementById('mj-list')) loadMegaJobs(true); }, 10000);
     dcLoad();
+    if (typeof window.clLoad === 'function') window.clLoad('open');
     if (!window._dcPoll) window._dcPoll = setInterval(function() { if (document.getElementById('dc-servers')) dcLoad(true); }, 60000);
   }
 
@@ -2175,13 +2177,59 @@
           (k.staff_note ? '<div><span style="color:var(--text-3);">Staff note:</span> ' + escHtml(k.staff_note) + '</div>' : '') +
         '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
+          (k.status === 'open' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clAiReview(\'' + k.id + '\')">✨ AI resolve</button>' : '') +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clOpenComps(\'' + k.id + '\')">Open these comps in the manager</button>' +
           (k.claim_type === 'transfer' || k.claim_type === 'stolen' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clTransfer(\'' + k.id + '\')">Move comps to their account</button>' : '') +
           (k.status !== 'approved' ? '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clSet(\'' + k.id + '\',\'approved\')">Approve</button>' : '') +
           (k.status !== 'rejected' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="clSet(\'' + k.id + '\',\'rejected\')">Decline</button>' : '') +
           (k.status !== 'open' ? '<button class="wv-see-all" onclick="clSet(\'' + k.id + '\',\'open\')">Reopen</button>' : '') +
-        '</div></div>';
+        '</div><div id="cl-ai-' + k.id + '"></div></div>';
     }).join('');
+  };
+  var CL_ACT = { move_to_account: 'Move to their account', set_creator_name: 'Credit as', set_title: 'Rename to', take_down: 'Take down' };
+  function _clAiBox(id, html) { var b = document.getElementById('cl-ai-' + id); if (b) b.innerHTML = html; return b; }
+  function _clAiRender(id, rv) {
+    var dec = rv.decision === 'approve' ? '<span class="wv-chip acc">AI: approve</span>' : rv.decision === 'decline' ? '<span class="wv-chip bad">AI: decline</span>' : '<span class="wv-chip warn">AI: needs a person</span>';
+    var titles = {}; (rv.comps || []).forEach(function(c) { titles[c.id] = c.title + (c.credited_as ? ' (' + c.credited_as + ')' : ''); });
+    var acts = (rv.actions || []).map(function(a) {
+      return '<li><b>' + escHtml(CL_ACT[a.type] || a.type) + (a.value ? ' ' + escHtml(a.value) : '') + '</b> · <a href="/album?id=' + encodeURIComponent(a.album_id) + '" target="_blank" style="color:var(--brand);">' + escHtml(titles[a.album_id] || a.album_id) + '</a></li>';
+    }).join('');
+    var canAuto = rv.decision !== 'needs_human' && !(rv.actions || []).some(function(a) { return a.type === 'take_down'; });
+    _clAiBox(id, '<div style="margin-top:10px;padding:12px 14px;border-radius:12px;background:var(--surface-3);border:1px solid var(--hair);">' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' + dec + '<span style="font-size:11.5px;color:var(--text-3);">' + escHtml(rv.confidence || '') + ' confidence</span></div>' +
+      '<div style="font-size:12.5px;color:var(--text);margin-bottom:6px;">' + escHtml(rv.summary || '') + '</div>' +
+      (acts ? '<div style="font-size:12px;color:var(--text-3);">If approved it will:</div><ul style="margin:4px 0 8px 18px;padding:0;font-size:12.5px;color:var(--text-2);">' + acts + '</ul>' : '<div style="font-size:12px;color:var(--text-3);margin-bottom:8px;">No changes to comps.</div>') +
+      (rv.dropped ? '<div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">' + rv.dropped + ' suggested change(s) ignored because they pointed at comps not in this claim.</div>' : '') +
+      '<div style="font-size:12px;color:var(--text-3);margin-bottom:4px;">Note the person will see:</div>' +
+      '<textarea id="cl-ai-note-' + id + '" class="wv-input" rows="2" style="width:100%;font-size:12.5px;padding:7px 10px;resize:vertical;">' + escHtml(rv.user_note || '') + '</textarea>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">' +
+        '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clAiApply(\'' + id + '\',\'approve\')">Approve' + (acts ? ' and make these changes' : '') + '</button>' +
+        '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="clAiApply(\'' + id + '\',\'decline\')">Decline</button>' +
+        (canAuto ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clAiApply(\'' + id + '\',\'ai\')">Let AI decide (' + (rv.decision === 'approve' ? 'approve' : 'decline') + ')</button>' : '') +
+      '</div></div>');
+  }
+  window.clAiReview = async function(id) {
+    _clAiBox(id, '<div style="margin-top:10px;font-size:12.5px;color:var(--text-3);">✨ GPT is checking the comps, the proof and the database…</div>');
+    try { var d = await api('/claims/' + id + '/ai-review', { method: 'POST', body: '{}' }); _clAiRender(id, d.review); }
+    catch (e) { _clAiBox(id, '<div style="margin-top:10px;font-size:12.5px;color:var(--red);">' + escHtml(e.message || 'AI review failed') + '</div>'); }
+  };
+  window.clAiApply = async function(id, mode) {
+    var noteEl = document.getElementById('cl-ai-note-' + id);
+    var label = mode === 'approve' ? 'Approve this claim and make the listed changes?' : mode === 'decline' ? 'Decline this claim?' : 'Go with the AI\'s decision?';
+    if (!confirm(label)) return;
+    try {
+      var r = await api('/claims/' + id + '/ai-apply', { method: 'POST', body: JSON.stringify({ mode: mode, note: noteEl ? noteEl.value : '' }) });
+      if (typeof wvToast === 'function') wvToast((r.decision === 'approve' ? 'Approved' : 'Declined') + (r.done && r.done.length ? ' · ' + r.done.length + ' change(s) made' : ''));
+      clLoad('open'); if (typeof mgLoad === 'function') mgLoad();
+    } catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.clAiAll = async function() {
+    var btn = document.getElementById('cl-ai-all');
+    var ids = Array.prototype.map.call(document.querySelectorAll('#cl-list > [id^="cl-"]'), function(el) { return el.id.slice(3); }).filter(function(x) { return /^[0-9a-f-]{36}$/.test(x); });
+    if (!ids.length) return;
+    btn.disabled = true;
+    for (var i = 0; i < ids.length; i++) { btn.textContent = '✨ Reviewing ' + (i + 1) + ' of ' + ids.length + '…'; await clAiReview(ids[i]); }
+    btn.disabled = false; btn.textContent = '✨ AI review all open';
   };
   window.clSet = async function(id, status) {
     var note = prompt(status === 'approved' ? 'Note for the person (what you did):' : status === 'rejected' ? 'Why it was declined (they will see this):' : 'Note:', '');
