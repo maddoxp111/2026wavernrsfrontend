@@ -185,6 +185,7 @@
                 Share
               </button>
               <span id="staff-cover-slot"></span>
+              <span id="staff-thread-slot"></span>
               ${album.origin && album.origin.url ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
               ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
             </div>
@@ -253,9 +254,9 @@
       </div>`;
 
     // Wire IA CDN retry on all cover images (they may take 1-3 min to propagate)
-    renderStaffCoverButton();
-    setTimeout(renderStaffCoverButton, 2000);
-    setTimeout(renderStaffCoverButton, 6000);
+    renderStaffCoverButton(); renderStaffThreadButton();
+    setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 2000);
+    setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 6000);
     if (typeof wireIACoverRetry === 'function') {
       document.querySelectorAll('#album-container img').forEach(wireIACoverRetry);
     }
@@ -289,6 +290,81 @@
     slot.dataset.done = '1';
     slot.innerHTML = '<button class="wv-btn-ghost" id="staff-cover-btn" onclick="fetchCoverFromSource()" title="Staff: look for a cover image where this comp was imported from">Get cover from source</button>';
   }
+
+  // Staff can rebuild a comp that came in from a Discord thread, keeping only
+  // the actual release: the first post's files, the owner's full upload, or
+  // the download link they posted. It shows what it found before changing it.
+  function renderStaffThreadButton() {
+    var slot = document.getElementById('staff-thread-slot');
+    if (!slot || slot.dataset.done) return;
+    var a = album;
+    var staff = false;
+    try { staff = sessionStorage.getItem('wv_is_mod') === 'true' || sessionStorage.getItem('wv_is_archiver') === 'true'; } catch (_) {}
+    if (!a || !a.is_archive || !staff || !/^discord:\/\/thread\//.test(a.source_url || '')) return;
+    slot.dataset.done = '1';
+    slot.innerHTML = '<button class="wv-btn-ghost" id="staff-thread-btn" onclick="rebuildFromThread()" title="Staff: rebuild this comp from its Discord thread, keeping only the actual release">Rebuild from Discord</button>';
+  }
+
+  async function _threadRepair(body) {
+    await api('/import/thread-repair', { method: 'POST', body: JSON.stringify(body) });
+    var st = null;
+    for (var i = 0; i < 150; i++) {
+      await new Promise(function (r) { setTimeout(r, 2000); });
+      st = await api('/import/thread-repair');
+      if (!st || st.status !== 'running') break;
+    }
+    return st;
+  }
+
+  window.rebuildFromThread = async function () {
+    var btn = document.getElementById('staff-thread-btn');
+    var a = album;
+    if (!btn || !a) return;
+    btn.disabled = true; btn.textContent = 'Reading the thread…';
+    try {
+      var st = await _threadRepair({ album_ids: [a.id], limit: 1 });
+      var s = (st && st.samples || []).find(function (x) { return x.id === a.id; }) || {};
+      var msg, apply = null;
+      if (s.kind === 'rebuild') {
+        msg = 'Found the release (' + (s.release || 'thread') + '): ' + s.files + ' track' + (s.files === 1 ? '' : 's') + ' instead of the ' + (s.had || 0) + ' here now. Rebuild it with just those?';
+        apply = { album_ids: [a.id], limit: 1, apply: true, force: true };
+      } else if (s.kind === 'linked_existing') {
+        msg = 'This comp is already on the site from its download link. Remove this copy and keep that one?';
+        apply = { album_ids: [a.id], limit: 1, apply: true };
+      } else if (s.kind === 'linked_queued') {
+        msg = 'The release is a download link (' + (s.link || '') + '). Replace this with an import from that link?';
+        apply = { album_ids: [a.id], limit: 1, apply: true };
+      } else if (s.kind === 'not_a_comp') {
+        msg = 'No finished comp in this thread: no full upload in the first post or from the owner, and no download link. Remove this comp from the archive?';
+        apply = { album_ids: [a.id], limit: 1, apply: true, remove_ids: [a.id] };
+      } else if (s.kind === 'renamed') {
+        msg = 'The tracks already match the thread. Update the title or creator to match it (' + [s.title, s.archive_artist_name].filter(Boolean).join(' · ') + ')?';
+        apply = { album_ids: [a.id], limit: 1, apply: true };
+      } else if (!s.kind) {
+        btn.textContent = 'Already matches the thread';
+        return;
+      } else {
+        btn.disabled = false; btn.textContent = 'Rebuild from Discord';
+        if (typeof wvToast === 'function') wvToast('Could not read the thread: ' + (s.why || s.kind), 'error');
+        return;
+      }
+      if (!confirm(msg)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+      btn.textContent = 'Rebuilding…';
+      var done = await _threadRepair(apply);
+      var mine = (done && done.samples || []).filter(function (x) { return x.id === a.id; });
+      var bad = mine.find(function (x) { return x.kind === 'rebuild_failed' || x.kind === 'failed'; });
+      if (bad) throw new Error(bad.why || 'Rebuild failed');
+      if (typeof wvToast === 'function') wvToast('Done');
+      var rebuilt = mine.find(function (x) { return x.kind === 'rebuilt' && x.new_id; });
+      if (rebuilt) { navigate('/album?id=' + rebuilt.new_id); return; }
+      if (s.kind === 'renamed') { location.reload(); return; }
+      if (s.kind === 'not_a_comp' || s.kind === 'linked_existing' || s.kind === 'linked_queued') { navigate('/archive'); return; }
+      location.reload();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Rebuild from Discord';
+      if (typeof wvToast === 'function') wvToast((e && e.message) || 'Could not rebuild', 'error');
+    }
+  };
 
   window.fetchCoverFromSource = async function () {
     var btn = document.getElementById('staff-cover-btn');
