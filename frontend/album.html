@@ -322,24 +322,28 @@
     if (!btn || !a) return;
     btn.disabled = true; btn.textContent = 'Reading the thread…';
     try {
-      var st = await _threadRepair({ album_ids: [a.id], limit: 1 });
-      var s = (st && st.samples || []).find(function (x) { return x.id === a.id; }) || {};
+      btn.textContent = 'Asking GPT to read the thread…';
+      var st = await _threadRepair({ album_ids: [a.id], limit: 1, ai: true });
+      var mine0 = (st && st.samples || []).filter(function (x) { return x.id === a.id; });
+      var s = mine0.find(function (x) { return x.kind !== 'gpt'; }) || {};
+      var g = mine0.find(function (x) { return x.kind === 'gpt'; });
+      var gptLine = g ? (g.why ? '\n\n(GPT could not help: ' + g.why + ')' : '\n\nGPT (' + (g.confidence || '?') + ' confidence): ' + (g.reason || '') + (g.title ? '\nTitle: ' + g.title : '') + (g.creator ? '\nCreator: ' + g.creator : '')) : '';
       var msg, apply = null;
       if (s.kind === 'rebuild') {
         msg = 'Found the release (' + (s.release || 'thread') + '): ' + s.files + ' track' + (s.files === 1 ? '' : 's') + ' instead of the ' + (s.had || 0) + ' here now. Rebuild it with just those?';
-        apply = { album_ids: [a.id], limit: 1, apply: true, force: true };
+        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, force: true };
       } else if (s.kind === 'linked_existing') {
         msg = 'This comp is already on the site from its download link. Remove this copy and keep that one?';
-        apply = { album_ids: [a.id], limit: 1, apply: true };
+        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
       } else if (s.kind === 'linked_queued') {
         msg = 'The release is a download link (' + (s.link || '') + '). Replace this with an import from that link?';
-        apply = { album_ids: [a.id], limit: 1, apply: true };
+        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
       } else if (s.kind === 'not_a_comp') {
         msg = 'No download link for the comp in this thread (comp threads only import from links, since the audio posted there is usually snippets). Remove this comp from the archive?';
-        apply = { album_ids: [a.id], limit: 1, apply: true, remove_ids: [a.id] };
+        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, remove_ids: [a.id] };
       } else if (s.kind === 'renamed') {
         msg = 'The tracks already match the thread. Update the title or creator to match it (' + [s.title, s.archive_artist_name].filter(Boolean).join(' · ') + ')?';
-        apply = { album_ids: [a.id], limit: 1, apply: true };
+        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
       } else if (!s.kind) {
         btn.textContent = 'Already matches the thread';
         return;
@@ -348,7 +352,7 @@
         if (typeof wvToast === 'function') wvToast('Could not read the thread: ' + (s.why || s.kind), 'error');
         return;
       }
-      if (!confirm(msg)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+      if (!confirm(msg + gptLine)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
       btn.textContent = 'Rebuilding…';
       var done = await _threadRepair(apply);
       var mine = (done && done.samples || []).filter(function (x) { return x.id === a.id; });
