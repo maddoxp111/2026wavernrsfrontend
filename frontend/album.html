@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=198a777f9dae">
-  <script src="/js/status-card.js?v=198a777f9dae"></script>
-  <script src="/js/down.js?v=198a777f9dae"></script>
+  <link rel="stylesheet" href="/css/style.css?v=99c70d76358d">
+  <script src="/js/status-card.js?v=99c70d76358d"></script>
+  <script src="/js/down.js?v=99c70d76358d"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=198a777f9dae"></script>
-<script src="/js/layout.js?v=198a777f9dae"></script>
-<script src="/js/player.js?v=198a777f9dae"></script>
-<script src="/js/router.js?v=198a777f9dae"></script>
-<script src="/js/playlists.js?v=198a777f9dae"></script>
-<script src="/js/ratings.js?v=198a777f9dae"></script>
+<script src="/js/api.js?v=99c70d76358d"></script>
+<script src="/js/layout.js?v=99c70d76358d"></script>
+<script src="/js/player.js?v=99c70d76358d"></script>
+<script src="/js/router.js?v=99c70d76358d"></script>
+<script src="/js/playlists.js?v=99c70d76358d"></script>
+<script src="/js/ratings.js?v=99c70d76358d"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -324,6 +324,31 @@
     if (!a || !a.is_archive || !staff || !/^discord:\/\/thread\//.test(a.source_url || '')) return;
     slot.dataset.done = '1';
     slot.innerHTML = '<button class="wv-btn-ghost" id="staff-thread-btn" onclick="rebuildFromThread()" title="Staff: rebuild this comp from its Discord thread, keeping only the actual release">Rebuild from Discord</button>';
+    watchRebuild(true);
+  }
+
+  // Shows a queued/running rebuild on the button, and keeps doing so after a refresh.
+  var _rbTimer = null;
+  async function watchRebuild(quiet) {
+    if (_rbTimer) { clearTimeout(_rbTimer); _rbTimer = null; }
+    var btn = document.getElementById('staff-thread-btn');
+    if (!btn || !album) return;
+    var st;
+    try { st = await api('/import/rebuild-status/' + album.id); } catch (_) { return; }
+    if (!st || !st.state) return;
+    var fresh = st.finished_at && Date.now() - new Date(st.finished_at).getTime() < 10 * 60 * 1000;
+    if (st.state === 'queued' || st.state === 'importing') {
+      btn.disabled = true;
+      btn.title = 'Importing from ' + (st.url || 'the link');
+      btn.textContent = st.state === 'importing'
+        ? (st.total ? 'Importing ' + st.done + '/' + st.total + '…' : 'Importing…')
+        : (st.position ? 'Queued (#' + st.position + ')…' : 'Queued…');
+      _rbTimer = setTimeout(function () { watchRebuild(false); }, 4000);
+      return;
+    }
+    btn.disabled = false; btn.textContent = 'Rebuild from Discord';
+    if (st.state === 'done' && !quiet) { if (typeof wvToast === 'function') wvToast('Rebuilt from the link'); setTimeout(function () { location.reload(); }, 800); }
+    else if (st.state === 'failed' && (!quiet || fresh)) { if (typeof wvToast === 'function') wvToast('Rebuild failed: ' + (st.error || 'import failed'), 'error'); }
   }
 
   // Lets staff choose which picture from the thread becomes the cover.
@@ -352,6 +377,47 @@
       wrap.querySelector('#wv-cp-ok').onclick = function () {
         var sel = wrap.querySelector('input[name="wv-cover-opt"]:checked');
         finish({ id: sel ? sel.value : null });
+      };
+    });
+  }
+
+  // Lets staff choose which download link in the thread is the actual comp.
+  function pickThreadLink(L, gptLine) {
+    return new Promise(function (resolve) {
+      var opts = L.options || [];
+      var def = opts.findIndex(function (o) { return o.suggested && o.supported; });
+      if (def < 0) def = opts.findIndex(function (o) { return o.supported; });
+      var HOST = { 'mega.nz': 'MEGA', 'mega.co.nz': 'MEGA', 'samply.app': 'Samply', 'untitled.stream': 'untitled', 'pillows.su': 'pillows', 'drive.google.com': 'Google Drive', 'gofile.io': 'Gofile', 'pixeldrain.com': 'Pixeldrain' };
+      var wrap = document.createElement('div');
+      wrap.className = 'wv-vp-wrap';
+      wrap.innerHTML = '<div class="wv-vp" style="max-width:660px;text-align:left;">' +
+        '<div class="wv-vp-title">Pick the comp\'s link</div>' +
+        '<div class="wv-vp-body">' + opts.length + ' download link' + (opts.length === 1 ? '' : 's') + ' in this thread. Choose the one that is the actual comp and its songs get swapped into this page (likes, comments and stars stay).' +
+          (gptLine ? '<div style="margin-top:6px;font-size:12px;color:var(--text-3);white-space:pre-wrap;">' + escHtml(gptLine.trim()) + '</div>' : '') + '</div>' +
+        '<div class="wv-link-pick">' + opts.map(function (o, k) {
+          var when = o.at ? new Date(o.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          var tags = (o.suggested ? '<span class="wv-link-tag good">' + (L.gpt ? 'GPT\'s pick' : 'Suggested') + '</span>' : '') +
+            (o.existing ? '<a class="wv-link-tag warn" href="/album?id=' + encodeURIComponent(o.existing) + '" target="_blank" onclick="event.stopPropagation()">Already on the site ↗</a>' : '') +
+            (o.pack ? '<span class="wv-link-tag warn">Says snippet / pack</span>' : '') +
+            (!o.supported ? '<span class="wv-link-tag">Can\'t import this host</span>' : '');
+          return '<label class="wv-link-opt' + (o.supported ? '' : ' off') + '"><input type="radio" name="wv-link-opt" value="' + k + '"' + (k === def ? ' checked' : '') + (o.supported ? '' : ' disabled') + '>' +
+            '<div class="wv-link-main"><div class="wv-link-top"><span class="wv-link-host">' + escHtml(HOST[o.host] || o.host || 'Link') + '</span>' + tags + '</div>' +
+            '<div class="wv-link-url"><a href="' + escHtml(o.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + escHtml(o.url) + '</a></div>' +
+            '<div class="wv-link-meta">' + escHtml([o.from === 'first post' ? 'First post' : o.from === 'owner' ? 'Thread owner' : 'Someone else', o.author, when].filter(Boolean).join(' · ')) + (o.stars ? ' · ⭐ ' + o.stars : '') + '</div>' +
+            (o.text ? '<div class="wv-link-text">' + escHtml(o.text) + '</div>' : '') + '</div></label>';
+        }).join('') +
+        '<label class="wv-link-opt"><input type="radio" name="wv-link-opt" value="none"' + (def < 0 ? ' checked' : '') + '><div class="wv-link-main"><div class="wv-link-top"><span class="wv-link-host">None of these</span></div><div class="wv-link-meta">The comp isn\'t out yet. Clear the songs, pick a cover from the thread and mark it Upcoming.</div></div></label>' +
+        '</div>' +
+        '<div class="wv-vp-actions" style="margin-top:14px;"><button class="wv-pill" id="wv-lp-cancel">Cancel</button><button class="wv-pill brand" id="wv-lp-ok">Continue</button></div>' +
+      '</div>';
+      document.body.appendChild(wrap);
+      var finish = function (v) { wrap.remove(); resolve(v); };
+      wrap.querySelector('#wv-lp-cancel').onclick = function () { finish(null); };
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) finish(null); });
+      wrap.querySelector('#wv-lp-ok').onclick = function () {
+        var sel = wrap.querySelector('input[name="wv-link-opt"]:checked');
+        if (!sel) return;
+        finish(sel.value === 'none' ? { none: true } : { url: opts[+sel.value].url });
       };
     });
   }
@@ -504,19 +570,33 @@
       btn.textContent = 'Asking GPT to read the thread…';
       var st = await _threadRepair({ album_ids: [a.id], limit: 1, ai: true });
       var mine0 = (st && st.samples || []).filter(function (x) { return x.id === a.id; });
-      var s = mine0.find(function (x) { return x.kind !== 'gpt'; }) || {};
+      var s = mine0.find(function (x) { return x.kind !== 'gpt' && x.kind !== 'links'; }) || {};
       var g = mine0.find(function (x) { return x.kind === 'gpt'; });
+      var L = mine0.find(function (x) { return x.kind === 'links'; });
       var gptLine = g ? (g.why ? '\n\n(GPT could not help: ' + g.why + ')' : g.overruled ? '\n\n(GPT did not pick a link, so the link found in the thread is used.)' : '\n\nGPT (' + (g.confidence || '?') + ' confidence): ' + (g.reason || '') + (g.title ? '\nTitle: ' + g.title : '') + (g.creator ? '\nCreator: ' + g.creator : '')) : '';
+      var aiOn = true, extra = {};
+      if (L && (L.options || []).length) {
+        L.gpt = !!(g && !g.why && !g.overruled && g.link);
+        var lp = await pickThreadLink(L, gptLine);
+        if (!lp) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+        extra = lp.none ? { nolink_ids: [a.id] } : { link_picks: {} };
+        if (!lp.none) extra.link_picks[a.id] = lp.url;
+        aiOn = false; gptLine = '';
+        btn.textContent = 'Checking that link…';
+        st = await _threadRepair(Object.assign({ album_ids: [a.id], limit: 1, ai: false }, extra));
+        s = (st && st.samples || []).find(function (x) { return x.id === a.id && x.kind !== 'gpt' && x.kind !== 'links'; }) || {};
+      }
+      var B = function (o) { return Object.assign(o, { ai: aiOn }, extra); };
       var msg, apply = null;
       if (s.kind === 'rebuild') {
         msg = 'Found the release (' + (s.release || 'thread') + '): ' + s.files + ' track' + (s.files === 1 ? '' : 's') + ' instead of the ' + (s.had || 0) + ' here now. Swap the songs for just those? The comp keeps its likes, comments and stars.';
-        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, force: true };
+        apply = B({ album_ids: [a.id], limit: 1, apply: true, force: true });
       } else if (s.kind === 'linked_existing') {
         msg = 'This comp is already on the site from its download link. Merge this copy into that one? Likes, comments and stars move over, and this link will open the other one.';
-        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
+        apply = B({ album_ids: [a.id], limit: 1, apply: true });
       } else if (s.kind === 'linked_queued') {
         msg = 'The release is a download link (' + (s.link || '') + '). Import it and swap the songs into this comp once it finishes? The comp keeps its likes, comments and stars.';
-        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
+        apply = B({ album_ids: [a.id], limit: 1, apply: true });
       } else if (s.kind === 'not_a_comp') {
         if (s.to_upcoming) {
           var pick = await pickThreadCover(s, gptLine);
@@ -524,7 +604,7 @@
           btn.textContent = 'Updating…';
           try {
             var picks = {}; if (pick.id) picks[a.id] = pick.id;
-            var done0 = await _threadRepair({ album_ids: [a.id], limit: 1, apply: true, ai: true, upcoming_ids: [a.id], cover_picks: picks });
+            var done0 = await _threadRepair(B({ album_ids: [a.id], limit: 1, apply: true, upcoming_ids: [a.id], cover_picks: picks }));
             var made = (done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'made_upcoming'; });
             var cf = (done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'cover_failed'; });
             if (!made) throw new Error(((done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'failed'; }) || {}).why || 'Nothing changed');
@@ -539,10 +619,10 @@
           return;
         }
         msg = 'No download link for the comp in this thread (comp threads only import from links, since the audio posted there is usually snippets). Remove this comp from the archive? It goes to the recycle bin in Manage the archive, where it can be restored.';
-        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, remove_ids: [a.id] };
+        apply = B({ album_ids: [a.id], limit: 1, apply: true, remove_ids: [a.id] });
       } else if (s.kind === 'renamed') {
         msg = 'The tracks already match the thread. Update the title or creator to match it (' + [s.title, s.archive_artist_name].filter(Boolean).join(' · ') + ')?';
-        apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
+        apply = B({ album_ids: [a.id], limit: 1, apply: true });
       } else if (!s.kind) {
         btn.textContent = 'Already matches the thread';
         return;
@@ -562,7 +642,7 @@
       if (rebuilt) { navigate('/album?id=' + rebuilt.new_id); return; }
       if (s.kind === 'renamed') { location.reload(); return; }
       if (s.kind === 'linked_existing') { navigate('/album?id=' + encodeURIComponent(s.to)); return; }
-      if (s.kind === 'linked_queued') { if (typeof wvToast === 'function') wvToast('Importing from the link. The songs swap in when it finishes.'); btn.textContent = 'Import queued'; return; }
+      if (s.kind === 'linked_queued') { if (typeof wvToast === 'function') wvToast('Importing from the link. The songs swap in when it finishes.'); btn.textContent = 'Queued…'; watchRebuild(false); return; }
       if (s.kind === 'not_a_comp') { navigate('/archive'); return; }
       location.reload();
     } catch (e) {
