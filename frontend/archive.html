@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=3f5f21272ad6">
-  <script src="/js/status-card.js?v=3f5f21272ad6"></script>
-  <script src="/js/down.js?v=3f5f21272ad6"></script>
+  <link rel="stylesheet" href="/css/style.css?v=8410219b6d47">
+  <script src="/js/status-card.js?v=8410219b6d47"></script>
+  <script src="/js/down.js?v=8410219b6d47"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=3f5f21272ad6"></script>
-<script src="/js/layout.js?v=3f5f21272ad6"></script>
-<script src="/js/player.js?v=3f5f21272ad6"></script>
-<script src="/js/router.js?v=3f5f21272ad6"></script>
+<script src="/js/api.js?v=8410219b6d47"></script>
+<script src="/js/layout.js?v=8410219b6d47"></script>
+<script src="/js/player.js?v=8410219b6d47"></script>
+<script src="/js/router.js?v=8410219b6d47"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -71,6 +71,12 @@ async function initArchive() {
       '<button id="arc-view-top" onclick="arcSetView(\'top\')">Top 150</button>' +
       '<button id="arc-view-trackers" onclick="arcSetView(\'trackers\')">Trackers</button>' +
     '</div>' +
+    '<div class="wv-seg arc-src-seg" id="arc-source" role="group" aria-label="Where the release came from" style="align-self:flex-start;">' +
+      '<button class="on" data-s="" onclick="arcSourceChange(\'\')">All sources</button>' +
+      '<button data-s="discord" onclick="arcSourceChange(\'discord\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg>Discord</button>' +
+      '<button data-s="reddit" onclick="arcSourceChange(\'reddit\')"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#FF4500"/><ellipse cx="12" cy="14" rx="6" ry="4" fill="#fff"/><circle cx="9.6" cy="13.6" r="1" fill="#FF4500"/><circle cx="14.4" cy="13.6" r="1" fill="#FF4500"/><circle cx="16.8" cy="7.2" r="1.3" fill="#fff"/></svg>Reddit</button>' +
+      '<button data-s="other" onclick="arcSourceChange(\'other\')">Other</button>' +
+    '</div>' +
     '<div id="arc-filters" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
       '<input type="text" id="arc-search" class="wv-input" placeholder="Search title or artist…" ' +
         'style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;font-size:14px;" oninput="arcSearchInput()">' +
@@ -84,12 +90,6 @@ async function initArchive() {
       '</select>' +
       '<select id="arc-era" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;display:none;" onchange="arcEraChange()">' +
         '<option value="">Every era</option>' +
-      '</select>' +
-      '<select id="arc-source" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;" onchange="arcSourceChange()" title="Where the release was found">' +
-        '<option value="">Every source</option>' +
-        '<option value="discord">From Discord</option>' +
-        '<option value="reddit">From Reddit</option>' +
-        '<option value="other">Other sources</option>' +
       '</select>' +
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcSurprise()" title="Play a comp at random">Surprise me</button>' +
       '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;" onclick="arcShuffleResults()" title="Queue a track from each comp shown">Shuffle these</button>' +
@@ -112,8 +112,7 @@ async function initArchive() {
   var _s0 = _p0.get('source');
   if (_s0 && ARC_SOURCES.indexOf(_s0) >= 0) {
     _arcSource = _s0;
-    var ss = document.getElementById('arc-source');
-    if (ss) ss.value = _s0;
+    _arcSourceMark();
   }
   var _v0 = _p0.get('view');
   if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers') _arcKind = _v0; }
@@ -217,9 +216,14 @@ var _arcEra = '';
 // Where a release came from: Discord, Reddit, or anywhere else it was pulled.
 var _arcSource = '';
 var ARC_SOURCES = ['discord', 'reddit', 'other'];
-function arcSourceChange() {
-  var sel = document.getElementById('arc-source');
-  _arcSource = sel && ARC_SOURCES.indexOf(sel.value) >= 0 ? sel.value : '';
+function _arcSourceMark() {
+  document.querySelectorAll('#arc-source button').forEach(function(b) { b.classList.toggle('on', (b.getAttribute('data-s') || '') === _arcSource); });
+}
+function arcSourceChange(v) {
+  var next = ARC_SOURCES.indexOf(v) >= 0 ? v : '';
+  if (next === _arcSource) return;
+  _arcSource = next;
+  _arcSourceMark();
   try {
     var u = new URL(location.href);
     if (_arcSource) u.searchParams.set('source', _arcSource); else u.searchParams.delete('source');
