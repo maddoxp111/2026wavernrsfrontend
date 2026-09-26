@@ -344,7 +344,7 @@
     if (isLoggedIn && user) {
       html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
-              '<span id="wv-notif-dot" style="position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--brand);display:none;"></span>' +
+              '<span id="wv-notif-dot" style="display:none;"></span>' +
               '</button>';
       html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
       var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
