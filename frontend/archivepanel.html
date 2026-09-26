@@ -257,7 +257,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Manage the archive</div>' +
             '<div style="font-size:12px;color:var(--text-3);">Find any comp and fix it: title, profile it belongs to, description, cover, tracks. Move comps between profiles, merge comps, rename and merge profiles. Select several for bulk actions.</div></div>' +
-            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button><button id="mg-tab-top" onclick="mgTab(\'top\')">Top 150</button><button id="mg-tab-otw" onclick="mgTab(\'otw\')">Of the Week</button><button id="mg-tab-cleanup" onclick="mgTab(\'cleanup\')">Cleanup</button>' +
+            '<div class="wv-seg"><button class="on" id="mg-tab-comps" onclick="mgTab(\'comps\')">Comps</button><button id="mg-tab-artists" onclick="mgTab(\'artists\')">Artists</button><button id="mg-tab-trackers" onclick="mgTab(\'trackers\')">Trackers</button><button id="mg-tab-top" onclick="mgTab(\'top\')">Top 150</button><button id="mg-tab-otw" onclick="mgTab(\'otw\')">Of the Week</button><button id="mg-tab-cleanup" onclick="mgTab(\'cleanup\')">Cleanup</button><button id="mg-tab-deleted" onclick="mgTab(\'deleted\')">Deleted</button>' +
             '</div>' +
           '</div>' +
           '<div id="mg-comps">' +
@@ -291,6 +291,15 @@
           '</div>' +
           '<div id="mg-cleanup" style="display:none;">' +
             '<div id="mg-cleanup-body"><div class="loading"><div class="spinner"></div></div></div>' +
+          '</div>' +
+          '<div id="mg-deleted" style="display:none;">' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Comps deleted from the site. The last 60 are kept in the recycle bin and come back instantly. Anything older can be pulled from the nightly backups, with its likes and comments.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">' +
+              '<input id="mg-restore-id" class="wv-input" placeholder="Paste a deleted comp\'s link or ID…" style="flex:1;min-width:240px;padding:8px 12px;font-size:13px;">' +
+              '<button class="wv-pill brand" style="font-size:12.5px;padding:7px 14px;" onclick="mgRestore()">Restore</button>' +
+            '</div>' +
+            '<div id="mg-restore-msg" style="font-size:12.5px;color:var(--text-2);margin-bottom:10px;"></div>' +
+            '<div id="mg-bin" style="display:flex;flex-direction:column;gap:6px;"></div>' +
           '</div>' +
           '<div id="mg-trackers" style="display:none;">' +
             '<div class="wv-card" style="padding:14px;margin-bottom:16px;">' +
@@ -1507,7 +1516,7 @@
   var _mg = { items: [], total: 0, sel: {}, timer: null, artists: [], asel: {}, atimer: null, editing: null };
   function _mgCover(u) { return u ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(u, 48) : u) + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;" loading="lazy">' : '<div style="width:36px;height:36px;border-radius:6px;background:var(--surface-3);flex-shrink:0;"></div>'; }
   window.mgTab = function(t) {
-    ['comps', 'artists', 'trackers', 'top', 'otw', 'cleanup'].forEach(function(x) {
+    ['comps', 'artists', 'trackers', 'top', 'otw', 'cleanup', 'deleted'].forEach(function(x) {
       var pane = document.getElementById('mg-' + x);
       if (pane) pane.style.display = t === x ? '' : 'none';
       var btn = document.getElementById('mg-tab-' + x);
@@ -1520,6 +1529,45 @@
     if (t === 'top' && !_mg.top) mgTopLoad();
     if (t === 'cleanup' && !_mg.cleanup) mgCleanupLoad();
     if (t === 'otw') mgOtwLoad();
+    if (t === 'deleted') mgBinLoad();
+  };
+
+  // ── Deleted comps: recycle bin and restore from backup ───────────────
+  window.mgBinLoad = async function() {
+    var box = document.getElementById('mg-bin'); if (!box) return;
+    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      var d = await api('/archive-manage/recycle-bin');
+      var items = d.items || [];
+      box.innerHTML = items.length ? items.map(function(x) {
+        return '<div class="wv-card" style="padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">' +
+          '<div style="flex:1;min-width:180px;"><div style="font-size:13.5px;font-weight:700;color:var(--text);">' + escHtml(x.title || 'Untitled') + '</div>' +
+          '<div style="font-size:12px;color:var(--text-3);">' + escHtml(x.creator || '') + ' · ' + x.tracks + ' songs' + (x.external_likes ? ' · ⭐ ' + x.external_likes : '') + ' · deleted ' + new Date(x.at).toLocaleString() + (x.reason ? ' · ' + escHtml(x.reason) : '') + '</div></div>' +
+          '<button class="wv-pill" style="font-size:12px;padding:6px 14px;" onclick="mgRestore(\'' + x.id + '\')">Restore</button></div>';
+      }).join('') : '<div class="wv-empty">The recycle bin is empty.</div>';
+    } catch (e) { box.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; }
+  };
+  window.mgRestore = async function(id) {
+    var msg = document.getElementById('mg-restore-msg');
+    var v = id || ((document.getElementById('mg-restore-id') || {}).value || '').trim();
+    if (!v) { msg.textContent = 'Paste the comp link or ID first.'; return; }
+    msg.style.color = 'var(--text-2)'; msg.textContent = 'Starting…';
+    try {
+      await api('/archive-manage/restore', { method: 'POST', body: JSON.stringify({ album_id: v }) });
+      for (var i = 0; i < 400; i++) {
+        await new Promise(function(r) { setTimeout(r, 2500); });
+        var st = await api('/archive-manage/restore');
+        msg.textContent = 'Restoring: ' + (st.step || '…');
+        if (!st.running) {
+          if (st.error) { msg.style.color = 'var(--red)'; msg.textContent = st.error; return; }
+          var r = st.result || {}, c = r.restored || {};
+          msg.style.color = 'var(--green)';
+          msg.innerHTML = 'Restored: ' + (c.tracks || 0) + ' songs' + (c.album_likes ? ', ' + c.album_likes + ' likes' : '') + (c.comments ? ', ' + c.comments + ' comments' : '') + (r.backup_at ? ' (from the backup of ' + new Date(r.backup_at).toLocaleDateString() + ')' : ' (from the recycle bin)') + '. <a href="/album?id=' + encodeURIComponent(r.album_id) + '" style="color:var(--brand);">Open it</a>';
+          mgBinLoad();
+          return;
+        }
+      }
+    } catch (e) { msg.style.color = 'var(--red)'; msg.textContent = e.message || 'Could not start the restore'; }
   };
 
   // ── Of the Week picks ────────────────────────────────────────────────
