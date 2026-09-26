@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=b924a6ef7b7d">
-  <script src="/js/status-card.js?v=b924a6ef7b7d"></script>
-  <script src="/js/down.js?v=b924a6ef7b7d"></script>
+  <link rel="stylesheet" href="/css/style.css?v=198a777f9dae">
+  <script src="/js/status-card.js?v=198a777f9dae"></script>
+  <script src="/js/down.js?v=198a777f9dae"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=b924a6ef7b7d"></script>
-<script src="/js/layout.js?v=b924a6ef7b7d"></script>
-<script src="/js/player.js?v=b924a6ef7b7d"></script>
-<script src="/js/router.js?v=b924a6ef7b7d"></script>
-<script src="/js/playlists.js?v=b924a6ef7b7d"></script>
-<script src="/js/ratings.js?v=b924a6ef7b7d"></script>
+<script src="/js/api.js?v=198a777f9dae"></script>
+<script src="/js/layout.js?v=198a777f9dae"></script>
+<script src="/js/player.js?v=198a777f9dae"></script>
+<script src="/js/router.js?v=198a777f9dae"></script>
+<script src="/js/playlists.js?v=198a777f9dae"></script>
+<script src="/js/ratings.js?v=198a777f9dae"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -151,6 +151,7 @@
     document.getElementById('album-container').innerHTML = `
       <div style="padding:28px 0;">
         ${freshBanner}
+        <div id="staff-bar" class="wv-staff-bar" style="display:none;"></div>
         <div class="wv-hero">
           <div class="wv-hero-art" style="background:${coverBg};">
             ${coverInner}
@@ -273,7 +274,7 @@
       </div>`;
 
     // Wire IA CDN retry on all cover images (they may take 1-3 min to propagate)
-    renderStaffCoverButton(); renderStaffThreadButton();
+    renderStaffCoverButton(); renderStaffThreadButton(); renderStaffBar();
     setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 2000);
     setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 6000);
     if (typeof wireIACoverRetry === 'function') {
@@ -314,7 +315,8 @@
   // the actual release: the first post's files, the owner's full upload, or
   // the download link they posted. It shows what it found before changing it.
   function renderStaffThreadButton() {
-    var slot = document.getElementById('staff-thread-slot');
+    renderStaffBar();
+    var slot = document.getElementById('staff-bar-rebuild') || document.getElementById('staff-thread-slot');
     if (!slot || slot.dataset.done) return;
     var a = album;
     var staff = false;
@@ -353,6 +355,134 @@
       };
     });
   }
+
+  // ── Staff toolbar: edit by hand, rebuild, or have the AI fix things ─────
+  var AI_QUICK = [['titles', 'Clean up song titles'], ['artist', 'Fix artist name'], ['cover', 'Fix cover'], ['description', 'Write description'], ['era', 'Set era'], ['tidy', 'Tidy everything']];
+  function _isStaffNow() { try { return sessionStorage.getItem('wv_is_mod') === 'true' || sessionStorage.getItem('wv_is_archiver') === 'true'; } catch (_) { return false; } }
+  function renderStaffBar() {
+    var bar = document.getElementById('staff-bar');
+    if (!bar || bar.dataset.done || !album || !album.is_archive || !_isStaffNow()) return;
+    bar.dataset.done = '1';
+    bar.style.display = '';
+    bar.innerHTML = '<div class="wv-sb-row"><span class="wv-sb-label">Staff</span>' +
+        '<button class="wv-pill" onclick="staffEdit()">✏️ Edit</button>' +
+        '<span id="staff-bar-rebuild"></span>' +
+        '<button class="wv-pill" id="staff-undo" style="display:none;" onclick="staffUndo()">↶ Undo last change</button>' +
+      '</div>' +
+      '<div class="wv-sb-row"><span class="wv-sb-label">AI</span>' + AI_QUICK.map(function (q) { return '<button class="wv-pill wv-sb-ai" onclick="staffAi(\'' + q[0] + '\')">' + q[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="wv-sb-row"><input id="staff-ai-q" class="wv-input" placeholder="Ask the AI to do something to this comp, e.g. \'move the interlude to the end\'" onkeydown="if(event.key===\'Enter\')staffAi(\'custom\')"><button class="wv-pill brand" onclick="staffAi(\'custom\')">Ask AI</button></div>' +
+      '<div id="staff-bar-msg" class="wv-sb-msg"></div>';
+    api('/archive-manage/comps/' + album.id + '/undo').then(function (d) { var u = document.getElementById('staff-undo'); if (u && d && d.available) { u.style.display = ''; u.title = 'Undo the ' + (d.reason || 'last change') + ' from ' + new Date(d.at).toLocaleString(); } }).catch(function () {});
+  }
+  function _sbMsg(t, bad) { var m = document.getElementById('staff-bar-msg'); if (m) { m.textContent = t; m.style.color = bad ? 'var(--red)' : 'var(--text-2)'; } }
+
+  window.staffUndo = async function () {
+    if (!confirm('Undo the last edit to this comp?')) return;
+    try { await api('/archive-manage/comps/' + album.id + '/undo', { method: 'POST', body: '{}' }); if (typeof wvToast === 'function') wvToast('Undone'); location.reload(); }
+    catch (e) { _sbMsg(e.message || 'Could not undo', true); }
+  };
+
+  window.staffAi = async function (task) {
+    var prompt = task === 'custom' ? ((document.getElementById('staff-ai-q') || {}).value || '').trim() : '';
+    if (task === 'custom' && !prompt) { _sbMsg('Type what you want the AI to do first.', true); return; }
+    _sbMsg('✨ The AI is looking at this comp…');
+    document.querySelectorAll('.wv-sb-ai').forEach(function (b) { b.disabled = true; });
+    try {
+      var d = await api('/archive-manage/comps/' + album.id + '/ai', { method: 'POST', body: JSON.stringify({ task: task, prompt: prompt }) });
+      _sbMsg('');
+      showAiPlan(d.plan);
+    } catch (e) { _sbMsg(e.message || 'The AI could not help with that', true); }
+    document.querySelectorAll('.wv-sb-ai').forEach(function (b) { b.disabled = false; });
+  };
+
+  function showAiPlan(plan) {
+    var ch = plan.changes || [];
+    var OP = { set_title: 'Title', set_artist: 'Credit', set_description: 'Description', set_era: 'Era', set_cover: 'Cover', rename_track: 'Song', move_track: 'Move song' };
+    var titles = {}; albumTracks.forEach(function (t) { var td = t.tracks || t; titles[td.id] = td.title; });
+    var wrap = document.createElement('div');
+    wrap.className = 'wv-vp-wrap';
+    wrap.innerHTML = '<div class="wv-vp" style="max-width:640px;text-align:left;">' +
+      '<div class="wv-vp-title">✨ AI suggestions</div>' +
+      '<div class="wv-vp-body">' + escHtml(plan.summary || '') + '</div>' +
+      (ch.length ? '<div class="wv-ai-list">' + ch.map(function (c, i) {
+        var after = c.op === 'set_era' ? c.after_label : c.op === 'move_track' ? 'position ' + c.value : c.value;
+        var before = c.op === 'move_track' ? 'position ' + c.before : c.before;
+        var what = c.op === 'rename_track' || c.op === 'move_track' ? OP[c.op] + ' · ' + escHtml(titles[c.track_id] || '') : OP[c.op];
+        var body = c.op === 'set_cover'
+          ? '<div class="wv-ai-imgs">' + (c.before ? '<img src="' + escHtml(c.before) + '" alt="">' : '<span>none</span>') + '<span>→</span><img src="' + escHtml(c.image) + '" alt=""></div>'
+          : '<div class="wv-ai-diff"><s>' + escHtml(before || '(empty)') + '</s><span>→</span><b>' + escHtml(after || '') + '</b></div>';
+        return '<label class="wv-ai-item"><input type="checkbox" checked value="' + i + '"><div><div class="wv-ai-what">' + what + '</div>' + body + (c.reason ? '<div class="wv-ai-why">' + escHtml(c.reason) + '</div>' : '') + '</div></label>';
+      }).join('') + '</div>' : '<div class="wv-vp-body" style="margin-top:8px;">No changes needed.</div>') +
+      '<div class="wv-vp-actions" style="margin-top:14px;"><button class="wv-pill" id="wv-ai-cancel">' + (ch.length ? 'Cancel' : 'Close') + '</button>' + (ch.length ? '<button class="wv-pill brand" id="wv-ai-ok">Apply ticked changes</button>' : '') + '</div>' +
+    '</div>';
+    document.body.appendChild(wrap);
+    var closeIt = function () { wrap.remove(); };
+    wrap.querySelector('#wv-ai-cancel').onclick = closeIt;
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) closeIt(); });
+    var ok = wrap.querySelector('#wv-ai-ok');
+    if (ok) ok.onclick = async function () {
+      var idx = Array.prototype.map.call(wrap.querySelectorAll('.wv-ai-item input:checked'), function (x) { return +x.value; });
+      if (!idx.length) { closeIt(); return; }
+      ok.disabled = true; ok.textContent = 'Applying…';
+      try {
+        var r = await api('/archive-manage/comps/' + album.id + '/ai-apply', { method: 'POST', body: JSON.stringify({ plan_id: plan.id, indexes: idx }) });
+        if (typeof wvToast === 'function') wvToast('Done: ' + (r.done || []).join(', '));
+        closeIt(); location.reload();
+      } catch (e) { ok.disabled = false; ok.textContent = 'Apply ticked changes'; alert(e.message || 'Could not apply'); }
+    };
+  }
+
+  window.staffEdit = async function () {
+    var eras = [];
+    try { eras = await api('/eratags'); } catch (_) {}
+    var list = albumTracks.map(function (t) { return t.tracks || t; });
+    var wrap = document.createElement('div');
+    wrap.className = 'wv-vp-wrap';
+    wrap.innerHTML = '<div class="wv-vp" style="max-width:640px;text-align:left;max-height:88vh;overflow:auto;">' +
+      '<div class="wv-vp-title">Edit comp</div>' +
+      '<div class="wv-ed-grid">' +
+        '<label>Title<input class="wv-input" id="ed-title" value="' + escHtml(album.title || '') + '"></label>' +
+        '<label>Credited to<input class="wv-input" id="ed-artist" value="' + escHtml(album.archive_artist_name || '') + '"></label>' +
+        '<label>Era<select class="wv-input" id="ed-era"><option value="">No era</option>' + (eras || []).map(function (e) { return '<option value="' + escHtml(e.id) + '"' + (album.era_tag_id === e.id ? ' selected' : '') + '>' + escHtml(e.name) + '</option>'; }).join('') + '</select></label>' +
+        '<label>Description<textarea class="wv-input" id="ed-desc" rows="3">' + escHtml(album.description || '') + '</textarea></label>' +
+        '<label>Cover<input type="file" id="ed-cover" accept="image/*" class="wv-input"></label>' +
+      '</div>' +
+      '<div class="wv-ot-title" style="margin:12px 0 6px;">Songs (change a number to move a song)</div>' +
+      '<div class="wv-ed-tracks">' + list.map(function (td, i) {
+        return '<div class="wv-ed-track" data-id="' + escHtml(td.id) + '"><input class="wv-input ed-pos" type="number" min="1" value="' + (i + 1) + '"><input class="wv-input ed-ttl" value="' + escHtml(td.title || '') + '"></div>';
+      }).join('') + '</div>' +
+      '<div class="wv-vp-actions" style="margin-top:14px;"><button class="wv-pill" id="ed-cancel">Cancel</button><button class="wv-pill brand" id="ed-save">Save</button></div>' +
+    '</div>';
+    document.body.appendChild(wrap);
+    var closeIt = function () { wrap.remove(); };
+    wrap.querySelector('#ed-cancel').onclick = closeIt;
+    wrap.querySelector('#ed-save').onclick = async function () {
+      var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        await api('/archive-manage/comps/' + album.id + '/snapshot', { method: 'POST', body: JSON.stringify({ reason: 'manual edit' }) });
+        var patch = {};
+        var t = document.getElementById('ed-title').value.trim(), ar = document.getElementById('ed-artist').value.trim(), era = document.getElementById('ed-era').value, desc = document.getElementById('ed-desc').value;
+        if (t && t !== album.title) patch.title = t;
+        if (ar !== (album.archive_artist_name || '')) patch.archive_artist_name = ar;
+        if ((era || null) !== (album.era_tag_id || null)) patch.era_tag_id = era || null;
+        if (desc !== (album.description || '')) patch.description = desc;
+        if (Object.keys(patch).length) await api('/archive-manage/comps/' + album.id, { method: 'PATCH', body: JSON.stringify(patch) });
+        var rows = Array.prototype.slice.call(wrap.querySelectorAll('.wv-ed-track'));
+        for (var i = 0; i < rows.length; i++) {
+          var id = rows[i].getAttribute('data-id'), nt = rows[i].querySelector('.ed-ttl').value.trim();
+          var orig = list.find(function (x) { return x.id === id; });
+          if (nt && orig && nt !== orig.title) await api('/archive-manage/tracks/' + id, { method: 'PATCH', body: JSON.stringify({ title: nt }) });
+        }
+        var ordered = rows.map(function (r, i) { return { id: r.getAttribute('data-id'), pos: parseFloat(r.querySelector('.ed-pos').value) || (i + 1), i: i }; })
+          .sort(function (a, b) { return a.pos - b.pos || a.i - b.i; });
+        if (ordered.some(function (o, k) { return o.i !== k; })) await api('/archive-manage/comps/' + album.id + '/tracklist', { method: 'PUT', body: JSON.stringify({ tracks: ordered.map(function (o, k) { return { track_id: o.id, position: k }; }) }) });
+        var f = document.getElementById('ed-cover').files[0];
+        if (f) { var fd = new FormData(); fd.append('cover', f); await apiUpload('/archive-manage/comps/' + album.id + '/cover', fd); }
+        if (typeof wvToast === 'function') wvToast('Saved');
+        closeIt(); location.reload();
+      } catch (e) { btn.disabled = false; btn.textContent = 'Save'; alert(e.message || 'Could not save'); }
+    };
+  };
 
   async function _threadRepair(body) {
     await api('/import/thread-repair', { method: 'POST', body: JSON.stringify(body) });
