@@ -2238,3 +2238,106 @@ window.wvClampDesc = function (el) {
     el.insertAdjacentElement('afterend', btn);
   });
 };
+
+// ── Discord thread viewer: renders a thread the way Discord shows it ──────
+(function () {
+  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function safeUrl(u) { return /^https?:\/\//i.test(u) ? u : '#'; }
+
+  function inline(t) {
+    var codes = [], held = [];
+    var hold = function (html) { held.push(html); return '\u0001' + (held.length - 1) + '\u0001'; };
+    t = t.replace(/`([^`\n]+)`/g, function (_, c) { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    t = esc(t);
+    t = t.replace(/&lt;(a?):([A-Za-z0-9_~]+):(\d+)&gt;/g, function (_, an, name, id) { return hold('<img class="dt-emoji" alt=":' + name + ':" title=":' + name + ':" src="https://cdn.discordapp.com/emojis/' + id + '.' + (an ? 'gif' : 'png') + '?size=48">'); });
+    t = t.replace(/&lt;t:(\d{9,11})(?::([tTdDfFR]))?&gt;/g, function (_, s, f) { var d = new Date(+s * 1000); return hold('<span class="dt-time-tag">' + esc(f === 'R' ? d.toLocaleDateString() : d.toLocaleString()) + '</span>'); });
+    t = t.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, u) { return hold('<a href="' + safeUrl(u) + '" target="_blank" rel="noopener nofollow">') + label + hold('</a>'); });
+    t = t.replace(/(^|[\s(])(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g, function (_, pre, u) { return pre + hold('<a href="' + u + '" target="_blank" rel="noopener nofollow">' + u + '</a>'); });
+    t = t.replace(/&lt;(https?:\/\/[^\s&]+)&gt;/g, function (_, u) { return hold('<a href="' + u + '" target="_blank" rel="noopener nofollow">' + u + '</a>'); });
+    t = t.replace(/\*\*\*([^*]+)\*\*\*/g, '<b><i>$1</i></b>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/__([^_]+)__/g, '<u>$1</u>');
+    t = t.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>').replace(/(^|[^_\w])_([^_\n]+)_(?!_)/g, '$1<i>$2</i>');
+    t = t.replace(/~~([^~]+)~~/g, '<s>$1</s>').replace(/\|\|([^|]+)\|\|/g, '<span class="dt-spoiler" onclick="this.classList.add(\'shown\')">$1</span>');
+    t = t.replace(/\u0001(\d+)\u0001/g, function (_, i) { return held[+i]; });
+    t = t.replace(/\u0000(\d+)\u0000/g, function (_, i) { return '<code>' + esc(codes[+i]) + '</code>'; });
+    return t;
+  }
+
+  function markdown(src) {
+    var out = [], parts = String(src || '').split(/```/);
+    parts.forEach(function (chunk, i) {
+      if (i % 2 === 1) { out.push('<pre class="dt-code">' + esc(chunk.replace(/^[a-z0-9+-]*\n/i, '')) + '</pre>'); return; }
+      var lines = chunk.split('\n'), buf = [];
+      lines.forEach(function (ln) {
+        var m;
+        if ((m = /^>>> ?(.*)$/.exec(ln))) buf.push('<blockquote>' + inline(m[1]) + '</blockquote>');
+        else if ((m = /^> ?(.*)$/.exec(ln))) buf.push('<blockquote>' + inline(m[1]) + '</blockquote>');
+        else if ((m = /^-# (.*)$/.exec(ln))) buf.push('<div class="dt-sub">' + inline(m[1]) + '</div>');
+        else if ((m = /^(#{1,3}) (.*)$/.exec(ln))) buf.push('<div class="dt-h' + m[1].length + '">' + inline(m[2]) + '</div>');
+        else if ((m = /^\s*[-*] (.*)$/.exec(ln))) buf.push('<div class="dt-li">• ' + inline(m[1]) + '</div>');
+        else buf.push(inline(ln) + '<br>');
+      });
+      out.push(buf.join('').replace(/(<br>)+$/, ''));
+    });
+    return out.join('');
+  }
+
+  function fmtSize(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' B'; }
+
+  function attachments(list) {
+    return (list || []).map(function (a) {
+      var u = esc(safeUrl(a.url));
+      if (a.kind === 'image') return '<a class="dt-img" href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" alt="' + esc(a.name) + '" loading="lazy" onerror="this.closest(\'a\').classList.add(\'gone\')"></a>';
+      if (a.kind === 'audio') return '<div class="dt-file dt-audio"><div class="dt-file-name">🎵 ' + esc(a.name) + ' <span>' + fmtSize(a.size) + '</span></div><audio controls preload="none" src="' + u + '"></audio></div>';
+      if (a.kind === 'video') return '<video class="dt-video" controls preload="none" src="' + u + '"></video>';
+      return '<a class="dt-file" href="' + u + '" target="_blank" rel="noopener"><div class="dt-file-name">📄 ' + esc(a.name) + ' <span>' + fmtSize(a.size) + '</span></div></a>';
+    }).join('');
+  }
+
+  function embeds(list) {
+    return (list || []).map(function (e) {
+      return '<div class="dt-embed" style="border-left-color:' + esc(e.color || 'var(--hair-strong)') + ';">' +
+        (e.provider ? '<div class="dt-embed-prov">' + esc(e.provider) + '</div>' : '') +
+        (e.title ? '<div class="dt-embed-title">' + (e.url ? '<a href="' + esc(safeUrl(e.url)) + '" target="_blank" rel="noopener">' + esc(e.title) + '</a>' : esc(e.title)) + '</div>' : '') +
+        (e.description ? '<div class="dt-embed-desc">' + markdown(e.description) + '</div>' : '') +
+        (e.image ? '<img class="dt-embed-img" src="' + esc(safeUrl(e.image)) + '" loading="lazy" onerror="this.remove()">' : (e.thumbnail ? '<img class="dt-embed-thumb" src="' + esc(safeUrl(e.thumbnail)) + '" loading="lazy" onerror="this.remove()">' : '')) +
+      '</div>';
+    }).join('');
+  }
+
+  function reactions(list) {
+    if (!list || !list.length) return '';
+    return '<div class="dt-reacts">' + list.map(function (r) {
+      var em = r.id ? '<img class="dt-emoji" src="https://cdn.discordapp.com/emojis/' + esc(r.id) + '.' + (r.animated ? 'gif' : 'png') + '?size=32" alt="' + esc(r.name) + '">' : esc(r.name);
+      return '<span class="dt-react">' + em + ' ' + r.count + '</span>';
+    }).join('') + '</div>';
+  }
+
+  function when(ts) {
+    var d = new Date(ts), now = new Date();
+    var sameDay = d.toDateString() === now.toDateString();
+    return sameDay ? 'Today at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  window.wvRenderDiscordThread = function (data, shown) {
+    var msgs = data.messages || [], byId = {};
+    msgs.forEach(function (m) { byId[m.id] = m; });
+    var html = [], prev = null;
+    msgs.slice(0, shown || msgs.length).forEach(function (m) {
+      var a = m.author || {};
+      var grouped = prev && prev.author && prev.author.id === a.id && !m.reply_to && (m.at - prev.at) < 7 * 60 * 1000;
+      var reply = m.reply_to ? byId[m.reply_to] : null;
+      var body = (m.content ? '<div class="dt-text">' + markdown(m.content) + (m.edited ? ' <span class="dt-edited">(edited)</span>' : '') + '</div>' : '') +
+        (m.forwarded || []).map(function (f) { return '<div class="dt-fwd"><div class="dt-fwd-label">↪ Forwarded</div>' + (f.content ? '<div class="dt-text">' + markdown(f.content) + '</div>' : '') + attachments(f.attachments) + '</div>'; }).join('') +
+        attachments(m.attachments) + embeds(m.embeds) +
+        (m.stickers || []).map(function (st) { return st.url ? '<img class="dt-sticker" src="' + esc(st.url) + '" alt="' + esc(st.name) + '">' : ''; }).join('') +
+        reactions(m.reactions);
+      if (grouped) html.push('<div class="dt-msg dt-cont" id="dt-' + esc(m.id) + '"><div class="dt-gutter"><span class="dt-hover-time">' + esc(new Date(m.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })) + '</span></div><div class="dt-main">' + body + '</div></div>');
+      else html.push('<div class="dt-msg" id="dt-' + esc(m.id) + '">' +
+        (reply ? '<div class="dt-reply"><span class="dt-reply-name">@' + esc((reply.author || {}).name || '') + '</span> ' + esc(String(reply.content || (reply.attachments && reply.attachments.length ? 'Click to see attachment' : '')).replace(/<a?:([A-Za-z0-9_~]+):\d+>/g, ':$1:').replace(/^#{1,3} |^-# |^> /gm, '').replace(/[*_~`|]{1,3}/g, '').replace(/\s+/g, ' ').slice(0, 110)) + '</div>' : (m.reply_to ? '<div class="dt-reply dt-reply-gone">Original message was deleted</div>' : '')) +
+        '<div class="dt-row"><div class="dt-gutter">' + (a.avatar ? '<img class="dt-avatar" src="' + esc(a.avatar) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<div class="dt-avatar dt-avatar-blank">' + esc((a.name || '?').charAt(0).toUpperCase()) + '</div>') + '</div>' +
+        '<div class="dt-main"><div class="dt-head"><span class="dt-name"' + (a.color ? ' style="color:' + esc(a.color) + ';"' : '') + '>' + esc(a.name) + '</span>' + (a.bot ? '<span class="dt-bot">APP</span>' : '') + '<span class="dt-time">' + esc(when(m.at)) + '</span></div>' + body + '</div></div></div>');
+      prev = m;
+    });
+    return html.join('');
+  };
+})();

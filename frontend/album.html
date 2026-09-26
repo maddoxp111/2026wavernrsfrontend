@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=6b00d0f390bb">
-  <script src="/js/status-card.js?v=6b00d0f390bb"></script>
-  <script src="/js/down.js?v=6b00d0f390bb"></script>
+  <link rel="stylesheet" href="/css/style.css?v=6161daad32e0">
+  <script src="/js/status-card.js?v=6161daad32e0"></script>
+  <script src="/js/down.js?v=6161daad32e0"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=6b00d0f390bb"></script>
-<script src="/js/layout.js?v=6b00d0f390bb"></script>
-<script src="/js/player.js?v=6b00d0f390bb"></script>
-<script src="/js/router.js?v=6b00d0f390bb"></script>
-<script src="/js/playlists.js?v=6b00d0f390bb"></script>
-<script src="/js/ratings.js?v=6b00d0f390bb"></script>
+<script src="/js/api.js?v=6161daad32e0"></script>
+<script src="/js/layout.js?v=6161daad32e0"></script>
+<script src="/js/player.js?v=6161daad32e0"></script>
+<script src="/js/router.js?v=6161daad32e0"></script>
+<script src="/js/playlists.js?v=6161daad32e0"></script>
+<script src="/js/ratings.js?v=6161daad32e0"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -246,6 +246,11 @@
                 </div>`;
             }).join('')}
         </div>
+
+        ${album.discord_thread ? `<div class="wv-dt-sec" id="wv-dt-sec">
+          <div class="wv-dt-head"><h2 class="section-title" style="margin:0;">Discord thread</h2><a class="wv-see-all" href="${escHtml(album.discord_thread)}" target="_blank" rel="noopener">Open in Discord ↗</a></div>
+          <div id="wv-dt-body" style="margin-top:10px;"><button class="wv-pill" onclick="loadDiscordThread()">Show the thread</button></div>
+        </div>` : ''}
 
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
@@ -1259,6 +1264,27 @@
       await loadAlbum();
       var b = document.getElementById('owner-tools'); if (b) { b.style.display = ''; renderOwnerTools(); }
     } catch (e) { _otMsg(e.message || 'Could not remove them', true); }
+  };
+
+  var _dtData = null, _dtShown = 80;
+  window.loadDiscordThread = async function (more) {
+    var body = document.getElementById('wv-dt-body');
+    if (!body || !album) return;
+    if (!more) {
+      body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try { _dtData = await api('/albums/' + album.id + '/thread'); }
+      catch (e) { body.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Could not load the thread') + '</div>'; return; }
+      _dtShown = 80;
+    } else _dtShown += 150;
+    var d = _dtData, th = d.thread || {}, total = (d.messages || []).length;
+    var note = d.unreadable_since ? 'This thread is gone from Discord. This is the copy saved on wavernrs.'
+      : d.saved ? 'Saved on wavernrs ' + new Date(d.saved_at).toLocaleString() + (d.truncated ? ' · first 1,000 messages' : '')
+      : 'Loaded from Discord. It is being saved to wavernrs now.';
+    body.innerHTML = '<div class="wv-dt-box">' +
+      '<div class="wv-dt-title"><b># ' + escHtml(th.name || 'thread') + '</b>' + (th.guild ? ' · ' + escHtml(th.guild) : '') + (th.parent ? ' › ' + escHtml(th.parent) : '') + '<br>' + escHtml(note) + ' · ' + total.toLocaleString() + ' messages</div>' +
+      (typeof wvRenderDiscordThread === 'function' ? wvRenderDiscordThread(d, _dtShown) : '') +
+      (total > _dtShown ? '<div style="padding:12px 16px;"><button class="wv-pill" onclick="loadDiscordThread(true)">Show more (' + (total - _dtShown).toLocaleString() + ' left)</button></div>' : '') +
+    '</div>';
   };
 
   async function loadAwardPills(id) {
