@@ -1545,7 +1545,7 @@
   };
 
   // ── Fix Discord thread comps in batches ──────────────────────────────
-  var DX_KIND = { linked_queued: 'Import from its link', linked_existing: 'Merge into the copy from its link', rebuild: 'Swap in the right files', not_a_comp: 'No link found (left alone)', renamed: 'Title or creator fix', untouched: 'Looks right', unreadable: 'Thread unreadable', failed: 'Failed' };
+  var DX_KIND = { linked_queued: 'Import from its link', linked_existing: 'Merge into the copy from its link', rebuild: 'Swap in the right files', not_a_comp: 'No link found', made_upcoming: 'Made Upcoming', renamed: 'Title or creator fix', untouched: 'Looks right', unreadable: 'Thread unreadable', failed: 'Failed' };
   function _dxOffset() { try { return +(localStorage.getItem('wv_dx_offset') || 0); } catch (e) { return 0; } }
   function _dxSetOffset(n) { try { localStorage.setItem('wv_dx_offset', String(n)); } catch (e) {} }
   window.dxReset = function() { _dxSetOffset(0); document.getElementById('dx-out').innerHTML = ''; document.getElementById('dx-pos').textContent = 'Back to the most-starred comps.'; };
@@ -1573,11 +1573,12 @@
       document.getElementById('dx-msg').textContent = Object.keys(counts).map(function(k) { return (DX_KIND[k] || k) + ': ' + counts[k]; }).join(' · ');
       var fixable = { linked_queued: 1, linked_existing: 1, rebuild: 1, renamed: 1 };
       document.getElementById('dx-out').innerHTML = rows.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:520px;overflow:auto;">' + rows.map(function(x) {
-        var can = !!fixable[x.kind];
-        var detail = x.kind === 'linked_queued' ? (x.link || '') : x.kind === 'linked_existing' ? 'already on the site' : x.kind === 'rebuild' ? (x.files + ' songs instead of ' + (x.had || 0)) : x.kind === 'not_a_comp' ? (x.protected ? 'protected' : '') : (x.why || '');
+        var can = !!fixable[x.kind] || (x.kind === 'not_a_comp' && x.to_upcoming);
+        var detail = x.kind === 'linked_queued' ? (x.link || '') : x.kind === 'linked_existing' ? 'already on the site' : x.kind === 'rebuild' ? (x.files + ' songs instead of ' + (x.had || 0))
+          : x.kind === 'not_a_comp' ? (x.to_upcoming ? 'GPT agrees: clear its songs, use the first picture posted as the cover, and mark it Upcoming' + (x.first_image ? '' : ' (no picture in the thread)') : x.needs_gpt ? 'tick "Ask GPT too" and check again to confirm' : 'GPT was not sure, left alone') : (x.why || '');
         var g = gpt[x.id];
         return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--surface-2);font-size:12.5px;">' +
-          '<input type="checkbox" class="dx-pick" value="' + x.id + '"' + (can ? ' checked' : ' disabled') + ' style="width:auto;margin:0;">' +
+          '<input type="checkbox" class="dx-pick" value="' + x.id + '"' + (x.kind === 'not_a_comp' ? ' data-upcoming="1"' : '') + (can ? ' checked' : ' disabled') + ' style="width:auto;margin:0;">' +
           '<span style="flex:1;min-width:0;"><a href="/album?id=' + encodeURIComponent(x.id) + '" target="_blank" style="color:var(--text);font-weight:700;">' + escHtml(x.title || '') + '</a>' +
           ' <span style="color:var(--text-3);">⭐ ' + (x.stars || 0) + ' · ' + (x.tracks_now || 0) + ' songs now</span><br>' +
           '<span style="color:' + (can ? 'var(--brand)' : 'var(--text-3)') + ';">' + escHtml(DX_KIND[x.kind] || x.kind) + '</span> <span style="color:var(--text-3);word-break:break-all;">' + escHtml(detail) + '</span>' +
@@ -1591,9 +1592,10 @@
     if (!ids.length) return;
     if (!confirm('Fix ' + ids.length + ' comp' + (ids.length === 1 ? '' : 's') + '? Each one keeps its likes, comments and stars. Link imports finish in the background.')) return;
     try {
-      var st = await _dxRun({ album_ids: ids, limit: ids.length, apply: true, force: true, ai: !!(document.getElementById('dx-ai') || {}).checked });
-      var done = (st.linked_queued || 0) + (st.linked_existing || 0) + (st.rebuilt || 0) + (st.renamed || 0);
-      document.getElementById('dx-msg').textContent = 'Fixed ' + done + ' (' + (st.linked_queued || 0) + ' importing from their links in the background)' + (st.failed ? ' · ' + st.failed + ' failed' : '') + '.';
+      var upIds = Array.prototype.map.call(document.querySelectorAll('.dx-pick:checked[data-upcoming="1"]'), function(c) { return c.value; });
+      var st = await _dxRun({ album_ids: ids, upcoming_ids: upIds, limit: ids.length, apply: true, force: true, ai: upIds.length ? true : !!(document.getElementById('dx-ai') || {}).checked });
+      var done = (st.linked_queued || 0) + (st.linked_existing || 0) + (st.rebuilt || 0) + (st.renamed || 0) + (st.made_upcoming || 0);
+      document.getElementById('dx-msg').textContent = 'Fixed ' + done + ' (' + (st.linked_queued || 0) + ' importing from their links in the background' + (st.made_upcoming ? ', ' + st.made_upcoming + ' made Upcoming' : '') + ')' + (st.failed ? ' · ' + st.failed + ' failed' : '') + '. Cleared songs are in the Deleted tab if you need them back.';
       document.getElementById('dx-out').innerHTML = '';
     } catch (e) { document.getElementById('dx-msg').textContent = e.message || 'Fix failed'; }
   };

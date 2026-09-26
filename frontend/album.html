@@ -357,9 +357,18 @@
         msg = 'The release is a download link (' + (s.link || '') + '). Import it and swap the songs into this comp once it finishes? The comp keeps its likes, comments and stars.';
         apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
       } else if (s.kind === 'not_a_comp') {
+        if (s.to_upcoming) {
+          msg = 'GPT agrees there is no download link in this thread. Clear its songs, use the first picture posted in the thread as the cover' + (s.first_image ? '' : ' (there is none, so the cover stays)') + ', and mark it Upcoming? It keeps its link, likes and stars, and the songs go to the recycle bin in case this is wrong.';
+          apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, upcoming_ids: [a.id] };
+          if (!confirm(msg + gptLine)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+          btn.textContent = 'Updating…';
+          try { await _threadRepair(apply); if (typeof wvToast === 'function') wvToast('Marked Upcoming'); location.reload(); }
+          catch (e) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; if (typeof wvToast === 'function') wvToast(e.message || 'Could not update', 'error'); }
+          return;
+        }
         if (s.protected) {
           btn.disabled = false; btn.textContent = 'Rebuild from Discord';
-          alert('No download link was found in this thread, so nothing was changed. This comp has a lot of stars, so it will not be removed from here.' + gptLine);
+          alert('No download link was found in this thread, and GPT could not confirm it, so nothing was changed.' + gptLine);
           return;
         }
         msg = 'No download link for the comp in this thread (comp threads only import from links, since the audio posted there is usually snippets). Remove this comp from the archive? It goes to the recycle bin in Manage the archive, where it can be restored.';
