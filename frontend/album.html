@@ -502,7 +502,7 @@
 
   function showAiPlan(plan) {
     var ch = plan.changes || [];
-    var OP = { set_title: 'Title', set_artist: 'Credit', set_description: 'Description', set_era: 'Era', set_cover: 'Cover', rename_track: 'Song', move_track: 'Move song' };
+    var OP = { set_title: 'Title', set_artist: 'Credit', set_description: 'Description', clear_description: 'Remove description', set_era: 'Era', set_cover: 'Cover', remove_cover: 'Remove cover', rename_track: 'Song', move_track: 'Move song' };
     var titles = {}; albumTracks.forEach(function (t) { var td = t.tracks || t; titles[td.id] = td.title; });
     var wrap = document.createElement('div');
     wrap.className = 'wv-vp-wrap';
@@ -510,11 +510,11 @@
       '<div class="wv-vp-title">✨ AI suggestions</div>' +
       '<div class="wv-vp-body">' + escHtml(plan.summary || '') + '</div>' +
       (ch.length ? '<div class="wv-ai-list">' + ch.map(function (c, i) {
-        var after = c.op === 'set_era' ? c.after_label : c.op === 'move_track' ? 'position ' + c.value : c.value;
+        var after = c.op === 'set_era' ? c.after_label : c.op === 'move_track' ? 'position ' + c.value : c.op === 'clear_description' ? '(no description)' : c.value;
         var before = c.op === 'move_track' ? 'position ' + c.before : c.before;
         var what = c.op === 'rename_track' || c.op === 'move_track' ? OP[c.op] + ' · ' + escHtml(titles[c.track_id] || '') : OP[c.op];
-        var body = c.op === 'set_cover'
-          ? '<div class="wv-ai-imgs">' + (c.before ? '<img src="' + escHtml(c.before) + '" alt="">' : '<span>none</span>') + '<span>→</span><img src="' + escHtml(c.image) + '" alt=""></div>'
+        var body = c.op === 'set_cover' || c.op === 'remove_cover'
+          ? '<div class="wv-ai-imgs">' + (c.before ? '<img src="' + escHtml(c.before) + '" alt="">' : '<span>none</span>') + '<span>→</span>' + (c.op === 'remove_cover' ? '<span>no cover</span>' : '<img src="' + escHtml(c.image) + '" alt="">') + '</div>'
           : '<div class="wv-ai-diff"><s>' + escHtml(before || '(empty)') + '</s><span>→</span><b>' + escHtml(after || '') + '</b></div>';
         return '<label class="wv-ai-item"><input type="checkbox" checked value="' + i + '"><div><div class="wv-ai-what">' + what + '</div>' + body + (c.reason ? '<div class="wv-ai-why">' + escHtml(c.reason) + '</div>' : '') + '</div></label>';
       }).join('') + '</div>' : '<div class="wv-vp-body" style="margin-top:8px;">No changes needed.</div>') +
