@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=5a258bc4c319">
-  <script src="/js/status-card.js?v=5a258bc4c319"></script>
-  <script src="/js/down.js?v=5a258bc4c319"></script>
+  <link rel="stylesheet" href="/css/style.css?v=6b00d0f390bb">
+  <script src="/js/status-card.js?v=6b00d0f390bb"></script>
+  <script src="/js/down.js?v=6b00d0f390bb"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=5a258bc4c319"></script>
-<script src="/js/layout.js?v=5a258bc4c319"></script>
-<script src="/js/player.js?v=5a258bc4c319"></script>
-<script src="/js/router.js?v=5a258bc4c319"></script>
-<script src="/js/playlists.js?v=5a258bc4c319"></script>
-<script src="/js/ratings.js?v=5a258bc4c319"></script>
+<script src="/js/api.js?v=6b00d0f390bb"></script>
+<script src="/js/layout.js?v=6b00d0f390bb"></script>
+<script src="/js/player.js?v=6b00d0f390bb"></script>
+<script src="/js/router.js?v=6b00d0f390bb"></script>
+<script src="/js/playlists.js?v=6b00d0f390bb"></script>
+<script src="/js/ratings.js?v=6b00d0f390bb"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -323,6 +323,36 @@
     slot.innerHTML = '<button class="wv-btn-ghost" id="staff-thread-btn" onclick="rebuildFromThread()" title="Staff: rebuild this comp from its Discord thread, keeping only the actual release">Rebuild from Discord</button>';
   }
 
+  // Lets staff choose which picture from the thread becomes the cover.
+  function pickThreadCover(s, gptLine) {
+    return new Promise(function (resolve) {
+      var imgs = s.images || [];
+      var wrap = document.createElement('div');
+      wrap.className = 'wv-vp-wrap';
+      var clears = s.had > 0;
+      wrap.innerHTML = '<div class="wv-vp" style="max-width:640px;text-align:left;">' +
+        '<div class="wv-vp-title">' + (clears ? 'No download link: make it Upcoming' : 'Pick the cover') + '</div>' +
+        '<div class="wv-vp-body">' + (clears ? 'There is no download link in this thread, so its ' + s.had + ' songs will be cleared (they go to the recycle bin) and it stays Upcoming with its likes and stars. ' : 'This comp has no songs yet. ') +
+          (imgs.length ? 'Pick the picture to use as the cover.' : 'There are no pictures in the thread, so the cover stays as it is.') +
+          (gptLine ? '<div style="margin-top:6px;font-size:12px;color:var(--text-3);white-space:pre-wrap;">' + escHtml(gptLine.trim()) + '</div>' : '') + '</div>' +
+        (imgs.length ? '<div class="wv-cover-pick">' + imgs.map(function (im, k) {
+          return '<label class="wv-cover-opt"><input type="radio" name="wv-cover-opt" value="' + escHtml(im.id || '') + '"' + (k === 0 ? ' checked' : '') + '>' +
+            '<img src="' + escHtml(im.url) + '" alt="" loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+            '<span>' + escHtml(im.from) + (im.author ? ' · ' + escHtml(im.author) : '') + '</span></label>';
+        }).join('') + '</div>' : '') +
+        '<div class="wv-vp-actions" style="margin-top:14px;"><button class="wv-pill" id="wv-cp-cancel">Cancel</button><button class="wv-pill brand" id="wv-cp-ok">' + (clears ? 'Clear songs and use this cover' : (imgs.length ? 'Use this cover' : 'OK')) + '</button></div>' +
+      '</div>';
+      document.body.appendChild(wrap);
+      var finish = function (v) { wrap.remove(); resolve(v); };
+      wrap.querySelector('#wv-cp-cancel').onclick = function () { finish(null); };
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) finish(null); });
+      wrap.querySelector('#wv-cp-ok').onclick = function () {
+        var sel = wrap.querySelector('input[name="wv-cover-opt"]:checked');
+        finish({ id: sel ? sel.value : null });
+      };
+    });
+  }
+
   async function _threadRepair(body) {
     await api('/import/thread-repair', { method: 'POST', body: JSON.stringify(body) });
     var st = null;
@@ -358,12 +388,18 @@
         apply = { album_ids: [a.id], limit: 1, apply: true, ai: true };
       } else if (s.kind === 'not_a_comp') {
         if (s.to_upcoming) {
-          msg = 'GPT agrees there is no download link in this thread. Clear its songs, use the first picture posted in the thread as the cover' + (s.first_image ? '' : ' (there is none, so the cover stays)') + ', and mark it Upcoming? It keeps its link, likes and stars, and the songs go to the recycle bin in case this is wrong.';
-          apply = { album_ids: [a.id], limit: 1, apply: true, ai: true, upcoming_ids: [a.id] };
-          if (!confirm(msg + gptLine)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+          var pick = await pickThreadCover(s, gptLine);
+          if (!pick) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
           btn.textContent = 'Updating…';
-          try { await _threadRepair(apply); if (typeof wvToast === 'function') wvToast('Marked Upcoming'); location.reload(); }
-          catch (e) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; if (typeof wvToast === 'function') wvToast(e.message || 'Could not update', 'error'); }
+          try {
+            var picks = {}; if (pick.id) picks[a.id] = pick.id;
+            var done0 = await _threadRepair({ album_ids: [a.id], limit: 1, apply: true, ai: true, upcoming_ids: [a.id], cover_picks: picks });
+            var made = (done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'made_upcoming'; });
+            var cf = (done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'cover_failed'; });
+            if (!made) throw new Error(((done0 && done0.samples || []).find(function (x) { return x.id === a.id && x.kind === 'failed'; }) || {}).why || 'Nothing changed');
+            if (typeof wvToast === 'function') wvToast(made.cover ? 'Cover updated' + (made.removed ? ' and songs cleared' : '') : (cf ? 'Could not copy that picture: ' + cf.why : 'Marked Upcoming (cover unchanged)'));
+            setTimeout(function () { location.reload(); }, 900);
+          } catch (e) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; if (typeof wvToast === 'function') wvToast(e.message || 'Could not update', 'error'); }
           return;
         }
         if (s.protected) {
