@@ -378,6 +378,8 @@ function wvImg(url, w, opts) {
   try { if (new URL(u).origin === location.origin) return u; } catch (_) { return u; }
   const size = wvImgSize(w || 320);
   let q = 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + size + (opts.square === false ? '' : '&h=' + size + '&fit=cover') + '&output=webp&q=' + (opts.q || 82) + '&il';
+  // Animated covers keep every frame instead of freezing on the first one.
+  if (/\.gif(\?|#|$)/i.test(u) || opts.animated) q += '&n=-1';
   return q;
 }
 window.wvImg = wvImg;
