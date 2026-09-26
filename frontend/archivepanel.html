@@ -290,6 +290,18 @@
             '<div id="mg-alist" style="display:flex;flex-direction:column;gap:4px;"></div>' +
           '</div>' +
           '<div id="mg-cleanup" style="display:none;">' +
+            '<div class="wv-card" style="padding:14px;margin-bottom:16px;">' +
+              '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">Fix Discord thread comps</div>' +
+              '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Checks comps imported from Discord threads against each thread\'s real release (its download link), most-starred first. Nothing changes until you press Fix. Fixes swap the songs and cover into the same comp, so it keeps its likes, comments and stars. Nothing is ever deleted from here.</div>' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+                '<button class="wv-pill brand" id="dx-check" style="font-size:12.5px;padding:7px 14px;" onclick="dxCheck()">Check the next 50</button>' +
+                '<label style="font-size:12.5px;color:var(--text-2);display:flex;gap:6px;align-items:center;"><input type="checkbox" id="dx-ai" style="width:auto;margin:0;"> Ask GPT too (slower)</label>' +
+                '<span id="dx-pos" style="font-size:12px;color:var(--text-3);"></span>' +
+                '<button class="wv-see-all" onclick="dxReset()">Start over</button>' +
+              '</div>' +
+              '<div id="dx-msg" style="font-size:12.5px;color:var(--text-2);margin-top:8px;"></div>' +
+              '<div id="dx-out"></div>' +
+            '</div>' +
             '<div id="mg-cleanup-body"><div class="loading"><div class="spinner"></div></div></div>' +
           '</div>' +
           '<div id="mg-deleted" style="display:none;">' +
@@ -1530,6 +1542,60 @@
     if (t === 'cleanup' && !_mg.cleanup) mgCleanupLoad();
     if (t === 'otw') mgOtwLoad();
     if (t === 'deleted') mgBinLoad();
+  };
+
+  // ── Fix Discord thread comps in batches ──────────────────────────────
+  var DX_KIND = { linked_queued: 'Import from its link', linked_existing: 'Merge into the copy from its link', rebuild: 'Swap in the right files', not_a_comp: 'No link found (left alone)', renamed: 'Title or creator fix', untouched: 'Looks right', unreadable: 'Thread unreadable', failed: 'Failed' };
+  function _dxOffset() { try { return +(localStorage.getItem('wv_dx_offset') || 0); } catch (e) { return 0; } }
+  function _dxSetOffset(n) { try { localStorage.setItem('wv_dx_offset', String(n)); } catch (e) {} }
+  window.dxReset = function() { _dxSetOffset(0); document.getElementById('dx-out').innerHTML = ''; document.getElementById('dx-pos').textContent = 'Back to the most-starred comps.'; };
+  async function _dxRun(body) {
+    await api('/import/thread-repair', { method: 'POST', body: JSON.stringify(body) });
+    var st = null;
+    for (var i = 0; i < 900; i++) {
+      await new Promise(function(r) { setTimeout(r, 2500); });
+      st = await api('/import/thread-repair');
+      var m = document.getElementById('dx-msg'); if (m) m.textContent = (body.apply ? 'Fixing' : 'Checking') + '… ' + (st.scanned || 0) + ' done' + (st.current ? ' · ' + st.current : '');
+      if (!st || st.status !== 'running') break;
+    }
+    return st;
+  }
+  window.dxCheck = async function() {
+    var btn = document.getElementById('dx-check'); btn.disabled = true;
+    var off = _dxOffset();
+    try {
+      var st = await _dxRun({ limit: 50, offset: off, ai: !!(document.getElementById('dx-ai') || {}).checked });
+      _dxSetOffset(off + 50);
+      document.getElementById('dx-pos').textContent = 'Checked ' + Math.min(off + 50, st.total || off + 50) + ' of ' + (st.total || '?') + ' thread comps';
+      var rows = (st.samples || []).filter(function(x) { return x.kind !== 'gpt'; });
+      var gpt = {}; (st.samples || []).forEach(function(x) { if (x.kind === 'gpt') gpt[x.id] = x; });
+      var counts = {}; rows.forEach(function(x) { counts[x.kind] = (counts[x.kind] || 0) + 1; });
+      document.getElementById('dx-msg').textContent = Object.keys(counts).map(function(k) { return (DX_KIND[k] || k) + ': ' + counts[k]; }).join(' · ');
+      var fixable = { linked_queued: 1, linked_existing: 1, rebuild: 1, renamed: 1 };
+      document.getElementById('dx-out').innerHTML = rows.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:520px;overflow:auto;">' + rows.map(function(x) {
+        var can = !!fixable[x.kind];
+        var detail = x.kind === 'linked_queued' ? (x.link || '') : x.kind === 'linked_existing' ? 'already on the site' : x.kind === 'rebuild' ? (x.files + ' songs instead of ' + (x.had || 0)) : x.kind === 'not_a_comp' ? (x.protected ? 'protected' : '') : (x.why || '');
+        var g = gpt[x.id];
+        return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--surface-2);font-size:12.5px;">' +
+          '<input type="checkbox" class="dx-pick" value="' + x.id + '"' + (can ? ' checked' : ' disabled') + ' style="width:auto;margin:0;">' +
+          '<span style="flex:1;min-width:0;"><a href="/album?id=' + encodeURIComponent(x.id) + '" target="_blank" style="color:var(--text);font-weight:700;">' + escHtml(x.title || '') + '</a>' +
+          ' <span style="color:var(--text-3);">⭐ ' + (x.stars || 0) + ' · ' + (x.tracks_now || 0) + ' songs now</span><br>' +
+          '<span style="color:' + (can ? 'var(--brand)' : 'var(--text-3)') + ';">' + escHtml(DX_KIND[x.kind] || x.kind) + '</span> <span style="color:var(--text-3);word-break:break-all;">' + escHtml(detail) + '</span>' +
+          (g && g.reason ? '<br><span style="color:var(--text-3);font-style:italic;">GPT: ' + escHtml(g.reason) + '</span>' : '') + '</span></label>';
+      }).join('') + '</div><button class="wv-pill brand" style="margin-top:10px;font-size:12.5px;padding:7px 16px;" onclick="dxFix()">Fix the ticked comps</button>' : '<div class="wv-empty">No thread comps left to check.</div>';
+    } catch (e) { document.getElementById('dx-msg').textContent = e.message || 'Check failed'; }
+    btn.disabled = false; btn.textContent = 'Check the next 50';
+  };
+  window.dxFix = async function() {
+    var ids = Array.prototype.map.call(document.querySelectorAll('.dx-pick:checked'), function(c) { return c.value; });
+    if (!ids.length) return;
+    if (!confirm('Fix ' + ids.length + ' comp' + (ids.length === 1 ? '' : 's') + '? Each one keeps its likes, comments and stars. Link imports finish in the background.')) return;
+    try {
+      var st = await _dxRun({ album_ids: ids, limit: ids.length, apply: true, force: true, ai: !!(document.getElementById('dx-ai') || {}).checked });
+      var done = (st.linked_queued || 0) + (st.linked_existing || 0) + (st.rebuilt || 0) + (st.renamed || 0);
+      document.getElementById('dx-msg').textContent = 'Fixed ' + done + ' (' + (st.linked_queued || 0) + ' importing from their links in the background)' + (st.failed ? ' · ' + st.failed + ' failed' : '') + '.';
+      document.getElementById('dx-out').innerHTML = '';
+    } catch (e) { document.getElementById('dx-msg').textContent = e.message || 'Fix failed'; }
   };
 
   // ── Deleted comps: recycle bin and restore from backup ───────────────
