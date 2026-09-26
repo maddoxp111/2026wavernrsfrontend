@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=2713c3b95278">
-  <script src="/js/status-card.js?v=2713c3b95278"></script>
-  <script src="/js/down.js?v=2713c3b95278"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7215df128d4a">
+  <script src="/js/status-card.js?v=7215df128d4a"></script>
+  <script src="/js/down.js?v=7215df128d4a"></script>
 </head>
 <body>
 
@@ -14,11 +14,11 @@
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=2713c3b95278"></script>
-<script src="/js/layout.js?v=2713c3b95278"></script>
-<script src="/js/player.js?v=2713c3b95278"></script>
-<script src="/js/router.js?v=2713c3b95278"></script>
-<script src="/js/playlists.js?v=2713c3b95278"></script>
+<script src="/js/api.js?v=7215df128d4a"></script>
+<script src="/js/layout.js?v=7215df128d4a"></script>
+<script src="/js/player.js?v=7215df128d4a"></script>
+<script src="/js/router.js?v=7215df128d4a"></script>
+<script src="/js/playlists.js?v=7215df128d4a"></script>
 <script>
   initPlayer();
 
@@ -201,22 +201,28 @@
           ? "navigate('/album?id=" + item.id + "')"
           : "navigate('/track?id=" + item.id + "')";
         var eraName = (item.era_tag && item.era_tag.name) || item.genre || '';
+        var isDraft = isAlbum && item.release_status === 'draft';
+        var upAt = isAlbum && item.release_status === 'upcoming' && item.release_at ? new Date(item.release_at) : null;
+        var isUpcoming = !!(upAt && upAt > new Date());
+        var statusTag = isDraft ? '<div class="wv-upcoming-badge" style="background:var(--surface-3);color:var(--text);border:1px dashed var(--text-3);">Draft</div>'
+          : isUpcoming ? '<div class="wv-upcoming-badge">Out ' + escHtml(upAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) + '</div>' : '';
+        var byName = item.collab && item.artists ? item.artists.display_name : artist.display_name;
 
         return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
           '<div class="wv-comp-card-cover">' +
             '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
               '' +
               (isAlbum ? '' : '') +
-              coverImg +
-              '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();' +
+              coverImg + statusTag +
+              (item.locked ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();' +
                 (isAlbum ? "playCompById('" + item.id + "')" : "artistPlayTrack('" + item.id + "')") + '">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-              '</button>' +
+              '</button>') +
             '</div>' +
           '</div>' +
           '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
           '<div class="wv-comp-card-artist" style="display:flex;align-items:center;gap:6px;">' +
-            escHtml(artist.display_name || '') +
+            escHtml(byName || '') + (item.collab ? ' · <span class="badge" style="font-size:10px;">Collab</span>' : '') +
             (eraName ? ' · <span class="badge" style="font-size:10px;">' + escHtml(eraName) + '</span>' : '') +
           '</div>' +
         '</div>';

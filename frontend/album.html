@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=2713c3b95278">
-  <script src="/js/status-card.js?v=2713c3b95278"></script>
-  <script src="/js/down.js?v=2713c3b95278"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7215df128d4a">
+  <script src="/js/status-card.js?v=7215df128d4a"></script>
+  <script src="/js/down.js?v=7215df128d4a"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=2713c3b95278"></script>
-<script src="/js/layout.js?v=2713c3b95278"></script>
-<script src="/js/player.js?v=2713c3b95278"></script>
-<script src="/js/router.js?v=2713c3b95278"></script>
-<script src="/js/playlists.js?v=2713c3b95278"></script>
-<script src="/js/ratings.js?v=2713c3b95278"></script>
+<script src="/js/api.js?v=7215df128d4a"></script>
+<script src="/js/layout.js?v=7215df128d4a"></script>
+<script src="/js/player.js?v=7215df128d4a"></script>
+<script src="/js/router.js?v=7215df128d4a"></script>
+<script src="/js/playlists.js?v=7215df128d4a"></script>
+<script src="/js/ratings.js?v=7215df128d4a"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -73,6 +73,7 @@
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
       loadTrackerPills(album.id);
       if (typeof wvClampDesc === 'function') wvClampDesc(document.querySelector('.wv-hero-desc'));
+      startCountdown();
       loadAwardPills(album.id);
       showDisown(album);
       showAddCover(album);
@@ -83,6 +84,18 @@
 
   async function renderAlbum() {
     const artist = album.artists || {};
+    const _me = (typeof getUser === 'function' && getUser()) || null;
+    const _isOwner = !!(_me && artist.user_id && _me.id === artist.user_id && !album.is_archive);
+    const _releaseAt = album.release_at ? new Date(album.release_at) : null;
+    const _isDraft = album.release_status === 'draft';
+    const _isUpcoming = album.release_status === 'upcoming' && _releaseAt && _releaseAt > new Date();
+    const _lockedForMe = _isUpcoming && albumTracks.length > 0 && albumTracks.every(function (t) { return !(t.tracks || t).ia_url; });
+    const _playable = albumTracks.length > 0 && !_lockedForMe;
+    window._albumLocked = _lockedForMe;
+    const _outLabel = _releaseAt ? _releaseAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: _releaseAt.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined }) + ' at ' + _releaseAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '';
+    const _sides = (Array.isArray(album.sides) ? album.sides : []).filter(function (sd, k, all) { return sd.start < albumTracks.length && !all.slice(k + 1).some(function (o) { return o.start === sd.start; }); });
+    const _collabs = Array.isArray(album.collaborators) ? album.collaborators : [];
+    const _collabHtml = _collabs.length ? ' <span style="color:var(--text-3);font-weight:400;">with</span> ' + _collabs.map(function (c) { return '<a href="/artist?id=' + encodeURIComponent(c.artist_id) + '">' + escHtml(c.name) + '</a>'; }).join(', ').replace(/, ([^,]*)$/, ' & $1') : '';
     const eraName = album.era_tag?.name || album.genre || '';
     const badges = await getBadgeData().catch(() => ({ verified_artists: [], highlighted_albums: [], exclusive_albums: [] }));
     const isHighlighted = badges.highlighted_albums && badges.highlighted_albums.indexOf(album.id) !== -1;
@@ -111,7 +124,7 @@
     // which takes a few minutes to process the item before tracks will play.
     // Show a heads-up banner for the first ~15 minutes after creation.
     let freshBanner = '';
-    if (album.created_at) {
+    if (album.created_at && !_isUpcoming && !_isDraft && albumTracks.length) {
       const ageMs = Date.now() - new Date(album.created_at).getTime();
       if (ageMs >= 0 && ageMs < 15 * 60 * 1000) {
         freshBanner = `
@@ -143,7 +156,7 @@
             ${coverInner}
           </div>
           <div class="wv-hero-body">
-            <div class="wv-kind">${!albumTracks.length ? '<span class="wv-upcoming-tag">Upcoming</span>' : Object.keys(_credits).length ? 'Playlist' : (album.is_archive ? 'Archived compilation' : 'Compilation')}</div>
+            <div class="wv-kind">${_isDraft ? '<span class="wv-draft-tag">Draft</span>' : (_isUpcoming || !albumTracks.length) ? '<span class="wv-upcoming-tag">Upcoming</span>' : Object.keys(_credits).length ? 'Playlist' : (album.is_archive ? 'Archived compilation' : 'Compilation')}</div>
             ${badgePills ? `<div style="margin:6px 0 2px;">${badgePills}</div>` : ''}
             <div id="wv-otw-pills" style="margin:6px 0 0;"></div>
             <div id="wv-tracker-pills" style="margin:6px 0 2px;"></div>
@@ -154,29 +167,31 @@
             <div class="wv-hero-sub">
               ${album.is_archive
                 ? `<a href="/archive-artist?a=${encodeURIComponent(archiveArtistSlug(album.archive_artist_name || 'Unknown'))}">${escHtml(album.archive_artist_name || 'Unknown')}</a>`
-                : `<a href="/artist?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>`}
+                : `<a href="/artist?id=${artist.id}">${escHtml(artist.display_name || 'Unknown')}${verifiedBadge}</a>${_collabHtml}`}
             </div>
             <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
                 ? '<a href="/eras" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
-                : escHtml(eraName)) + ' · ' : ''}${albumTracks.length ? albumTracks.length + ' edit' + (albumTracks.length !== 1 ? 's' : '') : 'Upcoming'}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
+                : escHtml(eraName)) + ' · ' : ''}${albumTracks.length ? albumTracks.length + ' edit' + (albumTracks.length !== 1 ? 's' : '') : 'Upcoming'}${_isUpcoming ? ' · Out ' + escHtml(_outLabel) : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
             ${album.description ? `<div class="wv-hero-desc">${escHtml(typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(album.description) : album.description)}</div>` : ''}
+            ${_isDraft && _isOwner ? '<div class="wv-release-note draft">Draft: only you and staff can see this comp. Release it when it\'s ready.</div>' : ''}
+            ${_isUpcoming ? '<div class="wv-release-note">Out ' + escHtml(_outLabel) + ' <span id="wv-countdown" data-at="' + _releaseAt.getTime() + '"></span>' + (_isOwner ? ' · you can already play it' : '') + '</div>' : ''}
             <div class="wv-hero-actions">
-              ${albumTracks.length ? '' : '<span class="wv-upcoming-note">Not out yet. The edits show up here once it drops.</span>'}
-              <button class="wv-btn-play" onclick="playAll()"${albumTracks.length ? '' : ' style="display:none"'}>
+              ${_playable ? '' : (albumTracks.length ? '<span class="wv-upcoming-note">Songs unlock on release day.</span>' : '<span class="wv-upcoming-note">Not out yet. The edits show up here once it drops.</span>')}
+              <button class="wv-btn-play" onclick="playAll()"${_playable ? '' : ' style="display:none"'}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play
               </button>
-              <button class="wv-btn-ghost" onclick="shuffleAll()"${albumTracks.length ? '' : ' style="display:none"'}>
+              <button class="wv-btn-ghost" onclick="shuffleAll()"${_playable ? '' : ' style="display:none"'}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.2 4.4 21 8.2l-3.8 3.8V9.4h-2.1c-1 0-1.6.4-2.3 1.4l-.9 1.3-1.5-2.1.7-1c1.1-1.6 2.4-2.4 4-2.4h2.1Zm0 8.1 3.8 3.8-3.8 3.8v-2.6h-2.1c-1.6 0-2.9-.8-4-2.4l-3-4.3c-.7-1-1.3-1.4-2.3-1.4H3.2V9.4h2.6c1.6 0 2.9.8 4 2.4l3 4.3c.7 1 1.3 1.4 2.3 1.4h2.1Zm-11.4 2.1c.6 0 1.1-.15 1.55-.5l1.45 2.05c-.85.6-1.85.9-3 .9H3.2v-2.45Z"/></svg>Shuffle
               </button>
               <button class="wv-icon-btn" id="like-btn" onclick="toggleLike()" title="${album.external_likes ? 'Includes ' + fmtNum(album.external_likes) + ' from where it was posted (Reddit upvotes / Discord ⭐)' : 'Like'}">${album.user_liked ? '♥' : '♡'} ${fmtNum(album.like_count || 0)}</button>${(function(){ _albumLikeCount = album.like_count || 0; return ''; })()}
               <div id="rating-widget">${ratingPlaceholder}</div>
             </div>
             <div class="wv-hero-actions" style="margin-top:10px;">
-              <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost" id="download-comp-btn"${albumTracks.length ? '' : ' style="display:none"'}>
+              <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost" id="download-comp-btn"${_playable ? '' : ' style="display:none"'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                 Download Zip
               </a>
-              <button class="wv-btn-ghost" onclick="addAlbumToQueue('${albumId}')" title="Add every track to the queue"${albumTracks.length ? '' : ' style="display:none"'}>
+              <button class="wv-btn-ghost" onclick="addAlbumToQueue('${albumId}')" title="Add every track to the queue"${_playable ? '' : ' style="display:none"'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
                 Add to queue
               </button>
@@ -184,6 +199,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
               </button>
+              ${_isOwner ? '<button class="wv-btn-ghost" onclick="toggleOwnerTools()" id="owner-tools-btn">Manage comp</button>' : ''}
               <span id="staff-cover-slot"></span>
               <span id="staff-thread-slot"></span>
               ${album.origin && album.origin.url ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
@@ -193,6 +209,7 @@
         </div>
 
         <h2 class="section-title">Tracklist</h2>
+        ${_isOwner ? '<div id="owner-tools" class="wv-owner-tools" style="display:none;"></div>' : ''}
         <div class="track-list" id="tracklist">
           ${albumTracks.length === 0 ? `<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Upcoming</div><div style="font-size:13px;color:var(--text-3);margin-top:4px;">This comp hasn't dropped yet. Like it to find it again when it does.</div></div>` :
             albumTracks.map((t, i) => {
@@ -213,15 +230,16 @@
                 ia_url: td.ia_url || '',
                 artist_name: cr ? cr.credit : (album.is_archive ? (album.archive_artist_name || 'Unknown') : (td.artists?.display_name || artist.display_name || '')),
               }).replace(/"/g, '&quot;');
-              return `
-                <div class="track-row" id="trow-${i}" onclick="playAtIndex(${i})">
+              const sideHead = _sides.filter(function (sd) { return sd.start === i; }).map(function (sd) { return '<div class="wv-side-head">' + escHtml(sd.name) + '</div>'; }).join('');
+              return sideHead + `
+                <div class="track-row${_lockedForMe ? ' is-locked' : ''}" id="trow-${i}" onclick="${_lockedForMe ? 'albumLockedTap()' : 'playAtIndex(' + i + ')'}">
                   <div class="track-row-num">${i + 1}</div>
                   <div style="${tdCoverStyle}">${tdCoverImg}</div>
                   <div class="track-row-info">
                     <div class="track-row-title">${escHtml(cr ? cr.title : (td.title || 'Unknown'))}</div>
                     <div class="track-row-artist">${cr ? wvCreditLinks(cr.credit) : escHtml(album.is_archive ? (album.archive_artist_name || 'Unknown') : (td.artists?.display_name || artist.display_name || 'Unknown'))}</div>
                   </div>
-                  <span class="track-row-plays">${fmtNum(td.play_count)} plays</span>
+                  ${_lockedForMe ? '<span class="track-row-plays">🔒</span>' : `<span class="track-row-plays">${fmtNum(td.play_count)} plays</span>`}
                   <button onclick="event.stopPropagation();openAddToPlaylist(${tdObjAttr})"
                     style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;" title="Save to playlist">＋</button>
                   <a href="/track?id=${td.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-3);padding:4px 8px;white-space:nowrap;">Open</a>
@@ -458,6 +476,7 @@
   }
 
   function playAtIndex(index) {
+    if (window._albumLocked) { albumLockedTap(); return; }
     if (!albumTracks[index]) return;
     currentTrackIndex = index;
     // Hand the full ordered list to the player so skip/prev (incl. OS media
@@ -1056,6 +1075,138 @@
       await api('/oauth/disown', { method: 'POST', body: JSON.stringify({ album_ids: [id] }) });
       location.reload();
     } catch (e) { alert(e.message || 'Failed'); }
+  };
+
+  window.albumLockedTap = function () {
+    if (typeof wvToast === 'function') wvToast('This comp isn\'t out yet. Songs unlock on release day.');
+  };
+
+  var _cdTimer = null;
+  function startCountdown() {
+    clearInterval(_cdTimer);
+    var el = document.getElementById('wv-countdown');
+    if (!el) return;
+    var at = +el.getAttribute('data-at');
+    var tick = function () {
+      var left = at - Date.now();
+      if (!document.body.contains(el)) { clearInterval(_cdTimer); return; }
+      if (left <= 0) { clearInterval(_cdTimer); el.textContent = '· out now'; setTimeout(function () { loadAlbum(); }, 4000); return; }
+      var d = Math.floor(left / 86400000), h = Math.floor(left / 3600000) % 24, m = Math.floor(left / 60000) % 60, sec = Math.floor(left / 1000) % 60;
+      el.textContent = '· ' + (d ? d + 'd ' : '') + (d || h ? h + 'h ' : '') + m + 'm ' + (d ? '' : sec + 's');
+    };
+    tick();
+    _cdTimer = setInterval(tick, 1000);
+    (window._pageCleanup || []).push(function () { clearInterval(_cdTimer); });
+  }
+
+  function _localInput(d) {
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  window.toggleOwnerTools = function () {
+    var box = document.getElementById('owner-tools');
+    if (!box) return;
+    var open = box.style.display === 'none';
+    box.style.display = open ? '' : 'none';
+    if (open) renderOwnerTools();
+  };
+
+  function renderOwnerTools() {
+    var box = document.getElementById('owner-tools');
+    if (!box || !album) return;
+    var st = album.release_status === 'draft' ? 'draft' : (album.release_status === 'upcoming' && album.release_at && new Date(album.release_at) > new Date()) ? 'upcoming' : 'released';
+    var when = album.release_at ? new Date(album.release_at) : new Date(Date.now() + 7 * 86400000);
+    var stLabel = st === 'draft' ? 'Draft (only you and staff can see it)' : st === 'upcoming' ? 'Upcoming, out ' + new Date(album.release_at).toLocaleString() : 'Released';
+    var sides = Array.isArray(album.sides) ? album.sides.slice() : [];
+    var trackOpts = function (sel) { return albumTracks.map(function (t, i) { var td = t.tracks || t; return '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>' + (i + 1) + '. ' + escHtml(td.title || '') + '</option>'; }).join(''); };
+    var collabs = Array.isArray(album.collaborators) ? album.collaborators : [];
+    box.innerHTML =
+      '<div class="wv-ot-sec"><div class="wv-ot-title">Release</div>' +
+        '<div class="wv-ot-sub">Now: <b>' + escHtml(stLabel) + '</b></div>' +
+        '<div class="wv-ot-row">' +
+          (st !== 'released' ? '<button class="wv-pill brand" onclick="setRelease(\'released\')">Release now</button>' : '') +
+          (st !== 'draft' ? '<button class="wv-pill" onclick="setRelease(\'draft\')">Make it a draft</button>' : '') +
+          '<input type="datetime-local" id="ot-release-at" class="wv-input" style="width:auto;padding:7px 10px;font-size:13px;" value="' + _localInput(when) + '">' +
+          '<button class="wv-pill" onclick="setRelease(\'upcoming\')">' + (st === 'upcoming' ? 'Change date' : 'Schedule as upcoming') + '</button>' +
+        '</div>' +
+        '<div class="wv-ot-help">Upcoming comps show on your profile with a countdown, and the songs unlock by themselves on the date.</div>' +
+      '</div>' +
+      '<div class="wv-ot-sec"><div class="wv-ot-title">Sides</div>' +
+        '<div class="wv-ot-help">Split the tracklist into sides or discs, like Side A and Side B. Each side starts at the song you pick.</div>' +
+        '<div id="ot-sides">' + (sides.length ? sides.map(function (sd, k) {
+          return '<div class="wv-ot-row" data-side="' + k + '"><input class="wv-input ot-side-name" maxlength="40" value="' + escHtml(sd.name) + '" style="width:160px;padding:7px 10px;font-size:13px;"><span style="font-size:12.5px;color:var(--text-3);">starts at</span><select class="wv-input ot-side-start" style="width:auto;padding:7px 10px;font-size:13px;">' + trackOpts(sd.start) + '</select><button class="wv-see-all" onclick="this.parentNode.remove()">Remove</button></div>';
+        }).join('') : '') + '</div>' +
+        '<div class="wv-ot-row"><button class="wv-pill" onclick="addSideRow()"' + (albumTracks.length ? '' : ' disabled') + '>+ Add a side</button><button class="wv-pill brand" onclick="saveSides()">Save sides</button></div>' +
+      '</div>' +
+      '<div class="wv-ot-sec"><div class="wv-ot-title">Collaborators</div>' +
+        '<div class="wv-ot-help">Credit the people you made this with. It shows on their profile too.</div>' +
+        '<div class="wv-ot-row" style="flex-wrap:wrap;">' + (collabs.length ? collabs.map(function (c) {
+          return '<span class="wv-chip">' + escHtml(c.name) + ' <button class="wv-see-all" style="margin-left:4px;" onclick="removeCollab(\'' + c.artist_id + '\')" aria-label="Remove">×</button></span>';
+        }).join('') : '<span style="font-size:12.5px;color:var(--text-3);">No collaborators yet.</span>') + '</div>' +
+        '<div class="wv-ot-row"><input id="ot-collab" class="wv-input" placeholder="Their wavernrs username" style="width:220px;padding:7px 10px;font-size:13px;"><button class="wv-pill" onclick="addCollab()">Add</button></div>' +
+      '</div>' +
+      '<div id="ot-msg" class="wv-ot-help" style="min-height:16px;"></div>';
+  }
+
+  function _otMsg(t, bad) { var m = document.getElementById('ot-msg'); if (m) { m.textContent = t; m.style.color = bad ? 'var(--red)' : 'var(--text-2)'; } }
+
+  window.setRelease = async function (to) {
+    var body = { release_status: to };
+    if (to === 'upcoming') {
+      var v = (document.getElementById('ot-release-at') || {}).value;
+      if (!v) { _otMsg('Pick a date and time first', true); return; }
+      body.release_at = new Date(v).toISOString();
+    }
+    if (to === 'draft' && !confirm('Make this a draft? It disappears from the site for everyone but you and staff until you release it.')) return;
+    try {
+      await api('/albums/' + album.id, { method: 'PUT', body: JSON.stringify(body) });
+      if (typeof wvToast === 'function') wvToast(to === 'released' ? 'Released' : to === 'draft' ? 'Now a draft' : 'Scheduled');
+      await loadAlbum();
+      var b = document.getElementById('owner-tools'); if (b) { b.style.display = ''; renderOwnerTools(); }
+    } catch (e) { _otMsg(e.message || 'Could not save', true); }
+  };
+
+  window.addSideRow = function () {
+    var wrap = document.getElementById('ot-sides'); if (!wrap) return;
+    var n = wrap.children.length;
+    var names = ['Side A', 'Side B', 'Side C', 'Side D', 'Side E', 'Side F'];
+    var opts = albumTracks.map(function (t, i) { var td = t.tracks || t; return '<option value="' + i + '">' + (i + 1) + '. ' + escHtml(td.title || '') + '</option>'; }).join('');
+    var row = document.createElement('div');
+    row.className = 'wv-ot-row';
+    row.innerHTML = '<input class="wv-input ot-side-name" maxlength="40" value="' + (names[n] || 'Side ' + (n + 1)) + '" style="width:160px;padding:7px 10px;font-size:13px;"><span style="font-size:12.5px;color:var(--text-3);">starts at</span><select class="wv-input ot-side-start" style="width:auto;padding:7px 10px;font-size:13px;">' + opts + '</select><button class="wv-see-all" onclick="this.parentNode.remove()">Remove</button>';
+    if (n > 0) { var sel = row.querySelector('select'); sel.value = String(Math.min(albumTracks.length - 1, Math.round(albumTracks.length * n / (n + 1)))); }
+    wrap.appendChild(row);
+  };
+
+  window.saveSides = async function () {
+    var rows = document.querySelectorAll('#ot-sides .wv-ot-row');
+    var sides = Array.prototype.map.call(rows, function (r) { return { name: r.querySelector('.ot-side-name').value.trim(), start: +r.querySelector('.ot-side-start').value }; }).filter(function (x) { return x.name; });
+    try {
+      await api('/albums/' + album.id, { method: 'PUT', body: JSON.stringify({ sides: sides }) });
+      if (typeof wvToast === 'function') wvToast(sides.length ? 'Sides saved' : 'Sides removed');
+      await loadAlbum();
+      var b = document.getElementById('owner-tools'); if (b) { b.style.display = ''; renderOwnerTools(); }
+    } catch (e) { _otMsg(e.message || 'Could not save', true); }
+  };
+
+  window.addCollab = async function () {
+    var v = ((document.getElementById('ot-collab') || {}).value || '').trim();
+    if (!v) return;
+    try {
+      var r = await api('/albums/' + album.id + '/collaborators', { method: 'POST', body: JSON.stringify({ username: v }) });
+      if (typeof wvToast === 'function') wvToast(r.name + ' added');
+      await loadAlbum();
+      var b = document.getElementById('owner-tools'); if (b) { b.style.display = ''; renderOwnerTools(); }
+    } catch (e) { _otMsg(e.message || 'Could not add them', true); }
+  };
+
+  window.removeCollab = async function (artistId) {
+    try {
+      await api('/albums/' + album.id + '/collaborators/' + artistId, { method: 'DELETE' });
+      await loadAlbum();
+      var b = document.getElementById('owner-tools'); if (b) { b.style.display = ''; renderOwnerTools(); }
+    } catch (e) { _otMsg(e.message || 'Could not remove them', true); }
   };
 
   async function loadAwardPills(id) {

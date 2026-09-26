@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — upload</title>
-  <link rel="stylesheet" href="/css/style.css?v=2713c3b95278">
-  <script src="/js/status-card.js?v=2713c3b95278"></script>
-  <script src="/js/down.js?v=2713c3b95278"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7215df128d4a">
+  <script src="/js/status-card.js?v=7215df128d4a"></script>
+  <script src="/js/down.js?v=7215df128d4a"></script>
 </head>
 <body>
 
@@ -60,6 +60,20 @@
         <select class="wv-input" id="upload-era-tag" style="appearance:auto;-webkit-appearance:auto;">
           <option value="">Loading…</option>
         </select>
+      </div>
+
+      <!-- Release -->
+      <div class="form-group" id="upload-release-group">
+        <label class="wv-form-label">Release</label>
+        <select class="wv-input" id="upload-release" style="appearance:auto;-webkit-appearance:auto;" onchange="document.getElementById('upload-release-at-wrap').style.display = this.value === 'upcoming' ? '' : 'none'">
+          <option value="">Release now</option>
+          <option value="draft">Draft: only you can see it until you release it</option>
+          <option value="upcoming">Upcoming: show it with a release date, playable on that date</option>
+        </select>
+        <div id="upload-release-at-wrap" style="display:none;margin-top:8px;">
+          <input class="wv-input" type="datetime-local" id="upload-release-at">
+        </div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:6px;">For comps with more than one song. You can change this later from the comp's page.</div>
       </div>
 
       <!-- Description -->
@@ -173,10 +187,10 @@
   </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=2713c3b95278"></script>
-<script src="/js/layout.js?v=2713c3b95278"></script>
-<script src="/js/player.js?v=2713c3b95278"></script>
-<script src="/js/router.js?v=2713c3b95278"></script>
+<script src="/js/api.js?v=7215df128d4a"></script>
+<script src="/js/layout.js?v=7215df128d4a"></script>
+<script src="/js/player.js?v=7215df128d4a"></script>
+<script src="/js/router.js?v=7215df128d4a"></script>
 <script>
   if (!isLoggedIn()) navigate('/login');
   initPlayer();
@@ -404,6 +418,14 @@
         if(era_tag_id) albumForm.append('era_tag_id',era_tag_id);
         if(description) albumForm.append('description',description);
         if(editCoverFile) albumForm.append('cover_file',editCoverFile);
+        var relSel=document.getElementById('upload-release'), relAt=document.getElementById('upload-release-at');
+        if(relSel && relSel.value){
+          albumForm.append('release_status',relSel.value);
+          if(relSel.value==='upcoming'){
+            if(!relAt.value){ throw new Error('Pick a release date for an upcoming comp'); }
+            albumForm.append('release_at',new Date(relAt.value).toISOString());
+          }
+        }
         var album=await apiUpload('/albums',albumForm);
 
         // Step 2: upload each track with album_id so it links immediately
