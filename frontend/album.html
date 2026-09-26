@@ -383,8 +383,45 @@
 
   // Lets staff choose which download link in the thread is the actual comp.
   var LINK_PICK_CSS = '.wv-link-pick { flex: 1 1 auto; min-height: 0; max-height: none; display: flex; flex-direction: column; gap: 8px; overflow: auto; margin-top: 12px; } .wv-link-opt { flex: none; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--hair-strong); cursor: pointer; } .wv-link-opt:has(input:checked) { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, transparent); } .wv-link-opt.off { opacity: .5; cursor: not-allowed; } .wv-link-opt input[type="radio"] { width: 16px; height: 16px; min-width: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--brand); flex: none; } .wv-link-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; } .wv-link-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .wv-link-host { font-weight: 700; font-size: 13px; color: var(--text); } .wv-link-url { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .wv-link-url a { color: inherit; } .wv-link-meta { font-size: 11.5px; color: var(--text-3); } .wv-link-text { font-size: 12px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .wv-link-tag { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); } .wv-link-tag.good { background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--text); } .wv-link-tag.warn { background: rgba(251, 191, 36, .18); color: #fbbf24; } .wv-link-title { font-size: 14px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; } .wv-link-host { font-weight: 600; font-size: 11.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }';
+  LINK_PICK_CSS += ' .wv-rc-grid { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; margin-top: 12px; } .wv-rc-opt { position: relative; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-size: 11.5px; color: var(--text-3); } .wv-rc-opt input { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; } .wv-rc-opt img, .wv-rc-keep { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 3px solid transparent; background: var(--surface-3); box-sizing: border-box; } .wv-rc-keep { display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; font-weight: 700; color: var(--text-2); font-size: 12px; } .wv-rc-opt input:checked ~ img, .wv-rc-opt input:checked ~ .wv-rc-keep { border-color: var(--brand); } .wv-rc-ai { position: absolute; top: 6px; left: 6px; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--brand); color: #14121c; }';
+  function _linkPickCss() { if (!document.getElementById('wv-link-pick-css')) { var stl = document.createElement('style'); stl.id = 'wv-link-pick-css'; stl.textContent = LINK_PICK_CSS; document.head.appendChild(stl); } }
+
+  // Cover step of a rebuild: the AI's "Fix cover" pick is preselected, staff can pick another or keep the current one.
+  function pickRebuildCover(images, ai, keepLabel) {
+    _linkPickCss();
+    return new Promise(function (resolve) {
+      var aiId = ai && ai.image_id ? String(ai.image_id) : null;
+      if (aiId && !images.some(function (im) { return String(im.id) === aiId; })) aiId = null;
+      var keepSrc = !/link/.test(keepLabel) && album && album.cover_url ? wvImg(album.cover_url, 240) : '';
+      var wrap = document.createElement('div');
+      wrap.className = 'wv-vp-wrap';
+      wrap.innerHTML = '<div class="wv-vp" style="max-width:660px;text-align:left;max-height:calc(100vh - 32px);display:flex;flex-direction:column;">' +
+        '<div class="wv-vp-title">Pick the cover</div>' +
+        '<div class="wv-vp-body">' + (aiId ? '✨ The AI picked the highlighted one' + (ai.reason ? ': ' + escHtml(ai.reason) : '.') : (ai && ai.none ? '✨ ' + escHtml(ai.none) : 'Choose a picture from the thread.')) + '</div>' +
+        '<div class="wv-rc-grid">' +
+          '<label class="wv-rc-opt"><input type="radio" name="wv-rc" value=""' + (aiId ? '' : ' checked') + '>' + (keepSrc ? '<img src="' + escHtml(keepSrc) + '" alt="">' : '<div class="wv-rc-keep">' + (/link/.test(keepLabel) ? 'Cover from the link' : 'No cover') + '</div>') + '<span>' + escHtml(keepLabel) + '</span></label>' +
+          images.map(function (im) {
+            var on = aiId && String(im.id) === aiId;
+            return '<label class="wv-rc-opt"><input type="radio" name="wv-rc" value="' + escHtml(String(im.id || '')) + '"' + (on ? ' checked' : '') + '>' + (on ? '<span class="wv-rc-ai">AI pick</span>' : '') +
+              '<img src="' + escHtml(im.url) + '" alt="" loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+              '<span>' + escHtml(im.from === 'first post' ? 'First post' : im.from === 'owner' ? 'Thread owner' : (im.author || 'Someone else')) + '</span></label>';
+          }).join('') +
+        '</div>' +
+        '<div class="wv-vp-actions" style="margin-top:14px;flex:none;"><button class="wv-pill" id="wv-rc-cancel">Cancel</button><button class="wv-pill brand" id="wv-rc-ok">Continue</button></div>' +
+      '</div>';
+      document.body.appendChild(wrap);
+      var finish = function (v) { wrap.remove(); resolve(v); };
+      wrap.querySelector('#wv-rc-cancel').onclick = function () { finish(null); };
+      wrap.addEventListener('click', function (e) { if (e.target === wrap) finish(null); });
+      wrap.querySelector('#wv-rc-ok').onclick = function () {
+        var sel = wrap.querySelector('input[name="wv-rc"]:checked');
+        finish({ id: sel && sel.value ? sel.value : null });
+      };
+    });
+  }
+
   function pickThreadLink(L, gptLine) {
-    if (!document.getElementById('wv-link-pick-css')) { var stl = document.createElement('style'); stl.id = 'wv-link-pick-css'; stl.textContent = LINK_PICK_CSS; document.head.appendChild(stl); }
+    _linkPickCss();
     return new Promise(function (resolve) {
       var opts = L.options || [];
       var def = opts.findIndex(function (o) { return o.suggested && o.supported; });
@@ -570,6 +607,10 @@
     btn.disabled = true; btn.textContent = 'Reading the thread…';
     try {
       btn.textContent = 'Asking GPT to read the thread…';
+      var aiCoverP = api('/archive-manage/comps/' + a.id + '/ai', { method: 'POST', body: JSON.stringify({ task: 'cover' }) }).then(function (d) {
+        var ch = ((d && d.plan && d.plan.changes) || []).find(function (c) { return c.op === 'set_cover'; });
+        return ch ? { image_id: ch.image_id, reason: ch.reason } : { none: (d && d.plan && d.plan.summary) || '' };
+      }).catch(function () { return null; });
       var st = await _threadRepair({ album_ids: [a.id], limit: 1, ai: true });
       var mine0 = (st && st.samples || []).filter(function (x) { return x.id === a.id; });
       var s = mine0.find(function (x) { return x.kind !== 'gpt' && x.kind !== 'links'; }) || {};
@@ -589,6 +630,16 @@
         s = (st && st.samples || []).find(function (x) { return x.id === a.id && x.kind !== 'gpt' && x.kind !== 'links'; }) || {};
       }
       var B = function (o) { return Object.assign(o, { ai: aiOn }, extra); };
+      var IM = ((st && st.samples) || []).find(function (x) { return x.id === a.id && x.kind === 'images'; });
+      var coverNote = '';
+      if (IM && (IM.images || []).length && s.kind && s.kind !== 'not_a_comp' && s.kind !== 'unreadable' && s.kind !== 'failed') {
+        btn.textContent = 'Picking a cover…';
+        var aiCover = await aiCoverP;
+        var linked = s.kind === 'linked_queued' || s.kind === 'linked_existing';
+        var cp = await pickRebuildCover(IM.images, aiCover, linked ? 'Use the link\'s cover' : 'Keep current cover');
+        if (!cp) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+        if (cp.id) { extra.cover_picks = {}; extra.cover_picks[a.id] = cp.id; coverNote = '\n\nThe cover you picked will be set' + (s.kind === 'linked_queued' ? ' once the songs are swapped in.' : '.'); }
+      }
       var msg, apply = null;
       if (s.kind === 'rebuild') {
         msg = 'Found the release (' + (s.release || 'thread') + '): ' + s.files + ' track' + (s.files === 1 ? '' : 's') + ' instead of the ' + (s.had || 0) + ' here now. Swap the songs for just those? The comp keeps its likes, comments and stars.';
@@ -626,14 +677,19 @@
         msg = 'The tracks already match the thread. Update the title or creator to match it (' + [s.title, s.archive_artist_name].filter(Boolean).join(' · ') + ')?';
         apply = B({ album_ids: [a.id], limit: 1, apply: true });
       } else if (!s.kind) {
-        btn.textContent = 'Already matches the thread';
-        return;
+        var IM0 = ((st && st.samples) || []).find(function (x) { return x.id === a.id && x.kind === 'images'; });
+        if (!IM0 || !(IM0.images || []).length) { btn.textContent = 'Already matches the thread'; return; }
+        var cp0 = await pickRebuildCover(IM0.images, await aiCoverP, 'Keep current cover');
+        if (!cp0 || !cp0.id) { btn.disabled = false; btn.textContent = 'Already matches the thread'; return; }
+        extra.cover_picks = {}; extra.cover_picks[a.id] = cp0.id; aiOn = false;
+        msg = 'The songs already match the thread. Set the cover you picked?';
+        apply = B({ album_ids: [a.id], limit: 1, apply: true });
       } else {
         btn.disabled = false; btn.textContent = 'Rebuild from Discord';
         if (typeof wvToast === 'function') wvToast('Could not read the thread: ' + (s.why || s.kind), 'error');
         return;
       }
-      if (!confirm(msg + gptLine)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
+      if (!confirm(msg + coverNote + gptLine)) { btn.disabled = false; btn.textContent = 'Rebuild from Discord'; return; }
       btn.textContent = 'Rebuilding…';
       var done = await _threadRepair(apply);
       var mine = (done && done.samples || []).filter(function (x) { return x.id === a.id; });
