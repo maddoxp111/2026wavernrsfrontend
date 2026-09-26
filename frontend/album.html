@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=6161daad32e0">
-  <script src="/js/status-card.js?v=6161daad32e0"></script>
-  <script src="/js/down.js?v=6161daad32e0"></script>
+  <link rel="stylesheet" href="/css/style.css?v=b924a6ef7b7d">
+  <script src="/js/status-card.js?v=b924a6ef7b7d"></script>
+  <script src="/js/down.js?v=b924a6ef7b7d"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=6161daad32e0"></script>
-<script src="/js/layout.js?v=6161daad32e0"></script>
-<script src="/js/player.js?v=6161daad32e0"></script>
-<script src="/js/router.js?v=6161daad32e0"></script>
-<script src="/js/playlists.js?v=6161daad32e0"></script>
-<script src="/js/ratings.js?v=6161daad32e0"></script>
+<script src="/js/api.js?v=b924a6ef7b7d"></script>
+<script src="/js/layout.js?v=b924a6ef7b7d"></script>
+<script src="/js/player.js?v=b924a6ef7b7d"></script>
+<script src="/js/router.js?v=b924a6ef7b7d"></script>
+<script src="/js/playlists.js?v=b924a6ef7b7d"></script>
+<script src="/js/ratings.js?v=b924a6ef7b7d"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -185,6 +185,7 @@
               </button>
               <button class="wv-icon-btn" id="like-btn" onclick="toggleLike()" title="${album.external_likes ? 'Includes ' + fmtNum(album.external_likes) + ' from where it was posted (Reddit upvotes / Discord ⭐)' : 'Like'}">${album.user_liked ? '♥' : '♡'} ${fmtNum(album.like_count || 0)}</button>${(function(){ _albumLikeCount = album.like_count || 0; return ''; })()}
               <div id="rating-widget">${ratingPlaceholder}</div>
+              ${album.discord_thread ? '<button class="wv-btn-ghost wv-dt-btn" onclick="openAlbumThread()"><svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.445.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>Discord thread</button>' : ''}
             </div>
             <div class="wv-hero-actions" style="margin-top:10px;">
               <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost" id="download-comp-btn"${_playable ? '' : ' style="display:none"'}>
@@ -202,7 +203,7 @@
               ${_isOwner ? '<button class="wv-btn-ghost" onclick="toggleOwnerTools()" id="owner-tools-btn">Manage comp</button>' : ''}
               <span id="staff-cover-slot"></span>
               <span id="staff-thread-slot"></span>
-              ${album.origin && album.origin.url ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
+              ${album.origin && album.origin.url && !(album.discord_thread && /^Discord thread$/.test(album.origin.label || '')) ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
               ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
             </div>
           </div>
@@ -246,11 +247,6 @@
                 </div>`;
             }).join('')}
         </div>
-
-        ${album.discord_thread ? `<div class="wv-dt-sec" id="wv-dt-sec">
-          <div class="wv-dt-head"><h2 class="section-title" style="margin:0;">Discord thread</h2><a class="wv-see-all" href="${escHtml(album.discord_thread)}" target="_blank" rel="noopener">Open in Discord ↗</a></div>
-          <div id="wv-dt-body" style="margin-top:10px;"><button class="wv-pill" onclick="loadDiscordThread()">Show the thread</button></div>
-        </div>` : ''}
 
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
@@ -1266,26 +1262,10 @@
     } catch (e) { _otMsg(e.message || 'Could not remove them', true); }
   };
 
-  var _dtData = null, _dtShown = 80;
-  window.loadDiscordThread = async function (more) {
-    var body = document.getElementById('wv-dt-body');
-    if (!body || !album) return;
-    if (!more) {
-      body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-      try { _dtData = await api('/albums/' + album.id + '/thread'); }
-      catch (e) { body.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Could not load the thread') + '</div>'; return; }
-      _dtShown = 80;
-    } else _dtShown += 150;
-    var d = _dtData, th = d.thread || {}, total = (d.messages || []).length;
-    var note = d.unreadable_since ? 'This thread is gone from Discord. This is the copy saved on wavernrs.'
-      : d.saved ? 'Saved on wavernrs ' + new Date(d.saved_at).toLocaleString() + (d.truncated ? ' · first 1,000 messages' : '')
-      : 'Loaded from Discord. It is being saved to wavernrs now.';
-    body.innerHTML = '<div class="wv-dt-box">' +
-      '<div class="wv-dt-title"><b># ' + escHtml(th.name || 'thread') + '</b>' + (th.guild ? ' · ' + escHtml(th.guild) : '') + (th.parent ? ' › ' + escHtml(th.parent) : '') + '<br>' + escHtml(note) + ' · ' + total.toLocaleString() + ' messages</div>' +
-      (typeof wvRenderDiscordThread === 'function' ? wvRenderDiscordThread(d, _dtShown) : '') +
-      (total > _dtShown ? '<div style="padding:12px 16px;"><button class="wv-pill" onclick="loadDiscordThread(true)">Show more (' + (total - _dtShown).toLocaleString() + ' left)</button></div>' : '') +
-    '</div>';
+  window.openAlbumThread = function () {
+    if (album && typeof wvOpenThreadPanel === 'function') wvOpenThreadPanel(album.id, album.discord_thread);
   };
+  (window._pageCleanup || []).push(function () { if (typeof wvCloseThreadPanel === 'function') wvCloseThreadPanel(); });
 
   async function loadAwardPills(id) {
     var box = document.getElementById('wv-otw-pills');

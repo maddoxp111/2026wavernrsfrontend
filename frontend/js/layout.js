@@ -2318,11 +2318,11 @@ window.wvClampDesc = function (el) {
     return sameDay ? 'Today at ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  window.wvRenderDiscordThread = function (data, shown) {
+  window.wvRenderDiscordThread = function (data, end, start, all) {
     var msgs = data.messages || [], byId = {};
-    msgs.forEach(function (m) { byId[m.id] = m; });
-    var html = [], prev = null;
-    msgs.slice(0, shown || msgs.length).forEach(function (m) {
+    (all || msgs).forEach(function (m) { byId[m.id] = m; });
+    var html = [], prev = start > 0 ? msgs[start - 1] : null;
+    msgs.slice(start || 0, end || msgs.length).forEach(function (m) {
       var a = m.author || {};
       var grouped = prev && prev.author && prev.author.id === a.id && !m.reply_to && (m.at - prev.at) < 7 * 60 * 1000;
       var reply = m.reply_to ? byId[m.reply_to] : null;
@@ -2331,6 +2331,7 @@ window.wvClampDesc = function (el) {
         attachments(m.attachments) + embeds(m.embeds) +
         (m.stickers || []).map(function (st) { return st.url ? '<img class="dt-sticker" src="' + esc(st.url) + '" alt="' + esc(st.name) + '">' : ''; }).join('') +
         reactions(m.reactions);
+      if (m.pinned) body = '<div class="dt-pin-flag">📌 Pinned</div>' + body;
       if (grouped) html.push('<div class="dt-msg dt-cont" id="dt-' + esc(m.id) + '"><div class="dt-gutter"><span class="dt-hover-time">' + esc(new Date(m.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })) + '</span></div><div class="dt-main">' + body + '</div></div>');
       else html.push('<div class="dt-msg" id="dt-' + esc(m.id) + '">' +
         (reply ? '<div class="dt-reply"><span class="dt-reply-name">@' + esc((reply.author || {}).name || '') + '</span> ' + esc(String(reply.content || (reply.attachments && reply.attachments.length ? 'Click to see attachment' : '')).replace(/<a?:([A-Za-z0-9_~]+):\d+>/g, ':$1:').replace(/^#{1,3} |^-# |^> /gm, '').replace(/[*_~`|]{1,3}/g, '').replace(/\s+/g, ' ').slice(0, 110)) + '</div>' : (m.reply_to ? '<div class="dt-reply dt-reply-gone">Original message was deleted</div>' : '')) +
@@ -2340,4 +2341,128 @@ window.wvClampDesc = function (el) {
     });
     return html.join('');
   };
+})();
+
+
+// ── Discord thread side panel: its own scroll, search and pinned messages ──
+(function () {
+  var st = null;
+  var BATCH = 150;
+  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function plain(m) { return String(m.content || '') + ' ' + ((m.author || {}).name || '') + ' ' + (m.attachments || []).map(function (a) { return a.name; }).join(' ') + ' ' + (m.forwarded || []).map(function (f) { return f.content || ''; }).join(' '); }
+
+  function close() {
+    var el = document.getElementById('wv-dtp');
+    if (el) el.remove();
+    document.removeEventListener('keydown', onKey);
+    st = null;
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+
+  function list() { return document.getElementById('wv-dtp-list'); }
+
+  function renderWindow(keepTopId) {
+    var box = list(); if (!box || !st) return;
+    var msgs = st.data.messages;
+    box.innerHTML = (st.start > 0 ? '<button class="wv-dtp-more" onclick="wvDtpEarlier()">Show earlier messages (' + st.start.toLocaleString() + ')</button>' : '') +
+      wvRenderDiscordThread(st.data, st.end, st.start) +
+      (st.end < msgs.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">End of the thread</div>');
+    if (keepTopId) { var el = document.getElementById('dt-' + keepTopId); if (el) box.scrollTop = el.offsetTop - 60; }
+  }
+
+  function append() {
+    if (!st || st.end >= st.data.messages.length || st.searching) return;
+    var box = list(); if (!box) return;
+    var from = st.end;
+    st.end = Math.min(st.data.messages.length, st.end + BATCH);
+    var sent = box.querySelector('.wv-dtp-sentinel'); if (sent) sent.remove();
+    box.insertAdjacentHTML('beforeend', wvRenderDiscordThread(st.data, st.end, from) + (st.end < st.data.messages.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">End of the thread</div>'));
+  }
+
+  window.wvDtpEarlier = function () {
+    if (!st) return;
+    var keep = st.data.messages[st.start] && st.data.messages[st.start].id;
+    st.start = Math.max(0, st.start - BATCH);
+    renderWindow(keep);
+  };
+
+  window.wvDtpJump = function (id) {
+    if (!st) return;
+    var idx = st.data.messages.findIndex(function (m) { return m.id === id; });
+    if (idx < 0) return;
+    var q = document.getElementById('wv-dtp-q'); if (q) q.value = '';
+    st.searching = false;
+    document.getElementById('wv-dtp-pins').classList.remove('open');
+    st.start = Math.max(0, idx - 40);
+    st.end = Math.min(st.data.messages.length, idx + BATCH);
+    renderWindow();
+    var el = document.getElementById('dt-' + id);
+    if (el) { list().scrollTop = el.offsetTop - 80; el.classList.add('dt-flash'); setTimeout(function () { el.classList.remove('dt-flash'); }, 1800); }
+  };
+
+  function search(q) {
+    var box = list(); if (!box || !st) return;
+    q = q.trim().toLowerCase();
+    if (!q) { st.searching = false; st.start = 0; st.end = Math.min(BATCH, st.data.messages.length); renderWindow(); box.scrollTop = 0; return; }
+    st.searching = true;
+    var hits = st.data.messages.filter(function (m) { return plain(m).toLowerCase().indexOf(q) >= 0; });
+    var shown = hits.slice(0, 200);
+    box.innerHTML = '<div class="wv-dtp-note">' + hits.length.toLocaleString() + ' result' + (hits.length === 1 ? '' : 's') + (hits.length > shown.length ? ', showing the first 200' : '') + '. Tap one to see it in the thread.</div>' +
+      shown.map(function (m) {
+        var html = wvRenderDiscordThread({ messages: [m] }, 1, 0, st.data.messages);
+        return '<div class="wv-dtp-hit" onclick="wvDtpJump(\'' + esc(m.id) + '\')">' + html + '</div>';
+      }).join('');
+    var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    box.querySelectorAll('.wv-dtp-hit .dt-text').forEach(function (el) {
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function (n) {
+        if (!re.test(n.nodeValue)) return;
+        re.lastIndex = 0;
+        var span = document.createElement('span');
+        span.innerHTML = esc(n.nodeValue).replace(re, '<mark>$1</mark>');
+        n.parentNode.replaceChild(span, n);
+      });
+    });
+  }
+
+  window.wvOpenThreadPanel = async function (albumId, discordUrl) {
+    close();
+    var wrap = document.createElement('div');
+    wrap.id = 'wv-dtp';
+    wrap.className = 'wv-dtp';
+    wrap.innerHTML = '<div class="wv-dtp-head">' +
+        '<div class="wv-dtp-title"><div id="wv-dtp-name"># Discord thread</div><div id="wv-dtp-sub" class="wv-dtp-sub">Loading…</div></div>' +
+        '<button class="wv-dtp-x" aria-label="Close" onclick="wvCloseThreadPanel()">×</button>' +
+      '</div>' +
+      '<div class="wv-dtp-tools">' +
+        '<input id="wv-dtp-q" class="wv-input" placeholder="Search this thread" autocomplete="off">' +
+        '<div class="wv-dtp-pinwrap"><button class="wv-pill" id="wv-dtp-pinbtn" style="display:none;" onclick="document.getElementById(\'wv-dtp-pins\').classList.toggle(\'open\')">📌 Pinned</button><div id="wv-dtp-pins" class="wv-dtp-pins"></div></div>' +
+        (discordUrl ? '<a class="wv-pill" href="' + esc(discordUrl) + '" target="_blank" rel="noopener">Open in Discord ↗</a>' : '') +
+      '</div>' +
+      '<div id="wv-dtp-list" class="wv-dtp-list"><div class="loading"><div class="spinner"></div></div></div>';
+    document.body.appendChild(wrap);
+    document.addEventListener('keydown', onKey);
+    var t = null;
+    document.getElementById('wv-dtp-q').addEventListener('input', function (e) { clearTimeout(t); var v = e.target.value; t = setTimeout(function () { search(v); }, 200); });
+    list().addEventListener('scroll', function () { var b = list(); if (b && b.scrollTop + b.clientHeight > b.scrollHeight - 600) append(); }, { passive: true });
+    var data;
+    try { data = await api('/albums/' + albumId + '/thread'); }
+    catch (e) { var l = list(); if (l) l.innerHTML = '<div class="wv-empty" style="margin:20px;">' + esc(e.message || 'Could not load the thread') + '</div>'; return; }
+    if (!document.getElementById('wv-dtp')) return;
+    st = { data: data, start: 0, end: Math.min(BATCH, (data.messages || []).length), searching: false };
+    var th = data.thread || {};
+    document.getElementById('wv-dtp-name').textContent = '# ' + (th.name || 'thread');
+    document.getElementById('wv-dtp-sub').textContent = (th.guild ? th.guild + (th.parent ? ' › ' + th.parent : '') + ' · ' : '') + (data.messages || []).length.toLocaleString() + ' messages · ' +
+      (data.unreadable_since ? 'saved copy, the thread is gone from Discord' : data.saved ? 'saved ' + new Date(data.saved_at).toLocaleDateString() : 'loaded live, saving the full thread now');
+    var pins = (data.messages || []).filter(function (m) { return m.pinned; });
+    if (pins.length) {
+      var pb = document.getElementById('wv-dtp-pinbtn'); pb.style.display = ''; pb.textContent = '📌 Pinned (' + pins.length + ')';
+      document.getElementById('wv-dtp-pins').innerHTML = pins.map(function (m) {
+        return '<button class="wv-dtp-pin" onclick="wvDtpJump(\'' + esc(m.id) + '\')"><b>' + esc((m.author || {}).name || '') + '</b> <span>' + esc(String(m.content || (m.attachments && m.attachments.length ? '[attachment]' : '')).replace(/\s+/g, ' ').slice(0, 140)) + '</span></button>';
+      }).join('');
+    }
+    renderWindow();
+  };
+  window.wvCloseThreadPanel = close;
 })();
