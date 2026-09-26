@@ -80,6 +80,7 @@
     ['browse',    'Browse',    '/browse',    'discover'],
     ['charts',    'Charts',    '/charts',    'chart'],
     ['artists',   'Editors',   '/artists',   'profile'],
+    ['music',     'Artists',   '/music',     'profile'],
     ['archive',   'Archive',   '/archive',   'archive'],
     ['eras',      'Eras',      '/eras',      'eras'],
     ['radio',     'Radio',     '/radio',     'radio'],
@@ -212,6 +213,7 @@
     html += _amSection('Library', [
       ['library', 'Recently Added', '/library', 'list'],
       ['artists', 'Editors', '/artists', 'profile'],
+      ['music', 'Artists', '/music', 'profile'],
       ['archive', 'Archive', '/archive', 'archive'],
       ['eras', 'Eras', '/eras', 'eras'],
       ['resources', 'Tracker', '/resources', 'resources'],

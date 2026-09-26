@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — artists</title>
+  <link rel="stylesheet" href="/css/style.css?v=9199bed5c3b0">
+  <script src="/js/status-card.js?v=9199bed5c3b0"></script>
+  <script src="/js/down.js?v=9199bed5c3b0"></script>
+</head>
+<body>
+<div id="view">
+  <div id="ma-root"><div class="loading"><div class="spinner"></div></div></div>
+</div>
+<script src="/js/api.js?v=9199bed5c3b0"></script>
+<script src="/js/layout.js?v=9199bed5c3b0"></script>
+<script src="/js/player.js?v=9199bed5c3b0"></script>
+<script src="/js/router.js?v=9199bed5c3b0"></script>
+<script>
+initPlayer();
+(function () {
+  var params = new URLSearchParams(location.search);
+  var key = (params.get('a') || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  var root = document.getElementById('ma-root');
+  var _items = [], _sort = 'tracks', _q = '', _timer = null, _detail = null;
+  if (typeof window.setPageWash === 'function') window.setPageWash('artists');
+
+  function initials(n) { var p = String(n || '?').trim().split(/\s+/); return ((p[0] || '?')[0] + (p[1] ? p[1][0] : '')).toUpperCase(); }
+
+  function renderList() {
+    root.innerHTML =
+      '<h1 class="wv-page-title">Artists</h1>' +
+      '<div style="font-size:13px;color:var(--text-3);margin:-6px 0 14px;">Every artist featured on an edit or comp on wavernrs, worked out from the song credits.</div>' +
+      '<div class="wv-toolbar">' +
+        '<input class="wv-input" id="ma-q" placeholder="Find an artist" value="' + escHtml(_q) + '" oninput="maSearch(this.value)">' +
+        '<div class="wv-seg" id="ma-sort">' +
+          ['tracks', 'plays', 'comps', 'name'].map(function (s) { return '<button class="' + (s === _sort ? 'on' : '') + '" onclick="maSort(\'' + s + '\')">' + ({ tracks: 'Most features', plays: 'Most played', comps: 'Most comps', name: 'A–Z' })[s] + '</button>'; }).join('') +
+        '</div>' +
+        '<span id="ma-count" style="font-size:12.5px;color:var(--text-3);"></span>' +
+      '</div>' +
+      '<div class="wv-tile-grid" id="ma-grid"><div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div></div>';
+    loadList();
+  }
+
+  async function loadList() {
+    var grid = document.getElementById('ma-grid');
+    try {
+      var d = await api('/music-artists?limit=300&sort=' + _sort + (_q ? '&q=' + encodeURIComponent(_q) : ''));
+      if (d.building) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Artist pages are being built from the song credits. Check back in a few minutes.</div>'; return; }
+      _items = d.items || [];
+      document.getElementById('ma-count').textContent = (d.total || _items.length).toLocaleString() + ' artists';
+      if (!_items.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match</div>'; return; }
+      grid.innerHTML = _items.map(function (a) {
+        var href = '/music?a=' + encodeURIComponent(a.artist_key);
+        return '<div class="wv-artist-tile" onclick="navigate(\'' + href + '\')">' +
+          '<div class="av" style="background:' + coverGradient(a.name || '') + ';display:flex;align-items:center;justify-content:center;"><span style="font-size:30px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span></div>' +
+          '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
+          '<div class="wv-artist-meta">' + (_sort === 'plays' ? fmtNum(a.plays || 0) + ' plays' : _sort === 'comps' ? a.comps + ' comp' + (a.comps === 1 ? '' : 's') : a.tracks + ' feature' + (a.tracks === 1 ? '' : 's')) + '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">' + escHtml(e.message) + '</div>'; }
+  }
+
+  window.maSort = function (s) { _sort = s; renderList(); };
+  window.maSearch = function (v) { _q = v.trim(); clearTimeout(_timer); _timer = setTimeout(loadList, 250); };
+
+  function trackItem(t) {
+    var a = t.albums || {};
+    return { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || a.cover_url || null, artist_name: a.is_archive ? (a.archive_artist_name || 'Archive') : ((t.artists && t.artists.display_name) || a.archive_artist_name || ''), _album_id: a.id || null, _album_title: a.title || null, _album_cover: a.cover_url || null, _archive_artist: a.is_archive ? (a.archive_artist_name || null) : null };
+  }
+  window.maPlay = function (idx, shuffle) {
+    var q = (_detail.tracks || []).filter(function (t) { return t.ia_url; }).map(trackItem);
+    if (!q.length) { if (typeof wvToast === 'function') wvToast('Nothing playable yet'); return; }
+    if (shuffle) for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = q[i]; q[i] = q[j]; q[j] = tmp; }
+    var start = 0;
+    if (typeof idx === 'string') start = Math.max(0, q.findIndex(function (x) { return x.id === idx; }));
+    window.setPlayerQueue(q, start);
+    window.playQueueIndex(start);
+  };
+
+  async function renderDetail() {
+    try {
+      _detail = await api('/music-artists/' + encodeURIComponent(key));
+    } catch (e) {
+      root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Artist not found') + ' <a href="/music" onclick="event.preventDefault();navigate(\'/music\')" style="color:var(--brand);">All artists</a></div>';
+      return;
+    }
+    var a = _detail.artist, tracks = _detail.tracks || [], comps = _detail.comps || [];
+    document.title = a.name + ' — wavernrs';
+    var lead = comps.find(function (c) { return c.cover_url; }) || tracks.find(function (t) { return t.cover_url || (t.albums && t.albums.cover_url); });
+    var leadCover = lead ? (lead.cover_url || (lead.albums && lead.albums.cover_url)) : '';
+    if (typeof window.setPageBgImage === 'function') window.setPageBgImage(leadCover || '', a.name);
+    root.innerHTML =
+      '<div style="margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/music\')">‹ Artists</button></div>' +
+      '<div class="wv-hero">' +
+        '<div class="wv-hero-art round" style="background:' + coverGradient(a.name) + ';display:flex;align-items:center;justify-content:center;"><span style="font-size:64px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span></div>' +
+        '<div class="wv-hero-body">' +
+          '<div class="wv-kind">Artist</div>' +
+          '<div class="wv-hero-title">' + escHtml(a.name) + '</div>' +
+          '<div class="wv-hero-meta">Featured on ' + a.tracks.toLocaleString() + ' song' + (a.tracks === 1 ? '' : 's') + ' across ' + a.comps.toLocaleString() + ' release' + (a.comps === 1 ? '' : 's') + ' · ' + fmtNum(a.plays || 0) + ' plays</div>' +
+          '<div class="wv-hero-actions"><button class="wv-btn-play" onclick="maPlay(0)"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play</button><button class="wv-btn-ghost" onclick="maPlay(0, true)">Shuffle</button></div>' +
+        '</div>' +
+      '</div>' +
+      (comps.length ? '<h2 class="wv-sec-title" style="margin:10px 0 12px;">Comps they\'re on</h2><div class="wv-tile-grid" style="margin-bottom:28px;">' + comps.slice(0, 24).map(function (c) {
+        var href = '/album?id=' + encodeURIComponent(c.id);
+        return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')"><div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(c.title || '') + ';border-radius:14px;">' +
+          (c.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(c.cover_url, 320) : c.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">' : '') +
+          '</div></div><div class="wv-comp-card-title">' + escHtml(c.title || '') + '</div><div class="wv-comp-card-artist">' + escHtml(c.archive_artist_name || '') + ' · ' + c.feature_count + ' song' + (c.feature_count === 1 ? '' : 's') + '</div></div>';
+      }).join('') + '</div>' : '') +
+      '<h2 class="wv-sec-title" style="margin:0 0 10px;">Songs</h2>' +
+      '<div class="track-list">' + tracks.map(function (t, i) {
+        var al = t.albums || {};
+        var cov = t.cover_url || al.cover_url || '';
+        return '<div class="track-row" onclick="' + (t.ia_url ? 'maPlay(\'' + t.id + '\')' : '') + '"' + (t.ia_url ? '' : ' style="opacity:.55;"') + '>' +
+          '<div class="track-row-num">' + (i + 1) + '</div>' +
+          '<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:' + coverGradient(t.title || '') + ';">' + (cov ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(cov, 80) : cov) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+          '<div class="track-row-info"><div class="track-row-title">' + escHtml(t.title || '') + '</div>' +
+          '<div class="track-row-artist">' + (al.id ? '<a href="/album?id=' + encodeURIComponent(al.id) + '" onclick="event.stopPropagation();navigate(\'/album?id=' + encodeURIComponent(al.id) + '\');return false;" style="color:inherit;">' + escHtml(al.title || '') + '</a> · ' : '') + escHtml(al.archive_artist_name || (t.artists && t.artists.display_name) || '') + '</div></div>' +
+          '<span class="track-row-plays">' + fmtNum(t.play_count || 0) + ' plays</span>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  if (key) renderDetail(); else renderList();
+})();
+</script>
+</body>
+</html>
