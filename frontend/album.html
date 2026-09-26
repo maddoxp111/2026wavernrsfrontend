@@ -382,7 +382,9 @@
   }
 
   // Lets staff choose which download link in the thread is the actual comp.
+  var LINK_PICK_CSS = '.wv-link-pick { flex: 1 1 auto; min-height: 0; max-height: none; display: flex; flex-direction: column; gap: 8px; overflow: auto; margin-top: 12px; } .wv-link-opt { flex: none; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--hair-strong); cursor: pointer; } .wv-link-opt:has(input:checked) { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, transparent); } .wv-link-opt.off { opacity: .5; cursor: not-allowed; } .wv-link-opt input[type="radio"] { width: 16px; height: 16px; min-width: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--brand); flex: none; } .wv-link-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; } .wv-link-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; } .wv-link-host { font-weight: 700; font-size: 13px; color: var(--text); } .wv-link-url { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .wv-link-url a { color: inherit; } .wv-link-meta { font-size: 11.5px; color: var(--text-3); } .wv-link-text { font-size: 12px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .wv-link-tag { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); } .wv-link-tag.good { background: color-mix(in srgb, var(--brand) 22%, transparent); color: var(--text); } .wv-link-tag.warn { background: rgba(251, 191, 36, .18); color: #fbbf24; } .wv-link-title { font-size: 14px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; } .wv-link-host { font-weight: 600; font-size: 11.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; }';
   function pickThreadLink(L, gptLine) {
+    if (!document.getElementById('wv-link-pick-css')) { var stl = document.createElement('style'); stl.id = 'wv-link-pick-css'; stl.textContent = LINK_PICK_CSS; document.head.appendChild(stl); }
     return new Promise(function (resolve) {
       var opts = L.options || [];
       var def = opts.findIndex(function (o) { return o.suggested && o.supported; });
@@ -390,7 +392,7 @@
       var HOST = { 'mega.nz': 'MEGA', 'mega.co.nz': 'MEGA', 'samply.app': 'Samply', 'untitled.stream': 'untitled', 'pillows.su': 'pillows', 'drive.google.com': 'Google Drive', 'gofile.io': 'Gofile', 'pixeldrain.com': 'Pixeldrain' };
       var wrap = document.createElement('div');
       wrap.className = 'wv-vp-wrap';
-      wrap.innerHTML = '<div class="wv-vp" style="max-width:660px;text-align:left;">' +
+      wrap.innerHTML = '<div class="wv-vp" style="max-width:660px;text-align:left;max-height:calc(100vh - 32px);display:flex;flex-direction:column;">' +
         '<div class="wv-vp-title">Pick the comp\'s link</div>' +
         '<div class="wv-vp-body">' + opts.length + ' download link' + (opts.length === 1 ? '' : 's') + ' in this thread. Choose the one that is the actual comp and its songs get swapped into this page (likes, comments and stars stay).' +
           (gptLine ? '<div style="margin-top:6px;font-size:12px;color:var(--text-3);white-space:pre-wrap;">' + escHtml(gptLine.trim()) + '</div>' : '') + '</div>' +
@@ -401,14 +403,14 @@
             (o.pack ? '<span class="wv-link-tag warn">Says snippet / pack</span>' : '') +
             (!o.supported ? '<span class="wv-link-tag">Can\'t import this host</span>' : '');
           return '<label class="wv-link-opt' + (o.supported ? '' : ' off') + '"><input type="radio" name="wv-link-opt" value="' + k + '"' + (k === def ? ' checked' : '') + (o.supported ? '' : ' disabled') + '>' +
-            '<div class="wv-link-main"><div class="wv-link-top"><span class="wv-link-host">' + escHtml(HOST[o.host] || o.host || 'Link') + '</span>' + tags + '</div>' +
+            '<div class="wv-link-main">' + (o.title ? '<div class="wv-link-title">' + escHtml(o.title) + '</div>' : '') + '<div class="wv-link-top"><span class="wv-link-host">' + escHtml(HOST[o.host] || o.host || 'Link') + '</span>' + tags + '</div>' +
             '<div class="wv-link-url"><a href="' + escHtml(o.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + escHtml(o.url) + '</a></div>' +
             '<div class="wv-link-meta">' + escHtml([o.from === 'first post' ? 'First post' : o.from === 'owner' ? 'Thread owner' : 'Someone else', o.author, when].filter(Boolean).join(' · ')) + (o.stars ? ' · ⭐ ' + o.stars : '') + '</div>' +
             (o.text ? '<div class="wv-link-text">' + escHtml(o.text) + '</div>' : '') + '</div></label>';
         }).join('') +
-        '<label class="wv-link-opt"><input type="radio" name="wv-link-opt" value="none"' + (def < 0 ? ' checked' : '') + '><div class="wv-link-main"><div class="wv-link-top"><span class="wv-link-host">None of these</span></div><div class="wv-link-meta">The comp isn\'t out yet. Clear the songs, pick a cover from the thread and mark it Upcoming.</div></div></label>' +
+        '<label class="wv-link-opt"><input type="radio" name="wv-link-opt" value="none"' + (def < 0 ? ' checked' : '') + '><div class="wv-link-main"><div class="wv-link-title">None of these</div><div class="wv-link-meta">The comp isn\'t out yet. Clear the songs, pick a cover from the thread and mark it Upcoming.</div></div></label>' +
         '</div>' +
-        '<div class="wv-vp-actions" style="margin-top:14px;"><button class="wv-pill" id="wv-lp-cancel">Cancel</button><button class="wv-pill brand" id="wv-lp-ok">Continue</button></div>' +
+        '<div class="wv-vp-actions" style="margin-top:14px;flex:none;"><button class="wv-pill" id="wv-lp-cancel">Cancel</button><button class="wv-pill brand" id="wv-lp-ok">Continue</button></div>' +
       '</div>';
       document.body.appendChild(wrap);
       var finish = function (v) { wrap.remove(); resolve(v); };
