@@ -1230,6 +1230,8 @@
   // If the CDN itself is down, stop sending every image through it after a few
   // failures — covers then load straight from their origin.
   var cdnFails = 0, cdnOff = false;
+  // Hosts the CDN cannot fetch from; these load straight from their origin.
+  var NO_CDN = /(^|\.)yetour\.xyz$/i;
   try { cdnOff = sessionStorage.getItem('wv_cdn_off') === '1'; } catch (_) {}
   function sizeFor(img) {
     var w = img.getAttribute('width') || img.dataset.size;
@@ -1246,7 +1248,8 @@
     if (img._wvCdn) return;
     var src = img.getAttribute('src') || '';
     if (!/^https?:\/\//i.test(src) || /^https?:\/\/wsrv\.nl\//i.test(src)) return;
-    try { if (new URL(src).origin === location.origin) return; } catch (_) { return; }
+    try { var su = new URL(src); if (su.origin === location.origin) return; if (NO_CDN.test(su.hostname)) return; } catch (_) { return; }
+    if (img.hasAttribute('data-nocdn')) return;
     img._wvCdn = true;
     img.dataset.wvOrig = src;
     if (cdnOff) {
