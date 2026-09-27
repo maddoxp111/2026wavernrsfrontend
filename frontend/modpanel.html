@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — mod panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
   var _allUsers = [];
 
@@ -34,7 +34,7 @@
           document.getElementById('view').innerHTML =
             '<div style="padding:48px 24px;text-align:center;">' +
             '<div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px;">Access denied</div>' +
-            '<div style="font-size:14px;color:var(--text-2);">You do not have moderator permissions.</div>' +
+            '<div style="font-size:14px;color:var(--text-2);">you dont have mod perms</div>' +
             '</div>';
           setTimeout(function() { window.location.href = '/index'; }, 2500);
           return;
@@ -50,7 +50,7 @@
       })
       .catch(function() {
         document.getElementById('view').innerHTML =
-          '<div style="padding:48px 24px;text-align:center;color:var(--red);">Failed to verify moderator status.</div>';
+          '<div style="padding:48px 24px;text-align:center;color:var(--red);">couldnt check if youre a mod...try again</div>';
       });
   })();
 
@@ -61,7 +61,7 @@
         '<div style="background:var(--elevated);border-radius:var(--r-lg);padding:36px 32px;max-width:380px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.18);">' +
           '<div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;">wavernrs</div>' +
           '<h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">Mod Panel</h1>' +
-          '<p style="font-size:14px;color:var(--text-2);margin:0 0 24px;">Enter your account password to continue</p>' +
+          '<p style="font-size:14px;color:var(--text-2);margin:0 0 24px;">type your account password to keep going</p>' +
           '<div id="mod-gate-alert" style="margin-bottom:12px;">' +
             (errMsg ? '<div style="color:var(--red);font-size:13px;">' + escHtml(errMsg) + '</div>' : '') +
           '</div>' +
@@ -78,7 +78,7 @@
   window.verifyModPassword = function() {
     var pwEl = document.getElementById('mod-gate-pw');
     var pw = pwEl ? pwEl.value : '';
-    if (!pw) { showModPasswordGate('Enter your password'); return; }
+    if (!pw) { showModPasswordGate('type your password'); return; }
     var token = localStorage.getItem('token');
     fetch(API_BASE + '/mod/reauth', {
       method: 'POST',
@@ -92,12 +92,12 @@
           renderShell();
           loadUsers();
         } else if (res.status === 429) {
-          showModPasswordGate('Too many attempts. Try again later.');
+          showModPasswordGate('too many tries...wait a bit and try again');
         } else {
           showModPasswordGate((res.d && res.d.error) || 'Incorrect password');
         }
       })
-      .catch(function() { showModPasswordGate('Connection error. Try again.'); });
+      .catch(function() { showModPasswordGate('connection error...try again'); });
   };
 
   // ── Shell ─────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@
         // Users tab
         '<div id="mod-tab-users">' +
           '<div style="margin-bottom:16px;">' +
-            '<input type="text" id="user-search" class="wv-input" placeholder="Search by username..." ' +
+            '<input type="text" id="user-search" class="wv-input" placeholder="search by username..." ' +
               'style="max-width:320px;padding:9px 14px;" oninput="filterUsers()">' +
           '</div>' +
           '<div id="users-list"><div class="loading"><div class="spinner"></div></div></div>' +
@@ -130,7 +130,7 @@
         // Uploads tab
         '<div id="mod-tab-uploads" style="display:none;">' +
           '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">' +
-            '<input id="uploads-q" class="wv-input" placeholder="Search every comp and edit by title, artist name or account…" style="flex:1;min-width:220px;max-width:460px;padding:8px 12px;font-size:13.5px;" oninput="uploadsSearchInput()">' +
+            '<input id="uploads-q" class="wv-input" placeholder="search every comp and edit by title, artist or account..." style="flex:1;min-width:220px;max-width:460px;padding:8px 12px;font-size:13.5px;" oninput="uploadsSearchInput()">' +
             '<span id="uploads-count" style="font-size:12px;color:var(--text-3);"></span>' +
           '</div>' +
           '<div id="uploads-list"><div class="loading"><div class="spinner"></div></div></div>' +
@@ -141,9 +141,9 @@
           '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
             '<div style="font-size:13px;font-weight:700;color:var(--purple-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">What this tool does</div>' +
             '<p style="margin:0;font-size:14px;color:var(--text-2);line-height:1.6;">' +
-              'Use this to fix a track whose audio is wrong — for example, when two tracks in the same comp shared an identical filename on Internet Archive and one overwrote the other. ' +
-              'Uploading a replacement file here pushes the correct audio to IA and updates the track in the database <strong style="color:var(--text-1);">without touching plays, likes, or comments</strong>. ' +
-              'The old IA file is left in place (IA does not support deletion); only the database URL is updated so the player immediately uses the new file.' +
+              'use this when a track has the wrong audio...like when 2 tracks in the same comp had the same filename on Internet Archive and one overwrote the other. ' +
+              'upload the right file here and it goes to IA and updates the track <strong style="color:var(--text-1);">without touching plays, likes or comments</strong>. ' +
+              'the old IA file stays up (IA doesnt let you delete stuff)...only the database url changes so the player uses the new file right away.' +
             '</p>' +
           '</div>' +
 
@@ -166,7 +166,7 @@
             '<input type="file" id="ra-file" accept="audio/*" class="wv-input" style="padding:8px 12px;">' +
           '</div>' +
 
-          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">Accepted: MP3, WAV, FLAC, AAC, OGG — max 200 MB</div>' +
+          '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">MP3, WAV, FLAC, AAC or OGG...max 200 MB</div>' +
 
           '<button class="wv-pill brand" id="ra-submit" onclick="submitReplaceAudio()" disabled style="opacity:.5;cursor:not-allowed;">Upload Replacement</button>' +
           '<div id="ra-status" style="margin-top:12px;font-size:13px;"></div>' +
@@ -177,9 +177,9 @@
           '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
             '<div style="font-size:13px;font-weight:700;color:var(--purple-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Archive uploads</div>' +
             '<p style="margin:0;font-size:14px;color:var(--text-2);line-height:1.6;">' +
-              'Archive comps are comps by artists who are <strong style="color:var(--text-1);">not on the site</strong> but are too good to be lost. ' +
-              'They do not create an artist account — the name you enter is display-only. ' +
-              'Archive comps appear ONLY on the Archive page and in the Archived section of search. They never show in discover, charts, feeds, or on any artist profile.' +
+              'archive comps are comps by artists who are <strong style="color:var(--text-1);">not on the site</strong> but are too good to lose. ' +
+              'they dont make an artist account...the name you type is just for show. ' +
+              'archive comps ONLY show on the Archive page and in the Archived part of search. they never show in discover, charts, feeds or on any artist profile.' +
             '</p>' +
           '</div>' +
 
@@ -195,16 +195,16 @@
           // Era tag keywords
           '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
             '<div style="font-weight:700;margin-bottom:4px;">Era Tag Keywords</div>' +
-            '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">Comma-separated keywords per era tag. When the Discord bot imports a comp, it matches the title against these keywords and assigns the matching tag. If nothing matches, it falls back to <b>Other</b>.</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">keywords for each era tag, split by commas. when the discord bot imports a comp it checks the title for these words and gives it the tag that matches. if nothing matches it gets <b>Other</b>.</div>' +
             '<div id="era-keywords-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
           '</div>' +
 
           // Import from link
           '<div class="wv-card" style="padding:18px 20px;margin-bottom:18px;">' +
             '<div style="font-weight:700;margin-bottom:6px;">Import from a link</div>' +
-            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">Paste a public <b>untitled.stream</b>, <b>Samply</b>, or <b>mega.nz folder</b> link — pulls every track and the cover art. Mega folders: each audio file becomes a track (sorted by filename), and an image in the folder becomes the cover. Mega downloads route through Tor (rotating IP every 2 comps) so they\'re slower and an occasional track may fail — just re-import to pick up any that didn\'t.</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">paste a public <b>untitled.stream</b>, <b>Samply</b> or <b>mega.nz folder</b> link and it grabs every track plus the cover. for mega folders each audio file becomes a track (sorted by filename) and any image in there becomes the cover. mega downloads go through Tor (new IP every 2 comps) so theyre slower and sometimes a track fails...just import it again to grab the ones that didnt make it.</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-              '<input id="arc-import-url" class="wv-input" placeholder="untitled.stream/library/project/…, samply.app/p/…, or mega.nz/folder/…" style="flex:1;min-width:220px;">' +
+              '<input id="arc-import-url" class="wv-input" placeholder="untitled.stream/library/project/..., samply.app/p/... or mega.nz/folder/..." style="flex:1;min-width:220px;">' +
               '<button class="wv-pill brand" id="arc-import-btn" onclick="startArchiveImport()">Import</button>' +
             '</div>' +
             '<div id="arc-import-status" style="margin-top:10px;font-size:13px;display:none;"></div>' +
@@ -219,7 +219,7 @@
             '</div>' +
             '<div class="wv-form-field" style="margin-bottom:10px;">' +
               '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label>' +
-              '<textarea id="arc-desc" class="wv-input" rows="2" placeholder="Optional…" style="resize:vertical;max-width:400px;"></textarea>' +
+              '<textarea id="arc-desc" class="wv-input" rows="2" placeholder="optional..." style="resize:vertical;max-width:400px;"></textarea>' +
             '</div>' +
             '<div class="wv-form-field" style="margin-bottom:12px;">' +
               '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Cover image</label>' +
@@ -246,7 +246,7 @@
           '</div>' +
           '<div id="discord-queue-preview" style="margin-bottom:16px;"></div>' +
           '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">' +
-            '<div style="font-size:13px;font-weight:600;color:var(--text-2);">Bot-triggered imports — auto-refreshes every 10 s</div>' +
+            '<div style="font-size:13px;font-weight:600;color:var(--text-2);">imports started by the bot...refreshes every 10s</div>' +
             '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="discord-status-filter">' +
               '<button class="wv-pill" id="dsf-all"    onclick="setDiscordFilter(\'\')"       style="font-size:11px;padding:3px 10px;background:var(--purple);color:#fff;">All</button>' +
               '<button class="wv-pill" id="dsf-queued" onclick="setDiscordFilter(\'queued\')"  style="font-size:11px;padding:3px 10px;">Queued</button>' +
@@ -263,9 +263,9 @@
           '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
             '<div style="font-size:13px;font-weight:700;color:var(--purple-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Duplicate comps</div>' +
             '<p style="margin:0;font-size:14px;color:var(--text-2);line-height:1.6;">' +
-              'Bulk imports reliably produce the same comp twice — the same link posted in two channels, or a folder re-scanned after a partial failure. ' +
-              'Each group below is one comp that exists more than once. Keep the most complete copy (most tracks) and remove the rest; ' +
-              'removing a copy deletes its tracks too, so plays and likes on the copy you keep are untouched.' +
+              'bulk imports end up making the same comp twice a lot...like the same link posted in 2 channels or a folder scanned again after it half failed. ' +
+              'each group below is one comp that exists more than once. keep the most complete copy (most tracks) and delete the rest. ' +
+              'deleting a copy deletes its tracks too, but plays and likes on the copy you keep stay the same.' +
             '</p>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
@@ -344,7 +344,7 @@
     var el = document.getElementById('users-list');
     if (!el) return;
     if (!users || !users.length) {
-      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No users found.</div>';
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no users found</div>';
       return;
     }
 
@@ -418,7 +418,7 @@
       });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Timeout applied.', 'success');
+      showAlert('timeout applied', 'success');
       loadUsers();
     } catch (err) {
       showAlert(err.message, 'error');
@@ -433,7 +433,7 @@
       });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Timeout removed.', 'success');
+      showAlert('timeout removed', 'success');
       loadUsers();
     } catch (err) {
       showAlert(err.message, 'error');
@@ -454,7 +454,7 @@
       var data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Failed');
       if (gen !== _uploadsGen) return;
-      var cnt = document.getElementById('uploads-count'); if (cnt) cnt.textContent = q ? (data.length + ' result' + (data.length === 1 ? '' : 's') + ' for "' + q + '"') : 'Latest 50 uploads';
+      var cnt = document.getElementById('uploads-count'); if (cnt) cnt.textContent = q ? (data.length + ' result' + (data.length === 1 ? '' : 's') + ' for "' + q + '"') : 'latest 50 uploads';
       renderUploads(data);
     } catch (err) {
       if (el) el.innerHTML = '<div style="color:var(--red);">' + escHtml(err.message) + '</div>';
@@ -465,7 +465,7 @@
     var el = document.getElementById('uploads-list');
     if (!el) return;
     if (!items || !items.length) {
-      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">No recent uploads.</div>';
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no recent uploads</div>';
       return;
     }
 
@@ -496,7 +496,7 @@
   }
 
   async function takeDown(type, id) {
-    if (!confirm('Take down this ' + type + '? This cannot be undone.')) return;
+    if (!confirm('take down this ' + type + '? you cant undo this')) return;
     try {
       var endpoint = type === 'album' ? '/mod/albums/' + id : '/mod/tracks/' + id;
       var r = await fetch(API_BASE + endpoint, { method: 'DELETE', headers: authHeaders() });
@@ -504,7 +504,7 @@
       if (!r.ok) throw new Error(d.error || 'Failed');
       var card = document.getElementById('upload-card-' + type + '-' + id);
       if (card) card.remove();
-      showAlert('Removed.', 'success');
+      showAlert('removed', 'success');
     } catch (err) {
       showAlert(err.message, 'error');
     }
@@ -512,12 +512,12 @@
 
   // ── Password Reset ────────────────────────────────────────────────────────
   async function resetUserPassword(userId, username) {
-    if (!confirm('Reset ' + username + '\'s password to "Password1"?')) return;
+    if (!confirm('reset the password for ' + username + ' to "Password1"?')) return;
     try {
       var r = await fetch(API_BASE + '/mod/users/' + userId + '/reset-password', { method: 'POST', headers: authHeaders() });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Password reset to "Password1" for ' + escHtml(username) + '.', 'success');
+      showAlert('password for ' + escHtml(username) + ' is now "Password1"', 'success');
     } catch (err) {
       showAlert(err.message, 'error');
     }
@@ -542,7 +542,7 @@
       var r = await fetch(API_BASE + '/mod/tracks/search?q=' + encodeURIComponent(q.trim()), { headers: authHeaders() });
       var data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Search failed');
-      if (!data.length) { resultsEl.innerHTML = '<div style="color:var(--text-3);font-size:13px;">No tracks found.</div>'; return; }
+      if (!data.length) { resultsEl.innerHTML = '<div style="color:var(--text-3);font-size:13px;">no tracks found</div>'; return; }
       resultsEl.innerHTML = data.map(function(t) {
         var meta = [t.artist_name, t.album_title ? 'from "' + escHtml(t.album_title) + '"' : null].filter(Boolean).join(' · ');
         return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--hair);border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="raSelectTrack(\'' + t.id + '\',\'' + escHtml(t.title).replace(/'/g, '\\\'') + '\',\'' + escHtml(meta).replace(/'/g, '\\\'') + '\')">' +
@@ -598,7 +598,7 @@
     var btn = document.getElementById('ra-submit');
 
     if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; btn.style.opacity = '.6'; }
-    if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-2);">Uploading to Internet Archive — this may take a minute…</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--text-2);">uploading to Internet Archive...this might take a minute</span>';
 
     var fd = new FormData();
     fd.append('audio', fileEl.files[0]);
@@ -611,7 +611,7 @@
       });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Upload failed');
-      if (statusEl) statusEl.innerHTML = '<span style="color:var(--green);">✓ Audio replaced successfully. The player will use the new file immediately.</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--green);">✓ audio replaced...the player uses the new file right away</span>';
       // Reset form
       _raSelectedId = null;
       var selEl = document.getElementById('ra-selected');
@@ -634,7 +634,7 @@
       var tags = await api('/eratags');
       var sel = document.getElementById('arc-era');
       if (!sel) return;
-      sel.innerHTML = '<option value="">Select era tag…</option>' +
+      sel.innerHTML = '<option value="">pick an era tag...</option>' +
         tags.map(function(t) { return '<option value="' + escHtml(t.id) + '">' + escHtml(t.name) + '</option>'; }).join('');
       _arcErasLoaded = true;
       _arcRenderKeywords(tags);
@@ -650,7 +650,7 @@
           '<span style="font-size:13px;font-weight:600;min-width:110px;flex-shrink:0;">' + escHtml(t.name) + '</span>' +
           '<input id="kw-' + escHtml(t.id) + '" class="wv-input" ' +
             'value="' + escHtml((t.keywords || []).join(', ')) + '" ' +
-            'placeholder="keyword1, keyword2…" ' +
+            'placeholder="keyword1, keyword2..." ' +
             'style="flex:1;min-width:180px;font-size:13px;padding:7px 10px;">' +
           '<button class="wv-pill brand" style="padding:6px 14px;font-size:12px;" ' +
             'onclick="saveEraTagKeywords(\'' + escHtml(t.id) + '\', this)">Save</button>' +
@@ -688,7 +688,7 @@
         '<span style="font-size:11px;color:var(--text-3);">' + (f.size / 1024 / 1024).toFixed(1) + 'MB</span>' +
       '</div>';
     }).join('') +
-    '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">Track titles are taken from the filenames (numbering and extension stripped). Files upload in the order shown.</div>';
+    '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">track titles come from the filenames (numbers and file extension get cut off). files upload in the order shown.</div>';
   }
 
   function _arcCleanTitle(name) {
@@ -706,8 +706,8 @@
   function _arcValidateCommon() {
     var artist = (document.getElementById('arc-artist') || {}).value || '';
     var era = (document.getElementById('arc-era') || {}).value || '';
-    if (!artist.trim()) return { error: 'Artist name is required for archive comps.' };
-    if (!era) return { error: 'Please select an era tag.' };
+    if (!artist.trim()) return { error: 'archive comps need an artist name' };
+    if (!era) return { error: 'pick an era tag' };
     return { artist: artist.trim(), era: era };
   }
 
@@ -721,16 +721,16 @@
     else if (/^https?:\/\/(www\.)?samply\.app\/p\/[A-Za-z0-9_-]+(\?.*)?$/.test(url)) endpoint = '/import/samply';
     else if (/^https?:\/\/mega(\.co)?\.nz\/(folder\/[\w-]+#[\w-]+|#F![\w-]+![\w-]+)\/?$/.test(url)) endpoint = '/import/mega';
     if (!endpoint) {
-      var badMsg = 'That doesn\'t look like an untitled.stream, Samply, or mega.nz folder link.';
-      if (/mega(\.co)?\.nz\/(file\/|#!)/.test(url)) badMsg = 'Mega single-file links aren\'t supported — paste a folder link (the whole folder becomes one comp).';
-      else if (/mega(\.co)?\.nz\/folder\/[\w-]+$/.test(url)) badMsg = 'That mega folder link is missing its key — copy the full link including the part after #.';
+      var badMsg = 'that doesnt look like an untitled.stream, Samply or mega.nz folder link';
+      if (/mega(\.co)?\.nz\/(file\/|#!)/.test(url)) badMsg = 'single file mega links dont work...paste a folder link (the whole folder becomes one comp)';
+      else if (/mega(\.co)?\.nz\/folder\/[\w-]+$/.test(url)) badMsg = 'that mega folder link is missing its key...copy the whole link including the part after #';
       _arcStatus('arc-import-status', badMsg, 'var(--red)');
       return;
     }
 
     var btn = document.getElementById('arc-import-btn');
     btn.disabled = true;
-    _arcStatus('arc-import-status', 'Starting archive import…');
+    _arcStatus('arc-import-status', 'starting archive import...');
     var jobId;
     try {
       var resp = await api(endpoint, { method: 'POST', body: JSON.stringify({
@@ -738,7 +738,7 @@
       }) });
       jobId = resp.jobId;
     } catch (err) {
-      _arcStatus('arc-import-status', 'Could not start import: ' + err.message, 'var(--red)');
+      _arcStatus('arc-import-status', 'couldnt start the import: ' + err.message, 'var(--red)');
       btn.disabled = false;
       return;
     }
@@ -780,10 +780,10 @@
           }
         }
       }
-      _arcStatus('arc-import-status', 'Connection closed.', 'var(--red)');
+      _arcStatus('arc-import-status', 'connection closed', 'var(--red)');
       btn.disabled = false;
     } catch (err) {
-      _arcStatus('arc-import-status', 'Lost connection to import: ' + err.message, 'var(--red)');
+      _arcStatus('arc-import-status', 'lost connection to the import: ' + err.message, 'var(--red)');
       btn.disabled = false;
     }
   }
@@ -795,15 +795,15 @@
     var common = _arcValidateCommon();
     if (common.error) { _arcStatus('arc-upload-status', common.error, 'var(--red)'); return; }
     var title = ((document.getElementById('arc-title') || {}).value || '').trim();
-    if (!title) { _arcStatus('arc-upload-status', 'Comp title is required.', 'var(--red)'); return; }
+    if (!title) { _arcStatus('arc-upload-status', 'comp needs a title', 'var(--red)'); return; }
     var filesInput = document.getElementById('arc-files');
     var files = Array.from((filesInput && filesInput.files) || []);
-    if (!files.length) { _arcStatus('arc-upload-status', 'Add at least one audio file.', 'var(--red)'); return; }
+    if (!files.length) { _arcStatus('arc-upload-status', 'add at least one audio file', 'var(--red)'); return; }
 
     var btn = document.getElementById('arc-upload-btn');
     btn.disabled = true;
     try {
-      _arcStatus('arc-upload-status', 'Creating archive comp…');
+      _arcStatus('arc-upload-status', 'making the archive comp...');
       var albumForm = new FormData();
       albumForm.append('title', title);
       albumForm.append('era_tag_id', common.era);
@@ -826,7 +826,7 @@
         await apiUpload('/tracks', form);
       }
 
-      _arcStatus('arc-upload-status', '✓ Archive comp uploaded. Opening…', 'var(--green)');
+      _arcStatus('arc-upload-status', '✓ archive comp uploaded...opening it', 'var(--green)');
       setTimeout(function() { navigate('/album?id=' + album.id); }, 900);
     } catch (err) {
       _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), 'var(--red)');
@@ -851,7 +851,7 @@
       if (sum) {
         sum.textContent = _dupeGroups.length
           ? _dupeGroups.length + ' duplicate group' + (_dupeGroups.length !== 1 ? 's' : '') + ' found'
-          : 'No duplicates found.';
+          : 'no duplicates found';
       }
       renderDuplicates();
     } catch (err) {
@@ -864,7 +864,7 @@
     var el = document.getElementById('dupes-list');
     if (!el) return;
     if (!_dupeGroups.length) {
-      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:12px 0;">Nothing to clean up — no duplicate comps detected.</div>';
+      el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:12px 0;">nothing to clean up...no duplicate comps found</div>';
       return;
     }
     el.innerHTML = _dupeGroups.map(function(g, gi) {
@@ -895,7 +895,7 @@
 
       return '<div class="wv-card" style="padding:16px 18px;margin-bottom:14px;">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
-          '<div style="font-size:14px;font-weight:700;">' + escHtml(g.albums[0].artist_name) + ' — ' + escHtml(g.albums[0].title || '') + '</div>' +
+          '<div style="font-size:14px;font-weight:700;">' + escHtml(g.albums[0].artist_name) + ' · ' + escHtml(g.albums[0].title || '') + '</div>' +
           '<span style="font-size:11px;color:var(--text-3);">' + g.albums.length + ' copies · ' + escHtml(g.reason) + '</span>' +
         '</div>' +
         rows +
@@ -911,12 +911,12 @@
     var g = _dupeGroups[gi];
     if (!g) return;
     var picked = document.querySelector('input[name="dupe-keep-' + gi + '"]:checked');
-    if (!picked) { showAlert('Choose which copy to keep first.', 'error'); return; }
+    if (!picked) { showAlert('pick which copy to keep first', 'error'); return; }
     var keepId = picked.value;
     var removeIds = g.albums.map(function(a) { return a.id; }).filter(function(id) { return id !== keepId; });
     if (!removeIds.length) return;
     if (!confirm('Delete ' + removeIds.length + ' duplicate cop' + (removeIds.length === 1 ? 'y' : 'ies') +
-                 '? Their tracks are removed too. This cannot be undone.')) return;
+                 '? their tracks get deleted too. you cant undo this')) return;
 
     if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
     try {
@@ -995,7 +995,7 @@
     }
 
     if (!log.length) {
-      el.innerHTML = header + '<div style="color:var(--text-3);font-size:14px;padding:8px 0;">No imports match this filter.</div>';
+      el.innerHTML = header + '<div style="color:var(--text-3);font-size:14px;padding:8px 0;">no imports match this filter</div>';
       return;
     }
 
@@ -1120,12 +1120,12 @@
   }
 
   window.discordBotStop = async function() {
-    if (!confirm('Stop the bot? The active import is cancelled and the queue is cleared. Resume re-queues pending work from the log.')) return;
+    if (!confirm('stop the bot? the import thats running gets cancelled and the queue gets cleared. hitting resume puts the pending stuff from the log back in the queue')) return;
     try {
       var r = await fetch(API_BASE + '/discord/stop', { method: 'POST', headers: authHeaders() });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Bot stopped. ' + (d.cleared || 0) + ' queued import(s) cleared.', 'success');
+      showAlert('bot stopped...' + (d.cleared || 0) + ' queued import(s) cleared', 'success');
     } catch (err) { showAlert(err.message, 'error'); }
     loadDiscordUploads();
   };
@@ -1135,7 +1135,7 @@
       var r = await fetch(API_BASE + '/discord/resume', { method: 'POST', headers: authHeaders() });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Bot resumed — pending imports re-queued.', 'success');
+      showAlert('bot resumed...pending imports are back in the queue', 'success');
     } catch (err) { showAlert(err.message, 'error'); }
     loadDiscordUploads();
   };
@@ -1146,19 +1146,19 @@
       var r = await fetch(API_BASE + '/discord/retry', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ id: id }) });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Re-queued for import.', 'success');
+      showAlert('back in the queue', 'success');
     } catch (err) { showAlert(err.message, 'error'); }
     loadDiscordUploads();
   };
 
   window.discordDeleteRow = async function(id, btn) {
-    if (!confirm('Delete this log entry? If the same link is posted again the bot will treat it as new.')) return;
+    if (!confirm('delete this log entry? if the same link gets posted again the bot will treat it like its new')) return;
     if (btn) btn.disabled = true;
     try {
       var r = await fetch(API_BASE + '/discord/log/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeaders() });
       var d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      showAlert('Log entry deleted.', 'success');
+      showAlert('log entry deleted', 'success');
     } catch (err) { showAlert(err.message, 'error'); }
     loadDiscordUploads();
   };

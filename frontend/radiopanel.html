@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
@@ -52,10 +52,10 @@
   <div class="wv-empty">Loading…</div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 var _mine = null, _stId = new URLSearchParams(location.search).get('s'), _st = null, _isMod = false;
 var _playlist = [], _queue = [], _tracks = {}, _albums = {}, _filter = 'all', _q = '', _dragId = null, _showList = 'queue';
@@ -77,12 +77,12 @@ function viewEl() { return document.getElementById('view'); }
 function setView(html) { var v = viewEl(); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
 
 async function init() {
-  if (!isLoggedIn()) { setView('<div class="wv-empty">Log in to manage a station.</div>'); return; }
+  if (!isLoggedIn()) { setView('<div class="wv-empty">log in to manage a station</div>'); return; }
   try {
     _mine = await api('/radio/mine');
     _isMod = !!_mine.is_mod;
-    if (!_mine.available) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio is not set up on the server yet (run RADIO_SQL.md).</div>'); return; }
-    if (!_isMod && !_mine.is_host && !_mine.stations.length) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">Radio stations are handed out by the wavernrs team. If you\'d like one, ask in the Discord.</div>'); return; }
+    if (!_mine.available) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">radio isnt set up on the server yet...run RADIO_SQL.md</div>'); return; }
+    if (!_isMod && !_mine.is_host && !_mine.stations.length) { setView('<h1 class="wv-page-title">Radio panel</h1><div class="wv-empty">radio stations are handed out by the wavernrs team...if you want one just ask in the discord</div>'); return; }
     if (!_stId && _mine.stations.length) _stId = _mine.stations[0].id;
     renderShell();
     if (_stId) await openStation(_stId);
@@ -97,9 +97,9 @@ function renderShell() {
   setView(
     '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;"><h1 class="wv-page-title" style="margin:0;">Radio panel</h1>' +
       (_st ? '<a class="wv-pill" style="margin-left:auto;font-size:12px;" href="/radio?s=' + encodeURIComponent(_st.slug) + '">Open station ↗</a>' : '') + '</div>' +
-    '<div style="color:var(--text-2);font-size:13.5px;margin:0 0 14px;">Anything you queue plays next. When the queue is empty the playlist loops, forever.</div>' +
+    '<div style="color:var(--text-2);font-size:13.5px;margin:0 0 14px;">anything you queue plays next...when the queue runs out the playlist just loops forever</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">' +
-      (pills || '<span class="rp-empty">' + (_mine.is_host ? 'You have a station waiting.' : 'You haven\'t been given a station yet. Ask a moderator.') + '</span>') +
+      (pills || '<span class="rp-empty">' + (_mine.is_host ? 'you have a station waiting' : 'you dont have a station yet...ask a mod') + '</span>') +
       (canCreate ? '<button class="wv-pill' + (!_mine.stations.length ? ' brand' : '') + '" onclick="createStationModal()">' + (_isMod ? '+ New station' : 'Create my station') + '</button>' : '') +
     '</div><div id="station"></div>');
 }
@@ -115,7 +115,7 @@ function createStationModal() {
 }
 async function createStation() {
   var name = document.getElementById('ns-name').value.trim(); var u = document.getElementById('ns-user'); var username = u ? u.value.trim() : '';
-  if (!name) { document.getElementById('ns-err').textContent = 'Give it a name.'; return; }
+  if (!name) { document.getElementById('ns-err').textContent = 'give it a name'; return; }
   try { var d = await api('/radio/stations', { method: 'POST', body: JSON.stringify({ name: name, username: username || undefined }) }); document.querySelector('.rp-modal-bg').remove(); _mine = await api('/radio/mine'); _stId = d.station.id; renderShell(); openStation(_stId); }
   catch (e) { document.getElementById('ns-err').textContent = e.message; }
 }
@@ -139,7 +139,7 @@ async function openStation(id) {
         '<div class="rp-card"><div class="rp-h">Station settings</div>' +
           '<div class="rp-field"><label>Name</label><input class="wv-input" id="st-name" value="' + escHtml(_st.name) + '"></div>' +
           '<div class="rp-field"><label>Description</label><textarea class="wv-input" id="st-desc" rows="2">' + escHtml(_st.description || '') + '</textarea></div>' +
-          '<div class="rp-field"><label>Cover image URL</label><input class="wv-input" id="st-cover" value="' + escHtml(_st.cover_url || '') + '" placeholder="Leave blank to use the playing track\'s cover"></div>' +
+          '<div class="rp-field"><label>Cover image URL</label><input class="wv-input" id="st-cover" value="' + escHtml(_st.cover_url || '') + '" placeholder="leave blank to use the cover of whatevers playing"></div>' +
           '<div class="rp-field"><label>Hearts</label><input class="wv-input" id="st-likes" type="number" min="0" value="' + (Number(_st.likes) || 0) + '"></div>' +
           (_isMod ? '<div class="rp-field"><label>Hand to username</label><input class="wv-input" id="st-owner" placeholder="username"></div>' : '') +
           '<div style="display:flex;gap:8px;align-items:center;margin-top:14px;"><button class="wv-pill brand" onclick="saveStation()">Save</button><span id="st-msg" style="font-size:12px;color:var(--text-3);"></span>' +
@@ -149,9 +149,9 @@ async function openStation(id) {
       '</div>' +
       '<div class="rp-card">' +
         '<div class="rp-h">Add music</div>' +
-        '<input class="wv-input" id="q" placeholder="Search tracks, edits, comps, artists…" oninput="searchDebounced()" style="font-size:15px;padding:12px 14px;">' +
+        '<input class="wv-input" id="q" placeholder="search tracks, edits, comps, artists..." oninput="searchDebounced()" style="font-size:15px;padding:12px 14px;">' +
         '<div class="rp-chips"><button class="rp-chip on" data-f="all" onclick="setFilter(\'all\')">All</button><button class="rp-chip" data-f="archive" onclick="setFilter(\'archive\')">Archive</button><button class="rp-chip" data-f="comps" onclick="setFilter(\'comps\')">Comps</button><button class="rp-chip" data-f="tracks" onclick="setFilter(\'tracks\')">Tracks &amp; edits</button></div>' +
-        '<div style="font-size:11.5px;color:var(--text-3);margin-bottom:8px;">▶ play now &nbsp;·&nbsp; ⏭ add to queue &nbsp;·&nbsp; ＋ add to playlist &nbsp;·&nbsp; comps open to their tracks</div>' +
+        '<div style="font-size:11.5px;color:var(--text-3);margin-bottom:8px;">▶ play now &nbsp;·&nbsp; ⏭ add to queue &nbsp;·&nbsp; ＋ add to playlist &nbsp;·&nbsp; tap a comp to see its tracks</div>' +
         '<div class="rp-results" id="results"></div>' +
       '</div>' +
     '</div>';
@@ -166,7 +166,7 @@ async function openStation(id) {
 
 function renderOnAir() {
   var n = _st._now, el = document.getElementById('onair'); if (!el) return;
-  if (!n || !n.track) { el.innerHTML = '<div class="rp-empty">Nothing on air. Add tracks to the playlist and it starts on its own.</div>'; return; }
+  if (!n || !n.track) { el.innerHTML = '<div class="rp-empty">nothing on air rn...add tracks to the playlist and itll start on its own</div>'; return; }
   el.innerHTML = '<div class="rp-onair">' + (n.track.cover_url ? '<img src="' + escHtml(n.track.cover_url) + '">' : '<span class="ph"></span>') +
     '<div style="min-width:0;flex:1;"><div style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(n.track.title) + '</div>' +
     '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(n.track.artist) + (n.track.album_title && n.track.album_title !== n.track.title ? ' · ' + escHtml(n.track.album_title) : '') + '</div>' +
@@ -192,9 +192,9 @@ async function saveStation() {
   try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify(body) }); _st = Object.assign(_st, d.station); msg.textContent = 'Saved.'; _mine = await api('/radio/mine'); var keep = document.getElementById('station').innerHTML; renderShell(); document.getElementById('station').innerHTML = keep; }
   catch (e) { msg.textContent = e.message; }
 }
-async function toggleShuffle() { try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify({ shuffle: !_st.shuffle }) }); _st.shuffle = d.station.shuffle; updateShuffleBtn(); renderList(); toast(_st.shuffle ? 'Playlist shuffles' : 'Playlist plays in order'); } catch (e) { toast(e.message); } }
+async function toggleShuffle() { try { var d = await api('/radio/stations/' + _stId, { method: 'PATCH', body: JSON.stringify({ shuffle: !_st.shuffle }) }); _st.shuffle = d.station.shuffle; updateShuffleBtn(); renderList(); toast(_st.shuffle ? 'playlist is on shuffle now' : 'playlist plays in order now'); } catch (e) { toast(e.message); } }
 function updateShuffleBtn() { var b = document.getElementById('shuffle-btn'); if (b) b.className = 'rp-ib' + (_st.shuffle ? ' brand' : ''); }
-async function deleteStation() { if (!confirm('Delete this station for good?')) return; await api('/radio/stations/' + _stId, { method: 'DELETE' }); _stId = null; _st = null; _mine = await api('/radio/mine'); renderShell(); }
+async function deleteStation() { if (!confirm('delete this station for good? you cant undo this')) return; await api('/radio/stations/' + _stId, { method: 'DELETE' }); _stId = null; _st = null; _mine = await api('/radio/mine'); renderShell(); }
 async function skip() { try { await api('/radio/stations/' + _stId + '/skip', { method: 'POST' }); toast('Skipped'); await refreshNow(); } catch (e) { toast(e.message); } }
 
 /* ---------- lists ---------- */
@@ -207,8 +207,8 @@ async function loadList(kind) {
 function renderList() {
   var kind = _showList, items = kind === 'queue' ? _queue : _playlist, box = document.getElementById('list'), hint = document.getElementById('list-hint');
   if (!box) return;
-  hint.textContent = kind === 'queue' ? 'Plays next, top to bottom, then the station goes back to the playlist.' : 'Loops forever · ' + items.length + ' tracks · ' + fmtDur(items.reduce(function(s, x) { return s + (x.duration_sec || 0); }, 0)) + (_st.shuffle ? ' · shuffled' : ' · in order');
-  if (!items.length) { box.innerHTML = '<div class="rp-empty">' + (kind === 'queue' ? 'Queue is empty. Use ⏭ on anything to line it up.' : 'Playlist is empty. Search on the right and add tracks or whole comps.') + '</div>'; return; }
+  hint.textContent = kind === 'queue' ? 'plays next, top to bottom...then it goes back to the playlist' : 'loops forever · ' + items.length + ' tracks · ' + fmtDur(items.reduce(function(s, x) { return s + (x.duration_sec || 0); }, 0)) + (_st.shuffle ? ' · shuffled' : ' · in order');
+  if (!items.length) { box.innerHTML = '<div class="rp-empty">' + (kind === 'queue' ? 'queue is empty...hit ⏭ on anything to line it up' : 'playlist is empty...search on the right and add tracks or whole comps') + '</div>'; return; }
   box.innerHTML = items.map(function(it, i) {
     var t = it.track || { title: '(missing track)', artist: '' };
     return '<div class="rp-row' + (it.playing ? ' playing' : '') + '" draggable="true" data-id="' + it.id + '" ondragstart="dragStart(event)" ondragover="event.preventDefault()" ondrop="dropOn(event)">' +
@@ -228,7 +228,7 @@ async function dropOn(e) {
 }
 async function moveTop(itemId) { var list = _queue.map(function(x) { return x.id; }); list.splice(list.indexOf(itemId), 1); list.unshift(itemId); try { await api('/radio/stations/' + _stId + '/items/order', { method: 'PUT', body: JSON.stringify({ ids: list }) }); await loadList('queue'); renderList(); } catch (e) { toast(e.message); } }
 async function removeItem(itemId) { try { await api('/radio/stations/' + _stId + '/items/' + itemId, { method: 'DELETE' }); await loadList(_showList); renderList(); } catch (e) { toast(e.message); } }
-async function clearList() { if (!confirm('Clear the whole ' + _showList + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: _showList }) }); await loadList(_showList); renderList(); } catch (e) { toast(e.message); } }
+async function clearList() { if (!confirm('clear the whole ' + _showList + '?')) return; try { await api('/radio/stations/' + _stId + '/clear', { method: 'POST', body: JSON.stringify({ kind: _showList }) }); await loadList(_showList); renderList(); } catch (e) { toast(e.message); } }
 async function playItemNow(itemId) { try { await api('/radio/stations/' + _stId + '/play-now', { method: 'POST', body: JSON.stringify({ item_id: itemId }) }); toast('Playing now'); await refreshNow(); await loadList('queue'); await loadList('playlist'); renderList(); } catch (e) { toast(e.message); } }
 
 /* ---------- adding ---------- */
@@ -267,7 +267,7 @@ async function toggleAlbum(id) {
   try {
     var d = await api('/albums/' + id);
     var list = (d.album_tracks || []).map(function(x) { var t = x.tracks || x; t.albums = t.albums || { title: d.title, cover_url: d.cover_url, is_archive: d.is_archive, archive_artist_name: d.archive_artist_name }; t.album_id = d.id; return normTrack(t); }).filter(Boolean);
-    sub.innerHTML = list.length ? list.map(trackRowHTML).join('') : '<div class="rp-empty">No tracks.</div>';
+    sub.innerHTML = list.length ? list.map(trackRowHTML).join('') : '<div class="rp-empty">no tracks</div>';
   } catch (e) { sub.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
 }
 async function browseDefault() {
@@ -284,7 +284,7 @@ async function browseDefault() {
       var recent = (d.recent || []).filter(function(x) { return x._type === 'track'; }).slice(0, 20);
       if (recent.length) html += '<div class="rp-sec">NEW UPLOADS</div>' + recent.map(function(x) { return trackRowHTML(normTrack(x)); }).join('');
     }
-    box.innerHTML = html || '<div class="rp-empty">Type to search.</div>';
+    box.innerHTML = html || '<div class="rp-empty">type to search</div>';
   } catch (e) { box.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
 }
 async function doSearch() {
@@ -306,7 +306,7 @@ async function doSearch() {
     var html = '';
     if (comps.length) html += '<div class="rp-sec">COMPS &amp; EDITS · ' + comps.length + '</div>' + comps.map(albumRowHTML).join('');
     if (tracks.length) html += '<div class="rp-sec">TRACKS · ' + tracks.length + '</div>' + tracks.map(trackRowHTML).join('');
-    box.innerHTML = html || '<div class="rp-empty">Nothing found for “' + escHtml(q) + '”.</div>';
+    box.innerHTML = html || '<div class="rp-empty">nothing found for “' + escHtml(q) + '”.</div>';
   } catch (e) { box.innerHTML = '<div class="rp-empty">' + escHtml(e.message) + '</div>'; }
 }
 if (typeof initPlayer === 'function') initPlayer();
