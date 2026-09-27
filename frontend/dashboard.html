@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — dashboard</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 
@@ -24,7 +24,7 @@
 <div class="modal-overlay" id="delete-modal">
   <div class="modal">
     <div class="modal-title">Delete edit?</div>
-    <p style="font-size:14px;color:var(--text-secondary);">This will permanently remove the edit from your profile. The file will remain on Internet Archive.</p>
+    <p style="font-size:14px;color:var(--text-secondary);">this deletes the edit from your profile for good. the file stays on Internet Archive tho.</p>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
       <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
@@ -36,7 +36,7 @@
 <div class="modal-overlay" id="delete-comp-modal">
   <div class="modal">
     <div class="modal-title">Delete comp?</div>
-    <p style="font-size:14px;color:var(--text-secondary);">This permanently removes the comp and every edit inside it.</p>
+    <p style="font-size:14px;color:var(--text-secondary);">this deletes the comp and every edit in it for good.</p>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeDeleteCompModal()">Cancel</button>
       <button class="btn btn-danger" id="confirm-delete-comp-btn">Delete</button>
@@ -123,11 +123,11 @@
 </div><!-- #view -->
 
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
-<script src="/js/playlists.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
+<script src="/js/playlists.js?v=07537cbbef8b"></script>
 <script>
   if (!isLoggedIn()) navigate('/login');
 
@@ -152,7 +152,7 @@
         api('/eratags').catch(() => []),
       ]);
       artist = me.artist;
-      if (!artist || !artist.id) throw new Error('No artist profile found. Try logging out and back in.');
+      if (!artist || !artist.id) throw new Error('no artist profile found...try logging out and back in');
       // Blurred profile image as the page background (like the home hero).
       if (typeof window.setPageBgImage === 'function') {
         window.setPageBgImage(artist.profile_image_url || artist.banner_url || '');
@@ -170,7 +170,7 @@
       try { renderStatsCharts(); } catch(_) {}
     } catch (err) {
       if (err.message.includes('401')) return navigate('/login');
-      showAlert('alert-container', 'Failed to load dashboard: ' + err.message);
+      showAlert('alert-container', 'couldnt load your dashboard: ' + err.message);
     }
   }
 
@@ -265,11 +265,11 @@
           <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Edit Profile</div>
           <div class="form-group">
             <label>Display name</label>
-            <input type="text" id="edit-name" value="${escHtml(artist.display_name || '')}" placeholder="Your name">
+            <input type="text" id="edit-name" value="${escHtml(artist.display_name || '')}" placeholder="your name">
           </div>
           <div class="form-group">
             <label>Bio</label>
-            <textarea id="edit-bio" rows="3" placeholder="Tell people about yourself…">${escHtml(artist.bio || '')}</textarea>
+            <textarea id="edit-bio" rows="3" placeholder="say something about yourself…">${escHtml(artist.bio || '')}</textarea>
           </div>
           <div class="form-group">
             <label>Profile picture</label>
@@ -281,7 +281,7 @@
                 <span id="profile_image_url-status" style="font-size:12px;color:var(--text-secondary);margin-left:8px;"></span>
               </div>
             </div>
-            <input type="url" id="edit-avatar" value="${escHtml(artist.profile_image_url || '')}" placeholder="or paste image URL">
+            <input type="url" id="edit-avatar" value="${escHtml(artist.profile_image_url || '')}" placeholder="or paste an image link">
           </div>
           <div class="form-group">
             <label>Banner image</label>
@@ -290,7 +290,7 @@
               <button class="btn btn-secondary btn-sm" onclick="document.getElementById('banner-img-file').click()">Upload banner</button>
               <span id="banner_url-status" style="font-size:12px;color:var(--text-secondary);margin-left:8px;"></span>
             </div>
-            <input type="url" id="edit-banner" value="${escHtml(artist.banner_url || '')}" placeholder="or paste banner URL">
+            <input type="url" id="edit-banner" value="${escHtml(artist.banner_url || '')}" placeholder="or paste a banner link">
           </div>
           <div class="form-group">
             <label>Location</label>
@@ -312,7 +312,7 @@
         <div class="wv-card" style="padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:15px;font-weight:600;margin-bottom:2px;">Upload Music</div>
-            <div style="font-size:13px;color:var(--text-2);">Share an edit or comp with the community</div>
+            <div style="font-size:13px;color:var(--text-2);">post an edit or a comp</div>
           </div>
           <a href="/upload" class="wv-pill brand" style="padding:10px 20px;text-decoration:none;">Upload</a>
         </div>
@@ -348,7 +348,7 @@
     const el = document.getElementById('my-uploads');
     if (!el) return; // guard: element might not exist if render() hasn't run yet
     if (!uploads.length) {
-      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-title">No uploads yet</div><div class="empty-desc">Upload something above.</div></div>`;
+      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-title">No uploads yet</div><div class="empty-desc">upload something above</div></div>`;
       return;
     }
     el.innerHTML = `<div class="track-list">` + uploads.map(item => {
@@ -393,7 +393,7 @@
       _myPlaylists = _myPlaylists || [];
     }
     if (!_myPlaylists.length) {
-      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">No playlists yet — create one above.</div>';
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">no playlists yet...make one above</div>';
       return;
     }
     el.innerHTML = '<div class="track-list">' + _myPlaylists.map(function(p) {
@@ -433,19 +433,19 @@
       if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
       navigate('/playlist?id=' + pl.id);
     } catch (err) {
-      alert('Could not create playlist: ' + err.message);
+      alert('couldnt make the playlist: ' + err.message);
     }
   }
 
   async function deleteDashboardPlaylist(id) {
-    if (!confirm('Delete this playlist? This cannot be undone.')) return;
+    if (!confirm('delete this playlist? you cant undo this')) return;
     try {
       await api('/playlists/' + id, { method: 'DELETE' });
       if (_myPlaylists) _myPlaylists = _myPlaylists.filter(function(p) { return p.id !== id; });
       if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
       renderDashboardPlaylists();
     } catch (err) {
-      alert('Could not delete playlist: ' + err.message);
+      alert('couldnt delete the playlist: ' + err.message);
     }
   }
   // ────────────────────────────────────────────────────────────────────────────
@@ -476,12 +476,12 @@
     var txt = document.getElementById('upload-zone-text');
     if (!selectedFiles.length) {
       el.innerHTML = '';
-      txt.textContent = 'Drop audio file(s) here or click to add to queue';
+      txt.textContent = 'drop audio files here or click to add them';
       return;
     }
     txt.textContent = selectedFiles.length === 1
-      ? '1 song queued — add more or press Upload'
-      : selectedFiles.length + ' songs queued';
+      ? '1 song added...add more or press Upload'
+      : selectedFiles.length + ' songs added';
     el.innerHTML = selectedFiles.map(function(item, i) {
       return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface-2);border-radius:var(--r-md);margin-bottom:6px;" draggable="true" id="qi-' + i + '"' +
         ' ondragstart="qDragStart(event,' + i + ')"' +
@@ -529,8 +529,8 @@
     const description = document.getElementById('upload-desc').value.trim();
     const drive_url = document.getElementById('drive-url').value.trim();
 
-    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'Add at least one audio file or paste a Drive link');
-    if (!title && selectedFiles.length !== 1) return showAlert('upload-alert', 'Title is required');
+    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'add at least one audio file or paste a drive link');
+    if (!title && selectedFiles.length !== 1) return showAlert('upload-alert', 'you need a title if its more than one song');
     // For single-file uploads, fall back to the queue item's title
     var effectiveTitle = title || (selectedFiles[0] && selectedFiles[0].title) || '';
 
@@ -574,7 +574,7 @@
         }
 
         if (linkErrors.length > 0) {
-          throw new Error('Some tracks failed to link to the comp:\n' + linkErrors.join('\n'));
+          throw new Error('some tracks didnt get added to the comp:\n' + linkErrors.join('\n'));
         }
 
         // Re-fetch album with its full tracklist
@@ -590,7 +590,7 @@
         if (description) form.append('description', description);
         if (editCoverFile) form.append('cover_file', editCoverFile);
         bar.style.width = '60%';
-        statusEl.textContent = 'Uploading to Internet Archive…';
+        statusEl.textContent = 'uploading to Internet Archive…';
         var track = await apiUpload('/tracks', form);
         uploads.unshift({ ...track, _type: 'track' });
       }
@@ -605,10 +605,10 @@
       document.getElementById('drive-url').value = '';
       document.getElementById('cover-input').value = '';
       document.getElementById('file-input').value = '';
-      document.getElementById('cover-zone-text').textContent = 'Drop image or click to browse';
+      document.getElementById('cover-zone-text').textContent = 'drop an image or click to pick one';
       renderUploadQueue();
       renderUploads();
-      showAlert('upload-alert', '&#x2713; Uploaded! Cover art may take 1–2 min to appear.', 'success');
+      showAlert('upload-alert', '&#x2713; uploaded!! the cover can take a min or 2 to show up', 'success');
     } catch (err) {
       showAlert('upload-alert', err.message || 'Upload failed');
     } finally {
@@ -660,13 +660,13 @@
       location: document.getElementById('edit-location').value.trim(),
       website: document.getElementById('edit-website').value.trim(),
     };
-    if (!updates.display_name) return showAlert('profile-alert', 'Display name is required');
+    if (!updates.display_name) return showAlert('profile-alert', 'you need a display name');
     try {
       artist = await api(`/artists/${artist.id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
-      showAlert('profile-alert', '&#x2713; Profile saved', 'success');
+      showAlert('profile-alert', '&#x2713; profile saved', 'success');
     } catch (err) {
       showAlert('profile-alert', err.message);
     }
@@ -741,7 +741,7 @@
 
   async function saveEditTrack() {
     const title = document.getElementById('edit-track-title').value.trim();
-    if (!title) return showAlert('edit-track-alert', 'Title is required');
+    if (!title) return showAlert('edit-track-alert', 'you need a title');
     clearAlert('edit-track-alert');
     try {
       const updated = await api(`/tracks/${editingTrackId}`, {
@@ -802,7 +802,7 @@
         ' ondragover="albumDragOver(event,' + i + ')"' +
         ' ondrop="albumDragDrop(event,' + i + ')"' +
         ' ondragend="albumDragEnd()">' +
-        '<div style="cursor:grab;padding:0 8px 0 0;font-size:16px;color:var(--text-secondary);user-select:none;flex-shrink:0;" title="Drag to reorder">⠿</div>' +
+        '<div style="cursor:grab;padding:0 8px 0 0;font-size:16px;color:var(--text-secondary);user-select:none;flex-shrink:0;" title="drag to move it">⠿</div>' +
         '<div class="tracklist-num" style="min-width:20px;flex-shrink:0;">' + (i + 1) + '</div>' +
         '<div class="tracklist-info" style="flex:1;min-width:0;">' +
           '<div class="tracklist-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(track.title || track.track_title || '') + '</div>' +
@@ -865,13 +865,13 @@
         setTimeout(function() { savedEl.style.opacity = '0'; }, 1500);
       }
     } catch (err) {
-      showAlert('edit-album-alert', 'Failed to save order: ' + (err.message || 'error'));
+      showAlert('edit-album-alert', 'couldnt save the order: ' + (err.message || 'error'));
     }
   }
 
   async function saveEditAlbum() {
     const title = document.getElementById('edit-album-title').value.trim();
-    if (!title) return showAlert('edit-album-alert', 'Title is required');
+    if (!title) return showAlert('edit-album-alert', 'you need a title');
     clearAlert('edit-album-alert');
     try {
       const updated = await api(`/albums/${editingAlbumId}`, {
@@ -945,7 +945,7 @@
       setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Upload failed';
-      alert('Image upload failed: ' + err.message);
+      alert('image upload failed: ' + err.message);
     }
   }
 

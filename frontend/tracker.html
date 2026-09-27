@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — tracker</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 
@@ -64,12 +64,12 @@
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
-  var TK_TAGS = { '\u2b50': 'Every edit is amazing', '\ud83d\uddd1': 'Only the leak is bad', '\ud83e\udd16': 'Every edit used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
+  var TK_TAGS = { '\u2b50': 'every edit on it is amazing', '\ud83d\uddd1': 'only the leak is bad', '\ud83e\udd16': 'every edit on it used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
   function tkTagHint(tag) { var out = []; for (var k in TK_TAGS) if (tag.indexOf(k) >= 0) out.push(TK_TAGS[k]); return out.join(' · ') || 'Tracker tag'; }
 
 (function () {
@@ -107,8 +107,8 @@
           '<div class="tk-sub">' + t.comps.toLocaleString() + ' comps · ' + t.edits.toLocaleString() + ' edits' +
             (t.art ? ' · ' + t.art.toLocaleString() + ' pieces of art' : '') +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
-          (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">Combines ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
-            '. A comp on more than one shows once, with a badge for each tracker that has it.</div>' : '') +
+          (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">this mixes ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
+            ' together. if a comp is on more than one it only shows once, with a badge for each tracker that has it.</div>' : '') +
         '</div>' +
         '<div class="tk-tabs">' +
           '<button class="' + (kind === 'comp' ? 'on' : '') + '" onclick="tkKind(\'comp\')">Comps</button>' +
@@ -125,12 +125,12 @@
     if (!d) {
       b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       try { d = await api('/trackers/' + encodeURIComponent(slug) + '?kind=' + kind); _cache[ck] = d; }
-      catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this tracker.</div>'; return; }
+      catch (e) { b.innerHTML = '<div class="wv-empty">couldnt load this tracker</div>'; return; }
     }
     if (_slug !== slug || _kind !== kind) return;
     document.title = 'wavernrs — ' + d.tracker.name;
     var html = header(d.tracker, kind);
-    if (!d.groups.length) html += '<div class="wv-empty">No ' + kindWord(kind, 2) + ' in this tracker.</div>';
+    if (!d.groups.length) html += '<div class="wv-empty">no ' + kindWord(kind, 2) + ' in this tracker</div>';
     (d.groups || []).forEach(function (g, gi) {
       if (d.groups.length > 1 || g.name !== 'Eras') html += '<div class="tk-group">' + esc(g.name) + '</div>';
       else if (gi === 0) html += '<div style="height:6px;"></div>';
@@ -154,7 +154,7 @@
     b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     var d;
     try { d = await api('/trackers/' + encodeURIComponent(slug) + '/era/' + encodeURIComponent(eraSlug) + '?kind=' + kind); }
-    catch (e) { b.innerHTML = '<div class="wv-empty">Could not load this era.</div>'; return; }
+    catch (e) { b.innerHTML = '<div class="wv-empty">couldnt load this era</div>'; return; }
     var t = d.tracker, era = d.era;
     document.title = 'wavernrs — ' + era.name;
     history.pushState(null, '', '/tracker?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'comp' ? '' : '&kind=' + kind));
@@ -195,7 +195,7 @@
     html += '<div class="tk-list">' + mainItems.map(tkRow).join('') + '</div>';
     if (extraItems.length) {
       html += '<div class="tk-sec-head">Additional comps<span>' + extraItems.length + '</span></div>' +
-        '<div class="tk-sec-note">On the tracker\'s second list — not part of the curated main list.</div>' +
+        '<div class="tk-sec-note">these are on the trackers second list...they didnt make the main one.</div>' +
         '<div class="tk-list">' + extraItems.map(tkRow).join('') + '</div>';
     }
     b.innerHTML = html;

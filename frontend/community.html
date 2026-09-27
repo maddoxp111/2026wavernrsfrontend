@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
   // Inject community styles once (works on both hard refresh and SPA navigation)
   if (!document.getElementById('comm-styles')) {
@@ -162,7 +162,7 @@
     var sorted = _sortedPosts();
     listEl.innerHTML = sorted.length
       ? '<div style="display:flex;flex-direction:column;gap:12px;">' + sorted.map(postRowHTML).join('') + '</div>'
-      : '<div class="empty-state" style="padding:60px 0;"><div style="font-size:32px;margin-bottom:12px;">💬</div><div class="empty-title">No posts yet</div></div>';
+      : '<div class="empty-state" style="padding:60px 0;"><div style="font-size:32px;margin-bottom:12px;">💬</div><div class="empty-title">no posts yet</div></div>';
     // Update pill active state
     document.querySelectorAll('.comm-sort-btn').forEach(function(btn) {
       btn.classList.toggle('is-active', btn.dataset.sort === sort);
@@ -192,7 +192,7 @@
       renderList();
     } catch (err) {
       document.getElementById('view').innerHTML =
-        '<div style="padding:60px 20px;text-align:center;color:var(--text-2);">Failed to load posts: ' + escHtml(err.message) + '</div>';
+        '<div style="padding:60px 20px;text-align:center;color:var(--text-2);">couldnt load posts: ' + escHtml(err.message) + '</div>';
     }
   }
 
@@ -206,12 +206,12 @@
           '<div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;">New Post</div>' +
           '<div>' +
             '<label class="wv-form-label">Title *</label>' +
-            '<input id="np-title" type="text" class="wv-input" placeholder="What\'s the topic?" style="width:100%;box-sizing:border-box;" maxlength="200">' +
+            '<input id="np-title" type="text" class="wv-input" placeholder="whats it about?" style="width:100%;box-sizing:border-box;" maxlength="200">' +
           '</div>' +
           '<div>' +
             '<label class="wv-form-label">Body</label>' +
             formatBar('np-body') +
-            '<textarea id="np-body" class="wv-input" placeholder="Share your thoughts…" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:90px;"></textarea>' +
+            '<textarea id="np-body" class="wv-input" placeholder="say what you wanna say..." rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:90px;"></textarea>' +
           '</div>' +
           '<div id="np-error" style="font-size:13px;color:var(--red);display:none;"></div>' +
           '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
@@ -239,7 +239,7 @@
         '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
           '<div>' +
             '<h1 style="margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
-            '<p style="margin:0;font-size:13.5px;color:var(--text-2);">Connect with others.</p>' +
+            '<p style="margin:0;font-size:13.5px;color:var(--text-2);">talk about comps and edits with everyone else on here.</p>' +
           '</div>' +
           sortPills +
         '</div>' +
@@ -252,8 +252,8 @@
     var postsHTML = !_sorted.length
       ? '<div class="empty-state" style="padding:60px 0;">' +
           '<div style="font-size:32px;margin-bottom:12px;">💬</div>' +
-          '<div class="empty-title">No posts yet</div>' +
-          '<div class="empty-desc">Be the first to start a conversation.</div>' +
+          '<div class="empty-title">no posts yet</div>' +
+          '<div class="empty-desc">be the first one to post something</div>' +
         '</div>'
       : '<div style="display:flex;flex-direction:column;gap:12px;">' +
           _sorted.map(postRowHTML).join('') +
@@ -273,10 +273,10 @@
 
     var actionBtns = '';
     if (isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="Delete your post">Delete</button>';
+      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="delete your post">Delete</button>';
     }
     if (isMod && !isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="Mod: take down post">Take down</button>';
+      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="mod only...take this post down">Take down</button>';
     }
 
     return (
@@ -334,7 +334,7 @@
     var title = titleEl ? titleEl.value.trim() : '';
     var body = bodyEl ? bodyEl.value.trim() : '';
     if (!title) {
-      if (errEl) { errEl.textContent = 'Title is required.'; errEl.style.display = ''; }
+      if (errEl) { errEl.textContent = 'you need a title'; errEl.style.display = ''; }
       if (titleEl) titleEl.focus();
       return;
     }
@@ -354,7 +354,7 @@
   }
 
   async function deletePost(id) {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
+    if (!confirm('delete this post? you cant undo this.')) return;
     try {
       await api('/community/posts/' + id, { method: 'DELETE' });
       posts = posts.filter(function(p) { return p.id !== id; });
@@ -364,13 +364,13 @@
         var listEl = document.getElementById('posts-list');
         if (listEl) listEl.innerHTML = posts.length
           ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
-          : '<div class="empty-state"><div class="empty-title">No posts yet</div></div>';
+          : '<div class="empty-state"><div class="empty-title">no posts yet</div></div>';
       }
-    } catch (err) { alert('Could not delete: ' + err.message); }
+    } catch (err) { alert('couldnt delete: ' + err.message); }
   }
 
   async function modTakeDownPost(id) {
-    if (!confirm('Take down this post? This cannot be undone.')) return;
+    if (!confirm('take down this post? you cant undo this.')) return;
     try {
       await api('/mod/community-posts/' + id, { method: 'DELETE' });
       posts = posts.filter(function(p) { return p.id !== id; });
@@ -380,9 +380,9 @@
         var listEl = document.getElementById('posts-list');
         if (listEl) listEl.innerHTML = posts.length
           ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
-          : '<div class="empty-state"><div class="empty-title">No posts</div></div>';
+          : '<div class="empty-state"><div class="empty-title">no posts</div></div>';
       }
-    } catch (err) { alert('Could not take down: ' + err.message); }
+    } catch (err) { alert('couldnt take it down: ' + err.message); }
   }
 
   function _paintVote(kind, id, v) {
@@ -448,7 +448,7 @@
       document.getElementById('view').innerHTML =
         '<div style="max-width:740px;margin:0 auto;padding:28px 16px;">' +
           '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;">← Community</button>' +
-          '<div style="color:var(--text-2);">Failed to load post.</div>' +
+          '<div style="color:var(--text-2);">couldnt load this post</div>' +
         '</div>';
     }
   }
@@ -471,14 +471,14 @@
       ? '<div style="margin-bottom:28px;">' +
           '<div style="font-size:14px;font-weight:600;margin-bottom:10px;">Add a comment</div>' +
           formatBar('top-comment-body') +
-          '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="Write something…" style="width:100%;box-sizing:border-box;resize:vertical;min-height:74px;"></textarea>' +
+          '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="write something..." style="width:100%;box-sizing:border-box;resize:vertical;min-height:74px;"></textarea>' +
           '<div id="top-comment-error" style="font-size:12px;color:var(--red);display:none;margin-top:4px;"></div>' +
           '<div style="display:flex;justify-content:flex-end;margin-top:8px;">' +
             '<button class="wv-pill brand" onclick="submitTopComment()">Comment</button>' +
           '</div>' +
         '</div>'
       : '<div style="margin-bottom:24px;font-size:13px;color:var(--text-2);">' +
-          '<a href="/login" style="color:var(--brand,var(--purple));">Log in</a> to comment.' +
+          '<a href="/login" style="color:var(--brand,var(--purple));">Log in</a> to comment' +
         '</div>';
 
     view.innerHTML =
@@ -527,7 +527,7 @@
   // ── Comments ──────────────────────────────────────────────────────────────
   function buildCommentTree() {
     if (!currentComments.length) {
-      return '<div style="text-align:center;padding:32px 0;color:var(--text-3);font-size:14px;">No comments yet — be the first!</div>';
+      return '<div style="text-align:center;padding:32px 0;color:var(--text-3);font-size:14px;">no comments yet...be the first!!</div>';
     }
     var childrenOf = {}, roots = [];
     currentComments.forEach(function(c) {
@@ -554,7 +554,7 @@
       var replyForm =
         '<div id="reply-form-' + escHtml(c.id) + '" style="display:none;margin-top:10px;">' +
           formatBar('reply-body-' + c.id) +
-          '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" placeholder="Reply…" ' +
+          '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" placeholder="reply..." ' +
             'style="width:100%;box-sizing:border-box;resize:vertical;min-height:56px;font-size:13px;"></textarea>' +
           '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:var(--red);display:none;margin-top:3px;"></div>' +
           '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px;">' +
@@ -601,7 +601,7 @@
     var errEl = document.getElementById('top-comment-error');
     var body = bodyEl ? bodyEl.value.trim() : '';
     if (!body) {
-      if (errEl) { errEl.textContent = 'Write something first.'; errEl.style.display = ''; }
+      if (errEl) { errEl.textContent = 'write something first'; errEl.style.display = ''; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
@@ -628,7 +628,7 @@
     var errEl = document.getElementById('reply-error-' + parentId);
     var body = bodyEl ? bodyEl.value.trim() : '';
     if (!body) {
-      if (errEl) { errEl.textContent = 'Write something first.'; errEl.style.display = ''; }
+      if (errEl) { errEl.textContent = 'write something first'; errEl.style.display = ''; }
       return;
     }
     if (errEl) errEl.style.display = 'none';
@@ -670,24 +670,24 @@
   }
 
   async function deleteComment(id) {
-    if (!confirm('Delete this comment?')) return;
+    if (!confirm('delete this comment?')) return;
     try {
       await api('/community/comments/' + id, { method: 'DELETE' });
       currentComments = currentComments.filter(function(c) { return c.id !== id; });
       rerenderComments();
-    } catch (err) { alert('Could not delete: ' + err.message); }
+    } catch (err) { alert('couldnt delete: ' + err.message); }
   }
 
   async function modDeleteComment(id) {
-    if (!confirm('Take down this comment?')) return;
+    if (!confirm('take down this comment?')) return;
     try {
       await api('/mod/community-comments/' + id, { method: 'DELETE' });
       currentComments = currentComments.filter(function(c) { return c.id !== id; });
       rerenderComments();
-      if (typeof wvToast === 'function') wvToast('Comment taken down');
+      if (typeof wvToast === 'function') wvToast('comment taken down');
     } catch (err) {
-      if (typeof wvToast === 'function') wvToast('Could not take it down: ' + (err.message || 'error'), 'error');
-      else alert('Could not take down: ' + err.message);
+      if (typeof wvToast === 'function') wvToast('couldnt take it down: ' + (err.message || 'error'), 'error');
+      else alert('couldnt take it down: ' + err.message);
     }
   }
 </script>

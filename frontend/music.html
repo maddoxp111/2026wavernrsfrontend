@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — artists</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <div id="ma-root"><div class="loading"><div class="spinner"></div></div></div>
 </div>
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 (function () {
@@ -30,9 +30,9 @@ initPlayer();
   function renderList() {
     root.innerHTML =
       '<h1 class="wv-page-title">Artists</h1>' +
-      '<div style="font-size:13px;color:var(--text-3);margin:-6px 0 14px;">Every artist featured on an edit or comp on wavernrs, worked out from the song credits.</div>' +
+      '<div style="font-size:13px;color:var(--text-3);margin:-6px 0 14px;">every artist thats on an edit or comp on wavernrs...pulled from the song credits</div>' +
       '<div class="wv-toolbar">' +
-        '<input class="wv-input" id="ma-q" placeholder="Find an artist" value="' + escHtml(_q) + '" oninput="maSearch(this.value)">' +
+        '<input class="wv-input" id="ma-q" placeholder="search for an artist" value="' + escHtml(_q) + '" oninput="maSearch(this.value)">' +
         '<div class="wv-seg" id="ma-sort">' +
           ['tracks', 'plays', 'comps', 'name'].map(function (s) { return '<button class="' + (s === _sort ? 'on' : '') + '" onclick="maSort(\'' + s + '\')">' + ({ tracks: 'Most features', plays: 'Most played', comps: 'Most comps', name: 'A–Z' })[s] + '</button>'; }).join('') +
         '</div>' +
@@ -46,16 +46,16 @@ initPlayer();
     var grid = document.getElementById('ma-grid');
     try {
       var d = await api('/music-artists?limit=300&sort=' + _sort + (_q ? '&q=' + encodeURIComponent(_q) : ''));
-      if (d.building) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Artist pages are being built from the song credits. Check back in a few minutes.</div>'; return; }
+      if (d.building) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">artist pages are still being made from the song credits...check back in a few min</div>'; return; }
       _items = d.items || [];
       document.getElementById('ma-count').textContent = (d.total || _items.length).toLocaleString() + ' artists';
-      if (!_items.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No artists match</div>'; return; }
+      if (!_items.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">no artists match that</div>'; return; }
       grid.innerHTML = _items.map(function (a) {
         var href = '/music?a=' + encodeURIComponent(a.artist_key);
         return '<div class="wv-artist-tile" onclick="navigate(\'' + href + '\')">' +
           '<div class="av" style="background:' + coverGradient(a.name || '') + ';display:flex;align-items:center;justify-content:center;"><span style="font-size:30px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span></div>' +
           '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
-          '<div class="wv-artist-meta">' + (a.primary ? 'On every comp' : _sort === 'plays' ? fmtNum(a.plays || 0) + ' plays' : _sort === 'comps' ? a.comps + ' comp' + (a.comps === 1 ? '' : 's') : a.tracks + ' feature' + (a.tracks === 1 ? '' : 's')) + '</div>' +
+          '<div class="wv-artist-meta">' + (a.primary ? 'on every comp' : _sort === 'plays' ? fmtNum(a.plays || 0) + ' plays' : _sort === 'comps' ? a.comps + ' comp' + (a.comps === 1 ? '' : 's') : a.tracks + ' feature' + (a.tracks === 1 ? '' : 's')) + '</div>' +
         '</div>';
       }).join('');
     } catch (e) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">' + escHtml(e.message) + '</div>'; }
@@ -70,7 +70,7 @@ initPlayer();
   }
   window.maPlay = function (idx, shuffle) {
     var q = (_detail.tracks || []).filter(function (t) { return t.ia_url; }).map(trackItem);
-    if (!q.length) { if (typeof wvToast === 'function') wvToast('Nothing playable yet'); return; }
+    if (!q.length) { if (typeof wvToast === 'function') wvToast('nothing playable yet'); return; }
     if (shuffle) for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = q[i]; q[i] = q[j]; q[j] = tmp; }
     var start = 0;
     if (typeof idx === 'string') start = Math.max(0, q.findIndex(function (x) { return x.id === idx; }));
@@ -82,7 +82,7 @@ initPlayer();
     try {
       _detail = await api('/music-artists/' + encodeURIComponent(key));
     } catch (e) {
-      root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Artist not found') + ' <a href="/music" onclick="event.preventDefault();navigate(\'/music\')" style="color:var(--brand);">All artists</a></div>';
+      root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'couldnt find that artist') + ' <a href="/music" onclick="event.preventDefault();navigate(\'/music\')" style="color:var(--brand);">All artists</a></div>';
       return;
     }
     var a = _detail.artist, tracks = _detail.tracks || [], comps = _detail.comps || [];
@@ -97,7 +97,7 @@ initPlayer();
         '<div class="wv-hero-body">' +
           '<div class="wv-kind">Artist</div>' +
           '<div class="wv-hero-title">' + escHtml(a.name) + '</div>' +
-          '<div class="wv-hero-meta">' + (a.primary ? 'The main artist on everything here · ' + a.tracks.toLocaleString() + ' songs across ' + a.comps.toLocaleString() + ' releases' : 'Featured on ' + a.tracks.toLocaleString() + ' song' + (a.tracks === 1 ? '' : 's') + ' across ' + a.comps.toLocaleString() + ' release' + (a.comps === 1 ? '' : 's') + ' · ' + fmtNum(a.plays || 0) + ' plays') + '</div>' +
+          '<div class="wv-hero-meta">' + (a.primary ? 'on basically everything here · ' + a.tracks.toLocaleString() + ' songs on ' + a.comps.toLocaleString() + ' releases' : 'on ' + a.tracks.toLocaleString() + ' song' + (a.tracks === 1 ? '' : 's') + ' from ' + a.comps.toLocaleString() + ' release' + (a.comps === 1 ? '' : 's') + ' · ' + fmtNum(a.plays || 0) + ' plays') + '</div>' +
           '<div class="wv-hero-actions"><button class="wv-btn-play" onclick="maPlay(0)"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play</button><button class="wv-btn-ghost" onclick="maPlay(0, true)">Shuffle</button></div>' +
         '</div>' +
       '</div>' +

@@ -69,7 +69,7 @@
       '<div class="rule"></div>';
 
     if (!ups.length) {
-      html += '<div class="none">No incidents reported.</div>';
+      html += '<div class="none">nothing wrong rn</div>';
     } else {
       html += '<div class="log">' + ups.map(function (u) {
         return '<div class="ev">' +

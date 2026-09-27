@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 
@@ -30,7 +30,7 @@ async function initArchiveArtist() {
   var view = document.getElementById('view');
   var slug = new URLSearchParams(location.search).get('a');
   if (!slug) {
-    view.innerHTML = '<div class="wv-empty">No artist specified.</div>';
+    view.innerHTML = '<div class="wv-empty">no artist picked...go back and choose one</div>';
     return;
   }
 
@@ -39,7 +39,7 @@ async function initArchiveArtist() {
     data = await api('/archive/artists/' + encodeURIComponent(slug));
   } catch (err) {
     view.innerHTML = '<div style="padding:48px 0;text-align:center;">' +
-      '<div style="font-size:17px;font-weight:700;margin-bottom:6px;">Artist not found</div>' +
+      '<div style="font-size:17px;font-weight:700;margin-bottom:6px;">couldnt find that artist</div>' +
       '<div style="font-size:13.5px;color:var(--text-3);margin-bottom:16px;">' + escHtml(err.message || '') + '</div>' +
       '<a href="/archive" class="btn btn-secondary" onclick="navigate(\'/archive\');return false;">Back to Archive</a></div>';
     return;
@@ -57,7 +57,7 @@ async function initArchiveArtist() {
   // Alternate spellings folded into this artist — shown so it's obvious why
   // comps typed slightly differently all landed on one page.
   var aliasNote = (data.aliases && data.aliases.length)
-    ? '<div class="wv-hero-meta">Also credited as ' + data.aliases.slice(0, 6).map(escHtml).join(' · ') + '</div>'
+    ? '<div class="wv-hero-meta">also goes by ' + data.aliases.slice(0, 6).map(escHtml).join(' · ') + '</div>'
     : '';
 
   view.innerHTML =
@@ -79,7 +79,7 @@ async function initArchiveArtist() {
           (totalPlays ? ' · ' + totalPlays.toLocaleString() + ' plays' : '') +
           (data.external_likes ? ' · ♥ ' + Number(data.external_likes).toLocaleString() : '') + '</div>' +
         ((data.top_eras && data.top_eras.length)
-          ? '<div class="wv-hero-meta">Mostly ' + data.top_eras.slice(0, 3).map(function (e) { return escHtml(e.name) + ' (' + e.comps + ')'; }).join(' · ') + '</div>'
+          ? '<div class="wv-hero-meta">mostly ' + data.top_eras.slice(0, 3).map(function (e) { return escHtml(e.name) + ' (' + e.comps + ')'; }).join(' · ') + '</div>'
           : '') +
         aliasNote +
         '<div class="wv-hero-actions" style="margin-top:12px;">' +
@@ -123,7 +123,7 @@ function renderComps() {
   var cs = document.getElementById('aa-comps'), es = document.getElementById('aa-edits'), em = document.getElementById('aa-empty');
   if (cs) cs.style.display = comps.length ? '' : 'none';
   if (es) es.style.display = edits.length ? '' : 'none';
-  if (em) em.innerHTML = _aaComps.length ? '' : '<div class="wv-empty">No comps.</div>';
+  if (em) em.innerHTML = _aaComps.length ? '' : '<div class="wv-empty">no comps yet</div>';
   renderGrid('aa-grid', comps);
   renderGrid('aa-grid-edits', edits);
 }
@@ -132,13 +132,13 @@ function renderComps() {
 function aaPlay(random) {
   var comps = _aaComps.filter(function (c) { return (c.track_count || 0) > 1; });
   var pool = comps.length ? comps : _aaComps;
-  if (!pool.length) { if (typeof wvToast === 'function') wvToast('Nothing to play here yet'); return; }
+  if (!pool.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
   var pick;
   if (random) pick = pool[Math.floor(Math.random() * pool.length)];
   else pick = pool.slice().sort(function (a, b) {
     return new Date(b.original_date || b.created_at) - new Date(a.original_date || a.created_at);
   })[0];
-  if (typeof wvToast === 'function') wvToast('Playing ' + pick.title);
+  if (typeof wvToast === 'function') wvToast('playing ' + pick.title);
   playCompById(pick.id, { album: pick, quiet: true, shuffle: !!random });
 }
 

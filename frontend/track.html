@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — edit</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 
@@ -18,12 +18,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
-<script src="/js/playlists.js?v=f7354117d521"></script>
-<script src="/js/ratings.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
+<script src="/js/playlists.js?v=07537cbbef8b"></script>
+<script src="/js/ratings.js?v=07537cbbef8b"></script>
 <script>
   initPlayer();
 
@@ -49,7 +49,7 @@
       track = await api(`/tracks/${trackId}`);
     } catch (err) {
       document.getElementById('track-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Edit not found</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+        `<div class="empty-state"><div class="empty-title">couldnt find this edit</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
       return;
     }
     try {
@@ -74,9 +74,9 @@
       return;
     }
     navigator.clipboard.writeText(url).then(function() {
-      if (typeof wvToast === 'function') wvToast('Link copied');
+      if (typeof wvToast === 'function') wvToast('link copied');
     }).catch(function() {
-      if (typeof wvToast === 'function') wvToast('Could not copy the link', 'error');
+      if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error');
     });
   }
 
@@ -117,7 +117,7 @@
     const starPlaceholder = [1,2,3,4,5].map(i =>
       `<button type="button" data-s="${i}" style="background:none;border:none;cursor:pointer;padding:2px;line-height:0;">${starEmpty}</button>`
     ).join('');
-    const ratingPlaceholder = `<div style="display:flex;align-items:center;gap:6px;"><div id="wv-rating-stars" style="display:flex;align-items:center;">${starPlaceholder}</div><span style="font-size:13px;color:var(--text-3);">No ratings yet</span></div>`;
+    const ratingPlaceholder = `<div style="display:flex;align-items:center;gap:6px;"><div id="wv-rating-stars" style="display:flex;align-items:center;">${starPlaceholder}</div><span style="font-size:13px;color:var(--text-3);">no ratings yet</span></div>`;
 
     const coverSrc = track.cover_url || (track.albums && track.albums.cover_url) || '';
     const cover = coverSrc
@@ -132,9 +132,9 @@
     try {
       const b = await (typeof getBadgeData === 'function' ? getBadgeData() : Promise.resolve({ highlighted_tracks: [], exclusive_tracks: [], verified_artists: [] }));
       if (b.highlighted_tracks && b.highlighted_tracks.indexOf(track.id) !== -1)
-        badgePills += '<span class="wv-badge-highlight">★ Highlighted by Wavernrs</span>';
+        badgePills += '<span class="wv-badge-highlight">★ Highlighted by wavernrs</span>';
       if (b.exclusive_tracks && b.exclusive_tracks.indexOf(track.id) !== -1)
-        badgePills += '<span class="wv-badge-exclusive">◆ Wavernrs Exclusive</span>';
+        badgePills += '<span class="wv-badge-exclusive">◆ wavernrs exclusive</span>';
     } catch (e) {}
 
     document.getElementById('track-container').innerHTML = `
@@ -168,11 +168,11 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
                 Download
               </a>
-              <button class="btn btn-secondary" onclick="playNextInQueue(_playable())" title="Play right after the current track">
+              <button class="btn btn-secondary" onclick="playNextInQueue(_playable())" title="play it right after whats playing now">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm13-8v6.2a2.8 2.8 0 1 0 2 2.7V8h3V6z"/></svg>
                 Play next
               </button>
-              <button class="btn btn-secondary" onclick="addToQueue(_playable())" title="Add to the end of the queue">
+              <button class="btn btn-secondary" onclick="addToQueue(_playable())" title="add it to the end of the queue">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
                 Queue
               </button>
@@ -193,7 +193,7 @@
         <div style="margin-top:40px;">
           <h2 class="section-title">Comments</h2>
           <div id="ts-timeline-wrap" style="display:none;margin-bottom:18px;">
-            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">Comments on the timeline — tap a dot to jump there</div>
+            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">comments on the timeline...tap a dot to jump to that part</div>
             <div style="position:relative;">
               <div id="ts-bubble" style="display:none;position:absolute;bottom:30px;transform:translateX(-50%);max-width:240px;z-index:5;background:var(--surface-2,#1a1a1a);border:1px solid var(--brand);border-radius:12px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,0.4);pointer-events:none;">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
@@ -208,17 +208,17 @@
           <div id="comment-form" style="margin-bottom:24px;">
             ${isLoggedIn() ? `
               <div style="display:flex;flex-direction:column;gap:10px;">
-                <textarea id="comment-input" class="wv-input" placeholder="Add a comment…"
+                <textarea id="comment-input" class="wv-input" placeholder="add a comment..."
                   style="min-height:72px;resize:vertical;line-height:1.5;"
                   onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment()"></textarea>
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                  <button id="ts-toggle" onclick="toggleTsComment()" title="Pin this comment to the current moment in the track"
+                  <button id="ts-toggle" onclick="toggleTsComment()" title="pin your comment to this exact part of the song"
                     style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>
                   <button class="btn btn-primary btn-sm" onclick="postComment()" style="margin-left:auto;">Post</button>
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
-              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment.
+              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment
             </p>`}
           </div>
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -258,7 +258,7 @@
         '</div>' +
         '<span class="track-row-plays">' + fmtNum(track.play_count) + ' plays</span>' +
         '<button onclick="event.stopPropagation();openAddToPlaylist(' + trackObjStr + ')" ' +
-          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-2);flex-shrink:0;" title="Save to playlist">＋</button>' +
+          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-2);flex-shrink:0;" title="save to a playlist">＋</button>' +
       '</div>';
   }
 
@@ -287,7 +287,7 @@
       _tsComments = comments.filter(c => c.track_time != null);
       renderTsTimeline();
       if (!comments.length) {
-        el.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">No comments yet. Be the first!</div></div>`;
+        el.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">no comments yet...be the first!!</div></div>`;
         return;
       }
       el.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;">' +
@@ -309,7 +309,7 @@
                 <span data-wv-uid="${escHtml(c.user_id || '')}" style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(username)}</span>
                 <span style="font-size:11.5px;color:var(--text-3);">${timeAgo(c.created_at)}</span>
               </div>
-              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="Jump to this moment" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
+              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="jump to this part" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
               <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
                 <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)"
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${upActive ? 'var(--brand)' : 'var(--hair-strong)'};background:${upActive ? 'var(--brand-bg)' : 'transparent'};color:${upActive ? 'var(--brand)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
@@ -329,7 +329,7 @@
       const el = document.getElementById('comments-list');
       if (el) {
         el.innerHTML = '<div class="empty-state" style="padding:24px 0;">' +
-          '<div class="empty-title" style="font-size:14px;">Comments could not load</div>' +
+          '<div class="empty-title" style="font-size:14px;">comments didnt load</div>' +
           '<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="loadComments()">Try again</button></div>';
       }
     }
@@ -544,7 +544,7 @@
       el.innerHTML =
         '<h2 class="section-title" style="margin-top:0;">Also on</h2>' +
         '<p style="margin:-6px 0 14px;font-size:12.5px;color:var(--text-3);">' +
-          'This song also appears on ' + d.total + (d.total === 1 ? ' other comp' : ' other comps') +
+          'this song is also on ' + d.total + (d.total === 1 ? ' other comp' : ' other comps') +
           (d.capped ? ' or more' : '') + more +
         '</p>' +
         '<div class="wv-comp-grid wv-comp-grid-4">' +

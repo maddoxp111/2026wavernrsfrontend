@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — radio</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
@@ -23,7 +23,7 @@
     .rd-card-sub { font-size:12.5px; color:var(--text-2); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .rd-card-likes { font-size:12px; color:var(--text-3); margin-top:6px; }
   </style>
-  <div class="wv-empty">Loading…</div>
+  <div class="wv-empty">loading...</div>
 <div id="rd-fs" style="display:none;">
   <style>
     #rd-fs { position:fixed; inset:0; z-index:250; background:#000; color:#fff; overflow:hidden; font-family:inherit; }
@@ -124,10 +124,10 @@
 </div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 var _lastLyricIdx = -2;
 var _slug = null, _st = null, _now = null, _up = [], _lyrics = null, _lyricTrack = null, _lyricsOn = false, _offset = 0, _poll = null, _tick = null, _likes = 0, _pendingLikes = 0, _likeTimer = null, _likeBusy = false, _listening = false, _stations = [];
@@ -153,7 +153,7 @@ async function loadList() {
   try {
     var d = await api('/radio/stations');
     _stations = d.stations || [];
-    if (!d.available) { setView('<h1 class="wv-page-title">Radio</h1><div class="wv-empty">Radio is not set up yet.</div>'); return; }
+    if (!d.available) { setView('<h1 class="wv-page-title">Radio</h1><div class="wv-empty">radio isnt set up yet</div>'); return; }
     var on = typeof window.radioSlug === 'function' ? window.radioSlug() : null;
     var cards = _stations.map(function(s) {
       var now = s.now && s.now.track ? s.now.track : null;
@@ -164,9 +164,9 @@ async function loadList() {
         '<div class="rd-card-sub">' + (now ? '▶ ' + escHtml(now.title) + ' · ' + escHtml(now.artist) : 'Off air') + '</div>' +
         '<div class="rd-card-likes">' + (s.owner ? 'by ' + escHtml(s.owner.name) + ' · ' : '') + '♥ ' + fmtN(s.likes) + '</div></div></div>';
     }).join('');
-    setView('<h1 class="wv-page-title">Radio</h1><div style="color:var(--text-2);font-size:14px;margin:-6px 0 18px;">Stations run around the clock. Tune in and everyone hears the same thing at the same time.</div>' +
-      (cards ? '<div class="rd-grid">' + cards + '</div>' : '<div class="wv-empty">No stations yet.</div>'));
-  } catch (e) { setView('<div class="wv-empty">Failed: ' + escHtml(e.message) + '</div>'); }
+    setView('<h1 class="wv-page-title">Radio</h1><div style="color:var(--text-2);font-size:14px;margin:-6px 0 18px;">stations play 24/7...tune in and everyone hears the same thing at the same time.</div>' +
+      (cards ? '<div class="rd-grid">' + cards + '</div>' : '<div class="wv-empty">no stations yet</div>'));
+  } catch (e) { setView('<div class="wv-empty">something broke: ' + escHtml(e.message) + '</div>'); }
 }
 
 async function openStation(slug) {
@@ -212,7 +212,7 @@ function renderNow() {
   document.getElementById('rd-cover').innerHTML = art ? '<img src="' + escHtml(art) + '" onerror="this.remove()">' : '📻';
   document.getElementById('rd-bg').style.backgroundImage = art ? 'url("' + art.replace(/"/g, '%22') + '")' : 'linear-gradient(135deg,#2a1d5e,#0b0b12)';
   document.getElementById('rd-now-title').textContent = t ? t.title : 'Off air';
-  document.getElementById('rd-now-sub').textContent = t ? (t.artist + (t.album_title && t.album_title !== t.title ? ' — ' + t.album_title : '')) : ((_st ? _st.name : 'This station') + ' has nothing scheduled right now');
+  document.getElementById('rd-now-sub').textContent = t ? (t.artist + (t.album_title && t.album_title !== t.title ? ' · ' + t.album_title : '')) : ((_st ? _st.name : 'This station') + ' has nothing playing rn');
   document.getElementById('rd-upnext').innerHTML = _up.slice(0, 4).map(function(u) {
     return '<div class="rd-up">' + (u.track.cover_url ? '<img src="' + escHtml(u.track.cover_url) + '" onerror="this.outerHTML=\'<span class=ph></span>\'">' : '<span class="ph"></span>') + '<div style="min-width:0;"><div class="t">' + escHtml(u.track.title) + '</div><div class="a">' + escHtml(u.track.artist) + '</div></div></div>';
   }).join('');
@@ -230,12 +230,12 @@ function toggleRadioLyrics() {
 
 async function loadLyrics(trackId) {
   var box = document.getElementById('rd-lyrics');
-  box.innerHTML = '<div class="rd-empty">Loading lyrics…</div>';
+  box.innerHTML = '<div class="rd-empty">loading lyrics...</div>';
   try {
     var d = await api('/lyrics/' + trackId);
     if (_lyricTrack !== trackId) return;
     var lines = (d && d.lines) || [];
-    if (!lines.length) { box.innerHTML = '<div class="rd-empty">No lyrics for this one yet.</div>'; return; }
+    if (!lines.length) { box.innerHTML = '<div class="rd-empty">no lyrics for this one yet</div>'; return; }
     _lyrics = lines;
     box.innerHTML = lines.map(function(l, i) { return '<div class="rd-lyric" data-i="' + i + '">' + escHtml(l.x || l.text || '') + '</div>'; }).join('');
     box.scrollTop = 0; _lastLyricIdx = -2;

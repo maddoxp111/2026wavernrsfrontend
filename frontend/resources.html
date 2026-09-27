@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resources — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
   <style>
     /* Standard tracker (artistgrid-style) rows */
     .tstd-row { display:flex; gap:12px; align-items:flex-start; padding:10px 14px; }
@@ -39,8 +39,8 @@
     .gloss-term { font-size:13.5px; font-weight:650; }
     .gloss-def { font-size:12.5px; color:var(--text-2); margin-top:2px; line-height:1.45; }
   </style>
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 
@@ -49,7 +49,7 @@
   <div style="padding:28px 0 8px;">
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);margin-bottom:6px;">Resources</div>
     <div class="wv-title" style="font-size:32px;font-weight:800;letter-spacing:-0.04em;line-height:1.05;">Tracker</div>
-    <p style="margin-top:8px;font-size:14px;color:var(--text-2);">Live from the community tracker sheet — every era, every leak, every link.</p>
+    <p style="margin-top:8px;font-size:14px;color:var(--text-2);">this pulls straight from the community tracker sheet...eras, leaks and links all in here.</p>
   </div>
 
   <!-- Tab bar (dynamically populated) -->
@@ -62,10 +62,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
   initPlayer();
 
@@ -362,7 +362,7 @@
       switchTab(0);
     } else {
       document.getElementById('tracker-container').innerHTML =
-        emptyState('No tracker connected', 'An admin can link the tracker sheet in the admin panel.');
+        emptyState('no tracker connected', 'an admin has to link the tracker sheet in the admin panel first');
     }
   }
 
@@ -416,9 +416,9 @@
       var t = trackerTabs[idx] || {};
       var q = t.gid ? ('gid=' + encodeURIComponent(t.gid)) : ('tab=' + idx);
       var data = await api('/resources/tracker?' + q);
-      if (data.error) { container.innerHTML = emptyState('Tab unavailable', data.error); return; }
-      if (!data.url) { container.innerHTML = emptyState('No sheet configured', 'An admin can connect a Google Sheet in the admin panel.'); return; }
-      if (!data.rows || !data.rows.length) { container.innerHTML = emptyState('Tab is empty', 'The connected sheet has no data.'); return; }
+      if (data.error) { container.innerHTML = emptyState('tab isnt available rn', data.error); return; }
+      if (!data.url) { container.innerHTML = emptyState('no sheet set up', 'an admin has to connect a google sheet in the admin panel first'); return; }
+      if (!data.rows || !data.rows.length) { container.innerHTML = emptyState('this tab is empty', 'theres nothing in the sheet yet'); return; }
 
       activeData = data;
       activeAnalysis = analyzeColumns(data.headers, data.rows);
@@ -429,7 +429,7 @@
       tabCache[idx] = { data: data, analysis: activeAnalysis, groups: activeGroups, playable: playable };
       renderTracker('');
     } catch (e) {
-      container.innerHTML = emptyState('Couldn\'t load tab', 'Try again in a moment.');
+      container.innerHTML = emptyState('couldnt load this tab', 'try again in a sec');
     }
   }
 
@@ -451,7 +451,7 @@
     }
     html += '<div class="wv-input wv-search-wrap" style="flex:1;min-width:200px;display:flex;align-items:center;gap:8px;padding:9px 14px;">' +
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-      '<input id="tracker-search" placeholder="Search…" value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
+      '<input id="tracker-search" placeholder="search..." value="' + escHtml(query || '') + '" oninput="onTrackerSearch(this.value)" ' +
       'style="flex:1;background:transparent;border:none;outline:none;font-size:13.5px;color:inherit;font-family:inherit;"></div>';
     html += '<a href="' + escHtml(activeData.view_url || activeData.url) + '" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">Open Sheet ↗</a>';
     html += '</div>';
@@ -489,7 +489,7 @@
     var container = document.getElementById('tracker-rows');
     if (!container) return;
 
-    if (!filtered.length) { container.innerHTML = emptyState('No matches', 'Try a different search.'); return; }
+    if (!filtered.length) { container.innerHTML = emptyState('no matches', 'try searching something else'); return; }
 
     if (an.isGlossary) {
       renderGlossary(filtered, activeData.headers, container);
@@ -534,7 +534,7 @@
     });
     html += '</div>';
     if (!count) {
-      container.innerHTML = emptyState('No art on this tab', 'None of these rows carry an image link.');
+      container.innerHTML = emptyState('no art on this tab', 'none of these rows have an image link');
       return;
     }
     if (filtered.length > shown.length) {
@@ -658,7 +658,7 @@
   }
 
   function renderTrackRowsHtml(groupRows, allRows, an) {
-    if (!groupRows.length) return '<div style="padding:12px;font-size:13px;color:var(--text-3);">No tracks.</div>';
+    if (!groupRows.length) return '<div style="padding:12px;font-size:13px;color:var(--text-3);">no tracks</div>';
     return groupRows.map(function(r) {
       var gi = allRows.indexOf(r);
       return an.std ? renderStdRow(r, gi, an) : renderOneRow(r, gi, an);
@@ -706,7 +706,7 @@
       html += '<div class="tstd-sub">' + subLines.map(function(l) { return escHtml(l); }).join('<br>') + '</div>';
     }
     if (notes) {
-      html += '<div class="tstd-notes" onclick="this.classList.toggle(\'open\')" title="Click to expand">' + escHtml(notes) + '</div>';
+      html += '<div class="tstd-notes" onclick="this.classList.toggle(\'open\')" title="click to see all of it">' + escHtml(notes) + '</div>';
     }
     html += '</div>';
 

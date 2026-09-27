@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
-<script src="/js/playlists.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
+<script src="/js/playlists.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 
@@ -98,7 +98,7 @@ function renderHome() {
   html += '<div class="wv-home-chips">' +
     chip('all', 'All') + chip('comps', 'Comps') + chip('edits', 'Edits') +
     '<span class="wv-chip" onclick="navigate(\'/archive\')">Archive</span>' +
-    '<span class="wv-chip" onclick="homeSurprise()" title="Play a comp at random">Surprise me</span>' +
+    '<span class="wv-chip" onclick="homeSurprise()" title="plays a random comp">Surprise me</span>' +
     '</div>';
 
   html += eraStrip();
@@ -162,13 +162,13 @@ function eraStrip() {
 // One click from the home page into something nobody was looking for.
 window.homeSurprise = async function () {
   try {
-    if (typeof wvToast === 'function') wvToast('Finding something…');
+    if (typeof wvToast === 'function') wvToast('finding something...');
     var r = await api('/archive/random?n=1');
     var pick = r && r.items && r.items[0];
-    if (!pick) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); return; }
-    if (typeof wvToast === 'function') wvToast('Playing ' + pick.title);
+    if (!pick) { if (typeof wvToast === 'function') wvToast('couldnt pick one rn...try again', 'error'); return; }
+    if (typeof wvToast === 'function') wvToast('playing ' + pick.title);
     playCompById(pick.id, { album: pick, quiet: true });
-  } catch (_) { if (typeof wvToast === 'function') wvToast('Could not pick one right now', 'error'); }
+  } catch (_) { if (typeof wvToast === 'function') wvToast('couldnt pick one rn...try again', 'error'); }
 };
 
 function chip(k, label) {

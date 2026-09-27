@@ -33,7 +33,7 @@
       } else {
         starsHtml +=
           '<button type="button" data-s="' + i + '"' +
-          ' style="background:none;border:none;cursor:pointer;padding:4px;line-height:0;-webkit-tap-highlight-color:transparent;" title="Log in to rate">' +
+          ' style="background:none;border:none;cursor:pointer;padding:4px;line-height:0;-webkit-tap-highlight-color:transparent;" title="log in to rate">' +
           _starSvg(i <= current) +
           '</button>';
       }
@@ -44,7 +44,7 @@
       : _data.count > 0
         ? '<span style="font-size:14px;font-weight:600;color:var(--text);">' + _data.avg + '</span>' +
           '<span style="font-size:13px;color:var(--text-3);margin-left:5px;">(' + _data.count + ' rating' + (_data.count !== 1 ? 's' : '') + ')</span>'
-        : '<span style="font-size:13px;color:var(--text-3);">No ratings yet</span>';
+        : '<span style="font-size:13px;color:var(--text-3);">no ratings yet</span>';
 
     container.innerHTML =
       '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -126,7 +126,7 @@
       // Revert optimistic update and show error
       _data.user_rating = prev;
       _saving = false;
-      _buildWidget('Failed: ' + err.message);
+      _buildWidget('didnt work: ' + err.message);
       setTimeout(function () { _buildWidget(); }, 3000);
       return;
     }

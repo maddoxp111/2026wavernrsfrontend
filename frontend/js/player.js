@@ -53,24 +53,24 @@ function _queueable(t) {
 // Drop a track in right after the one playing.
 window.playNextInQueue = function (track) {
   const t = _queueable(track);
-  if (!t) { if (typeof wvToast === 'function') wvToast('That track has no audio yet'); return false; }
+  if (!t) { if (typeof wvToast === 'function') wvToast('that track doesnt have audio yet'); return false; }
   if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
   _pq.splice(_pqIdx + 1, 0, t);
   _shuffleBag = _shuffleBag.map(i => (i > _pqIdx ? i + 1 : i));
   _renderQueuePanel();
   _saveQueue();
-  if (typeof wvToast === 'function') wvToast('Playing next: ' + (t.title || 'track'));
+  if (typeof wvToast === 'function') wvToast('playing next: ' + (t.title || 'track'));
   return true;
 };
 
 window.addToQueue = function (track) {
   const t = _queueable(track);
-  if (!t) { if (typeof wvToast === 'function') wvToast('That track has no audio yet'); return false; }
+  if (!t) { if (typeof wvToast === 'function') wvToast('that track doesnt have audio yet'); return false; }
   if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
   _pq.push(t);
   _renderQueuePanel();
   _saveQueue();
-  if (typeof wvToast === 'function') wvToast('Added to queue: ' + (t.title || 'track'));
+  if (typeof wvToast === 'function') wvToast('added to queue: ' + (t.title || 'track'));
   return true;
 };
 
@@ -79,15 +79,15 @@ window.addAlbumToQueue = async function (albumId) {
   try {
     const rows = await api('/albums/' + albumId + '/tracks');
     const tracks = (rows || []).map(r => r.tracks || r).filter(t => t && t.ia_url);
-    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('Nothing playable on that comp'); return false; }
+    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('nothing on that comp can play'); return false; }
     if (!_pq.length && currentTrack) { _pq = [_queueable(currentTrack) || currentTrack]; _pqIdx = 0; }
     tracks.forEach(t => { const q = _queueable(t); if (q) _pq.push(q); });
     _renderQueuePanel();
     _saveQueue();
-    if (typeof wvToast === 'function') wvToast('Queued ' + tracks.length + ' track' + (tracks.length === 1 ? '' : 's'));
+    if (typeof wvToast === 'function') wvToast('queued ' + tracks.length + ' track' + (tracks.length === 1 ? '' : 's'));
     return true;
   } catch (e) {
-    if (typeof wvToast === 'function') wvToast('Could not load that comp');
+    if (typeof wvToast === 'function') wvToast('couldnt load that comp');
     return false;
   }
 };
@@ -102,7 +102,7 @@ window.playCompById = async function (albumId, opts) {
     if (typeof wvToast === 'function' && !o.quiet) wvToast('Loading…');
     const rows = await api('/albums/' + albumId + '/tracks');
     let tracks = (rows || []).map(r => r.tracks || r).filter(t => t && t.ia_url);
-    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('Nothing playable on that comp', 'error'); return false; }
+    if (!tracks.length) { if (typeof wvToast === 'function') wvToast('nothing on that comp can play', 'error'); return false; }
     let meta = o.album || null;
     if (!meta) { try { meta = await api('/albums/' + albumId); } catch (_) { meta = null; } }
     const who = meta ? ((meta.is_archive && meta.archive_artist_name) || (meta.artists && meta.artists.display_name) || '') : '';
@@ -125,7 +125,7 @@ window.playCompById = async function (albumId, opts) {
     window.playQueueIndex(0);
     return true;
   } catch (e) {
-    if (typeof wvToast === 'function') wvToast('Could not start that comp', 'error');
+    if (typeof wvToast === 'function') wvToast('couldnt play that comp', 'error');
     return false;
   }
 };
@@ -227,7 +227,7 @@ function shareCurrent() {
   if (!currentTrack || !currentTrack.id) return;
   const url = location.origin + (currentTrack._album_id ? '/album?id=' + currentTrack._album_id : '/track?id=' + currentTrack.id);
   if (navigator.share) navigator.share({ title: currentTrack.title, url }).catch(() => {});
-  else navigator.clipboard.writeText(url).then(() => { if (typeof showAlert === 'function') showAlert('Link copied', 'success'); }).catch(() => {});
+  else navigator.clipboard.writeText(url).then(() => { if (typeof showAlert === 'function') showAlert('link copied', 'success'); }).catch(() => {});
 }
 
 const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
@@ -514,7 +514,7 @@ function _renderQueuePanel() {
   if (count) count.textContent = _pq.length ? _pq.length + (_pq.length === 1 ? ' track' : ' tracks') : '';
 
   if (!_pq.length) {
-    list.innerHTML = '<div class="wv-queue-empty">Queue is empty — play a comp or playlist.</div>';
+    list.innerHTML = '<div class="wv-queue-empty">nothing in the queue...play a comp or playlist</div>';
     return;
   }
 
@@ -918,7 +918,7 @@ function initPlayer() {
     console.error('Audio error:', audio.src);
     _audioFails++;
     const name = (currentTrack && currentTrack.title) || 'That track';
-    if (typeof wvToast === 'function') wvToast(name + ' would not play — its file is missing', 'error');
+    if (typeof wvToast === 'function') wvToast(name + ' wont play...its file is missing', 'error');
     _setPlayBtns(false);
     // One dead link should not end the listening session, but a run of them
     // means something wider is wrong, so stop rather than skip the whole queue.
@@ -1440,7 +1440,7 @@ function _renderInAppHint() {
     : href;
   const el = document.createElement('div');
   el.className = 'pfs-inapp'; el.id = 'pfs-inapp';
-  el.innerHTML = '<span>You\'re in another app\'s browser, which stops music when you switch away. <a href="' + open + '" target="_blank" rel="noopener">Open in your browser</a> to keep playing in the background.</span>' +
+  el.innerHTML = '<span>youre in another apps browser so the music stops when you leave. <a href="' + open + '" target="_blank" rel="noopener">open it in your browser</a> to keep it playing in the background.</span>' +
     '<button aria-label="Dismiss" onclick="localStorage.setItem(\'wv_inapp_hint\',\'off\');this.parentNode.remove()">×</button>';
   wrap.insertAdjacentElement('afterend', el);
 }
@@ -1617,8 +1617,8 @@ function _renderLyrics() {
         '<div class="lyr-empty-t">No lyrics yet</div>' +
         '<div class="lyr-empty-d">' +
           (_lyr.canEdit
-            ? 'Generate them from the audio — it takes about a minute.'
-            : 'Lyrics haven\'t been generated for this track yet.') +
+            ? 'you can make them from the audio...takes about a minute'
+            : 'no one made lyrics for this track yet') +
         '</div>' +
       '</div>';
   } else {
@@ -1644,15 +1644,15 @@ function _renderLyrics() {
       tools.innerHTML = '<span class="lyr-src">Getting the lyrics…</span>';
     } else if (!_lyr.lines.length && _lyr.autoFailed === _lyr.trackId) {
       tools.hidden = false;
-      tools.innerHTML = '<span class="lyr-src">No lyrics could be made for this one.</span>';
+      tools.innerHTML = '<span class="lyr-src">couldnt get lyrics for this one</span>';
     } else if (_lyr.canEdit && _lyr.lines.length && _lyr.source === 'auto' && !hasWords) {
       tools.hidden = false;
       tools.innerHTML = '<button class="lyr-tool" onclick="autoGenerateLyrics(this)">Get word timing</button>';
     } else {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
-        ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto-generated — may contain mistakes'
-            : (_lyr.source === 'embedded' ? 'from the file' : 'artist-provided')) + '</span>'
+        ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto made...might have mistakes'
+            : (_lyr.source === 'embedded' ? 'from the file' : 'from the artist')) + '</span>'
         : '';
     }
   }
@@ -1727,8 +1727,8 @@ function _renderLyricsEditor() {
   var text = _lyr.lines.length ? _lyr.lines.map(function (l) { return l.x; }).join('\n') : (_lyr.plain || '');
   scroll.innerHTML =
     '<div class="lyr-edit">' +
-      '<div class="lyr-edit-hint">One line per line. Save, then use <b>Sync</b> to tap the timings in as it plays.</div>' +
-      '<textarea id="lyr-text" class="lyr-textarea" placeholder="Type or paste the lyrics…">' + escHtml(text) + '</textarea>' +
+      '<div class="lyr-edit-hint">one lyric line per line. save it, then use <b>Sync</b> to tap in the timing while it plays.</div>' +
+      '<textarea id="lyr-text" class="lyr-textarea" placeholder="type or paste the lyrics…">' + escHtml(text) + '</textarea>' +
     '</div>';
   if (tools) {
     tools.hidden = false;
@@ -1762,7 +1762,7 @@ window.saveLyricsText = function () {
 // faster than typing timecodes, and accurate enough because you're listening.
 window.startLyricsSync = function () {
   var texts = _linesFromTextarea();
-  if (!texts.length) { alert('Add some lines first.'); return; }
+  if (!texts.length) { alert('add some lines first'); return; }
   _lyr.pending = texts.map(function (x) { return { t: null, x: x }; });
   _lyrSyncPos = 0;
   _lyr.mode = 'sync';
@@ -1824,13 +1824,13 @@ function _persistLyrics(lines, plain) {
   })
     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
     .then(function (res) {
-      if (!res.ok) { alert(res.d.error || 'Could not save lyrics'); return; }
+      if (!res.ok) { alert(res.d.error || 'couldnt save the lyrics'); return; }
       _lyr.lines = res.d.lines || lines;
       _lyr.source = 'manual';
       _lyr.mode = 'view';
       _renderLyrics();
     })
-    .catch(function () { alert('Could not save lyrics'); });
+    .catch(function () { alert('couldnt save the lyrics'); });
 }
 
 window.autoGenerateLyrics = function (btn) {
@@ -1843,7 +1843,7 @@ window.autoGenerateLyrics = function (btn) {
   fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/auto', { method: 'POST', headers: hdr })
     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
     .then(function (res) {
-      if (!res.ok) { fail(btn ? (res.d.error || 'Could not get lyrics') : null); return; }
+      if (!res.ok) { fail(btn ? (res.d.error || 'couldnt get lyrics') : null); return; }
       // The file already carried them — nothing to wait for.
       if (res.d.status === 'succeeded') {
         _lyr.generating = false;
@@ -1853,7 +1853,7 @@ window.autoGenerateLyrics = function (btn) {
         _renderLyrics();
         if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
         if (!res.d.synced) {
-          alert('Found the words saved inside the file, but no timings — use Edit → Sync timings to tap them in.');
+          alert('found the words in the file but no timing...use Edit → Sync timings to tap them in');
         }
         return;
       }
@@ -1875,11 +1875,11 @@ window.autoGenerateLyrics = function (btn) {
               if (btn) { btn.disabled = false; btn.textContent = 'Get word timing'; }
             } else if (j.status === 'failed' || tries > 150) {
               clearInterval(poll);
-              fail(btn ? (j.error || 'Transcription timed out') : null);
+              fail(btn ? (j.error || 'getting the lyrics took too long') : null);
             }
           })
           .catch(function () {});
       }, 4000);
     })
-    .catch(function () { fail(btn ? 'Could not get lyrics' : null); });
+    .catch(function () { fail(btn ? 'couldnt get lyrics' : null); });
 };

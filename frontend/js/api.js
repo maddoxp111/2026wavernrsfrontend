@@ -42,11 +42,11 @@ function _handleAuthFailure(res, data) {
 }
 
 // Outages can arrive as a whole error page in the message; show one line instead.
-const BUSY_MSG = 'wavernrs is having trouble right now. Give it a minute and try again.';
+const BUSY_MSG = 'wavernrs is having problems rn...give it a minute and try again';
 function friendlyError(msg, status, fallback) {
   const m = typeof msg === 'string' ? msg.trim() : '';
   if (status === 503 || status === 502 || status === 504) return BUSY_MSG;
-  if (!m) return `${fallback || 'Request failed'} (${status})`;
+  if (!m) return `${fallback || 'something went wrong'} (${status})`;
   if (/<\/?(html|head|body|div|span|title)\b/i.test(m) || m.length > 300) return BUSY_MSG;
   // database and gateway trouble should never be shown in its raw form
   if (/cloudflare|error code 5\d\d|connection timed out|schema cache|PGRST\d+|database is busy|could not query the database|fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|upstream|statement timeout|canceling statement|Connection terminated|AbortError|was aborted/i.test(m)) return BUSY_MSG;
@@ -558,7 +558,7 @@ function renderNav(activePage = '') {
       <a href="/discover" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
     </div>
     <div style="flex:1;max-width:260px;" class="nav-search-wrap">
-      <input type="text" id="nav-search" placeholder="Search edits, artists…"
+      <input type="text" id="nav-search" placeholder="search edits, artists…"
         onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search?q='+encodeURIComponent(q);}">
     </div>
     <div class="nav-right" id="nav-right"></div>

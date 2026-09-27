@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — editors</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <h1 class="wv-page-title">Editors</h1>
   <div class="wv-toolbar">
-    <input class="wv-input" id="ar-q" placeholder="Find an editor" oninput="renderArtists()">
+    <input class="wv-input" id="ar-q" placeholder="search for an editor" oninput="renderArtists()">
     <div class="wv-seg" id="ar-sort">
       <button class="on" data-s="plays" onclick="setArtistSort('plays')">Most played</button>
       <button data-s="followers" onclick="setArtistSort('followers')">Most followed</button>
@@ -30,10 +30,10 @@
     <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
   </div>
 </div>
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 var _artists = [];
@@ -54,7 +54,7 @@ async function loadArtists() {
     _artists = d.items || [];
     renderArtists();
   } catch (e) {
-    document.getElementById('ar-grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">Could not load artists: ' + escHtml(e.message) + '</div>';
+    document.getElementById('ar-grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">couldnt load editors...' + escHtml(e.message) + '</div>';
   }
 }
 
@@ -67,7 +67,7 @@ window.renderArtists = function() {
     return (b[_arSort] || 0) - (a[_arSort] || 0) || (b.plays || 0) - (a.plays || 0);
   });
   document.getElementById('ar-count').textContent = list.length + ' editor' + (list.length === 1 ? '' : 's');
-  if (!list.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">No editors match</div>'; return; }
+  if (!list.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">no editors match that</div>'; return; }
   var ver = (_badges.verified_artists || []);
   grid.innerHTML = list.map(function(a) {
     var img = a.profile_image_url || a.cover;

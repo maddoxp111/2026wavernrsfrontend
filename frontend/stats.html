@@ -4,20 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — stats</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
   <h1 class="wv-page-title">Stats</h1>
-  <p class="wv-page-sub">The whole site, in numbers. Refreshes every minute.</p>
+  <p class="wv-page-sub">the whole site in numbers...updates every minute</p>
   <div id="st-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 if (typeof window.setPageWash === 'function') window.setPageWash('stats');
@@ -38,7 +38,7 @@ async function loadStats() {
     var d = await api('/stats');
     var t = d.totals || {};
     var html = '<div class="wv-stat-grid">' +
-      tile('Plays', fmtNum(t.plays || 0), 'across every edit and comp') +
+      tile('Plays', fmtNum(t.plays || 0), 'on every edit and comp') +
       tile('Edits', fmtNum(t.edits || 0)) +
       tile('Comps', fmtNum(t.comps || 0)) +
       tile('Archive comps', fmtNum(t.archive_comps || 0)) +
@@ -55,10 +55,10 @@ async function loadStats() {
     html += '</div>';
     html += '<div style="margin-top:28px;"><div class="wv-sec-head"><h2 class="wv-sec-title">Releases per era</h2></div>' +
       bars((d.eras || []).slice().sort(function(a, b) { return b.releases - a.releases; }).slice(0, 12).map(function(e) { return { name: e.name, releases: e.releases, href: '/browse?era=' + e.id }; }), 'releases') + '</div>';
-    html += '<div style="font-size:12px;color:var(--text-3);margin-top:22px;">Updated ' + (d.generated_at ? timeAgo(d.generated_at) : 'just now') + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-3);margin-top:22px;">updated ' + (d.generated_at ? timeAgo(d.generated_at) : 'just now') + '</div>';
     el.innerHTML = html;
   } catch (e) {
-    el.innerHTML = '<div class="wv-empty">Could not load stats: ' + escHtml(e.message) + '</div>';
+    el.innerHTML = '<div class="wv-empty">couldnt load stats...' + escHtml(e.message) + '</div>';
   }
 }
 loadStats();

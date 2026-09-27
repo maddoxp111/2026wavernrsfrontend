@@ -80,7 +80,7 @@
     if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
       document.getElementById('atp-list').innerHTML =
         '<p style="font-size:13px;color:var(--text-secondary);text-align:center;">' +
-        '<a href="/login" style="color:var(--purple-light);">Log in</a> to save to a playlist.</p>';
+        '<a href="/login" style="color:var(--purple-light);">Log in</a> to save stuff to a playlist</p>';
       return;
     }
 
@@ -91,7 +91,7 @@
       _renderList(_cache);
     }).catch(function () {
       document.getElementById('atp-list').innerHTML =
-        '<p style="font-size:13px;color:var(--text-secondary);">Could not load playlists.</p>';
+        '<p style="font-size:13px;color:var(--text-secondary);">couldnt load your playlists</p>';
     });
   }
 
@@ -99,7 +99,7 @@
     var el = document.getElementById('atp-list');
     if (!el) return;
     if (!playlists.length) {
-      el.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);text-align:center;">No playlists yet — create one below.</p>';
+      el.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);text-align:center;">no playlists yet...make one below</p>';
       return;
     }
     el.innerHTML = playlists.map(function (p) {
@@ -142,9 +142,9 @@
       }, 900);
     }).catch(function (err) {
       if (err && err.message && err.message.includes('409')) {
-        statusEl.textContent = 'Already in this playlist';
+        statusEl.textContent = 'its already in this playlist';
       } else {
-        statusEl.textContent = 'Failed to add track';
+        statusEl.textContent = 'couldnt add it';
       }
       statusEl.className = 'playlist-modal-status error';
     });
@@ -183,7 +183,7 @@
       _cacheTs = Date.now();
       window._atpAddTo(newPl.id);
     }).catch(function (err) {
-      statusEl.textContent = (err && err.message) ? err.message : 'Failed to create playlist';
+      statusEl.textContent = (err && err.message) ? err.message : 'couldnt make the playlist';
       statusEl.className = 'playlist-modal-status error';
     });
   };

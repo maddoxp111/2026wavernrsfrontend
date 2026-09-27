@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — listening parties</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view">
@@ -104,10 +104,10 @@
   </style>
   <div id="lp-root"><div class="loading"><div class="spinner"></div></div></div>
 </div>
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
 initPlayer();
 (function () {
@@ -152,7 +152,7 @@ initPlayer();
     var badge = l.status === 'live' ? (l.paused ? '<span class="lp-badge paused">PAUSED</span>' : '<span class="lp-badge"><span class="lp-dot"></span>LIVE</span>')
       : l.status === 'ended' ? '<span class="lp-badge ended">ENDED</span>'
       : '<span class="lp-badge soon">' + (l.starts_at ? 'STARTS ' + escHtml(countdown(l.starts_at).toUpperCase()) : 'LOBBY OPEN') + '</span>';
-    var sub = l.status === 'live' ? (np ? '♪ ' + np.title + ' · ' + np.artist : 'Waiting for the next song') : l.status === 'ended' ? 'Ended' : (l.starts_at ? when(l.starts_at) : 'Starting soon');
+    var sub = l.status === 'live' ? (np ? '♪ ' + np.title + ' · ' + np.artist : 'waiting for the next song') : l.status === 'ended' ? 'Ended' : (l.starts_at ? when(l.starts_at) : 'starting soon');
     return '<div class="lp-card" onclick="navigate(\'/lp?id=' + encodeURIComponent(l.id) + '\')">' +
       '<div class="lp-card-art">' + art(np && np.cover_url, l.title, 480) + badge + (l.status === 'live' ? '<span class="lp-count">🎧 ' + (l.listeners || 0) + '</span>' : '') + '</div>' +
       '<div class="lp-card-body"><div class="lp-card-name">' + escHtml(l.title) + '</div>' +
@@ -162,23 +162,23 @@ initPlayer();
 
   async function renderList() {
     var d;
-    try { d = await api('/lp'); } catch (e) { root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Could not load listening parties') + '</div>'; return; }
-    if (!d.available) { root.innerHTML = '<div class="wv-empty">Listening parties are being set up. Check back in a minute.</div>'; return; }
+    try { d = await api('/lp'); } catch (e) { root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'couldnt load listening parties') + '</div>'; return; }
+    if (!d.available) { root.innerHTML = '<div class="wv-empty">listening parties are still getting set up...check back in a minute</div>'; return; }
     var mine = (d.mine || []).filter(function (l) { return l.status !== 'ended'; });
     var mineIds = new Set(mine.map(function (l) { return l.id; }));
     var live = (d.live || []).filter(function (l) { return !mineIds.has(l.id); });
     var soon = (d.upcoming || []).filter(function (l) { return !mineIds.has(l.id); });
     root.innerHTML =
       '<div class="lp-head"><div><h1 class="lp-h1">Listening parties</h1>' +
-      '<div class="lp-sub">Listen to edits and comps together, live. Everyone hears the same song at the same moment. Hosted by Discord verified members.</div></div>' +
+      '<div class="lp-sub">listen to edits and comps together live...everyone hears the same thing at the same time. only discord verified members can host one.</div></div>' +
       (mine.length ? '' : '<button class="wv-btn-play" id="lp-host-btn">Host an LP</button>') + '</div>' +
       (mine.length ? '<div class="lp-sec"><h2>Your LP</h2><div class="lp-grid">' + mine.map(card).join('') + '</div></div>' : '') +
-      '<div class="lp-sec"><h2>Live now</h2>' + (live.length ? '<div class="lp-grid">' + live.map(card).join('') + '</div>' : '<div class="lp-empty">Nobody is live right now.' + (mine.length ? '' : ' Start one and share the link.') + '</div>') + '</div>' +
+      '<div class="lp-sec"><h2>Live now</h2>' + (live.length ? '<div class="lp-grid">' + live.map(card).join('') + '</div>' : '<div class="lp-empty">nobody is live rn' + (mine.length ? '' : '...start one and send the link to people') + '</div>') + '</div>' +
       (soon.length ? '<div class="lp-sec"><h2>Coming up</h2><div class="lp-grid">' + soon.map(card).join('') + '</div></div>' : '');
     var hb = document.getElementById('lp-host-btn');
     if (hb) hb.onclick = function () {
       if (!loggedIn) { navigate('/login?next=' + encodeURIComponent('/lp')); return; }
-      if (!d.can_host) { if (typeof wvVerifyPrompt === 'function') wvVerifyPrompt('Hosting a listening party is for Discord verified members.'); return; }
+      if (!d.can_host) { if (typeof wvVerifyPrompt === 'function') wvVerifyPrompt('you have to be discord verified to host a listening party...just for security reasons.'); return; }
       openForm(null);
     };
   }
@@ -190,10 +190,10 @@ initPlayer();
     if (lp && lp.starts_at) { var t = new Date(lp.starts_at); local = new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
     wrap.innerHTML = '<div class="wv-vp lp-form" style="max-width:460px;text-align:left;">' +
       '<div class="wv-vp-title">' + (lp ? 'Edit LP' : 'Host an LP') + '</div>' +
-      '<label>Name</label><input class="wv-input" id="lpf-title" maxlength="100" placeholder="e.g. DONDA 2 comp premiere" value="' + escHtml(lp ? lp.title : '') + '">' +
-      '<label>About (optional)</label><textarea class="wv-input" id="lpf-desc" rows="3" maxlength="1000" placeholder="What are you playing?">' + escHtml(lp ? lp.description : '') + '</textarea>' +
+      '<label>Name</label><input class="wv-input" id="lpf-title" maxlength="100" placeholder="like DONDA 2 comp premiere" value="' + escHtml(lp ? lp.title : '') + '">' +
+      '<label>About (optional)</label><textarea class="wv-input" id="lpf-desc" rows="3" maxlength="1000" placeholder="what are you playing?">' + escHtml(lp ? lp.description : '') + '</textarea>' +
       '<label>Start time (optional)</label><input class="wv-input" id="lpf-when" type="datetime-local" value="' + local + '">' +
-      '<div style="font-size:12px;color:var(--text-3);margin-top:6px;">You start it yourself when you are ready. The time just shows people when to show up.</div>' +
+      '<div style="font-size:12px;color:var(--text-3);margin-top:6px;">you start it yourself when youre ready...the time just tells people when to show up.</div>' +
       '<div class="wv-vp-actions" style="margin-top:16px;"><button class="wv-pill" id="lpf-cancel">Cancel</button><button class="wv-pill brand" id="lpf-ok">' + (lp ? 'Save' : 'Create') + '</button></div>' +
     '</div>';
     document.body.appendChild(wrap);
@@ -211,9 +211,9 @@ initPlayer();
         else { var r = await api('/lp', { method: 'POST', body: JSON.stringify(body) }); closeIt(); navigate('/lp?id=' + encodeURIComponent(r.lp.id)); }
       } catch (e) {
         btn.disabled = false;
-        if (e.data && e.data.need_verification && typeof wvVerifyPrompt === 'function') { closeIt(); wvVerifyPrompt('Hosting a listening party is for Discord verified members.'); return; }
+        if (e.data && e.data.need_verification && typeof wvVerifyPrompt === 'function') { closeIt(); wvVerifyPrompt('you have to be discord verified to host a listening party...just for security reasons.'); return; }
         if (e.data && e.data.id) { closeIt(); navigate('/lp?id=' + encodeURIComponent(e.data.id)); return; }
-        if (typeof wvToast === 'function') wvToast(e.message || 'Could not save', 'error');
+        if (typeof wvToast === 'function') wvToast(e.message || 'couldnt save', 'error');
       }
     };
     setTimeout(function () { var t = document.getElementById('lpf-title'); if (t) t.focus(); }, 30);
@@ -228,7 +228,7 @@ initPlayer();
   async function loadRoom(keepChat) {
     var d;
     try { d = await api('/lp/' + encodeURIComponent(id)); }
-    catch (e) { if (!S.lp) root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Could not load this LP') + '</div>'; return; }
+    catch (e) { if (!S.lp) root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'couldnt load this LP') + '</div>'; return; }
     S.lp = d.lp; S.items = d.items || []; S.now = d.now; S.curPos = d.cur_position || 0; S.qv = d.queue_version; S.listeners = d.listeners || S.listeners; S.host = !!d.can_control; S.status = d.lp.status;
     S.offset = Date.parse(d.server_time) - Date.now();
     document.title = 'wavernrs — ' + d.lp.title;
@@ -241,7 +241,7 @@ initPlayer();
     root.innerHTML = '<div style="margin:4px 0 8px;"><a href="/lp" onclick="navigate(\'/lp\');return false;" style="color:var(--text-3);font-size:13px;">← All listening parties</a></div>' +
       '<div class="lp-room"><div id="lp-main"><div id="lp-hero"></div><div id="lp-now"></div><div id="lp-add"></div><div class="lp-q" id="lp-q"></div></div>' +
       '<div class="lp-chat"><h3>Chat <span style="font-size:12px;color:var(--text-3);font-weight:600;" id="lp-lc"></span></h3><div class="lp-msgs" id="lp-msgs"></div>' +
-      (loggedIn ? '<div class="lp-send"><input class="wv-input" id="lp-in" maxlength="400" placeholder="Say something…" autocomplete="off"><button class="wv-pill brand" id="lp-send">Send</button></div>'
+      (loggedIn ? '<div class="lp-send"><input class="wv-input" id="lp-in" maxlength="400" placeholder="say something..." autocomplete="off"><button class="wv-pill brand" id="lp-send">Send</button></div>'
         : '<div class="lp-note"><a href="/login" onclick="navigate(\'/login?next=\'+encodeURIComponent(location.pathname+location.search));return false;">Log in</a> to chat</div>') + '</div></div>';
     var inp = document.getElementById('lp-in');
     if (inp) {
@@ -264,7 +264,7 @@ initPlayer();
     var acts = '';
     if (S.status !== 'ended') acts += isJoined ? '<button class="wv-btn-ghost" id="lp-leave">Leave</button>' : '<button class="wv-btn-play" id="lp-join"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' + (S.status === 'live' ? 'Join the LP' : 'Join the lobby') + '</button>';
     acts += '<button class="wv-btn-ghost" id="lp-share">Share link</button>';
-    if (S.host && S.status === 'waiting') acts += '<button class="wv-btn-play" id="lp-start"' + (S.items.length ? '' : ' disabled title="Add some songs first"') + '>Start the LP</button>';
+    if (S.host && S.status === 'waiting') acts += '<button class="wv-btn-play" id="lp-start"' + (S.items.length ? '' : ' disabled title="add some songs first"') + '>Start the LP</button>';
     if (S.host && S.status !== 'ended') acts += '<button class="wv-pill" id="lp-edit">Edit</button><button class="wv-pill" id="lp-end">End LP</button>';
     if (S.host && S.status === 'ended') acts += '<button class="wv-pill" id="lp-del">Delete</button>';
     el.innerHTML = '<div class="lp-hero"><div class="lp-cover">' + art(cov, S.lp.title, 480) + '</div>' +
@@ -272,7 +272,7 @@ initPlayer();
       '<div class="lp-title">' + escHtml(S.lp.title) + '</div>' +
       '<div class="lp-host">' + av(S.lp.host) + '<span>Hosted by ' + who(S.lp.host) + '</span></div>' +
       (S.lp.description ? '<div class="lp-desc">' + escHtml(S.lp.description) + '</div>' : '') +
-      '<div class="lp-people">' + (ppl.length ? '<span class="lp-stack">' + ppl.map(av).join('') + '</span>' : '') + '<span id="lp-lcount">' + S.listeners.count + ' listening' + (isJoined ? ' · you\'re in' : '') + '</span></div>' +
+      '<div class="lp-people">' + (ppl.length ? '<span class="lp-stack">' + ppl.map(av).join('') + '</span>' : '') + '<span id="lp-lcount">' + S.listeners.count + ' listening' + (isJoined ? ' · youre in' : '') + '</span></div>' +
       '<div class="lp-actions">' + acts + '</div></div></div>';
     var b;
     if ((b = document.getElementById('lp-join'))) b.onclick = join;
@@ -280,13 +280,13 @@ initPlayer();
     if ((b = document.getElementById('lp-share'))) b.onclick = function () {
       var url = location.origin + '/lp?id=' + encodeURIComponent(id);
       if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({ title: S.lp.title, url: url }).catch(function () {}); return; }
-      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { if (typeof wvToast === 'function') wvToast('Link copied'); }).catch(function () { prompt('Copy this link', url); });
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }).catch(function () { prompt('copy this link', url); });
     };
     if ((b = document.getElementById('lp-start'))) b.onclick = async function () { await control('start'); join(); };
     if ((b = document.getElementById('lp-edit'))) b.onclick = function () { openForm(S.lp); };
-    if ((b = document.getElementById('lp-end'))) b.onclick = async function () { if (!confirm('End this LP for everyone?')) return; await control('end'); };
+    if ((b = document.getElementById('lp-end'))) b.onclick = async function () { if (!confirm('end this LP for everyone?')) return; await control('end'); };
     if ((b = document.getElementById('lp-del'))) b.onclick = async function () {
-      if (!confirm('Delete this LP and its chat?')) return;
+      if (!confirm('delete this LP and its chat?')) return;
       try { await api('/lp/' + id, { method: 'DELETE' }); navigate('/lp'); } catch (e) { if (typeof wvToast === 'function') wvToast(e.message, 'error'); }
     };
   }
@@ -307,17 +307,17 @@ initPlayer();
     var el = document.getElementById('lp-now'); if (!el) return;
     if (S.status !== 'live') {
       el.innerHTML = S.status === 'ended'
-        ? '<div class="lp-now" style="text-align:center;color:var(--text-2);">This LP has ended. Thanks for listening.</div>'
-        : '<div class="lp-now" style="text-align:center;color:var(--text-2);">' + (S.host ? (S.items.length ? 'Everything is ready. Press <b>Start the LP</b> when people are here.' : 'Add songs below, then press <b>Start the LP</b>.') : 'The host hasn\'t started yet. Join the lobby and it will start playing for you when they do.') + '</div>';
+        ? '<div class="lp-now" style="text-align:center;color:var(--text-2);">this LP is over...thank you for listening ❤️</div>'
+        : '<div class="lp-now" style="text-align:center;color:var(--text-2);">' + (S.host ? (S.items.length ? 'everythings ready...press <b>Start the LP</b> when people are here.' : 'add songs below, then press <b>Start the LP</b>.') : 'the host hasnt started yet...join the lobby and itll start playing for you when they do.') + '</div>';
       return;
     }
     var t = S.now && S.now.track;
     var hostBtns = S.host ? '<div class="lp-ctrl">' +
       '<button class="lp-cbtn" data-a="prev" title="Previous"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>' +
-      '<button class="lp-cbtn big" data-a="' + (S.now && S.now.paused ? 'resume' : 'pause') + '" title="' + (S.now && S.now.paused ? 'Resume for everyone' : 'Pause for everyone') + '">' + (S.now && S.now.paused ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>') + '</button>' +
+      '<button class="lp-cbtn big" data-a="' + (S.now && S.now.paused ? 'resume' : 'pause') + '" title="' + (S.now && S.now.paused ? 'resume for everyone' : 'pause for everyone') + '">' + (S.now && S.now.paused ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' : '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>') + '</button>' +
       '<button class="lp-cbtn" data-a="next" title="Next"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button></div>' : '';
     if (!t) {
-      el.innerHTML = '<div class="lp-now" style="text-align:center;color:var(--text-2);">' + (S.host ? 'That was the last song. Add more below and they start straight away, or end the LP.' : 'Waiting for the host to add more songs…') + '</div>';
+      el.innerHTML = '<div class="lp-now" style="text-align:center;color:var(--text-2);">' + (S.host ? 'that was the last song...add more below and theyll start right away, or end the LP.' : 'waiting for the host to add more songs...') + '</div>';
       return;
     }
     el.innerHTML = '<div class="lp-now"><div class="lp-now-row"><div class="lp-now-art">' + art(t.cover_url, t.title, 160) + '</div><div style="min-width:0;flex:1;">' +
@@ -344,12 +344,12 @@ initPlayer();
     el.innerHTML = '<h3>Tracklist <span style="font-size:12px;color:var(--text-3);font-weight:600;">' + S.items.length + ' song' + (S.items.length === 1 ? '' : 's') + '</span></h3>' +
       (S.items.length ? S.items.map(function (it, i) {
         var t = it.track, cls = it.id === curId ? ' cur' : (live && (curId ? it.position < curPos : it.position <= curPos) ? ' done' : '');
-        var btns = S.host && S.status !== 'ended' ? (live ? '<button class="lp-qb" data-j="' + it.id + '" title="Play this now">▶</button>' : '') +
+        var btns = S.host && S.status !== 'ended' ? (live ? '<button class="lp-qb" data-j="' + it.id + '" title="play this now">▶</button>' : '') +
           '<button class="lp-qb" data-u="' + i + '" title="Move up"' + (i ? '' : ' style="visibility:hidden"') + '>↑</button><button class="lp-qb" data-d="' + i + '" title="Move down"' + (i < S.items.length - 1 ? '' : ' style="visibility:hidden"') + '>↓</button><button class="lp-qb" data-x="' + it.id + '" title="Remove">✕</button>' : '';
         return '<div class="lp-qrow' + cls + '"><span class="lp-qn">' + (it.id === curId ? '♪' : i + 1) + '</span><div class="lp-qart">' + art(t.cover_url, t.title, 80) + '</div>' +
           '<div class="lp-qi"><div class="lp-qt">' + escHtml(t.title) + '</div><div class="lp-qa">' + escHtml(t.artist) + (t.album_title ? ' · ' + escHtml(t.album_title) : '') + '</div></div>' +
           '<span class="lp-qd">' + (it.duration_sec ? mmss(it.duration_sec) : '') + '</span>' + btns + '</div>';
-      }).join('') : '<div class="lp-empty">' + (S.host ? 'No songs yet. Search above to add edits or whole comps.' : 'The host hasn\'t added songs yet.') + '</div>');
+      }).join('') : '<div class="lp-empty">' + (S.host ? 'no songs yet...search above to add edits or whole comps.' : 'the host hasnt added any songs yet') + '</div>');
     el.querySelectorAll('[data-j]').forEach(function (b) { b.onclick = function () { control('jump', { item_id: b.getAttribute('data-j') }); }; });
     el.querySelectorAll('[data-x]').forEach(function (b) { b.onclick = async function () { try { await api('/lp/' + id + '/items/' + b.getAttribute('data-x'), { method: 'DELETE' }); loadRoom(true); } catch (e) { wvToast(e.message, 'error'); } }; });
     var move = async function (i, dir) {
@@ -368,7 +368,7 @@ initPlayer();
     var el = document.getElementById('lp-add'); if (!el) return;
     if (!S.host || S.status === 'ended') { el.innerHTML = ''; return; }
     if (document.getElementById('lp-sq')) return;
-    el.innerHTML = '<div class="lp-add"><input class="wv-input" id="lp-sq" placeholder="Add songs: search edits or comps…" autocomplete="off" style="width:100%;box-sizing:border-box;"><div class="lp-res" id="lp-res"></div></div>';
+    el.innerHTML = '<div class="lp-add"><input class="wv-input" id="lp-sq" placeholder="search edits or comps to add..." autocomplete="off" style="width:100%;box-sizing:border-box;"><div class="lp-res" id="lp-res"></div></div>';
     document.getElementById('lp-sq').addEventListener('input', function () {
       _addQ = this.value.trim();
       clearTimeout(_addTimer);
@@ -379,7 +379,7 @@ initPlayer();
     var box = document.getElementById('lp-res'); if (!box) return;
     var q = _addQ;
     if (!q) { box.innerHTML = ''; return; }
-    box.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:6px;">Searching…</div>';
+    box.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:6px;">searching...</div>';
     var d;
     try { d = await api('/radio/search?q=' + encodeURIComponent(q)); } catch (e) { box.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px;">' + escHtml(e.message) + '</div>'; return; }
     if (q !== _addQ) return;
@@ -388,13 +388,13 @@ initPlayer();
     }).concat((d.tracks || []).map(function (t) {
       return '<div class="lp-qrow"><div class="lp-qart">' + art(t.cover_url, t.title, 80) + '</div><div class="lp-qi"><div class="lp-qt">' + escHtml(t.title) + '</div><div class="lp-qa">' + escHtml(t.artist) + (t.album_title ? ' · ' + escHtml(t.album_title) : '') + '</div></div><button class="wv-pill" data-tr="' + t.id + '">Add</button></div>';
     }));
-    box.innerHTML = rows.length ? rows.join('') : '<div style="color:var(--text-3);font-size:13px;padding:6px;">Nothing found.</div>';
+    box.innerHTML = rows.length ? rows.join('') : '<div style="color:var(--text-3);font-size:13px;padding:6px;">nothing found</div>';
     box.querySelectorAll('[data-al],[data-tr]').forEach(function (b) {
       b.onclick = async function () {
         var body = b.hasAttribute('data-al') ? { album_id: b.getAttribute('data-al') } : { track_id: b.getAttribute('data-tr') };
         b.disabled = true;
         try { var r = await api('/lp/' + id + '/items', { method: 'POST', body: JSON.stringify(body) }); b.textContent = 'Added ' + (r.added > 1 ? r.added : '✓'); loadRoom(true); }
-        catch (e) { b.disabled = false; wvToast(e.message || 'Could not add', 'error'); }
+        catch (e) { b.disabled = false; wvToast(e.message || 'couldnt add that', 'error'); }
       };
     });
   }
@@ -405,7 +405,7 @@ initPlayer();
       S.now = r.now; S.status = r.status; S.offset = Date.parse(r.server_time) - Date.now();
       renderHero(); renderNow(); renderQueue();
       if (joined() && typeof lpTuneIn === 'function') lpTuneIn(id);
-    } catch (e) { if (typeof wvToast === 'function') wvToast(e.message || 'Could not do that', 'error'); }
+    } catch (e) { if (typeof wvToast === 'function') wvToast(e.message || 'couldnt do that', 'error'); }
   }
 
   function applyState(d) {
@@ -414,7 +414,7 @@ initPlayer();
     var before = JSON.stringify([S.status, S.now && S.now.item_id, S.now && S.now.paused, S.now && S.now.started_at, S.now && S.now.duration_sec]);
     S.status = d.status; S.now = d.now; S.curPos = d.cur_position || 0;
     S.listeners.count = d.listeners || 0;
-    var lc = document.getElementById('lp-lcount'); if (lc) lc.textContent = S.listeners.count + ' listening' + (joined() ? ' · you\'re in' : '');
+    var lc = document.getElementById('lp-lcount'); if (lc) lc.textContent = S.listeners.count + ' listening' + (joined() ? ' · youre in' : '');
     var after = JSON.stringify([S.status, S.now && S.now.item_id, S.now && S.now.paused, S.now && S.now.started_at, S.now && S.now.duration_sec]);
     if (d.queue_version !== S.qv) { loadRoom(true); return; }
     if (before !== after) { renderHero(); renderNow(); renderQueue(); }
@@ -440,7 +440,7 @@ initPlayer();
   function paintChat(scroll) {
     var box = document.getElementById('lp-msgs'); if (!box) return;
     var nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    box.innerHTML = S.msgs.length ? S.msgs.map(msgHtml).join('') : '<div class="lp-note" style="margin:auto;">No messages yet. Say hi.</div>';
+    box.innerHTML = S.msgs.length ? S.msgs.map(msgHtml).join('') : '<div class="lp-note" style="margin:auto;">no messages yet...say hi</div>';
     box.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = async function () { try { await api('/lp/' + id + '/chat/' + b.getAttribute('data-del'), { method: 'DELETE' }); S.msgs = S.msgs.filter(function (m) { return String(m.id) !== b.getAttribute('data-del'); }); paintChat(false); } catch (e) { wvToast(e.message, 'error'); } }; });
     if (scroll || nearBottom) box.scrollTop = box.scrollHeight;
   }
@@ -463,7 +463,7 @@ initPlayer();
       var r = await api('/lp/' + id + '/chat', { method: 'POST', body: JSON.stringify({ body: body }) });
       if (!S.msgs.some(function (m) { return m.id === r.message.id; })) { S.msgs.push(r.message); S.lastChat = Math.max(S.lastChat, r.message.id); }
       paintChat(true);
-    } catch (e) { inp.value = body; if (typeof wvToast === 'function') wvToast(e.message || 'Could not send', 'error'); }
+    } catch (e) { inp.value = body; if (typeof wvToast === 'function') wvToast(e.message || 'couldnt send', 'error'); }
   }
 
   loadRoom(false);

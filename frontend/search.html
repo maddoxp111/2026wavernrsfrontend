@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — search</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div id="view"></div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
 <script>
   initPlayer();
 
@@ -26,7 +26,7 @@
     '<div style="max-width:860px;">' +
       '<div class="wv-input" style="display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:10px 18px;">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--text-3)"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>' +
-        '<input id="search-q" placeholder="Search edits, artists, comps…" style="flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text);font-family:inherit;" autocomplete="off">' +
+        '<input id="search-q" placeholder="search edits, artists, comps..." style="flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text);font-family:inherit;" autocomplete="off">' +
       '</div>' +
       '<div id="search-results"></div>' +
     '</div>';
@@ -77,7 +77,7 @@
       var archived = results.archived || [];
 
       if (!tracks.length && !artists.length && !albums.length && !archived.length) {
-        el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No results for "' + escHtml(q) + '"</div><div class="empty-desc">Try a different search term.</div></div>';
+        el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">nothing for "' + escHtml(q) + '"</div><div class="empty-desc">try searching something else</div></div>';
         return;
       }
 
@@ -96,7 +96,7 @@
             var isV = badges.verified_artists && badges.verified_artists.indexOf(a.id) !== -1;
             return '<div onclick="navigate(\'/artist?id=' + a.id + '\')" style="cursor:pointer;flex-shrink:0;text-align:center;width:88px;">' +
               '<div style="width:88px;height:88px;border-radius:50%;background:' + bg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">' + inner + '</div>' +
-              '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);display:flex;align-items:center;justify-content:center;gap:2px;">' + escHtml(a.display_name) + (isV ? '<span class="wv-verified-icon" title="Verified Artist">✓</span>' : '') + '</div>' +
+              '<div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);display:flex;align-items:center;justify-content:center;gap:2px;">' + escHtml(a.display_name) + (isV ? '<span class="wv-verified-icon" title="verified artist">✓</span>' : '') + '</div>' +
               '<div style="font-size:11px;color:var(--text-3);margin-top:2px;">Artist</div>' +
             '</div>';
           }).join('') +
@@ -113,8 +113,8 @@
             var artistName = escHtml((a.artists && a.artists.display_name) || 'Unknown');
             var isH = badges.highlighted_albums && badges.highlighted_albums.indexOf(a.id) !== -1;
             var isE = badges.exclusive_albums   && badges.exclusive_albums.indexOf(a.id) !== -1;
-            var titleBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
-                              (isE ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
+            var titleBadges = (isH ? '<span class="wv-badge-hl-icon" title="highlighted by wavernrs">★</span>' : '') +
+                              (isE ? '<span class="wv-badge-ex-icon" title="only on wavernrs">◆</span>' : '');
             return '<div class="scroll-card" onclick="navigate(\'/album?id=' + a.id + '\')" style="flex-shrink:0;width:140px;">' +
               '<div class="scroll-card-cover" style="background:' + bg + ';">' +
                 (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" onerror="this.style.display=\'none\'">' : '') +
@@ -139,8 +139,8 @@
             var td = JSON.stringify({id:t.id,title:t.title,ia_url:t.ia_url||'',cover_url:coverUrl,artist_name:(t.artists&&t.artists.display_name)||''}).replace(/"/g,'&quot;');
             var isH = badges.highlighted_tracks && badges.highlighted_tracks.indexOf(t.id) !== -1;
             var isE = badges.exclusive_tracks   && badges.exclusive_tracks.indexOf(t.id) !== -1;
-            var trackBadges = (isH ? '<span class="wv-badge-hl-icon" title="Highlighted by Wavernrs">★</span>' : '') +
-                              (isE ? '<span class="wv-badge-ex-icon" title="Wavernrs Exclusive">◆</span>' : '');
+            var trackBadges = (isH ? '<span class="wv-badge-hl-icon" title="highlighted by wavernrs">★</span>' : '') +
+                              (isE ? '<span class="wv-badge-ex-icon" title="only on wavernrs">◆</span>' : '');
             return '<div class="track-row" onclick="navigate(\'/track?id=' + t.id + '\')">' +
               '<div class="track-row-num">' + (i + 1) + '</div>' +
               '<div class="track-row-cover" style="background:' + bg + ';">' +
@@ -190,7 +190,7 @@
         window.setPageBgImage(bgUrl);
       }
     } catch (err) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-title">Search failed</div><div class="empty-desc">' + escHtml(err.message) + '</div></div>';
+      el.innerHTML = '<div class="empty-state"><div class="empty-title">search didnt work...try again</div><div class="empty-desc">' + escHtml(err.message) + '</div></div>';
     }
   }
 
@@ -204,7 +204,7 @@
   function searchPlay(i) {
     var playable = _searchTracks.filter(function (t) { return t.ia_url; });
     var want = _searchTracks[i];
-    if (!want || !want.ia_url) { if (typeof wvToast === 'function') wvToast('That edit has no audio yet'); return; }
+    if (!want || !want.ia_url) { if (typeof wvToast === 'function') wvToast('that edit has no audio yet'); return; }
     var idx = playable.findIndex(function (t) { return t.id === want.id; });
     var queue = playable.map(function (t) {
       return {

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — playlists</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 
@@ -35,11 +35,11 @@
 
 </div><!-- /view -->
 
-<script src="/js/api.js?v=f7354117d521"></script>
-<script src="/js/layout.js?v=f7354117d521"></script>
-<script src="/js/player.js?v=f7354117d521"></script>
-<script src="/js/router.js?v=f7354117d521"></script>
-<script src="/js/playlists.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
+<script src="/js/layout.js?v=07537cbbef8b"></script>
+<script src="/js/player.js?v=07537cbbef8b"></script>
+<script src="/js/router.js?v=07537cbbef8b"></script>
+<script src="/js/playlists.js?v=07537cbbef8b"></script>
 <script>
 (function () {
   if (typeof initPlayer === 'function') initPlayer();
@@ -86,7 +86,7 @@
       renderCommunity();
     } catch (e) {
       if (my !== seq) return;
-      el().innerHTML = '<div class="empty-state"><div class="empty-title">Could not load playlists</div></div>';
+      el().innerHTML = '<div class="empty-state"><div class="empty-title">couldnt load playlists...try again</div></div>';
     }
   }
 
@@ -95,8 +95,8 @@
   function renderCommunity() {
     if (!community.length) {
       el().innerHTML = '<div class="empty-state">' +
-        '<div class="empty-title">No playlists published yet</div>' +
-        '<div class="empty-desc">Build one from any comp or the archive and publish it. It will show up here for everyone.</div>' +
+        '<div class="empty-title">no playlists posted yet</div>' +
+        '<div class="empty-desc">make one from any comp or the archive and publish it...then everyone can see it here</div>' +
         '<button class="wv-btn-play" style="margin-top:16px;" onclick="window.wvNewPlaylist()">Build the first one</button>' +
         '</div>';
       return;
@@ -108,7 +108,7 @@
   async function loadMine(my) {
     if (!isLoggedIn()) {
       el().innerHTML = '<div class="empty-state">' +
-        '<div class="empty-title">Log in to see your playlists</div>' +
+        '<div class="empty-title">log in to see your playlists</div>' +
         '<a href="/login?next=' + encodeURIComponent('/playlists?tab=mine') + '" class="btn btn-primary" style="margin-top:16px;">Log in</a>' +
         '</div>';
       return;
@@ -120,15 +120,15 @@
       renderMine();
     } catch (e) {
       if (my !== seq) return;
-      el().innerHTML = '<div class="empty-state"><div class="empty-title">Could not load your playlists</div></div>';
+      el().innerHTML = '<div class="empty-state"><div class="empty-title">couldnt load your playlists...try again</div></div>';
     }
   }
 
   function renderMine() {
     if (!mine || !mine.length) {
       el().innerHTML = '<div class="empty-state">' +
-        '<div class="empty-title">You haven\'t made one yet</div>' +
-        '<div class="empty-desc">Search any song or comp, drag them into order, add a cover and publish.</div>' +
+        '<div class="empty-title">you havent made one yet</div>' +
+        '<div class="empty-desc">search for songs or comps, drag them in order, add a cover and publish it</div>' +
         '<button class="wv-btn-play" style="margin-top:16px;" onclick="window.wvNewPlaylist()">New playlist</button>' +
         '</div>';
       return;
@@ -146,14 +146,14 @@
 
   window.plsDelete = async function (id, i) {
     var p = mine && mine[i];
-    if (!p || !confirm('Delete "' + p.title + '"? This can\'t be undone.')) return;
+    if (!p || !confirm('delete "' + p.title + '"? you cant undo this')) return;
     try {
       await api('/playlists/' + id, { method: 'DELETE' });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
       mine.splice(i, 1);
       renderMine();
     } catch (e) {
-      if (typeof wvToast === 'function') wvToast((e && e.message) || 'Could not delete it', 'error');
+      if (typeof wvToast === 'function') wvToast((e && e.message) || 'couldnt delete it...try again', 'error');
     }
   };
 

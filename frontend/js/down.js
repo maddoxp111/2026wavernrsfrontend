@@ -40,7 +40,7 @@
     box.innerHTML = '<div class="inner">' +
       '<div class="brand">wavernrs</div>' +
       '<div class="card" id="wv-down-card"></div>' +
-      '<div class="note">Wavernrs is currently down, join the Discord for updates: ' +
+      '<div class="note">wavernrs is down rn...join the discord for updates: ' +
         '<a href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener">https://discord.gg/j2jGmw5CZH</a></div>' +
       '</div>' +
       '<div class="gate"><button type="button" id="wv-down-toggle">password</button></div>';

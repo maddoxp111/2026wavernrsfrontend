@@ -118,7 +118,7 @@
         '<span class="wv-chip" data-k="edits" onclick="window._libFilter(\'edits\')">Edits</span>' +
         '<span class="wv-chip" data-k="playlists" onclick="window._libFilter(\'playlists\')">Playlists</span>' +
       '</div>' +
-      '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="Search in your library" oninput="window._libSearch(this.value)"></div>';
+      '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="search your library" oninput="window._libSearch(this.value)"></div>';
   }
 
   function _footHTML(isLoggedIn, profileHref) {
@@ -172,7 +172,7 @@
 
     html += '<div class="sp-lib-bar">' +
       '<div class="sp-lib-find">' + icon('search') +
-        '<input id="wv-lib-q" placeholder="Search in Your Library" oninput="window._libSearch(this.value)">' +
+        '<input id="wv-lib-q" placeholder="search your library" oninput="window._libSearch(this.value)">' +
       '</div>' +
       '<span class="sp-lib-sort">Recents ' + icon('list') + '</span>' +
       '</div>';
@@ -288,13 +288,13 @@
       if (_libKind === 'recent') {
         items = _libRecent().filter(function(t) { return t.id; }).slice(0, 30);
         if (!items.length) {
-          list.innerHTML = '<div class="wv-lib-empty"><b>Nothing played yet</b><p>Play a comp or edit and it shows up here.</p>' +
+          list.innerHTML = '<div class="wv-lib-empty"><b>Nothing played yet</b><p>play a comp or edit and itll show up here</p>' +
             '<a class="btn btn-secondary btn-sm" href="/browse" onclick="navigate(\'/browse\');return false;">Browse</a></div>';
           return;
         }
       } else {
         if (!loggedIn) {
-          list.innerHTML = '<div class="wv-lib-empty"><b>Sign in to see your library</b><p>Liked comps, edits and playlists live here.</p>' +
+          list.innerHTML = '<div class="wv-lib-empty"><b>Sign in to see your library</b><p>your liked comps, edits and playlists go here</p>' +
             '<a class="btn btn-primary btn-sm" href="/login">Log in</a></div>';
           return;
         }
@@ -304,14 +304,14 @@
         if (_libKind === 'playlists') items = (_libData.playlists || []).map(function(p) { return { _type: 'playlist', id: p.id, title: p.title, sub: 'Playlist · ' + (p.track_count || 0) + ' tracks' }; });
         if (!items.length) {
           var what = _libKind === 'playlists' ? 'playlists' : 'liked ' + _libKind;
-          list.innerHTML = '<div class="wv-lib-empty"><b>No ' + what + ' yet</b><p>' + (_libKind === 'playlists' ? 'Create one from any edit\'s menu.' : 'Tap the heart on anything and it lands here.') + '</p></div>';
+          list.innerHTML = '<div class="wv-lib-empty"><b>No ' + what + ' yet</b><p>' + (_libKind === 'playlists' ? 'make one from the menu on any edit' : 'tap the heart on anything and itll show up here') + '</p></div>';
           return;
         }
       }
       if (_libQuery) {
         var q = _libQuery.toLowerCase();
         items = items.filter(function(it) { return String(it.title || '').toLowerCase().indexOf(q) !== -1 || String(it.artist_name || '').toLowerCase().indexOf(q) !== -1; });
-        if (!items.length) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">No matches</div>'; return; }
+        if (!items.length) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">no matches</div>'; return; }
       }
       list.innerHTML = items.slice(0, 60).map(_libRow).join('');
     });
@@ -457,7 +457,7 @@
             el = document.createElement('div'); el.id = 'wv-suggest';
             var wrap = inp.closest('.wv-topbar-search'); (wrap || document.body).appendChild(el);
           }
-          el.innerHTML = (rows.length ? rows.join('') : '<div class="wv-lib-s" style="padding:12px 14px;">No matches</div>') +
+          el.innerHTML = (rows.length ? rows.join('') : '<div class="wv-lib-s" style="padding:12px 14px;">no matches</div>') +
             '<a class="wv-sug-all" href="/search?q=' + encodeURIComponent(q) + '" onclick="navSearch(' + JSON.stringify(q).replace(/"/g, '&quot;') + ');return false;">See all results for “' + _escL(q) + '”</a>';
         }).catch(function() {});
     }, 180);
@@ -593,7 +593,7 @@
     if (!panel) return;
     if (!notifs || !notifs.length) {
       panel.querySelector('.wv-notif-list').innerHTML =
-        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px;">No notifications yet</div>';
+        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px;">no notifications yet</div>';
       return;
     }
     panel.querySelector('.wv-notif-list').innerHTML = notifs.map(function(n) {
@@ -828,7 +828,7 @@
   window.setTheme = function(t) {
     t = THEMES[t] ? t : 'dark';
     if (THEMES[t].members && !window.wvIsVerified()) {
-      if (typeof wvToast === 'function') wvToast('Waverunners is for Discord-verified members. Verify in Settings.');
+      if (typeof wvToast === 'function') wvToast('the Waverunners theme is only for discord verified members...verify in Settings');
       t = 'dark';
     }
     try { localStorage.setItem('wv_theme', t); } catch (_) {}
@@ -1090,7 +1090,7 @@
         '<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;">wavernrs</div>' +
         '<div id="wv-lock-icon" style="font-size:32px;margin-bottom:12px;">🔒</div>' +
         '<h2 style="font-size:22px;font-weight:800;margin:0 0 6px;">Site is locked</h2>' +
-        '<p style="font-size:14px;color:var(--text-2);margin:0 0 22px;line-height:1.5;">Enter the access password to continue.</p>' +
+        '<p style="font-size:14px;color:var(--text-2);margin:0 0 22px;line-height:1.5;">put in the password to get in</p>' +
         '<div id="wv-lock-alert" style="margin-bottom:10px;"></div>' +
         '<div style="display:flex;gap:8px;">' +
           '<input type="password" id="wv-lock-pw" class="wv-input" placeholder="Password..." style="flex:1;padding:10px 14px;" ' +
@@ -1120,12 +1120,12 @@
           // server-side gate will recognise this visitor.
           location.reload();
         } else {
-          if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">Incorrect password. Try again.</div>';
+          if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">wrong password...try again</div>';
           if (pw) { pw.value = ''; pw.focus(); }
         }
       })
       .catch(function() {
-        if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">Connection error. Try again.</div>';
+        if (alertEl) alertEl.innerHTML = '<div style="color:var(--red);font-size:13px;padding:6px 0;">connection problem...try again</div>';
       });
   };
 
@@ -1404,7 +1404,7 @@
         '</div>' +
         (hasPassword
           ? '<div class="wv-cd-pw-wrap">' +
-              '<input type="password" id="wv-cd-pw" class="wv-input" placeholder="Have early access? Enter password…" onkeydown="if(event.key===\'Enter\')window._verifyCountdown()">' +
+              '<input type="password" id="wv-cd-pw" class="wv-input" placeholder="have early access? put the password here…" onkeydown="if(event.key===\'Enter\')window._verifyCountdown()">' +
               '<button class="wv-pill" style="margin-top:10px;width:100%;" onclick="window._verifyCountdown()">Enter</button>' +
               '<div id="wv-cd-err" style="color:#f87171;font-size:13px;margin-top:8px;min-height:18px;"></div>' +
             '</div>'
@@ -1458,10 +1458,10 @@
         // content requests that fired before unlock would have been 403'd).
         location.reload();
       } else {
-        if (errEl) errEl.textContent = 'Wrong password.';
+        if (errEl) errEl.textContent = 'wrong password';
       }
     } catch (e) {
-      if (errEl) errEl.textContent = 'Could not verify — check your connection.';
+      if (errEl) errEl.textContent = 'couldnt check it...check your connection';
     }
   };
 
@@ -1597,7 +1597,7 @@
     return '<div style="max-width:440px;width:100%;background:var(--surface);border-radius:18px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.6);">' +
       '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Is this yours?</div>' +
       '<div style="font-size:13px;color:var(--text-2);line-height:1.55;margin:6px 0 16px;">' +
-        'These were added to your profile automatically when you connected an account. Tell us which ones you actually made — the rest go back to the archive.' +
+        'these got added to your profile when you connected an account. tell us which ones you actually made...the rest go back to the archive.' +
       '</div>' +
       '<div style="height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-bottom:16px;">' +
         '<div style="height:100%;width:' + pct + '%;background:var(--brand);border-radius:99px;transition:width .2s;"></div></div>' +
@@ -1607,7 +1607,7 @@
         '<div style="flex:1;min-width:0;">' +
           '<div style="font-size:16px;font-weight:800;line-height:1.25;">' + esc(it.title || 'Untitled') + '</div>' +
           '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">' + (it.track_count || 0) + ' track' + (it.track_count === 1 ? '' : 's') + '</div>' +
-          (it.shared_link ? '<div style="font-size:11.5px;color:var(--orange);margin-top:5px;">Came from a link someone posted</div>' : '') +
+          (it.shared_link ? '<div style="font-size:11.5px;color:var(--orange);margin-top:5px;">came from a link someone else posted</div>' : '') +
         '</div></div>' +
       '<div style="display:flex;gap:8px;">' +
         '<button class="wv-pill brand" style="flex:1;padding:11px;font-weight:700;" onclick="wvReview(true)">I made this</button>' +
@@ -1667,8 +1667,8 @@
 // instead of spinning forever or printing a database error at the reader.
 window.wvErrorHTML = function (err, retryAttr) {
   var busy = typeof wvIsBusyError === 'function' && wvIsBusyError(err);
-  var msg = busy ? (window.WV_BUSY_MSG || 'wavernrs is having trouble right now. Give it a minute and try again.')
-                 : ((err && err.message) || 'Something went wrong.');
+  var msg = busy ? (window.WV_BUSY_MSG || 'wavernrs is having problems rn...give it a minute and try again')
+                 : ((err && err.message) || 'something went wrong');
   var esc = typeof escHtml === 'function' ? escHtml : function (x) { return String(x); };
   return '<div class="wv-empty" style="grid-column:1/-1;padding:28px 16px;text-align:center;">' +
     '<div style="font-size:15px;font-weight:700;margin-bottom:6px;">' + (busy ? 'Can\u2019t reach wavernrs' : 'Couldn\u2019t load this') + '</div>' +
@@ -1694,7 +1694,7 @@ window.wvShowError = function (el, err, retryAttr) {
     el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#5b4a2a;color:#ffe9b8;' +
       'font-size:12.5px;font-weight:600;text-align:center;padding:7px 12px;padding-top:calc(7px + env(safe-area-inset-top));' +
       'box-shadow:0 1px 0 rgba(0,0,0,.35);';
-    el.textContent = 'Having trouble reaching wavernrs — some things may not load. Retrying…';
+    el.textContent = 'cant reach wavernrs rn...some stuff might not load. trying again…';
     document.body.appendChild(el);
   }
   function hide() { if (el) { el.remove(); el = null; } }
@@ -1844,7 +1844,7 @@ window.wvOpenThemePicker = function () {
       var tdef = (window.WV_THEMES || {})[name];
       if (tdef && tdef.members && !window.wvIsVerified()) {
         wrap.remove();
-        if (typeof wvToast === 'function') wvToast('Waverunners is for Discord-verified members');
+        if (typeof wvToast === 'function') wvToast('the Waverunners theme is only for discord verified members');
         if (typeof navigate === 'function') navigate('/settings#discord-verify'); else location.href = '/settings#discord-verify';
         return;
       }
@@ -2014,7 +2014,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window._wvToggleNP = function () {
     var showing = !!cur && open();
     try { localStorage.setItem('wv_np_open', showing ? '0' : '1'); } catch (_) {}
-    if (!showing && !cur && typeof wvToast === 'function') wvToast('Play something to see it here');
+    if (!showing && !cur && typeof wvToast === 'function') wvToast('play something to see it here');
     render();
   };
 
@@ -2158,7 +2158,7 @@ window.wvVerifyPrompt = function (reason) {
   wrap.innerHTML = '<div class="wv-vp" role="dialog" aria-label="Discord verification">' +
     '<div class="wv-vp-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg></div>' +
     '<div class="wv-vp-title">Get Discord verified</div>' +
-    '<div class="wv-vp-body">' + esc(reason || 'This is a perk for members of the wavernrs Discord.') + ' Join the server, link your Discord in Settings, and it unlocks along with a verified badge, the Waverunners theme and a name colour.</div>' +
+    '<div class="wv-vp-body">' + esc(reason || 'this is only for people in the wavernrs discord') + '<br><br>join the server and link your discord in Settings...you also get a verified badge, the Waverunners theme and a name color.</div>' +
     '<div class="wv-vp-actions">' +
       '<a class="wv-pill" href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener" style="text-decoration:none;">Join the Discord</a>' +
       '<button class="wv-pill brand" id="wv-vp-go">Verify in Settings</button>' +
@@ -2193,7 +2193,7 @@ window.wvVerifyPrompt = function (reason) {
     wrap.innerHTML = '<div class="wv-vp" role="dialog" aria-modal="true" aria-label="Join the Discord server">' +
       '<div class="wv-vp-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg></div>' +
       '<div class="wv-vp-title">Join the Discord server</div>' +
-      '<div class="wv-vp-body">Hang out with the wavernrs community, hear about new comps first, and get Discord verified for member perks.</div>' +
+      '<div class="wv-vp-body">please just join the discord 🙏 you hear about new comps first and you can get verified for extra stuff on the site</div>' +
       '<a class="wv-join-btn" id="wv-join-go" href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener">Join</a>' +
       '<button class="wv-join-later" id="wv-join-later">Not now</button>' +
     '</div>';
@@ -2369,7 +2369,7 @@ window.wvClampDesc = function (el) {
     var msgs = st.data.messages;
     box.innerHTML = (st.start > 0 ? '<button class="wv-dtp-more" onclick="wvDtpEarlier()">Show earlier messages (' + st.start.toLocaleString() + ')</button>' : '') +
       wvRenderDiscordThread(st.data, st.end, st.start) +
-      (st.end < msgs.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">End of the thread</div>');
+      (st.end < msgs.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">end of the thread</div>');
     if (keepTopId) { var el = document.getElementById('dt-' + keepTopId); if (el) box.scrollTop = el.offsetTop - 60; }
   }
 
@@ -2379,7 +2379,7 @@ window.wvClampDesc = function (el) {
     var from = st.end;
     st.end = Math.min(st.data.messages.length, st.end + BATCH);
     var sent = box.querySelector('.wv-dtp-sentinel'); if (sent) sent.remove();
-    box.insertAdjacentHTML('beforeend', wvRenderDiscordThread(st.data, st.end, from) + (st.end < st.data.messages.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">End of the thread</div>'));
+    box.insertAdjacentHTML('beforeend', wvRenderDiscordThread(st.data, st.end, from) + (st.end < st.data.messages.length ? '<div class="wv-dtp-sentinel" style="height:1px;"></div>' : '<div class="wv-dtp-end">end of the thread</div>'));
   }
 
   window.wvDtpEarlier = function () {
@@ -2410,7 +2410,7 @@ window.wvClampDesc = function (el) {
     st.searching = true;
     var hits = st.data.messages.filter(function (m) { return plain(m).toLowerCase().indexOf(q) >= 0; });
     var shown = hits.slice(0, 200);
-    box.innerHTML = '<div class="wv-dtp-note">' + hits.length.toLocaleString() + ' result' + (hits.length === 1 ? '' : 's') + (hits.length > shown.length ? ', showing the first 200' : '') + '. Tap one to see it in the thread.</div>' +
+    box.innerHTML = '<div class="wv-dtp-note">' + hits.length.toLocaleString() + ' result' + (hits.length === 1 ? '' : 's') + (hits.length > shown.length ? ', showing the first 200' : '') + '...tap one to jump to it in the thread</div>' +
       shown.map(function (m) {
         var html = wvRenderDiscordThread({ messages: [m] }, 1, 0, st.data.messages);
         return '<div class="wv-dtp-hit" onclick="wvDtpJump(\'' + esc(m.id) + '\')">' + html + '</div>';
@@ -2451,13 +2451,13 @@ window.wvClampDesc = function (el) {
     list().addEventListener('scroll', function () { var b = list(); if (b && b.scrollTop + b.clientHeight > b.scrollHeight - 600) append(); }, { passive: true });
     var data;
     try { data = await api('/albums/' + albumId + '/thread'); }
-    catch (e) { var l = list(); if (l) l.innerHTML = '<div class="wv-empty" style="margin:20px;">' + esc(e.message || 'Could not load the thread') + '</div>'; return; }
+    catch (e) { var l = list(); if (l) l.innerHTML = '<div class="wv-empty" style="margin:20px;">' + esc(e.message || 'couldnt load the thread') + '</div>'; return; }
     if (!document.getElementById('wv-dtp')) return;
     st = { data: data, start: 0, end: Math.min(BATCH, (data.messages || []).length), searching: false };
     var th = data.thread || {};
     document.getElementById('wv-dtp-name').textContent = '# ' + (th.name || 'thread');
     document.getElementById('wv-dtp-sub').textContent = (th.guild ? th.guild + (th.parent ? ' › ' + th.parent : '') + ' · ' : '') + (data.messages || []).length.toLocaleString() + ' messages · ' +
-      (data.unreadable_since ? 'saved copy, the thread is gone from Discord' : data.saved ? 'saved ' + new Date(data.saved_at).toLocaleDateString() : 'loaded live, saving the full thread now');
+      (data.unreadable_since ? 'saved copy, the thread got deleted from discord' : data.saved ? 'saved ' + new Date(data.saved_at).toLocaleDateString() : 'loaded live, saving the whole thread now');
     var pins = (data.messages || []).filter(function (m) { return m.pinned; });
     if (pins.length) {
       var pb = document.getElementById('wv-dtp-pinbtn'); pb.style.display = ''; pb.textContent = '📌 Pinned (' + pins.length + ')';

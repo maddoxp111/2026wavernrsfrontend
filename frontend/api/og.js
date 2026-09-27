@@ -115,7 +115,7 @@ async function lp(id) {
   const cover = (d.now && d.now.track && d.now.track.cover_url) || ((d.items || [])[0] && d.items[0].track && d.items[0].track.cover_url);
   return {
     title: l.title + ' — listening party',
-    description: joinParts([state, 'Hosted by ' + host, (d.items || []).length ? (d.items.length + ' songs') : null, l.description || 'Listen together on wavernrs']),
+    description: joinParts([state, 'Hosted by ' + host, (d.items || []).length ? (d.items.length + ' songs') : null, l.description || 'come listen together on wavernrs']),
     image: cover || FALLBACK_IMAGE,
     type: 'website',
   };
@@ -162,7 +162,7 @@ module.exports = async (req, res) => {
   if (!meta) {
     meta = {
       title: 'wavernrs',
-      description: 'A home for Ye comps and edits — stream, browse and keep track of them.',
+      description: 'Ye comps and edits...listen to them, look through them and keep track of them.',
       image: FALLBACK_IMAGE,
       type: 'website',
     };

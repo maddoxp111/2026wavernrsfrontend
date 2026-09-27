@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — signing in…</title>
-  <link rel="stylesheet" href="/css/style.css?v=f7354117d521">
+  <link rel="stylesheet" href="/css/style.css?v=07537cbbef8b">
   <link rel="icon" type="image/x-icon" href="/icon.ico">
-  <script src="/js/status-card.js?v=f7354117d521"></script>
-  <script src="/js/down.js?v=f7354117d521"></script>
+  <script src="/js/status-card.js?v=07537cbbef8b"></script>
+  <script src="/js/down.js?v=07537cbbef8b"></script>
 </head>
 <body>
 <div class="wv-auth-page" id="auth-root">
@@ -21,7 +21,7 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=f7354117d521"></script>
+<script src="/js/api.js?v=07537cbbef8b"></script>
 <script>
   try {
     if (localStorage.getItem('wv_theme_dark_default') !== '1') {
@@ -38,11 +38,11 @@
   var errCode = params.get('error');
 
   var errorMessages = {
-    invalid_state:   'Login session expired. Please try again.',
-    oauth_failed:    'OAuth sign-in failed. Please try again.',
-    create_failed:   'Could not create account. Please try again.',
-    already_linked:  'That account is already connected to a different user.',
-    not_set_up:      'Reddit connections are not set up on the server yet.',
+    invalid_state:   'login took too long...try again',
+    oauth_failed:    'sign in didnt work...try again',
+    create_failed:   'couldnt make your account...try again',
+    already_linked:  'that account is already linked to someone else',
+    not_set_up:      'reddit linking isnt set up yet',
   };
 
   (async function () {
@@ -50,7 +50,7 @@
       document.getElementById('cb-status').style.display = 'none';
       document.getElementById('cb-error').style.display = '';
       var reason = params.get('reason');
-      document.getElementById('cb-error-msg').textContent = (errorMessages[errCode] || 'Something went wrong.') +
+      document.getElementById('cb-error-msg').textContent = (errorMessages[errCode] || 'something went wrong') +
         (reason ? ' (' + reason + ')' : '');
       return;
     }
@@ -58,7 +58,7 @@
     if (linked) {
       // Came back from a link flow — just close/redirect to settings
       var claimed = parseInt(params.get('claimed') || '0', 10);
-      document.getElementById('cb-status').textContent = (linked === 'discord' ? 'Discord' : linked === 'reddit' ? 'Reddit' : linked === 'lastfm' ? 'Last.fm' : 'Google') + ' account linked!' + (claimed ? ' ' + claimed + ' comp' + (claimed === 1 ? '' : 's') + ' from the archive moved to your profile.' : '');
+      document.getElementById('cb-status').textContent = (linked === 'discord' ? 'Discord' : linked === 'reddit' ? 'Reddit' : linked === 'lastfm' ? 'Last.fm' : 'Google') + ' account linked!!' + (claimed ? ' ' + claimed + ' comp' + (claimed === 1 ? '' : 's') + ' from the archive got moved to your profile' : '');
       setTimeout(function () { location.href = '/settings'; }, 1200);
       return;
     }
@@ -78,7 +78,7 @@
     // No token and no error — shouldn't happen
     document.getElementById('cb-status').style.display = 'none';
     document.getElementById('cb-error').style.display = '';
-    document.getElementById('cb-error-msg').textContent = 'No token received. Please try again.';
+    document.getElementById('cb-error-msg').textContent = 'something broke while signing in...try again';
   })();
 </script>
 </body>
