@@ -55,7 +55,14 @@
     .lp-stack .lp-av { border:2px solid var(--bg, #121212); margin-left:-7px; }
     .lp-stack .lp-av:first-child { margin-left:0; }
 
-    .lp-now { background:var(--surface); border-radius:16px; padding:16px; margin-bottom:18px; }
+    .lp-now { background:var(--surface); border-radius:16px; padding:16px; margin-bottom:18px; position:relative; }
+    .lp-reacts { display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; }
+    .lp-rb { border:0; background:var(--surface-2); border-radius:99px; width:42px; height:36px; font-size:18px; cursor:pointer; transition:transform .12s var(--ease), background .12s; }
+    .lp-rb:hover { background:var(--surface-3); transform:translateY(-2px); }
+    .lp-rb:active { transform:scale(.9); }
+    .lp-float { position:absolute; left:0; right:0; bottom:40px; height:0; pointer-events:none; overflow:visible; }
+    .lp-fl { position:absolute; bottom:0; font-size:26px; animation:lpFloat 2.4s ease-out forwards; will-change:transform, opacity; }
+    @keyframes lpFloat { 0% { transform:translate(0,0) scale(.6); opacity:0; } 12% { opacity:1; transform:translate(0,-20px) scale(1.1); } 100% { transform:translate(var(--dx), -190px) scale(.9); opacity:0; } }
     .lp-now-row { display:flex; gap:14px; align-items:center; }
     .lp-now-art { width:64px; height:64px; border-radius:10px; overflow:hidden; position:relative; flex-shrink:0; }
     .lp-now-art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
@@ -323,8 +330,11 @@ initPlayer();
     el.innerHTML = '<div class="lp-now"><div class="lp-now-row"><div class="lp-now-art">' + art(t.cover_url, t.title, 160) + '</div><div style="min-width:0;flex:1;">' +
       '<div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--text-3);">NOW PLAYING</div>' +
       '<div class="lp-now-t">' + escHtml(t.title) + '</div><div class="lp-now-a">' + escHtml(t.artist) + (t.album_id ? ' · <a href="/album?id=' + encodeURIComponent(t.album_id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">' + escHtml(t.album_title || 'comp') + '</a>' : '') + '</div></div></div>' +
-      '<div class="lp-bar"><div id="lp-prog"></div></div><div class="lp-times"><span id="lp-t0">0:00</span><span id="lp-t1">' + (S.now.duration_sec ? mmss(S.now.duration_sec) : '') + '</span></div>' + hostBtns + '</div>';
+      '<div class="lp-bar"><div id="lp-prog"></div></div><div class="lp-times"><span id="lp-t0">0:00</span><span id="lp-t1">' + (S.now.duration_sec ? mmss(S.now.duration_sec) : '') + '</span></div>' + hostBtns +
+      '<div class="lp-reacts">' + REACTS.map(function (e) { return '<button class="lp-rb" data-r="' + e + '" title="react">' + e + '</button>'; }).join('') + '</div>' +
+      '<div class="lp-float" id="lp-float"></div></div>';
     el.querySelectorAll('[data-a]').forEach(function (b) { b.onclick = function () { control(b.getAttribute('data-a')); }; });
+    el.querySelectorAll('[data-r]').forEach(function (b) { b.onclick = function () { sendReact(b.getAttribute('data-r')); }; });
     tick();
   }
 
@@ -408,8 +418,41 @@ initPlayer();
     } catch (e) { if (typeof wvToast === 'function') wvToast(e.message || 'couldnt do that', 'error'); }
   }
 
+  // ── Reactions: tap one and it floats up for everyone in the room ──
+  var REACTS = ['🔥', '😭', '🐐', '💀', '❤️', '🙏'];
+  var _seenReacts = {}, _reactsPrimed = false, _lastReact = 0;
+  function floatReact(e) {
+    var box = document.getElementById('lp-float'); if (!box) return;
+    var el = document.createElement('span');
+    el.className = 'lp-fl'; el.textContent = e;
+    el.style.left = (10 + Math.random() * 80) + '%';
+    el.style.setProperty('--dx', (Math.random() * 60 - 30).toFixed(0) + 'px');
+    box.appendChild(el);
+    setTimeout(function () { el.remove(); }, 2500);
+  }
+  async function sendReact(e) {
+    if (Date.now() - _lastReact < 650) return;
+    _lastReact = Date.now();
+    floatReact(e);
+    try {
+      var cid = ''; try { cid = sessionStorage.getItem('wv_lp_cid') || ''; } catch (_) {}
+      var r = await api('/lp/' + id + '/react', { method: 'POST', body: JSON.stringify({ e: e, c: cid }) });
+      if (r && r.n) _seenReacts[r.n] = 1;
+    } catch (_) {}
+  }
+  function takeReacts(list) {
+    if (!list) return;
+    list.forEach(function (x) {
+      if (_seenReacts[x.n]) return;
+      _seenReacts[x.n] = 1;
+      if (_reactsPrimed) setTimeout(function () { floatReact(x.e); }, Math.random() * 2600);
+    });
+    _reactsPrimed = true;
+  }
+
   function applyState(d) {
     if (!d || d.error) return;
+    takeReacts(d.reactions);
     S.offset = Date.parse(d.server_time) - Date.now();
     var before = JSON.stringify([S.status, S.now && S.now.item_id, S.now && S.now.paused, S.now && S.now.started_at, S.now && S.now.duration_sec]);
     S.status = d.status; S.now = d.now; S.curPos = d.cur_position || 0;
