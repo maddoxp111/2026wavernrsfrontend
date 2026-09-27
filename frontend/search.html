@@ -67,7 +67,10 @@
       var _results = await Promise.all([
         api('/search?q=' + encodeURIComponent(q)),
         getBadgeData().catch(function(){ return { verified_artists:[], highlighted_albums:[], exclusive_albums:[] }; }),
+        api('/resources/search?q=' + encodeURIComponent(q)).catch(function(){ return { results: [] }; }),
       ]);
+      var ye = (_results[2] && _results[2].results) || [];
+      var yeTotal = (_results[2] && _results[2].total) || ye.length;
       var results = _results[0];
       var badges = _results[1] || { verified_artists:[], highlighted_albums:[], exclusive_albums:[], highlighted_tracks:[], exclusive_tracks:[] };
       var tracks = results.tracks || [];
@@ -76,7 +79,7 @@
       var albums = results.albums || [];
       var archived = results.archived || [];
 
-      if (!tracks.length && !artists.length && !albums.length && !archived.length) {
+      if (!tracks.length && !artists.length && !albums.length && !archived.length && !ye.length) {
         el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">nothing for "' + escHtml(q) + '"</div><div class="empty-desc">try searching something else</div></div>';
         return;
       }
@@ -179,6 +182,23 @@
             '</div>';
           }).join('') +
           '</div></div>';
+      }
+
+      // Songs from the Ye tracker (the Ye side of the archive)
+      if (ye.length) {
+        html += '<div class="search-results-section">' +
+          '<div class="search-results-title" style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">From the Ye tracker' +
+            (yeTotal > ye.length ? '<a href="/resources?q=' + encodeURIComponent(q) + '" onclick="navigate(this.getAttribute(\'href\'));return false;" style="font-size:12.5px;font-weight:700;color:var(--text-3);">see all ' + yeTotal + ' ›</a>' : '') + '</div>' +
+          '<div class="track-list">' + ye.map(function (r) {
+            var href = '/resources?tab=' + encodeURIComponent(r.tab) + '&era=' + encodeURIComponent(r.era) + '&q=' + encodeURIComponent(r.title);
+            var art = r.art ? (typeof wvImg === 'function' ? wvImg(r.art, 96) : r.art) : '';
+            return '<div class="track-row" onclick="navigate(\'' + href.replace(/'/g, "\\'") + '\')" style="cursor:pointer;">' +
+              '<div style="width:44px;height:44px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:' + coverGradient(r.era || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+              '<div class="track-row-info"><div class="track-row-title">' + escHtml(r.title) + '</div>' +
+              '<div class="track-row-artist">' + escHtml(r.era) + ' · ' + escHtml(r.tab.toLowerCase()) + (r.sub ? ' · ' + escHtml(r.sub) : '') + '</div></div>' +
+              (r.avail || r.quality ? '<span class="track-row-plays" style="white-space:nowrap;">' + escHtml([r.avail, r.quality].filter(Boolean).join(' · ')) + '</span>' : '') +
+            '</div>';
+          }).join('') + '</div></div>';
       }
 
       el.innerHTML = html;
