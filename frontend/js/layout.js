@@ -51,6 +51,7 @@
     if (!name || name === 'index') return 'home';
     var ALIAS = {
       discover: 'browse',
+      resources: 'archive',
       eras: 'browse',
       history: 'library',
       'archive-artist': 'archive',
@@ -88,7 +89,6 @@
     ['radio',     'Radio',     '/radio',     'radio'],
     ['lp',        'Live LPs',  '/lp',        'headphones'],
     ['community', 'Community', '/community', 'community'],
-    ['resources', 'Tracker',   '/resources', 'resources'],
   ];
 
   function _skin() {
@@ -219,7 +219,6 @@
       ['artists', 'Editors', '/artists', 'profile'],
       ['music', 'Artists', '/music', 'mic'],
       ['archive', 'Archive', '/archive', 'archive'],
-      ['resources', 'Tracker', '/resources', 'resources'],
     ]);
 
     html += '<div class="am-sec am-sec-grow"><div class="am-sec-label">Playlists</div>';
@@ -2146,6 +2145,14 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   setTimeout(function () { window.wvRefreshVerification(false); }, 1500);
 })();
+
+// Yedits / Ye switch next to the Archive heading. Yedits is the comps archive, Ye is the tracker side.
+window.wvArchiveMode = function (active) {
+  return '<div class="wv-seg wv-arc-mode" role="group" aria-label="Which archive">' +
+    '<button' + (active === 'yedits' ? ' class="on" aria-pressed="true"' : '') + ' onclick="' + (active === 'yedits' ? '' : 'navigate(\'/archive\')') + '">Yedits</button>' +
+    '<button' + (active === 'ye' ? ' class="on" aria-pressed="true"' : '') + ' onclick="' + (active === 'ye' ? '' : 'navigate(\'/resources\')') + '">Ye</button>' +
+  '</div>';
+};
 
 window.wvVerifyPrompt = function (reason) {
   var old = document.getElementById('wv-verify-prompt');
