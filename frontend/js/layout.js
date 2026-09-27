@@ -573,6 +573,7 @@
 
   function _notifHref(n) {
     if (!n || !n.entity_id) return '';
+    if (n.entity_type === 'lp') return '/lp?id=' + n.entity_id;
     if (n.entity_type === 'track') return '/track?id=' + n.entity_id;
     if (n.entity_type === 'album') return '/album?id=' + n.entity_id;
     if (n.entity_type === 'artist') return '/artist?id=' + n.entity_id;
