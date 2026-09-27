@@ -53,7 +53,7 @@ initPlayer();
       grid.innerHTML = _items.map(function (a) {
         var href = '/music?a=' + encodeURIComponent(a.artist_key);
         return '<div class="wv-artist-tile" onclick="navigate(\'' + href + '\')">' +
-          '<div class="av" style="background:' + coverGradient(a.name || '') + ';display:flex;align-items:center;justify-content:center;"><span style="font-size:30px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span></div>' +
+          '<div class="av" style="background:' + coverGradient(a.name || '') + ';display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;"><span style="font-size:30px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span>' + (a.photo ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.photo, 320) : a.photo) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
           '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
           '<div class="wv-artist-meta">' + (a.primary ? 'on every comp' : _sort === 'plays' ? fmtNum(a.plays || 0) + ' plays' : _sort === 'comps' ? a.comps + ' comp' + (a.comps === 1 ? '' : 's') : a.tracks + ' feature' + (a.tracks === 1 ? '' : 's')) + '</div>' +
         '</div>';
@@ -93,7 +93,7 @@ initPlayer();
     root.innerHTML =
       '<div style="margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/music\')">‹ Artists</button></div>' +
       '<div class="wv-hero">' +
-        '<div class="wv-hero-art round" style="background:' + coverGradient(a.name) + ';display:flex;align-items:center;justify-content:center;"><span style="font-size:64px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span></div>' +
+        '<div class="wv-hero-art round" style="background:' + coverGradient(a.name) + ';display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;"><span style="font-size:64px;font-weight:800;color:rgba(255,255,255,.92);">' + escHtml(initials(a.name)) + '</span>' + (a.photo ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(a.photo, 600) : a.photo) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
         '<div class="wv-hero-body">' +
           '<div class="wv-kind">Artist</div>' +
           '<div class="wv-hero-title">' + escHtml(a.name) + '</div>' +
