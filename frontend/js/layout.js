@@ -51,6 +51,7 @@
     if (!name || name === 'index') return 'home';
     var ALIAS = {
       discover: 'browse',
+      eras: 'browse',
       history: 'library',
       'archive-artist': 'archive',
       dashboard: 'profile',
@@ -84,7 +85,6 @@
     ['artists',   'Editors',   '/artists',   'profile'],
     ['music',     'Artists',   '/music',     'mic'],
     ['archive',   'Archive',   '/archive',   'archive'],
-    ['eras',      'Eras',      '/eras',      'eras'],
     ['radio',     'Radio',     '/radio',     'radio'],
     ['lp',        'Live LPs',  '/lp',        'headphones'],
     ['community', 'Community', '/community', 'community'],
@@ -219,7 +219,6 @@
       ['artists', 'Editors', '/artists', 'profile'],
       ['music', 'Artists', '/music', 'mic'],
       ['archive', 'Archive', '/archive', 'archive'],
-      ['eras', 'Eras', '/eras', 'eras'],
       ['resources', 'Tracker', '/resources', 'resources'],
     ]);
 
