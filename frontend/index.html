@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=ebb17275f7ba">
-  <script src="/js/status-card.js?v=ebb17275f7ba"></script>
-  <script src="/js/down.js?v=ebb17275f7ba"></script>
+  <link rel="stylesheet" href="/css/style.css?v=31217628fb78">
+  <script src="/js/status-card.js?v=31217628fb78"></script>
+  <script src="/js/down.js?v=31217628fb78"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=ebb17275f7ba"></script>
-<script src="/js/layout.js?v=ebb17275f7ba"></script>
-<script src="/js/player.js?v=ebb17275f7ba"></script>
-<script src="/js/router.js?v=ebb17275f7ba"></script>
-<script src="/js/playlists.js?v=ebb17275f7ba"></script>
+<script src="/js/api.js?v=31217628fb78"></script>
+<script src="/js/layout.js?v=31217628fb78"></script>
+<script src="/js/player.js?v=31217628fb78"></script>
+<script src="/js/router.js?v=31217628fb78"></script>
+<script src="/js/playlists.js?v=31217628fb78"></script>
 <script>
 initPlayer();
 
@@ -101,6 +101,7 @@ function renderHome() {
     '<span class="wv-chip" onclick="homeSurprise()" title="plays a random comp">Surprise me</span>' +
     '</div>';
 
+  html += '<div id="home-lp"></div>';
   html += eraStrip();
 
   // Jump back in — dense 2×4 tile grid, first screen
@@ -138,6 +139,30 @@ function renderHome() {
   }), '/library');
 
   view.innerHTML = html;
+  fillLiveLps();
+}
+
+// Live listening parties go right at the top so people actually find them.
+var _lpCache = { at: 0, live: [] };
+async function fillLiveLps() {
+  try {
+    if (Date.now() - _lpCache.at > 60000) {
+      var d = await api('/lp');
+      _lpCache = { at: Date.now(), live: (d && d.live) || [] };
+    }
+  } catch (_) { return; }
+  var el = document.getElementById('home-lp');
+  if (!el || !_lpCache.live.length) return;
+  el.innerHTML = _lpCache.live.slice(0, 2).map(function (l) {
+    var np = l.now_playing, href = '/lp?id=' + encodeURIComponent(l.id);
+    var art = np && np.cover_url ? (typeof wvImg === 'function' ? wvImg(np.cover_url, 160) : np.cover_url) : '';
+    return '<a class="wv-home-lp" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' +
+      '<div class="wv-home-lp-art" style="background:' + coverGradient(l.title || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="wv-home-lp-i"><div class="wv-home-lp-k"><span class="wv-home-lp-dot"></span>' + (l.paused ? 'PAUSED' : 'LIVE NOW') + ' · ' + (l.listeners || 0) + ' listening</div>' +
+      '<div class="wv-home-lp-t">' + escHtml(l.title) + '</div>' +
+      '<div class="wv-home-lp-s">hosted by ' + escHtml((l.host && l.host.name) || 'someone') + (np ? ' · ♪ ' + escHtml(np.title) : '') + '</div></div>' +
+      '<span class="wv-home-lp-go">Join</span></a>';
+  }).join('');
 }
 
 // A quick way into the archive by era, using the covers we already have.
