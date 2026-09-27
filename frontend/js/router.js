@@ -47,6 +47,17 @@ window.navigate = async function(url) {
     const curView = document.getElementById('view');
     if (curView) curView.replaceWith(newView.cloneNode(true));
 
+    // Pages that keep their styles in <head> would lose them on an in-app
+    // navigation, since only #view is swapped. Bring them along, and drop the
+    // ones the previous page brought.
+    document.querySelectorAll('style[data-wv-page-style]').forEach(el => el.remove());
+    doc.head.querySelectorAll('style').forEach(st => {
+      const s2 = document.createElement('style');
+      s2.setAttribute('data-wv-page-style', '1');
+      s2.textContent = st.textContent;
+      document.head.appendChild(s2);
+    });
+
     // Push state FIRST so location.search is correct when page script reads it
     if (!fromPopstate) history.pushState(null, doc.title, url);
 
