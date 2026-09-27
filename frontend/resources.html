@@ -470,7 +470,7 @@ initPlayer();
         (len ? '<span class="yt-m">' + esc(len) + '</span>' : '') +
         (date ? '<span class="yt-m" title="' + esc(C.date) + '">' + esc(date) + '</span>' : fdate ? '<span class="yt-m" title="File date">' + esc(fdate) + '</span>' : '') +
         (C.avail ? badge('avail', r[C.avail]) : '') + (C.quality ? badge('quality', r[C.quality]) : '') +
-      '</div>' + (linkHtml ? '<div class="yt-links">' + linkHtml + '</div>' : '') + '</div></div>';
+      '</div><div class="yt-links">' + linkHtml + '<button class="yt-l" data-share="' + it.i + '" title="copy a link to this song" style="border:0;cursor:pointer;font-family:inherit;">share</button></div></div></div>';
   }
   function wire(body, list) {
     body.querySelectorAll('.yt-notes').forEach(function (n) { n.onclick = function () { n.classList.toggle('open'); }; });
@@ -479,6 +479,16 @@ initPlayer();
     });
     body.querySelectorAll('[data-zoom]').forEach(function (b) {
       b.onclick = function () { var i = +b.getAttribute('data-zoom'); var withImg = list.filter(function (it) { return it.img; }); lightbox(withImg, withImg.findIndex(function (it) { return it.i === i; })); };
+    });
+    body.querySelectorAll('[data-share]').forEach(function (b) {
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        var it = list.find(function (x) { return x.i === +b.getAttribute('data-share'); }); if (!it) return;
+        var C = S.d.C, e = (it.r[C.era] || '').trim(), t = splitMarks(first(it.r[C.name])).title;
+        var url = location.origin + '/resources?tab=' + encodeURIComponent(S.tab.name) + '&era=' + encodeURIComponent(e) + '&q=' + encodeURIComponent(t);
+        if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({ title: t, url: url }).catch(function () {}); return; }
+        (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }).catch(function () { prompt('copy this link', url); });
+      };
     });
     var mb = document.getElementById('yt-more'); if (mb) mb.onclick = function () { S.limit += 250; renderBody(); };
     highlight();
