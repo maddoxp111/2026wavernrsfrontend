@@ -954,7 +954,7 @@ function _onTimeUpdate() {
     currentTrack._savedTime = audio.currentTime;
     localStorage.setItem(PLAYER_KEY, JSON.stringify(currentTrack));
   }
-  if ('mediaSession' in navigator && audio.duration) {
+  if ('mediaSession' in navigator && audio.duration && !_radio) {
     try {
       navigator.mediaSession.setPositionState({
         duration: audio.duration,
@@ -1107,16 +1107,22 @@ function _lfmOnTick() {
 }
 // ---- Radio mode: the station clock drives the player ----
 let _radio = null, _radioTimer = null, _radioBusy = false;
+function _liveMode(on) {
+  document.body.classList.toggle('wv-live', !!on);
+  _setPlayBtns(audio && !audio.paused);
+}
 window.radioTuneIn = async function (slug) {
   _radio = { slug, offset: 0 };
+  _liveMode(true);
   clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 8000);
   await _radioSync(true);
 };
-window.radioStop = function () { const wasLp = _radio && _radio.lp; _radio = null; clearInterval(_radioTimer); _radioTimer = null; if (wasLp) document.dispatchEvent(new CustomEvent('lpLeft')); };
+window.radioStop = function () { const wasLp = _radio && _radio.lp; _radio = null; clearInterval(_radioTimer); _radioTimer = null; _liveMode(false); if (wasLp) document.dispatchEvent(new CustomEvent('lpLeft')); };
 window.radioSlug = function () { return _radio && !_radio.lp ? _radio.slug : null; };
 // Listening parties ride on the radio sync: the server clock says what is playing and where.
 window.lpTuneIn = async function (id) {
   _radio = { slug: id, offset: 0, lp: true, hostPaused: false };
+  _liveMode(true);
   clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 3000);
   await _radioSync(true);
 };
@@ -1148,6 +1154,7 @@ async function _radioSync(force) {
       document.dispatchEvent(new CustomEvent('lpState', { detail: d }));
       if (!r.ok || d.status === 'ended') { if (audio && !audio.paused) audio.pause(); window.radioStop(); return; }
     }
+    if (_radio.userPaused && !force) return;
     if (!d.now || !d.now.track) { if (audio && !audio.paused) audio.pause(); return; }
     const t = d.now.track;
     const hostPaused = isLp && !!d.now.paused;
@@ -1159,6 +1166,7 @@ async function _radioSync(force) {
       _fromQueue = false;
       playTrack({ id: t.id, title: t.title, artist_name: t.artist + (isLp ? ' · 🎧 ' : ' · 📻 ') + d.name, ia_url: t.url, cover_url: t.cover_url, _album_title: d.name, _album_id: t.album_id || null, _archive_artist: t.is_archive ? t.artist : null, _radio: slug, _radioStart: ident });
       const ctx = document.getElementById('pfs-context'); if (ctx) ctx.textContent = (isLp ? '🎧 ' : '📻 ') + d.name;
+      try { audio.playbackRate = 1; } catch (_) {}
       if (audio.readyState >= 1) seekNow(); else audio.addEventListener('loadedmetadata', seekNow, { once: true });
       if (hostPaused) { _wantPlaying = false; audio.pause(); }
     } else if (isLp) {
@@ -1338,14 +1346,17 @@ function playTrack(track) {
       artist: track.artist_name || track.artists?.display_name || '',
       artwork: track.cover_url ? [{ src: track.cover_url, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
-    navigator.mediaSession.setActionHandler('play', () => { _wantPlaying = true; audio.play(); });
-    navigator.mediaSession.setActionHandler('pause', () => { _wantPlaying = false; audio.pause(); });
-    navigator.mediaSession.setActionHandler('previoustrack', () => skipPrev());
-    navigator.mediaSession.setActionHandler('nexttrack', () => skipNext());
-    navigator.mediaSession.setActionHandler('seekbackward', e => { audio.currentTime -= e.seekOffset || 10; });
-    navigator.mediaSession.setActionHandler('seekforward', e => { audio.currentTime += e.seekOffset || 10; });
-    try { navigator.mediaSession.setActionHandler('seekto', e => { if (e.seekTime != null && audio.duration) audio.currentTime = e.seekTime; }); } catch (_) {}
-    try { navigator.mediaSession.setActionHandler('stop', () => { _wantPlaying = false; audio.pause(); }); } catch (_) {}
+    const live = !!track._radio;
+    const h = (name, fn) => { try { navigator.mediaSession.setActionHandler(name, fn); } catch (_) {} };
+    h('play', () => { if (_radio) { if (audio.paused) togglePlay(); return; } _wantPlaying = true; audio.play(); });
+    h('pause', () => { if (_radio) { if (!audio.paused) togglePlay(); return; } _wantPlaying = false; audio.pause(); });
+    h('previoustrack', live ? null : () => skipPrev());
+    h('nexttrack', live ? null : () => skipNext());
+    h('seekbackward', live ? null : e => { audio.currentTime -= e.seekOffset || 10; });
+    h('seekforward', live ? null : e => { audio.currentTime += e.seekOffset || 10; });
+    h('seekto', live ? null : e => { if (e.seekTime != null && audio.duration) audio.currentTime = e.seekTime; });
+    h('stop', () => { if (_radio) _radio.userPaused = true; _wantPlaying = false; audio.pause(); });
+    if (live) { try { navigator.mediaSession.setPositionState({ duration: Infinity, playbackRate: 1, position: 0 }); } catch (_) {} }
   }
 }
 
@@ -1413,6 +1424,15 @@ function _renderAll(track) {
 let _wantPlaying = false;
 function togglePlay() {
   if (!audio) return;
+  if (_radio) {
+    if (audio.paused) {
+      _radio.userPaused = false; _wantPlaying = true;
+      const go = (n) => { if (!_radio) return; if (_radioBusy && n < 40) return setTimeout(() => go(n + 1), 150); _radioSync(true); };
+      go(0);
+    }
+    else { _radio.userPaused = true; _wantPlaying = false; audio.pause(); }
+    return;
+  }
   if (audio.paused) { _wantPlaying = true; audio.play().catch(console.error); }
   else { _wantPlaying = false; audio.pause(); }
 }
@@ -1446,6 +1466,14 @@ function _renderInAppHint() {
 }
 
 function _setPlayBtns(playing) {
+  if (playing && _radio) {
+    const sq = n => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`;
+    const b1 = document.getElementById('player-play-btn'), b2 = document.getElementById('player-mini-play-btn'), b3 = document.getElementById('pfs-play-btn');
+    if (b1) { b1.innerHTML = sq(18); b1.title = 'Stop'; }
+    if (b2) { b2.innerHTML = sq(16); b2.title = 'Stop'; }
+    if (b3) { b3.innerHTML = sq(26); b3.title = 'Stop'; }
+    return;
+  }
   const icon = playing
     ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`
     : `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -1485,9 +1513,11 @@ document.addEventListener('keydown', function(e) {
     togglePlay();
   } else if ((e.key === 'ArrowRight' || e.key === 'l') && !e.shiftKey && !onControl) {
     e.preventDefault();
+    if (_radio) return;
     audio.currentTime = Math.min((audio.duration || 0), audio.currentTime + 10);
   } else if ((e.key === 'ArrowLeft' || e.key === 'j') && !e.shiftKey && !onControl) {
     e.preventDefault();
+    if (_radio) return;
     audio.currentTime = Math.max(0, audio.currentTime - 10);
   } else if (e.key === 'ArrowRight' && e.shiftKey) {
     skipNext();
