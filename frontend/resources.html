@@ -122,6 +122,8 @@
   .yt-key-r { display:grid; grid-template-columns:130px minmax(0,1fr); gap:10px; padding:9px 0; border-top:1px solid var(--hair); align-items:start; }
   .yt-key-r div { font-size:13px; color:var(--text-2); line-height:1.5; }
   .yt-key-r .yt-b, .yt-key-r .yt-tag { justify-self:start; cursor:default; }
+  .yt-down { display:flex; gap:10px; align-items:flex-start; background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3); color:var(--text-2); border-radius:14px; padding:12px 14px; font-size:13.5px; line-height:1.5; margin-bottom:16px; }
+  .yt-down b { color:#fbbf24; }
   .yt-empty { text-align:center; padding:60px 20px; color:var(--text-3); font-size:14px; }
   .yt-empty b { display:block; font-size:18px; color:var(--text); margin-bottom:6px; }
 </style>
@@ -134,6 +136,7 @@
     </div>
   </div>
   <div class="yt-tabs" id="yt-tabs" role="tablist" aria-label="Tracker tabs"></div>
+  <div id="yt-down"></div>
   <div id="yt-root"><div class="loading"><div class="spinner"></div></div></div>
 </div>
 </div><!-- /view -->
@@ -202,10 +205,11 @@ initPlayer();
   }
 
   // ── links ────────────────────────────────────────────────────
+  var IS_APPLE = /iPad|iPhone|iPod/.test(navigator.platform || '') || (/Mac/.test(navigator.userAgent) && 'ontouchend' in document) || /iPhone|iPad|iPod/.test(navigator.userAgent);
   function pillowId(u) { var m = String(u || '').match(/(?:pillows|pillowcase)\.su\/f\/([a-z0-9]+)/i); return m ? m[1] : null; }
   function audioOf(u) {
     if (!u) return null;
-    var p = pillowId(u); if (p) return 'https://api.pillows.su/api/download/' + p;
+    var p = pillowId(u); if (p) return API_BASE + '/resources/audio/' + p.toLowerCase() + (IS_APPLE ? '?ios=1' : '');
     if (/\.(mp3|m4a|wav|flac|ogg|aac|opus)(\?|#|$)/i.test(u)) return u;
     if (/(cdn\.samply\.app|archive\.org\/download|\.b-cdn\.net)/i.test(u)) return u;
     return null;
@@ -571,6 +575,24 @@ initPlayer();
       });
     } catch (_) {}
   }
+
+  // pillows hosts almost every song here. When it's down, say so instead of silently failing.
+  function checkPillows() {
+    fetch(API_BASE + '/resources/pillows-status').then(function (r) { return r.json(); }).then(function (d) {
+      var el = document.getElementById('yt-down'); if (!el) return;
+      el.innerHTML = d && d.up === false ? '<div class="yt-down"><span>⚠️</span><div><b>pillows is down rn.</b> almost every song here is hosted on pillows, so most wont play till its back. anything thats been played on wavernrs before still works.</div></div>' : '';
+    }).catch(function () {});
+  }
+  var _lastErrToast = 0;
+  function onAudioErr() {
+    if (!currentTrack || String(currentTrack.id || '').indexOf('yt-') !== 0) return;
+    if (Date.now() - _lastErrToast < 4000) return;
+    _lastErrToast = Date.now();
+    if (typeof wvToast === 'function') wvToast('that song wont load rn...pillows might be down', 'error');
+    checkPillows();
+  }
+  if (typeof audio !== 'undefined' && audio) { audio.addEventListener('error', onAudioErr); window._pageCleanup.push(function () { audio.removeEventListener('error', onAudioErr); }); }
+  checkPillows();
 
   // ── boot ─────────────────────────────────────────────────────
   (async function boot() {
