@@ -285,6 +285,33 @@ initPlayer();
     var k = keys.find(function (x) { var m = norm(x); return m.indexOf(n) === 0 || n.indexOf(m) === 0; });
     return k ? art[k] : null;
   }
+  // Tracker eras → the site's era tags, so an era page can link to its yedits.
+  S.tags = null;
+  api('/eratags').then(function (list) { var m = {}; (list || []).forEach(function (t) { m[norm(t.name)] = t.id; }); S.tags = m; if (S.era && document.getElementById('yt-hero-links')) paintEraLink(); }).catch(function () {});
+  var TAG_ALIAS = { yeezus2: 'yeezusii', beforethecollegedropout: 'beforetcd', loveeveryone: 'loveeveryone' };
+  function tagFor(era) {
+    if (!S.tags) return null;
+    var n = norm(String(era || '').replace(/\s*\[v\d+\]\s*/ig, ' ').replace(/\((\d{4})\)/, ''));
+    n = TAG_ALIAS[n] || n;
+    if (S.tags[n]) return S.tags[n];
+    if (/^vultures/.test(n) && S.tags.vultures123) return S.tags.vultures123;
+    var best = null;
+    Object.keys(S.tags).forEach(function (k) { if (k.length >= 4 && n.indexOf(k) === 0 && (!best || k.length > best.length)) best = k; });
+    return best ? S.tags[best] : null;
+  }
+  function paintEraLink() {
+    var el = document.getElementById('yt-hero-links'); if (!el || !S.era) return;
+    var id = tagFor(S.era);
+    el.innerHTML = id ? '<a class="yt-l" href="/archive?era=' + encodeURIComponent(id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">yedits from this era ›</a>' : '';
+  }
+  // Links from the Yedits side use the site's era names (Bully, Before TCD, Yeezus II...).
+  var ERA_BACK = { beforetcd: 'beforethecollegedropout', yeezusii: 'yeezus2', vultures123: 'vultures1' };
+  function resolveEra(name) {
+    var d = S.d; if (!d) return null;
+    var n = norm(name); n = ERA_BACK[n] || n;
+    var strip = function (e) { return norm(String(e).replace(/\s*\[v\d+\]\s*/ig, ' ')); };
+    return d.eras.find(function (e) { return strip(e) === n; }) || d.eras.find(function (e) { return strip(e).indexOf(n) === 0; }) || null;
+  }
   function eraArt(e) { var g = S.d && S.d.byEra[e]; return g ? g.art : null; }
 
   // ── tabs ─────────────────────────────────────────────────────
@@ -313,7 +340,7 @@ initPlayer();
     try { S.d = await loadTab(t); }
     catch (e) { if (S.tab === t) root.innerHTML = empty('this tab didnt load', e.message || 'try again in a sec'); return; }
     if (S.tab !== t) return;
-    if (S.era && !S.d.byEra[S.era]) S.era = null;
+    if (S.era && !S.d.byEra[S.era]) { S.era = resolveEra(S.era); setUrl(); }
     render();
   }
 
@@ -345,6 +372,7 @@ initPlayer();
       body.innerHTML = eraHero(g) + (q ? '<div class="yt-count">' + rows.length + ' of ' + g.rows.length + ' songs</div>' : '') +
         (rows.length ? '<div class="yt-list">' + rows.slice(0, S.limit).map(rowHtml).join('') + '</div>' + more(rows.length) : empty('no matches', 'try something else'));
       wire(body, rows);
+      paintEraLink();
       var back = document.getElementById('yt-back'); if (back) back.onclick = function () { S.era = null; S.q = ''; setUrl(); render(); };
       var ds = body.querySelector('.yt-desc.clamp'); if (ds) ds.onclick = function () { ds.classList.remove('clamp'); var b = ds.querySelector('.yt-desc-more'); if (b) b.remove(); };
       return;
@@ -393,7 +421,7 @@ initPlayer();
       '<div class="yt-hero">' + cover(g.art, g.name, '', 600) + '<div class="yt-hero-i"><div class="yt-hero-k">ERA · ' + esc((S.tab && S.tab.name || '').toUpperCase()) + '</div>' +
       '<div class="yt-hero-t">' + esc(g.name) + '</div>' + (inf.aka ? '<div class="yt-hero-a">aka ' + esc(inf.aka) + '</div>' : '') +
       '<div class="yt-stats"><span class="yt-stat"><b>' + songs + '</b> songs</span>' + (pl ? '<span class="yt-stat"><b>' + pl + '</b> playable</span>' : '') +
-      st.map(function (s) { var m = s.match(/^(\d+)\s+(.*)$/); return m && m[1] !== '0' ? '<span class="yt-stat"><b>' + esc(m[1]) + '</b> ' + esc(m[2].toLowerCase()) + '</span>' : ''; }).join('') + '</div></div></div>' +
+      st.map(function (s) { var m = s.match(/^(\d+)\s+(.*)$/); return m && m[1] !== '0' ? '<span class="yt-stat"><b>' + esc(m[1]) + '</b> ' + esc(m[2].toLowerCase()) + '</span>' : ''; }).join('') + '</div><div class="yt-links" id="yt-hero-links" style="justify-content:flex-start;margin-top:12px;"></div></div></div>' +
       (inf.desc || (inf.timeline && inf.timeline.length) ? (function () {
         var long = String(inf.desc || '').length > 380 || (inf.timeline && inf.timeline.length > 3);
         return '<div class="yt-desc' + (long ? ' clamp' : '') + '"><div class="yt-desc-t">' + esc(inf.desc || '') + '</div>' +
