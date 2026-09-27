@@ -235,7 +235,7 @@ initPlayer();
   async function loadRoom(keepChat) {
     var d;
     try { d = await api('/lp/' + encodeURIComponent(id)); }
-    catch (e) { if (!S.lp) root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'couldnt load this LP') + '</div>'; return; }
+    catch (e) { if (!S.lp) { root.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'couldnt load this LP') + '</div>'; timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); timers = []; } return; }
     S.lp = d.lp; S.items = d.items || []; S.now = d.now; S.curPos = d.cur_position || 0; S.qv = d.queue_version; S.listeners = d.listeners || S.listeners; S.host = !!d.can_control; S.status = d.lp.status;
     S.offset = Date.parse(d.server_time) - Date.now();
     document.title = 'wavernrs — ' + d.lp.title;
