@@ -123,6 +123,7 @@ function renderHome() {
   var mostPlayed = (typeof getPlayTally === 'function' ? getPlayTally({ days: 30, min: 2, limit: 12 }) : [])
     .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
   html += awardsBlock();
+  html += '<div id="home-leaks"></div>';
   html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts');
@@ -140,6 +141,31 @@ function renderHome() {
 
   view.innerHTML = html;
   fillLiveLps();
+  fillLeaks();
+}
+
+// Newest leaks from the Ye tracker.
+var _leakCache = { at: 0, rows: [] };
+async function fillLeaks() {
+  if (_homeFilter !== 'all') return;
+  try {
+    if (Date.now() - _leakCache.at > 5 * 60000) {
+      var d = await api('/resources/latest?n=12');
+      _leakCache = { at: Date.now(), rows: (d && d.results) || [] };
+    }
+  } catch (_) { return; }
+  var el = document.getElementById('home-leaks');
+  if (!el || !_leakCache.rows.length) return;
+  el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources\')">Fresh leaks</h2><button class="wv-see-all" onclick="navigate(\'/resources\')">Show all</button></div>' +
+    '<div class="scroll-row">' + _leakCache.rows.map(function (r) {
+      var t = String(r.title || '').replace(/^[\s\u2B50\u2728\uFE0F\u2049]+/, '').replace(/^(\uD83C[\uDFC6\uDFC5\uDF96]|\uD83E\uDD47|\uD83D\uDDD1|\uD83E\uDD16)\uFE0F?\s*/, '');
+      var href = '/resources?tab=Unreleased&era=' + encodeURIComponent(r.era) + '&q=' + encodeURIComponent(t);
+      var art = r.art ? (typeof wvImg === 'function' ? wvImg(r.art, 320) : r.art) : '';
+      return '<div class="scroll-card" onclick="navigate(\'' + href.replace(/'/g, "\\'") + '\')" style="flex-shrink:0;width:150px;">' +
+        '<div class="scroll-card-cover" style="background:' + coverGradient(r.era || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="scroll-card-title">' + escHtml(t) + '</div>' +
+        '<div class="scroll-card-sub">' + escHtml(r.era) + (r.leak ? ' · ' + escHtml(r.leak.replace(/, \d{4}$/, '')) : '') + '</div></div>';
+    }).join('') + '</div></div>';
 }
 
 // Live listening parties go right at the top so people actually find them.

@@ -37,6 +37,14 @@
   .yt-era-n { font-weight:750; font-size:14px; margin-top:9px; line-height:1.25; }
   .yt-era-s { font-size:12px; color:var(--text-3); margin-top:3px; }
 
+  .yt-fresh { margin:0 0 26px; }
+  .yt-fresh h3 { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:0 0 10px; }
+  .yt-fresh-row { display:flex; gap:12px; overflow-x:auto; scrollbar-width:none; padding-bottom:4px; }
+  .yt-fresh-row::-webkit-scrollbar { display:none; }
+  .yt-fc { flex:none; width:150px; cursor:pointer; }
+  .yt-fc .yt-cover { width:150px; height:150px; border-radius:10px; }
+  .yt-fc-t { font-size:13px; font-weight:700; margin-top:7px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .yt-fc-s { font-size:11.5px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .yt-back { border:0; background:transparent; color:var(--text-3); font:inherit; font-size:13px; font-weight:700; cursor:pointer; padding:0; margin-bottom:14px; }
   .yt-back:hover { color:var(--text); }
   .yt-hero { display:flex; gap:22px; align-items:flex-end; flex-wrap:wrap; margin-bottom:18px; }
@@ -342,11 +350,12 @@ initPlayer();
       return;
     }
     if (!q) {
-      body.innerHTML = '<div class="yt-count">' + d.eras.length + ' eras · ' + d.items.length.toLocaleString() + ' songs</div><div class="yt-eras">' + d.eras.map(function (e) {
+      body.innerHTML = (S.tab && /^unreleased$/i.test(S.tab.name) ? '<div id="yt-latest"></div>' : '') + '<div class="yt-count">' + d.eras.length + ' eras · ' + d.items.length.toLocaleString() + ' songs</div><div class="yt-eras">' + d.eras.map(function (e) {
         var g = d.byEra[e], n = g.rows.length, pl = g.rows.filter(function (it) { return rowAudio(it); }).length;
         return '<div class="yt-era" data-era="' + esc(e) + '">' + cover(g.art, e, '', 400) + '<div class="yt-era-n">' + esc(e) + '</div><div class="yt-era-s">' + n + ' song' + (n === 1 ? '' : 's') + (pl ? ' · ' + pl + ' playable' : '') + '</div></div>';
       }).join('') + '</div>';
       body.querySelectorAll('[data-era]').forEach(function (el) { el.onclick = function () { S.era = el.getAttribute('data-era'); S.q = ''; S.limit = 250; setUrl(); render(); window.scrollTo(0, 0); var c = document.getElementById('wv-content'); if (c) c.scrollTop = 0; }; });
+      fillLatest();
       return;
     }
     var hits = d.items.filter(function (it) { return hay(it).indexOf(q) !== -1; });
@@ -360,6 +369,16 @@ initPlayer();
     body.innerHTML = hits.length ? html + more(hits.length) : empty('no matches', 'try something else');
     body.querySelectorAll('.yt-group[data-era]').forEach(function (el) { el.onclick = function () { S.era = el.getAttribute('data-era'); S.q = ''; setUrl(); render(); }; });
     wire(body, hits);
+  }
+  var _latest = null;
+  async function fillLatest() {
+    var el = document.getElementById('yt-latest'); if (!el) return;
+    if (!_latest) { try { _latest = (await api('/resources/latest?n=16')).results || []; } catch (_) { _latest = []; } }
+    el = document.getElementById('yt-latest'); if (!el || !_latest.length) return;
+    el.innerHTML = '<div class="yt-fresh"><h3>just leaked</h3><div class="yt-fresh-row">' + _latest.map(function (r, i) {
+      return '<div class="yt-fc" data-li="' + i + '">' + cover(r.art, r.era, '', 300) + '<div class="yt-fc-t">' + esc(splitMarks(r.title).title) + '</div><div class="yt-fc-s">' + esc(r.era) + (r.leak ? ' · ' + esc(r.leak.replace(/, \d{4}$/, '')) : '') + '</div></div>';
+    }).join('') + '</div></div>';
+    el.querySelectorAll('[data-li]').forEach(function (c) { c.onclick = function () { var r = _latest[+c.getAttribute('data-li')]; S.era = r.era; S.q = splitMarks(r.title).title; setUrl(); render(); }; });
   }
   function more(n) { return n > S.limit ? '<div class="yt-more"><button class="wv-btn-ghost" id="yt-more">show ' + Math.min(250, n - S.limit) + ' more</button></div>' : ''; }
   function hay(it) {
