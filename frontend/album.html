@@ -197,6 +197,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
                 Add to queue
               </button>
+              <button class="wv-btn-ghost" onclick="hostLpWithComp()" title="start a listening party with this comp"${_playable ? '' : ' style="display:none"'}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                Listen together
+              </button>
               <button class="wv-btn-ghost" id="share-btn" onclick="copyLink()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
@@ -728,6 +732,27 @@
       btn.disabled = false; btn.textContent = 'Get cover from source';
       if (typeof wvToast === 'function') wvToast((e && e.message) || 'couldnt start that', 'error');
     }
+  };
+
+  // Starts a listening party with this comp (or adds it to the one you already have going).
+  window.hostLpWithComp = async function () {
+    var a = album; if (!a) return;
+    var loggedIn = false; try { loggedIn = !!localStorage.getItem('token'); } catch (_) {}
+    if (!loggedIn) { navigate('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; }
+    var lpId = null;
+    try {
+      var r = await api('/lp', { method: 'POST', body: JSON.stringify({ title: (a.title || 'comp') + ' listening party', description: 'listening to ' + (a.title || 'this comp') + ' together' }) });
+      lpId = r.lp.id;
+    } catch (e) {
+      if (e.data && e.data.need_verification) { if (typeof wvVerifyPrompt === 'function') wvVerifyPrompt('you have to be discord verified to host a listening party...just for security reasons.'); return; }
+      if (e.data && e.data.id) {
+        if (!confirm('you already have a listening party going. add this comp to it?')) return;
+        lpId = e.data.id;
+      } else { if (typeof wvToast === 'function') wvToast(e.message || 'couldnt start a listening party', 'error'); return; }
+    }
+    try { await api('/lp/' + lpId + '/items', { method: 'POST', body: JSON.stringify({ album_id: a.id }) }); }
+    catch (e) { if (typeof wvToast === 'function') wvToast(e.message || 'couldnt add the songs', 'error'); }
+    navigate('/lp?id=' + encodeURIComponent(lpId));
   };
 
   function copyLink() {
