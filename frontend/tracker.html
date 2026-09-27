@@ -60,6 +60,36 @@
     #view .tk-hero .art { width:96px; height:96px; border-radius:12px; overflow:hidden; flex-shrink:0;
       box-shadow:0 8px 24px rgba(0,0,0,.35); }
     #view .tk-hero .art img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .fs-tabs { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px 0 10px; margin:4px 0 16px; border-bottom:1px solid var(--border); }
+    #view .fs-tabs::-webkit-scrollbar { display:none; }
+    #view .fs-tab { flex:none; border:0; background:var(--surface-2); color:var(--text-2); font:inherit; font-size:13px; font-weight:700; padding:8px 14px; border-radius:99px; cursor:pointer; white-space:nowrap; }
+    #view .fs-tab:hover { color:var(--text); }
+    #view .fs-tab.on { background:var(--text); color:var(--bg, #000); }
+    #view .fs-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    #view .fs-search { flex:1; min-width:200px; display:flex; align-items:center; gap:8px; background:var(--surface-2); border-radius:99px; padding:9px 16px; color:var(--text-3); }
+    #view .fs-search input { flex:1; min-width:0; background:transparent; border:0; outline:0; box-shadow:none; padding:0; margin:0; height:auto; font:inherit; font-size:14px; color:var(--text); }
+    #view .fs-src { font-size:12.5px; color:var(--text-3); text-decoration:none; font-weight:700; white-space:nowrap; }
+    #view .fs-src:hover { color:var(--text); }
+    #view .fs-count { font-size:12.5px; color:var(--text-3); margin:0 0 14px; }
+    #view .fs-h { font-size:19px; font-weight:800; letter-spacing:-.02em; margin:28px 0 8px; overflow-wrap:anywhere; }
+    #view .fs-note { background:var(--surface); border-radius:12px; padding:12px 14px; margin:0 0 12px; font-size:13.5px; line-height:1.6; color:var(--text-2); white-space:pre-line; overflow-wrap:anywhere; }
+    #view .fs-note.clamp { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
+    #view .fs-list { display:flex; flex-direction:column; }
+    #view .fs-row { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:12px 10px; border-radius:12px; align-items:start; }
+    #view .fs-row.img { grid-template-columns:72px minmax(0,1fr); }
+    #view .fs-row + .fs-row { border-top:1px solid var(--border); }
+    #view .fs-row:hover { background:var(--surface); }
+    #view .fs-cv { width:72px; height:72px; border-radius:9px; overflow:hidden; background:var(--surface-2); display:block; }
+    #view .fs-cv img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .fs-t { font-weight:700; font-size:15px; line-height:1.3; overflow-wrap:anywhere; }
+    #view .fs-f { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:4px; font-size:12.5px; color:var(--text-2); }
+    #view .fs-f span b { color:var(--text-3); font-weight:600; margin-right:4px; }
+    #view .fs-d { font-size:12.5px; color:var(--text-2); margin-top:6px; line-height:1.5; white-space:pre-line; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; cursor:pointer; }
+    #view .fs-d.open { display:block; }
+    #view .fs-ls { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    #view .fs-l { font-size:11.5px; font-weight:700; color:var(--text-2); background:var(--surface-2); border-radius:99px; padding:4px 10px; text-decoration:none; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #view .fs-l:hover { background:var(--brand); color:#14121c; }
+    #view .fs-more { display:block; margin:18px auto 0; border:0; background:var(--surface-2); color:var(--text); font:inherit; font-weight:700; font-size:13.5px; padding:10px 22px; border-radius:99px; cursor:pointer; }
   </style>
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
@@ -114,11 +144,13 @@
           '<button class="' + (kind === 'comp' ? 'on' : '') + '" onclick="tkKind(\'comp\')">Comps</button>' +
           '<button class="' + (kind === 'edit' ? 'on' : '') + '" onclick="tkKind(\'edit\')">Edits</button>' +
           (t.art ? '<button class="' + (kind === 'art' ? 'on' : '') + '" onclick="tkKind(\'art\')">Art</button>' : '') +
+          (hasSheet(t.slug) ? '<button data-sheet class="' + (kind === 'sheet' ? 'on' : '') + '" onclick="tkKind(\'sheet\')">Full tracker</button>' : '') +
         '</div>' +
       '</div>';
   }
 
   async function renderTracker(slug, kind) {
+    if (kind === 'sheet') return renderSheet(slug);
     _slug = slug; _kind = kind;
     var b = body(); if (!b) return;
     var ck = slug + '|' + kind, d = _cache[ck];
@@ -144,6 +176,170 @@
     });
     b.innerHTML = html;
     history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind));
+    sheetInfo(slug).then(function (info) {
+      if (!info || !info.kind || _slug !== slug || _kind !== kind) return;
+      var tabs = document.querySelector('#view .tk-tabs');
+      if (tabs && !tabs.querySelector('[data-sheet]')) tabs.insertAdjacentHTML('beforeend', '<button data-sheet onclick="tkKind(\'sheet\')">Full tracker</button>');
+    });
+  }
+
+  var _sheetInfo = {}, _sheetGrid = {}, _fs = null;
+  var FS_PAGE = 80;
+
+  var _sheetOk = {};
+  function sheetInfo(slug) {
+    if (!_sheetInfo[slug]) _sheetInfo[slug] = api('/trackers/' + encodeURIComponent(slug) + '/sheet').then(function (i) { if (i && i.kind) _sheetOk[slug] = true; return i; }).catch(function () { delete _sheetInfo[slug]; return null; });
+    return _sheetInfo[slug];
+  }
+  function hasSheet(slug) { return !!_sheetOk[slug]; }
+
+  function sheetTabs(slug, info) {
+    if (info.kind === 'gsheet') return Promise.resolve(info.tabs.map(function (t) { return { name: t.name, id: t.gid }; }));
+    var k = 'static|' + info.url;
+    if (!_sheetGrid[k]) _sheetGrid[k] = fetch(info.url).then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); }).catch(function (e) { delete _sheetGrid[k]; throw e; });
+    return _sheetGrid[k].then(function (d) { return d.tabs.map(function (t, i) { return { name: t.name, id: String(i), grid: t }; }); });
+  }
+
+  function sheetGrid(slug, info, tab) {
+    if (tab.grid) return Promise.resolve(tab.grid);
+    var k = slug + '|' + tab.id;
+    if (!_sheetGrid[k]) _sheetGrid[k] = api('/trackers/' + encodeURIComponent(slug) + '/sheet/' + encodeURIComponent(tab.id)).catch(function (e) { delete _sheetGrid[k]; throw e; });
+    return _sheetGrid[k];
+  }
+
+  function fsHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'link'; } }
+  function fsLinkLabel(l) {
+    var t = String(l.t || '').trim();
+    if (!t || /^https?:\/\//i.test(t) || t.length > 40) return fsHost(l.u);
+    return t;
+  }
+
+  function fsParse(grid) {
+    var rows = grid.rows || [], hdr = -1;
+    for (var i = 0; i < Math.min(rows.length, 12); i++) {
+      var r = rows[i], txt = r.filter(function (c) { return c.t; });
+      if (txt.length >= 3 && txt.every(function (c) { return c.t.length <= 40 && !(c.i && c.i.length); })) { hdr = i; break; }
+    }
+    var labels = {};
+    if (hdr >= 0) rows[hdr].forEach(function (c) { if (c.t) labels[c.c] = c.t; });
+    var titleCol = null;
+    for (var c in labels) if (/^(title|name|comp|comp name|edit|edit name|song|album|project|alias|resource)s?$/i.test(labels[c].trim())) { titleCol = +c; break; }
+    var blocks = [], section = '';
+    rows.forEach(function (r, ri) {
+      if (ri === hdr) return;
+      var txt = r.filter(function (c) { return c.t; });
+      var imgs = [], links = [];
+      r.forEach(function (c) {
+        (c.i || []).forEach(function (u) { imgs.push(u); });
+        (c.l || []).forEach(function (l) { if (!links.some(function (x) { return x.u === l.u; })) links.push(l); });
+      });
+      if (txt.length === 1 && !imgs.length && r.length === 1) {
+        var only = txt[0].t;
+        if (only.length <= 80 && !links.length && hdr >= 0 && ri > hdr) { section = only; blocks.push({ k: 'h', t: only }); return; }
+        blocks.push({ k: 'n', t: only, links: links, pre: hdr >= 0 && ri < hdr });
+        return;
+      }
+      if (!txt.length && !imgs.length && !links.length) return;
+      var title = null, fields = [], desc = [];
+      var tc = titleCol != null ? r.find(function (x) { return x.c === titleCol && x.t; }) : null;
+      if (!tc) tc = txt.find(function (x) { return x.t !== section && x.t.length <= 140 && !/^link/i.test(labels[x.c] || ''); });
+      if (tc) title = tc.t;
+      txt.forEach(function (x) {
+        if (x === tc || x.t === section) return;
+        var lab = labels[x.c] || '';
+        if (x.l && x.l.length && x.t.length <= 40 && x.l.length === x.t.split('\n').length) return;
+        if (x.t.length > 90 || /\n/.test(x.t)) desc.push(x.t);
+        else fields.push([lab, x.t]);
+      });
+      blocks.push({ k: 'e', title: title || (links[0] ? fsLinkLabel(links[0]) : 'untitled'), img: imgs[0] || null, fields: fields, desc: desc.join('\n\n'), links: links,
+        hay: (section + ' ' + txt.map(function (x) { return x.t; }).join(' ')).toLowerCase() });
+    });
+    return blocks;
+  }
+
+  function fsEntry(b) {
+    return '<div class="fs-row' + (b.img ? ' img' : '') + '">' +
+      (b.img ? '<a class="fs-cv" href="' + esc(b.img) + '" target="_blank" rel="noopener"><img data-nocdn src="' + esc(b.img) + '" loading="lazy" alt="" onerror="this.style.opacity=0"></a>' : '') +
+      '<div style="min-width:0;">' +
+        '<div class="fs-t">' + esc(b.title) + '</div>' +
+        (b.fields.length ? '<div class="fs-f">' + b.fields.map(function (f) { return '<span>' + (f[0] ? '<b>' + esc(f[0]) + '</b>' : '') + esc(f[1]) + '</span>'; }).join('') + '</div>' : '') +
+        (b.desc ? '<div class="fs-d" onclick="this.classList.toggle(\'open\')">' + esc(b.desc) + '</div>' : '') +
+        (b.links.length ? '<div class="fs-ls">' + b.links.slice(0, 12).map(function (l) { return '<a class="fs-l" href="' + esc(l.u) + '" target="_blank" rel="noopener" title="' + esc(l.u) + '">' + esc(fsLinkLabel(l)) + '</a>'; }).join('') + (b.links.length > 12 ? '<span class="fs-l">+' + (b.links.length - 12) + ' more</span>' : '') + '</div>' : '') +
+      '</div></div>';
+  }
+
+  function fsDraw() {
+    var box = document.getElementById('fs-out'); if (!box || !_fs) return;
+    var words = _fs.q.toLowerCase().split(/\s+/).filter(Boolean);
+    var html = '', shown = 0, total = 0, list = '', pendingH = null;
+    function flush() { if (list) { html += '<div class="fs-list">' + list + '</div>'; list = ''; } }
+    _fs.blocks.forEach(function (b) {
+      if (b.k === 'h') { pendingH = b; return; }
+      if (b.k === 'n') {
+        if (words.length) return;
+        if (shown >= _fs.limit) return;
+        flush();
+        if (pendingH) { html += '<div class="fs-h">' + esc(pendingH.t) + '</div>'; pendingH = null; }
+        html += '<div class="fs-note' + (b.t.length > 320 ? ' clamp' : '') + '" onclick="this.classList.remove(\'clamp\')">' + esc(b.t) + '</div>';
+        if (b.links.length) html += '<div class="fs-ls" style="margin:-4px 0 12px;">' + b.links.map(function (l) { return '<a class="fs-l" href="' + esc(l.u) + '" target="_blank" rel="noopener">' + esc(fsLinkLabel(l)) + '</a>'; }).join('') + '</div>';
+        return;
+      }
+      if (words.length && !words.every(function (w) { return b.hay.indexOf(w) >= 0; })) return;
+      total++;
+      if (shown >= _fs.limit) return;
+      if (pendingH) { flush(); html += '<div class="fs-h">' + esc(pendingH.t) + '</div>'; pendingH = null; }
+      list += fsEntry(b); shown++;
+    });
+    flush();
+    if (!total && !html) html = '<div class="wv-empty">' + (words.length ? 'nothing on this tab matches that' : 'this tab is empty') + '</div>';
+    if (total > shown) html += '<button class="fs-more" onclick="fsMore()">show more (' + (total - shown).toLocaleString() + ' left)</button>';
+    box.innerHTML = html;
+    var cnt = document.getElementById('fs-count');
+    if (cnt) cnt.textContent = total.toLocaleString() + (total === 1 ? ' entry' : ' entries') + (words.length ? ' match' : ' on this tab');
+  }
+
+  window.fsMore = function () { if (_fs) { _fs.limit += FS_PAGE * 2; fsDraw(); } };
+  window.fsSearch = function (v) { if (!_fs) return; _fs.q = v; _fs.limit = FS_PAGE; clearTimeout(_fs.tm); _fs.tm = setTimeout(fsDraw, 120); };
+
+  window.fsTab = async function (id) {
+    if (!_fs) return;
+    var tab = _fs.tabs.find(function (t) { return t.id === String(id); }) || _fs.tabs[0];
+    _fs.tab = tab;
+    document.querySelectorAll('#view .fs-tab').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-id') === tab.id); });
+    history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(_slug) + '&kind=sheet' + (tab === _fs.tabs[0] ? '' : '&tab=' + encodeURIComponent(tab.id)));
+    var box = document.getElementById('fs-out');
+    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('fs-count').textContent = '';
+    var slug = _slug, g;
+    try { g = await sheetGrid(slug, _fs.info, tab); }
+    catch (e) { if (_fs && _fs.tab === tab) box.innerHTML = '<div class="wv-empty">couldnt load this tab right now, try again in a bit</div>'; return; }
+    if (!_fs || _fs.tab !== tab || _slug !== slug) return;
+    _fs.blocks = fsParse(g); _fs.limit = FS_PAGE;
+    fsDraw();
+  };
+
+  async function renderSheet(slug, tabId) {
+    _slug = slug; _kind = 'sheet';
+    var b = body(); if (!b) return;
+    b.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    var d = _cache[slug + '|comp'], info, tabs;
+    try {
+      var res = await Promise.all([d ? d : api('/trackers/' + encodeURIComponent(slug) + '?kind=comp'), sheetInfo(slug)]);
+      d = _cache[slug + '|comp'] = res[0]; info = res[1];
+      if (!info || !info.kind) { renderTracker(slug, 'comp'); return; }
+      tabs = await sheetTabs(slug, info);
+    } catch (e) { b.innerHTML = '<div class="wv-empty">couldnt load the full tracker</div>'; return; }
+    if (_slug !== slug || _kind !== 'sheet') return;
+    document.title = 'wavernrs — ' + d.tracker.name;
+    _fs = { info: info, tabs: tabs, q: '', limit: FS_PAGE, blocks: [] };
+    var src = info.kind === 'gsheet' ? info.url : info.source;
+    b.innerHTML = header(d.tracker, 'sheet') +
+      '<div class="fs-tabs">' + tabs.map(function (t) { return '<button class="fs-tab" data-id="' + esc(t.id) + '" onclick="fsTab(\'' + esc(t.id) + '\')">' + esc(t.name) + '</button>'; }).join('') + '</div>' +
+      '<div class="fs-bar"><label class="fs-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+        '<input type="search" placeholder="search this tab" oninput="fsSearch(this.value)"></label>' +
+        (src ? '<a class="fs-src" href="' + esc(src) + '" target="_blank" rel="noopener">' + (info.kind === 'gsheet' ? 'open the sheet ↗' : 'original ↗') + '</a>' : '') + '</div>' +
+      '<div class="fs-count" id="fs-count"></div><div id="fs-out"></div>';
+    fsTab(tabId || tabs[0].id);
   }
 
   window.tkKind = function (kind) { renderTracker(_slug, kind); window.scrollTo(0, 0); };
@@ -239,11 +435,11 @@
     var p = new URLSearchParams(location.search);
     var slug = p.get('t'), era = p.get('era');
     var qk = p.get('kind');
-    var kind = (qk === 'edit' || qk === 'art') ? qk : 'comp';
+    var kind = (qk === 'edit' || qk === 'art' || qk === 'sheet') ? qk : 'comp';
     if (!slug) { navigate('/archive'); return; }
     if (typeof initPlayer === 'function') initPlayer();
     _slug = slug; _kind = kind;
-    if (era) window.tkEra(era); else renderTracker(slug, kind);
+    if (era) window.tkEra(era); else if (kind === 'sheet') renderSheet(slug, p.get('tab')); else renderTracker(slug, kind);
   })();
 })();
 </script>
