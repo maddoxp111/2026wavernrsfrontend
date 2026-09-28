@@ -1121,7 +1121,7 @@ window._ytBooted = false;
       api('/archive/eras').then(function (r) { var m = {}; ((r && r.items) || []).forEach(function (t) { m[norm(t.name)] = t; }); st.tags = m; var el = document.getElementById('ds-links'); if (el && st.cur) el.innerHTML = links(st.cur); if (st.sub === 'albums' && !st.album && document.getElementById('ds-body')) albums(document.getElementById('ds-body')); }).catch(function () {});
       if (st.album) openAlbum(st.album); else grid();
     }
-    var SUBS = [['albums', 'Albums'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
+    var SUBS = [['albums', 'Albums'], ['unreleased', 'Unreleased'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
     function grid(sub) {
       st.vt = (st.vt || 0) + 1;
       st.album = ''; st.cur = null;
@@ -1134,6 +1134,7 @@ window._ytBooted = false;
       var subs = document.getElementById('ds-subs'), onb = subs && subs.querySelector('.on'); if (onb && onb.offsetLeft + onb.offsetWidth > subs.clientWidth) subs.scrollLeft = onb.offsetLeft - 16;
       var body = document.getElementById('ds-body');
       if (st.sub === 'albums') albums(body);
+      else if (st.sub === 'unreleased') unreleased(body);
       else if (st.sub === 'producers') producers(body);
       else if (st.sub === 'samples') samplesView(body);
       else creditsView(body, st.sub);
@@ -1147,6 +1148,19 @@ window._ytBooted = false;
           return '<div class="yt-era" data-a="' + esc(a.slug) + '">' + cover(a) + '<div class="yt-era-n">' + esc(a.title) + '</div><div class="yt-era-s">' + esc([a.year, a.artist !== 'Kanye West' && a.artist !== 'Ye' ? a.artist : '', a.tracks + ' songs', tg && tg.comps ? tg.comps + ' comps' : ''].filter(Boolean).join(' · ')) + '</div></div>';
         }).join('') + '</div>';
       body.querySelectorAll('[data-a]').forEach(function (c) { c.onclick = function () { openAlbum(c.getAttribute('data-a')); window.scrollTo(0, 0); }; });
+    }
+    function unreleased(body) {
+      var vt = st.vt;
+      body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      api('/ye/disco/unreleased').then(function (d) {
+        if (vt !== st.vt || !document.getElementById('ds-body')) return;
+        body.innerHTML = '<div class="yt-count">' + d.total + ' albums that never came out, from the Ye tracker. tap one to see every song</div>' +
+          '<div class="yt-eras">' + d.items.map(function (e) {
+            return '<div class="yt-era" data-era="' + esc(e.era) + '"><div class="yt-cover" style="background:' + (window.coverGradient ? coverGradient(e.era) : 'var(--surface-3)') + ';">' + (e.art ? '<img src="' + esc(thumb(e.art, 300)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+              '<div class="yt-era-n">' + esc(e.era) + '</div><div class="yt-era-s">' + e.songs + ' songs · ' + e.leaked + ' leaked' + (e.first_leak ? ' · since ' + esc(e.first_leak.slice(0, 4)) : '') + '</div></div>';
+          }).join('') + '</div>';
+        body.querySelectorAll('[data-era]').forEach(function (c) { c.onclick = function () { navigate('/resources?era=' + encodeURIComponent(c.getAttribute('data-era'))); }; });
+      }).catch(function (e) { if (vt === st.vt) body.innerHTML = '<div class="yt-empty"><b>couldnt load these</b>' + esc(e.message || '') + '</div>'; });
     }
     function producers(body) {
       body.innerHTML = '<div class="yt-count">who produced ye\'s albums, by number of songs. tap a name to see their songs</div><div class="ds-prods">' + st.d.producers.map(function (p) { return '<button class="ye-chip" data-p="' + esc(p.name) + '">' + esc(p.name) + ' <span>' + p.tracks + '</span></button>'; }).join('') + '</div><div id="ds-prod"></div>';
