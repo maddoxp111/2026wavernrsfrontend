@@ -143,6 +143,21 @@ async function ye(params) {
       return { title: a.title + ' — ' + a.artist + ' (' + a.year + ')', description: joinParts([tracks + ' songs', top.length ? 'with ' + top.join(', ') : null, 'credits and samples on wavernrs']), image: a.cover || FALLBACK_IMAGE, type: 'music.album' };
     }
   }
+  if (view === 'tweets' && params.get('tweet')) {
+    const d = await getJSON('/ye/tweets/' + encodeURIComponent(params.get('tweet')));
+    const t = d && d.tweet;
+    if (t) {
+      const when = new Date(t.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const img = (t.media || []).map(m => m.image_url).find(Boolean) || (d.profile && d.profile.pfp) || FALLBACK_IMAGE;
+      const text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim();
+      return { title: 'ye on ' + when, description: (text.length > 280 ? text.slice(0, 277) + '…' : text) || 'a ye tweet', image: img, type: 'article' };
+    }
+  }
+  if (view === 'yeezy' && params.get('item')) {
+    const d = await getJSON('/ye/yeezy/item/' + encodeURIComponent(params.get('item')));
+    const x = d && d.item;
+    if (x) return { title: x.title + (x.year ? ' (' + x.year + ')' : ''), description: joinParts([x.sub, x.price ? '$' + x.price : null, 'from the Yeezy archive on wavernrs']), image: (x.images || [])[0] || FALLBACK_IMAGE, type: 'product' };
+  }
   if (view === 'tweets' && params.get('filter') === 'today') return { title: 'On this day in Ye history', description: 'what ye tweeted on this date, every year', image: FALLBACK_IMAGE, type: 'website' };
   return { title: YE_VIEWS[view][0] + ' — wavernrs', description: YE_VIEWS[view][1], image: FALLBACK_IMAGE, type: 'website' };
 }
@@ -184,7 +199,7 @@ module.exports = async (req, res) => {
   try {
     if (type === 'ye') {
       const keep = new URLSearchParams();
-      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
+      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era', 'tweet', 'item']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
       where = SITE + '/resources' + (keep.toString() ? '?' + keep.toString() : '');
       meta = await ye(url.searchParams);
     } else if (id && LOADERS[type]) meta = await LOADERS[type](id);

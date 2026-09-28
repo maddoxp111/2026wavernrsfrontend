@@ -339,6 +339,11 @@
   .ds-pv.on { background:var(--brand); color:#14121c; }
   .ds-nav { display:flex; justify-content:space-between; gap:10px; margin-top:22px; }
   .ds-nav .yt-l { border:0; cursor:pointer; font-family:inherit; font-size:12.5px; }
+  .tw-share { border:0; background:none; color:var(--text-3); font:inherit; font-size:inherit; font-weight:700; cursor:pointer; padding:0; margin-left:auto; }
+  .tw-share + a { margin-left:0 !important; }
+  .tw-share:hover { color:var(--text); }
+  .tw-one-h { display:flex; justify-content:space-between; align-items:center; font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--brand); margin:4px 0 6px; }
+  #tw-one .tw { border:1px solid color-mix(in srgb, var(--brand) 45%, transparent); border-radius:14px; margin-bottom:18px; }
   .tw-day { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:24px 0 8px; }
   .yt-empty b { display:block; font-size:18px; color:var(--text); margin-bottom:6px; }
 </style>
@@ -941,7 +946,7 @@ window._ytBooted = false;
         (t.in_reply_to_username ? '<div class="tw-reply">replying to ' + [].concat(t.in_reply_to_username).map(function (u) { return '@' + esc(u); }).join(' ') + '</div>' : '') +
         '<div class="tw-t">' + linkify(t.text || '', hasMedia) + '</div>' + media(t.media) + quote + poll +
         '<div class="tw-s"><span title="replies">💬 ' + num(t.replies) + '</span><span title="retweets">🔁 ' + num(t.retweets) + '</span><span title="likes">♥ ' + num(t.likes) + '</span>' + (t.views ? '<span title="views">👁 ' + num(t.views) + '</span>' : '') +
-        '<a href="https://x.com/kanyewest/status/' + esc(t.id) + '" target="_blank" rel="noopener nofollow">original ↗</a></div></div></article>';
+        '<button class="tw-share" data-share="' + esc(t.id) + '" title="copy a link to this tweet">share</button><a href="https://x.com/kanyewest/status/' + esc(t.id) + '" target="_blank" rel="noopener nofollow">original ↗</a></div></div></article>';
     }
     function url() {
       var q = new URLSearchParams(); q.set('view', 'tweets'); if (st.year) q.set('year', st.year); if (st.q) q.set('q', st.q); if (st.filter === 'today') q.set('filter', 'today');
@@ -974,8 +979,22 @@ window._ytBooted = false;
         feed.innerHTML = html || '<div class="yt-empty"><b>nothing on ' + esc(day) + '</b>ye didnt tweet on this day</div>';
       } catch (e) { feed.innerHTML = '<div class="yt-empty"><b>couldnt load this day</b>' + esc(e.message || '') + '</div>'; }
     }
+    function shareTweet(id) {
+      var link = location.origin + '/resources?view=tweets&tweet=' + encodeURIComponent(id);
+      if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) { navigator.share({ url: link }).catch(function () {}); return; }
+      try { navigator.clipboard.writeText(link); if (typeof wvToast === 'function') wvToast('link copied'); } catch (_) {}
+    }
+    async function loadOne(id) {
+      var box = document.getElementById('tw-one'); if (!box) return;
+      try {
+        var d = await api('/ye/tweets/' + encodeURIComponent(id));
+        if (d.profile) st.profiles[d.tweet.year] = st.profiles[d.tweet.year] || d.profile;
+        box.innerHTML = '<div class="tw-one-h"><span>shared tweet</span><button class="yt-back" id="tw-one-x" style="margin:0;">see every tweet ›</button></div>' + card(d.tweet);
+        document.getElementById('tw-one-x').onclick = function () { box.innerHTML = ''; try { history.replaceState(history.state, '', location.pathname + '?view=tweets'); } catch (_) {} };
+      } catch (e) { box.innerHTML = '<div class="yt-empty"><b>couldnt find that tweet</b></div>'; }
+    }
     function shell() {
-      root.innerHTML = '<div class="tw-top" id="tw-top"></div>' +
+      root.innerHTML = '<div id="tw-one"></div><div class="tw-top" id="tw-top"></div>' +
         '<div class="yt-bar" style="margin-top:14px;"><label class="yt-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="tw-q" placeholder="search every tweet..." value="' + esc(st.q) + '" autocomplete="off"></label>' +
         '<select id="tw-sort" class="ye-sel"><option value="new">newest</option><option value="old">oldest</option><option value="top">most liked</option></select></div>' +
         '<div class="yt-tabs" id="tw-years"></div>' +
@@ -999,7 +1018,8 @@ window._ytBooted = false;
       feed.innerHTML = st.items.length ? st.items.map(card).join('') + (st.items.length < st.total ? '<div class="yt-more"><button class="wv-btn-ghost" id="tw-more">show more</button></div>' : '') : '<div class="yt-empty"><b>no tweets match</b>try something else</div>';
       var mb = document.getElementById('tw-more'); if (mb) mb.onclick = function () { mb.disabled = true; load(true); };
     }
-    return { open: function () { if (st.started) return; st.started = true; shell(); load(false); } };
+    root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share]'); if (b) { e.preventDefault(); shareTweet(b.getAttribute('data-share')); } });
+    return { open: function () { if (st.started) return; st.started = true; shell(); if (P.get('tweet')) loadOne(P.get('tweet')); load(false); } };
   })();
 
   // ── Discography (MusicBrainz) ──────────────────────────────────
@@ -1227,7 +1247,7 @@ window._ytBooted = false;
       }
       if (y.tweets.top) {
         var t = y.tweets.top;
-        html += '<div class="tl-card" data-go="/resources?view=tweets&year=' + y.year + '"><div class="tl-k">MOST LIKED TWEET' + (t.likes ? ' · ♥ ' + num(t.likes) : '') + '</div><div class="tl-tw">' + esc(String(t.text || '').replace(/\s*https?:\/\/\S+/g, '')) + '</div>' + (y.tweets.count > 20 ? bars(y.tweets.months) : '') + '</div>';
+        html += '<div class="tl-card" data-go="/resources?view=tweets&year=' + y.year + '&tweet=' + encodeURIComponent(t.id) + '"><div class="tl-k">MOST LIKED TWEET' + (t.likes ? ' · ♥ ' + num(t.likes) : '') + '</div><div class="tl-tw">' + esc(String(t.text || '').replace(/\s*https?:\/\/\S+/g, '')) + '</div>' + (y.tweets.count > 20 ? bars(y.tweets.months) : '') + '</div>';
       }
       if (y.tour) {
         html += '<div class="tl-card" data-go="/resources?view=tours&year=' + y.year + '"><div class="tl-k">TOUR</div><div class="tl-at">' + y.tour.shows + ' show' + (y.tour.shows === 1 ? '' : 's') + (y.tour.first ? ' · starting with ' + esc(String(y.tour.first).toLowerCase()) : '') + '</div><div class="yt-sub">' + [y.tour.videos ? y.tour.videos + ' videos' : '', y.tour.merch ? y.tour.merch + ' merch' : '', y.tour.yedia ? y.tour.yedia + ' fan photos and videos' : ''].filter(Boolean).join(' · ') + '</div></div>';
