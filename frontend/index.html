@@ -194,7 +194,7 @@ async function fillOnThisDay() {
     var t = y.items && y.items[0]; if (!t) return;
     var text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim() || (t.media && t.media.length ? '[photo]' : '');
     if (!text) return;
-    cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">' + (t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : 'read it ›') + '</div></div>');
+    cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">' + (t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : 'read it ›') + '</div></div>');
   });
   ((d.leaks && d.leaks.items) || []).slice(0, 8).forEach(function (l) {
     var clean = String(l.title).replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
@@ -207,13 +207,9 @@ async function fillOnThisDay() {
     cards.push('<div class="scroll-card" onclick="navigate(\'/resources?view=yeezy&item=' + encodeURIComponent(x.id).replace(/'/g, '%27') + '\')" style="flex-shrink:0;width:150px;"><div class="scroll-card-cover" style="background:#fff;"><img src="' + escHtml(art) + '" loading="lazy" style="object-fit:contain;" onerror="this.remove()"></div>' +
       '<div class="scroll-card-title">' + escHtml(x.title) + '</div><div class="scroll-card-sub">yeezy · ' + escHtml(x.year) + '</div></div>');
   });
-  var dly = {}; try { dly = JSON.parse(localStorage.getItem('wv_yedaily') || '{}') || {}; } catch (_) {}
-  var todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
-  var played = dly.day === todayKey && dly.res;
-  cards.unshift('<div class="wv-otd-tw wv-otd-quiz" onclick="navigate(\'/resources?view=quiz\')"><div class="wv-otd-y">DAILY YE</div><div class="wv-otd-t">' + (played ? escHtml(dly.res.split('').map(function (c) { return c === '1' ? '🟩' : '🟥'; }).join('')) + '<br>you got ' + (dly.res.split('1').length - 1) + '/5 today' : 'today\u2019s 5 questions. same for everyone, one try') + '</div><div class="wv-otd-s">' + (played ? (dly.streak > 1 ? '🔥 ' + dly.streak + ' day streak' : 'new one at midnight') : 'play ›') + '</div></div>');
   if (!cards.length) return;
   var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
-  el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources?view=tweets&filter=today\')">On this day in Ye history</h2><button class="wv-see-all" onclick="navigate(\'/resources?view=tweets&filter=today\')">' + escHtml(day) + '</button></div>' +
+  el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources?view=today\')">On this day in Ye history</h2><button class="wv-see-all" onclick="navigate(\'/resources?view=today\')">' + escHtml(day) + '</button></div>' +
     '<div class="scroll-row">' + cards.join('') + '</div></div>';
 }
 
@@ -239,8 +235,8 @@ async function fillTrackerNew() {
 }
 
 // A one-time heads up about new corners of the site. Dismissed for good once closed.
-var WV_NEWS = { id: 'ye-archive-2026-09-28', items: [
-  ['Daily Ye', '5 questions a day, same for everyone', '/resources?view=quiz'],
+var WV_NEWS = { id: 'ye-archive-2026-09-28b', items: [
+  ['On this day', 'what ye tweeted, dropped and leaked on this date', '/resources?view=today'],
   ['Discography', 'producers, samples and previews for every album', '/resources?view=disco'],
   ['Song pages', 'every version of a song, leaks, credits and live shows', '/resources?view=song&t=Runaway'],
   ['Timeline', 'ye year by year', '/resources?view=timeline'],

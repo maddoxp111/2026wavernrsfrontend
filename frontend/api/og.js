@@ -127,8 +127,8 @@ const YE_VIEWS = {
   yeezy: ['The Yeezy archive', 'every Yeezy piece, season by season'],
   tours: ['Ye tours', 'shows, setlists, merch and fan footage from every tour'],
   disco: ['Ye discography', 'every album with producers, samples and the songs he made for other artists'],
-  timeline: ['Ye, year by year', 'albums, tweets, tours, Yeezy and collaborations on one timeline'],
-  quiz: ['The Ye quiz', 'how well do you know ye? tweets, albums, samples, producers and name that song'],
+  timeline: ['Ye, month by month', 'albums, tweets, leaks, tours, Yeezy and collaborations on one timeline'],
+  today: ['On this day in Ye history', 'what ye tweeted, released and leaked on this date, every year'],
 };
 async function ye(params) {
   const view = YE_VIEWS[params.get('view')] ? params.get('view') : 'tracker';
