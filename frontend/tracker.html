@@ -373,9 +373,10 @@
     var top = document.querySelector('#view .tk-top'); if (!top || document.querySelector('#view .tk-new')) return;
     var x = d.items[0];
     var html = '<details class="tk-new"><summary>What’s new <span class="d">updated ' + esc(tkWhen(x.at)) + '</span>' +
-      (x.added_count ? '<span class="pl">+' + x.added_count + ' added</span>' : '') + (x.removed_count ? '<span class="mi">−' + x.removed_count + ' removed</span>' : '') + '<span class="ar">▾</span></summary>' +
+      (x.added_count ? '<span class="pl">+' + x.added_count + ' added</span>' : '') + (x.removed_count ? '<span class="mi">−' + x.removed_count + ' removed</span>' : '') + (x.renamed_count ? '<span class="d">' + x.renamed_count + ' renamed</span>' : '') + '<span class="ar">▾</span></summary>' +
       (x.added.length ? '<h4>added</h4><ul>' + x.added.map(tkItem).join('') + '</ul>' : '') +
       (x.removed.length ? '<h4>removed from the tracker</h4><ul>' + x.removed.map(tkItem).join('') + '</ul>' : '') +
+      (x.renamed && x.renamed.length ? '<h4>renamed</h4><ul>' + x.renamed.map(function (r) { return tkItem({ era: r.era, n: r.n, c: '', a: r.a }).replace('<span>· ', '<span>was ' + esc(r.from) + ' · '); }).join('') + '</ul>' : '') +
       (x.added_count > x.added.length || x.removed_count > x.removed.length ? '<div class="older">showing the first ' + Math.max(x.added.length, x.removed.length) + '</div>' : '') +
       (d.items.length > 1 ? '<div class="older">earlier: ' + d.items.slice(1, 6).map(function (o) { return esc(tkWhen(o.at)) + ' (+' + o.added_count + ' / −' + o.removed_count + ')'; }).join(' · ') + '</div>' : '') +
       '</details>';

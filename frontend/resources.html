@@ -273,6 +273,42 @@
   .tl-pics { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
   .tl-pics img { width:84px; height:84px; object-fit:contain; background:#fff; border-radius:8px; flex:none; }
   @media (max-width:640px) { .tl { padding-left:20px; } .tl-dot { left:-20px; } .tl::before { left:4px; } .tl-yh { font-size:28px; } .tl-albums { grid-template-columns:1fr; } }
+  #ye-quiz { margin-top:16px; max-width:720px; }
+  .qz-hero h2, .qz-done h2 { font-size:28px; font-weight:800; letter-spacing:-.03em; margin:4px 0 6px; }
+  .qz-hero p { color:var(--text-2); margin:0 0 18px; font-size:14px; }
+  .qz-k { font-size:11px; font-weight:800; letter-spacing:.09em; color:var(--text-3); }
+  .qz-modes { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+  .qz-mode { text-align:left; border:0; background:var(--surface); color:var(--text); font:inherit; border-radius:14px; padding:16px; cursor:pointer; display:flex; flex-direction:column; gap:4px; }
+  .qz-mode:hover { background:var(--surface-2); }
+  .qz-mode b { font-size:17px; }
+  .qz-mode span { font-size:12.5px; color:var(--text-3); }
+  .qz-mode i { font-style:normal; font-size:11.5px; font-weight:700; color:var(--brand); margin-top:4px; }
+  .qz-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:13px; color:var(--text-2); }
+  .qz-prog { height:4px; background:var(--surface-2); border-radius:99px; margin:10px 0 18px; overflow:hidden; }
+  .qz-prog i { display:block; height:100%; background:var(--brand); transition:width .3s; }
+  .qz-q { background:var(--surface); border-radius:16px; padding:18px; margin-bottom:12px; }
+  .qz-text { font-size:22px; font-weight:800; letter-spacing:-.02em; line-height:1.3; margin-top:8px; overflow-wrap:anywhere; }
+  .qz-text.tw { font-size:17px; font-weight:600; letter-spacing:0; white-space:pre-line; }
+  .qz-opts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .qz-opts.imgs { grid-template-columns:repeat(4,1fr); }
+  @media (max-width:560px) { .qz-opts { grid-template-columns:1fr; } .qz-opts.imgs { grid-template-columns:1fr 1fr; } .qz-text { font-size:19px; } }
+  .qz-opt { border:2px solid transparent; background:var(--surface-2); color:var(--text); font:inherit; border-radius:12px; padding:12px 14px; cursor:pointer; text-align:left; display:flex; flex-direction:column; gap:2px; width:100%; }
+  .qz-opt:hover:not(:disabled) { border-color:var(--hair-strong, rgba(255,255,255,.2)); }
+  .qz-opt img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; margin-bottom:6px; }
+  .qz-opt b { font-size:14.5px; }
+  .qz-opt span { font-size:12px; color:var(--text-3); }
+  .qz-opt.right { border-color:#4ade80; background:rgba(74,222,128,.14); }
+  .qz-opt.wrong { border-color:#f87171; background:rgba(248,113,113,.12); }
+  .qz-opt:disabled { cursor:default; }
+  .qz-res { margin-top:14px; display:flex; flex-direction:column; gap:3px; font-size:14px; }
+  .qz-res.ok b { color:#4ade80; } .qz-res.no b { color:#f87171; }
+  .qz-res span { color:var(--text-2); font-size:13px; }
+  .qz-next { margin-top:14px; border:0; background:var(--brand); color:#14121c; font:inherit; font-weight:800; font-size:14px; padding:11px 22px; border-radius:99px; cursor:pointer; }
+  .qz-done { text-align:center; padding:20px 0; }
+  .qz-big { font-size:84px; font-weight:900; letter-spacing:-.05em; line-height:1; margin:6px 0; }
+  .qz-big span { font-size:34px; color:var(--text-3); margin-left:6px; letter-spacing:0; }
+  .qz-acts { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px; align-items:center; }
+  .qz-acts .qz-next, .qz-acts .qz-opt { margin-top:0; padding:11px 20px; border-radius:99px; font-weight:700; font-size:14px; flex-direction:row; }
   .ds-h { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:30px 0 10px; }
   .ds-prods { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .ds-prods .ye-chip span { opacity:.6; font-weight:600; margin-left:3px; }
@@ -305,6 +341,7 @@
       <button role="tab" aria-selected="false" data-view="tours">Tours</button>
       <button role="tab" aria-selected="false" data-view="disco">Discography</button>
       <button role="tab" aria-selected="false" data-view="timeline">Timeline</button>
+      <button role="tab" aria-selected="false" data-view="quiz">Quiz</button>
     </div>
   </div>
   <div id="ye-tracker">
@@ -317,6 +354,7 @@
   <div id="ye-tours" style="display:none;"></div>
   <div id="ye-disco" style="display:none;"></div>
   <div id="ye-timeline" style="display:none;"></div>
+  <div id="ye-quiz" style="display:none;"></div>
 </div>
 </div><!-- /view -->
 
@@ -840,7 +878,7 @@ window._ytBooted = false;
 // ── Ye archive views: Tracker / Tweets / Yeezy ──────────────────
 (function () {
   var P = new URLSearchParams(location.search);
-  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline' };
+  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', quiz: 'ye-quiz' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function num(n) { n = +n || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K' : String(n); }
   function thumb(u, w) {
@@ -857,7 +895,7 @@ window._ytBooted = false;
     var yv = document.getElementById('ye-views'), yb = yv && yv.querySelector('.on'); if (yb && yb.offsetLeft + yb.offsetWidth > yv.scrollLeft + yv.clientWidth) yv.scrollLeft = yb.offsetLeft + yb.offsetWidth - yv.clientWidth + 12;
     if (v === 'tracker') { if (typeof window._ytBoot === 'function') window._ytBoot(); if (push && typeof window._ytSetUrl === 'function') window._ytSetUrl(); return; }
     if (push) { try { history.replaceState(history.state, '', location.pathname + '?view=' + v); } catch (_) {} }
-    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else YZ.open();
+    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else if (v === 'quiz') QZ.open(); else YZ.open();
   }
   document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { b.onclick = function () { setView(b.getAttribute('data-view'), true); }; });
 
@@ -1179,6 +1217,76 @@ window._ytBooted = false;
       paint();
     }
     return { open: function () { if (st.started) return; st.started = true; load(); } };
+  })();
+
+  // ── Quiz ───────────────────────────────────────────────────────
+  var QZ = (function () {
+    var root = document.getElementById('ye-quiz');
+    var MODES = [['', 'mixed', 'a bit of everything'], ['tweet', 'tweets', 'guess the year he tweeted it'], ['album', 'albums', 'which album is the song on'], ['sample', 'samples', 'which song samples it'], ['producer', 'producers', 'who helped produce it']];
+    var st = { mode: '', qs: [], i: 0, score: 0, streak: 0, best: 0, picked: null, started: false };
+    function bestKey() { return 'wv_yequiz_best_' + (st.mode || 'mixed'); }
+    function getBest() { try { return +localStorage.getItem(bestKey()) || 0; } catch (_) { return 0; } }
+    function setBest(n) { try { localStorage.setItem(bestKey(), String(n)); } catch (_) {} }
+    function menu() {
+      root.innerHTML = '<div class="qz-hero"><div class="qz-k">YE QUIZ</div><h2>how well do you know ye?</h2><p>10 questions from his tweets, albums, samples and credits. pick a mode</p></div>' +
+        '<div class="qz-modes">' + MODES.map(function (m) { var b = 0; try { b = +localStorage.getItem('wv_yequiz_best_' + (m[0] || 'mixed')) || 0; } catch (_) {} return '<button class="qz-mode" data-m="' + m[0] + '"><b>' + m[1] + '</b><span>' + m[2] + '</span>' + (b ? '<i>best ' + b + '/10</i>' : '') + '</button>'; }).join('') + '</div>';
+      root.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { st.mode = b.getAttribute('data-m'); start(); }; });
+    }
+    async function start() {
+      root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try { var d = await api('/ye/quiz?n=10' + (st.mode ? '&kinds=' + st.mode : '')); st.qs = d.questions || []; }
+      catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt start the quiz</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
+      if (!st.qs.length) { root.innerHTML = '<div class="yt-empty"><b>no questions yet</b>the archive is still loading, try again in a minute</div>'; return; }
+      st.i = 0; st.score = 0; st.streak = 0; st.best = getBest(); st.picked = null;
+      ask();
+    }
+    function ask() {
+      var q = st.qs[st.i];
+      st.picked = null;
+      var imgs = q.options.some(function (o) { return o.img; });
+      root.innerHTML = '<div class="qz-bar"><button class="yt-back" id="qz-quit" style="margin:0;">← modes</button><span>' + (st.i + 1) + ' / ' + st.qs.length + '</span><span>score <b>' + st.score + '</b>' + (st.streak > 1 ? ' · 🔥 ' + st.streak : '') + '</span></div>' +
+        '<div class="qz-prog"><i style="width:' + (st.i / st.qs.length * 100) + '%"></i></div>' +
+        '<div class="qz-q"><div class="qz-k">' + esc(q.q) + '</div>' +
+          '<div class="qz-text' + (q.kind === 'tweet' ? ' tw' : '') + '">' + esc(q.text) + '</div>' + (q.sub ? '<div class="yt-sub" style="margin-top:6px;">' + esc(q.sub) + '</div>' : '') + '</div>' +
+        '<div class="qz-opts' + (imgs ? ' imgs' : '') + '">' + q.options.map(function (o, k) {
+          return '<button class="qz-opt" data-k="' + k + '">' + (o.img ? '<img src="' + esc(thumb(o.img, 240)) + '" alt="" onerror="this.remove()">' : '') + '<b>' + esc(o.label) + '</b>' + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + '</button>';
+        }).join('') + '</div><div id="qz-after"></div>';
+      document.getElementById('qz-quit').onclick = menu;
+      root.querySelectorAll('.qz-opt').forEach(function (b) { b.onclick = function () { answer(+b.getAttribute('data-k')); }; });
+    }
+    function answer(k) {
+      if (st.picked != null) return;
+      var q = st.qs[st.i]; st.picked = k;
+      var right = q.options[k].label === q.answer;
+      if (right) { st.score++; st.streak++; } else st.streak = 0;
+      root.querySelectorAll('.qz-opt').forEach(function (b, j) { var o = q.options[j]; b.disabled = true; if (o.label === q.answer) b.classList.add('right'); else if (j === k) b.classList.add('wrong'); });
+      var more = '';
+      if (q.kind === 'tweet' && q.extra) more = 'tweeted ' + new Date(q.extra.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) + (q.extra.likes ? ' · ♥ ' + num(q.extra.likes) : '');
+      else if (q.kind === 'producer' && q.extra) more = 'produced by ' + q.extra.all.join(', ');
+      else if (q.kind === 'sample' && q.extra) more = q.answer + ' is on ' + q.extra.album;
+      else if (q.kind === 'album' && q.extra) more = q.answer + ' came out in ' + q.extra.year;
+      var last = st.i === st.qs.length - 1;
+      document.getElementById('qz-after').innerHTML = '<div class="qz-res ' + (right ? 'ok' : 'no') + '"><b>' + (right ? (st.streak > 2 ? 'on fire 🔥' : 'correct') : 'nope, it was ' + esc(q.answer)) + '</b>' + (more ? '<span>' + esc(more) + '</span>' : '') + '</div>' +
+        '<button class="qz-next" id="qz-next">' + (last ? 'see your score' : 'next question') + '</button>';
+      var nb = document.getElementById('qz-next'); nb.onclick = function () { if (last) done(); else { st.i++; ask(); } }; nb.focus();
+    }
+    function done() {
+      var n = st.qs.length, s = st.score, isBest = s > st.best;
+      if (isBest) setBest(s);
+      var line = s === n ? 'perfect. you might be ye' : s >= n * 0.8 ? 'certified ye head' : s >= n * 0.5 ? 'not bad, not bad' : s >= n * 0.3 ? 'you listen to the singles' : 'go run it back';
+      var mode = (MODES.filter(function (m) { return m[0] === st.mode; })[0] || MODES[0])[1];
+      var shareText = 'i got ' + s + '/' + n + ' on the wavernrs ye quiz (' + mode + ') — ' + location.origin + '/resources?view=quiz';
+      root.innerHTML = '<div class="qz-done"><div class="qz-k">YOUR SCORE</div><div class="qz-big">' + s + '<span>/' + n + '</span></div><h2>' + esc(line) + '</h2>' +
+        (isBest ? '<div class="yt-stat" style="display:inline-block;">new best for ' + esc(mode) + '</div>' : st.best ? '<div class="yt-sub">your best is ' + st.best + '/' + n + '</div>' : '') +
+        '<div class="qz-acts"><button class="qz-next" id="qz-again">play again</button><button class="qz-opt" id="qz-share" style="width:auto;">share score</button><button class="qz-opt" id="qz-menu" style="width:auto;">modes</button></div></div>';
+      document.getElementById('qz-again').onclick = start;
+      document.getElementById('qz-menu').onclick = menu;
+      document.getElementById('qz-share').onclick = function () {
+        if (navigator.share) { navigator.share({ text: shareText }).catch(function () {}); return; }
+        try { navigator.clipboard.writeText(shareText); if (typeof wvToast === 'function') wvToast('copied your score'); } catch (_) {}
+      };
+    }
+    return { open: function () { if (st.started) return; st.started = true; menu(); } };
   })();
 
   // ── Yeezy ──────────────────────────────────────────────────────
