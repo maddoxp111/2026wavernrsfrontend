@@ -325,6 +325,10 @@
   .ds-r { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
   .ds-find { border:0; background:var(--surface-2); color:var(--text-2); font:inherit; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:99px; cursor:pointer; }
   .ds-find:hover { background:var(--brand); color:#14121c; }
+  .ds-ls { display:flex; gap:10px; margin-top:4px; font-size:11.5px; }
+  .ds-ls a { color:var(--text-3); text-decoration:none; font-weight:700; }
+  .ds-ls a:hover { color:var(--text); }
+  .ds-pv.on { background:var(--brand); color:#14121c; }
   .ds-nav { display:flex; justify-content:space-between; gap:10px; margin-top:22px; }
   .ds-nav .yt-l { border:0; cursor:pointer; font-family:inherit; font-size:12.5px; }
   .tw-day { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:24px 0 8px; }
@@ -1147,7 +1151,8 @@ window._ytBooted = false;
             (t.producers.length ? '<div class="ds-p">prod. ' + t.producers.map(function (p) { return '<button data-pp="' + esc(p) + '">' + esc(p) + '</button>'; }).join(', ') + '</div>' : '') +
             samp(t.samples, 'samples') +
             (t.sampled_by_count ? '<details class="ds-by"><summary>sampled by ' + t.sampled_by_count + (t.sampled_by_count === 1 ? ' song' : ' songs') + '</summary>' + samp(t.sampled_by, '') + '</details>' : '') +
-            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span><button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button></div></div>';
+            ((t.links && (t.links.spotify || t.links.apple)) ? '<div class="ds-ls">' + (t.links.spotify ? '<a href="' + esc(t.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (t.links.apple ? '<a href="' + esc(t.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
+            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span>' + (t.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(t.preview) + '" title="play a 30 second preview">▶ preview</button>' : '') + '<button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button></div></div>';
         }).join('') + '</div>';
       });
       html += '<div class="ds-nav">' + (r.prev ? '<button class="yt-l" data-a="' + esc(r.prev.slug) + '">‹ ' + esc(r.prev.title) + '</button>' : '<span></span>') + (r.next ? '<button class="yt-l" data-a="' + esc(r.next.slug) + '">' + esc(r.next.title) + ' ›</button>' : '') + '</div>' +
@@ -1156,8 +1161,23 @@ window._ytBooted = false;
       document.getElementById('ds-back').onclick = function () { grid('albums'); window.scrollTo(0, 0); };
       root.querySelectorAll('.ds-nav [data-a]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-a')); window.scrollTo(0, 0); }; });
       root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
-      root.querySelectorAll('.ds-find').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
+      root.querySelectorAll('.ds-find[data-q]').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
+      root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
     }
+    var _pv = null, _pvBtn = null;
+    function preview(b) {
+      var u = b.getAttribute('data-pv');
+      if (_pv && _pvBtn === b) { if (_pv.paused) { _pv.play().catch(function () {}); } else { _pv.pause(); } return; }
+      if (_pv) { _pv.pause(); if (_pvBtn) { _pvBtn.textContent = '▶ preview'; _pvBtn.classList.remove('on'); } }
+      if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
+      _pv = new Audio(u); _pvBtn = b;
+      _pv.onplay = function () { b.textContent = '❚❚ preview'; b.classList.add('on'); };
+      _pv.onpause = _pv.onended = function () { b.textContent = '▶ preview'; b.classList.remove('on'); };
+      _pv.play().catch(function () { b.textContent = 'cant play'; });
+    }
+    var stopPv = function () { if (_pv) _pv.pause(); };
+    if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', stopPv);
+    if (window._pageCleanup) window._pageCleanup.push(function () { stopPv(); if (typeof audio !== 'undefined' && audio && audio.removeEventListener) audio.removeEventListener('play', stopPv); });
     return { open: function () { if (st.started) return; st.started = true; load(); } };
   })();
 

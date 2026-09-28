@@ -595,8 +595,28 @@
           '<div class="track-row-artist">' + escHtml(sub) + '</div>' +
           (r.producers && r.producers.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">prod. ' + escHtml(r.producers.join(', ')) + '</div>' : '') +
           (r.samples && r.samples.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">samples ' + r.samples.map(function (x) { return escHtml(x.t) + (x.a ? ' by ' + escHtml(x.a) : ''); }).join(' · ') + '</div>' : '') +
+          ((r.preview || (r.links && (r.links.spotify || r.links.apple))) ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;" onclick="event.stopPropagation()">' +
+            (r.preview ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;font-weight:700;" data-ypv="' + escHtml(r.preview) + '">▶ 30s preview</button>' : '') +
+            (r.links && r.links.spotify ? '<a class="wv-pill" style="font-size:12px;padding:5px 12px;font-weight:700;text-decoration:none;" href="' + escHtml(r.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') +
+            (r.links && r.links.apple ? '<a class="wv-pill" style="font-size:12px;padding:5px 12px;font-weight:700;text-decoration:none;" href="' + escHtml(r.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
           '</div><span class="track-row-plays" style="white-space:nowrap;">credits ›</span></div>';
       }).join('');
+    var pv = null;
+    el.querySelectorAll('[data-ypv]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        if (pv && !pv.paused) { pv.pause(); return; }
+        if (!pv) {
+          pv = new Audio(b.getAttribute('data-ypv'));
+          pv.onplay = function () { b.textContent = '❚❚ 30s preview'; };
+          pv.onpause = pv.onended = function () { b.textContent = '▶ 30s preview'; };
+          if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', function () { pv.pause(); });
+          if (window._pageCleanup) window._pageCleanup.push(function () { pv.pause(); });
+        }
+        if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
+        pv.play().catch(function () {});
+      };
+    });
   }
 
   async function loadAlsoOn() {
