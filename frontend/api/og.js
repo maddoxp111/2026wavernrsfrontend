@@ -132,6 +132,7 @@ const YE_VIEWS = {
 };
 async function ye(params) {
   const view = YE_VIEWS[params.get('view')] ? params.get('view') : 'tracker';
+  if (params.get('view') === 'song' && !params.get('t')) return { title: 'Ye songs — wavernrs', description: 'every version of every Ye song', image: FALLBACK_IMAGE, type: 'website' };
   if (view === 'disco' && params.get('album')) {
     const d = await getJSON('/ye/disco/' + encodeURIComponent(params.get('album')));
     const a = d && d.album;
@@ -151,6 +152,14 @@ async function ye(params) {
       const img = (t.media || []).map(m => m.image_url).find(Boolean) || (d.profile && d.profile.pfp) || FALLBACK_IMAGE;
       const text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim();
       return { title: 'ye on ' + when, description: (text.length > 280 ? text.slice(0, 277) + '…' : text) || 'a ye tweet', image: img, type: 'article' };
+    }
+  }
+  if (params.get('view') === 'song' && params.get('t')) {
+    const d = await getJSON('/ye/song?t=' + encodeURIComponent(params.get('t')));
+    if (d && d.title) {
+      const rel = d.released && d.released[0];
+      const leaked = (d.tracker || []).filter(x => x.tab !== 'Released' && x.leak).length;
+      return { title: d.title + ' — every version', description: joinParts([rel ? 'from ' + rel.album + ' (' + rel.year + ')' : 'unreleased', (d.tracker || []).length ? d.tracker.length + ' on the Ye tracker' : null, leaked ? leaked + ' leaked' : null, rel && rel.producers.length ? 'prod. ' + rel.producers.slice(0, 3).join(', ') : null]), image: (rel && rel.cover ? rel.cover.replace('front-250', 'front-500') : null) || ((d.tracker || []).find(x => x.art) || {}).art || FALLBACK_IMAGE, type: 'music.song' };
     }
   }
   if (view === 'yeezy' && params.get('item')) {
@@ -199,7 +208,7 @@ module.exports = async (req, res) => {
   try {
     if (type === 'ye') {
       const keep = new URLSearchParams();
-      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era', 'tweet', 'item']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
+      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era', 'tweet', 'item', 't']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
       where = SITE + '/resources' + (keep.toString() ? '?' + keep.toString() : '');
       meta = await ye(url.searchParams);
     } else if (id && LOADERS[type]) meta = await LOADERS[type](id);

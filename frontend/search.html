@@ -68,7 +68,7 @@
     var disco = function (slug) { return '/resources?view=disco&album=' + encodeURIComponent(slug); };
     var out = '<div class="search-results-section"><div class="search-results-title">From the Ye archive</div><div class="track-list">';
     (ya.albums || []).forEach(function (a) { out += row(a.cover_sm, a.title, 'album · ' + a.year + ' · ' + a.tracks + ' songs', disco(a.slug), 'discography'); });
-    (ya.songs || []).forEach(function (t) { out += row(t.cover, t.title, t.album + ' · ' + t.year + (t.producers.length ? ' · prod. ' + t.producers.join(', ') : ''), disco(t.slug), 'song'); });
+    (ya.songs || []).forEach(function (t) { out += row(t.cover, t.title, t.album + ' · ' + t.year + (t.producers.length ? ' · prod. ' + t.producers.join(', ') : ''), '/resources?view=song&t=' + encodeURIComponent(t.title), 'song'); });
     (ya.samples || []).forEach(function (x) { out += row(x.cover, x.t + (x.a ? ' — ' + x.a : ''), 'sampled on ' + x.song + ' (' + x.album + ')', disco(x.slug), 'sample'); });
     (ya.credits || []).forEach(function (c) { out += row(c.cover, c.title, c.artist + (c.album && c.album !== c.title ? ' · ' + c.album : '') + (c.year ? ' · ' + c.year : ''), '/resources?view=disco&sub=' + (c.roles.indexOf('produced') >= 0 ? 'produced' : 'featured'), c.roles.indexOf('produced') >= 0 ? 'ye produced' : 'ye featured'); });
     (ya.yeezy || []).forEach(function (x) { out += row(x.img, x.title, 'yeezy' + (x.year ? ' · ' + x.year : ''), '/resources?view=yeezy&item=' + encodeURIComponent(x.id), 'yeezy'); });

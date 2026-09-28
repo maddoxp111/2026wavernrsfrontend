@@ -242,7 +242,9 @@
   #ye-disco .yt-row:not(.thumb) { grid-template-columns:34px minmax(0,1fr) auto; }
   #ye-disco .yt-row:not(.thumb) > .yt-num { grid-column:auto; grid-row:auto; }
   #ye-disco .yt-row:not(.thumb) > .ds-r { grid-column:auto; grid-row:auto; }
-  #ye-disco .yt-row.thumb { grid-template-columns:56px minmax(0,1fr) auto; }
+  #ye-disco .yt-row.thumb, #ye-song .yt-row.thumb { grid-template-columns:56px minmax(0,1fr) auto; }
+  #ye-song .yt-row.thumb > * { grid-column:auto; grid-row:auto; }
+  @media (max-width:640px) { #ye-song .yt-row.thumb { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } #ye-song .yt-row.thumb .yt-cover.sm { width:48px; height:48px; } #ye-song .ds-r .yt-sub { max-width:84px; font-size:11px; } }
   #ye-disco .yt-row.thumb > * { grid-column:auto; grid-row:auto; }
   @media (max-width:640px) { #ye-disco .yt-row.thumb { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } #ye-disco .yt-row.thumb .yt-cover.sm { width:48px; height:48px; } }
   @media (max-width:640px) { #ye-disco .yt-row:not(.thumb) { grid-template-columns:24px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } }
@@ -317,6 +319,14 @@
   .qz-big span { font-size:34px; color:var(--text-3); margin-left:6px; letter-spacing:0; }
   .qz-acts { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px; align-items:center; }
   .qz-acts .qz-next, .qz-acts .qz-opt { margin-top:0; padding:11px 20px; border-radius:99px; font-weight:700; font-size:14px; flex-direction:row; }
+  .ds-song { border:0; background:none; padding:0; font:inherit; color:inherit; cursor:pointer; text-align:left; }
+  .ds-song:hover { text-decoration:underline; }
+  .sg-card { background:var(--surface); border-radius:14px; padding:14px 16px; margin:4px 0 8px; cursor:pointer; }
+  .sg-card:hover { background:var(--surface-2); }
+  .sg-l { font-size:13.5px; color:var(--text); margin-top:6px; line-height:1.5; overflow-wrap:anywhere; }
+  .sg-l b { color:var(--text-3); font-weight:700; margin-right:4px; }
+  .sg-l i { font-style:normal; color:var(--text-3); }
+  .sg-dot { color:var(--text-3); }
   .ds-h { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:30px 0 10px; }
   .ds-prods { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .ds-prods .ye-chip span { opacity:.6; font-weight:600; margin-left:3px; }
@@ -372,6 +382,7 @@
   <div id="ye-disco" style="display:none;"></div>
   <div id="ye-timeline" style="display:none;"></div>
   <div id="ye-quiz" style="display:none;"></div>
+  <div id="ye-song" style="display:none;margin-top:16px;"></div>
 </div>
 </div><!-- /view -->
 
@@ -895,7 +906,7 @@ window._ytBooted = false;
 // ── Ye archive views: Tracker / Tweets / Yeezy ──────────────────
 (function () {
   var P = new URLSearchParams(location.search);
-  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', quiz: 'ye-quiz' };
+  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', quiz: 'ye-quiz', song: 'ye-song' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function num(n) { n = +n || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K' : String(n); }
   function thumb(u, w) {
@@ -912,7 +923,7 @@ window._ytBooted = false;
     var yv = document.getElementById('ye-views'), yb = yv && yv.querySelector('.on'); if (yb && yb.offsetLeft + yb.offsetWidth > yv.scrollLeft + yv.clientWidth) yv.scrollLeft = yb.offsetLeft + yb.offsetWidth - yv.clientWidth + 12;
     if (v === 'tracker') { if (typeof window._ytBoot === 'function') window._ytBoot(); if (push && typeof window._ytSetUrl === 'function') window._ytSetUrl(); return; }
     if (push) { try { history.replaceState(history.state, '', location.pathname + '?view=' + v); } catch (_) {} }
-    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else if (v === 'quiz') QZ.open(); else YZ.open();
+    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else if (v === 'quiz') QZ.open(); else if (v === 'song') SG.open(); else YZ.open();
   }
   document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { b.onclick = function () { setView(b.getAttribute('data-view'), true); }; });
 
@@ -1186,7 +1197,7 @@ window._ytBooted = false;
         if (a.discs.length > 1) html += '<h3 class="ds-h">' + esc(d.title || 'disc ' + (di + 1)) + '</h3>';
         html += '<div class="yt-list">' + d.tracks.map(function (t) {
           return '<div class="yt-row"><div class="yt-num">' + esc(t.n) + '</div><div style="min-width:0;">' +
-            '<div class="yt-t">' + esc(t.title) + '</div>' +
+            '<div class="yt-t"><button class="ds-song" data-song="' + esc(t.title) + '" title="every version of this song">' + esc(t.title) + '</button></div>' +
             (t.feat.length ? '<div class="yt-sub">with ' + esc(t.feat.join(', ')) + '</div>' : '') +
             (t.producers.length ? '<div class="ds-p">prod. ' + t.producers.map(function (p) { return '<button data-pp="' + esc(p) + '">' + esc(p) + '</button>'; }).join(', ') + '</div>' : '') +
             samp(t.samples, 'samples') +
@@ -1203,6 +1214,7 @@ window._ytBooted = false;
       root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
       root.querySelectorAll('.ds-find[data-q]').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
       root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
+      root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
     }
     var _pv = null, _pvBtn = null;
     function preview(b) {
@@ -1407,6 +1419,87 @@ window._ytBooted = false;
     }
     if (window._pageCleanup) window._pageCleanup.push(stopAudio);
     return { open: function () { if (st.started) return; st.started = true; menu(); } };
+  })();
+
+  // ── Song hub: every version, the credits, and the edits here ───
+  var SG = (function () {
+    var root = document.getElementById('ye-song');
+    var st = { t: P.get('t') || '', started: false, seq: 0 };
+    function tlen(ms) { var s = Math.round((ms || 0) / 1000); return s ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : ''; }
+    function sampList(list) { return list.map(function (x) { return esc(x.t) + (x.a ? ' <i>by ' + esc(x.a) + '</i>' : ''); }).join('<span class="sg-dot"> · </span>'); }
+    var _pv = null;
+    function stopPv() { if (_pv) { try { _pv.pause(); } catch (_) {} } }
+    if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', stopPv);
+    if (window._pageCleanup) window._pageCleanup.push(function () { stopPv(); if (typeof audio !== 'undefined' && audio && audio.removeEventListener) audio.removeEventListener('play', stopPv); });
+    async function load(t) {
+      st.t = t; var my = ++st.seq;
+      try { history.replaceState(history.state, '', location.pathname + '?view=song&t=' + encodeURIComponent(t)); } catch (_) {}
+      root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      var d, site = null;
+      try {
+        var r = await Promise.all([api('/ye/song?t=' + encodeURIComponent(t)), api('/search?q=' + encodeURIComponent(t)).catch(function () { return null; })]);
+        d = r[0]; site = r[1];
+      } catch (e) { if (my === st.seq) root.innerHTML = '<div class="yt-empty"><b>couldnt load that song</b>' + esc(e.message || '') + '</div>'; return; }
+      if (my !== st.seq) return;
+      document.title = d.title + ' — wavernrs';
+      var rel = d.released[0] || null;
+      var art = rel ? rel.cover : ((d.tracker.find(function (x) { return x.art; }) || {}).art || '');
+      var unr = d.tracker.filter(function (x) { return x.tab !== 'Released'; });
+      var leaked = unr.filter(function (x) { return x.leak; });
+      var sub = rel ? 'released on ' + rel.album + ' · ' + rel.year : (unr.length ? 'unreleased' + (unr[0].era ? ' · ' + unr[0].era : '') : 'not on the tracker');
+      var html = '<button class="yt-back" id="sg-back">← Ye archive</button>' +
+        '<div class="yt-hero"><div class="yt-cover" style="background:' + (window.coverGradient ? coverGradient(d.title) : 'var(--surface-3)') + ';">' + (art ? '<img src="' + esc(thumb(art, 420)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
+          '<div class="yt-hero-i"><div class="yt-hero-k">SONG</div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
+          '<div class="yt-stats">' + (d.tracker.length ? '<span class="yt-stat"><b>' + d.tracker.length + '</b> on the tracker</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + '</div>' +
+          (rel && (rel.preview || rel.links.spotify || rel.links.apple) ? '<div class="yt-links" style="justify-content:flex-start;margin-top:12px;">' + (rel.preview ? '<button class="yt-l" id="sg-pv" style="border:0;cursor:pointer;font-family:inherit;">▶ 30s preview</button>' : '') + (rel.links.spotify ? '<a class="yt-l" href="' + esc(rel.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (rel.links.apple ? '<a class="yt-l" href="' + esc(rel.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
+          '</div></div>';
+      if (rel) {
+        html += '<div class="sg-card" data-go="/resources?view=disco&album=' + encodeURIComponent(rel.slug) + '"><div class="tl-k">CREDITS · ' + esc(rel.album.toUpperCase()) + '</div>' +
+          (rel.feat.length ? '<div class="sg-l"><b>with</b> ' + esc(rel.feat.join(', ')) + '</div>' : '') +
+          (rel.producers.length ? '<div class="sg-l"><b>produced by</b> ' + esc(rel.producers.join(', ')) + '</div>' : '') +
+          (rel.writers.length ? '<div class="sg-l"><b>written by</b> ' + esc(rel.writers.join(', ')) + '</div>' : '') +
+          (rel.samples.length ? '<div class="sg-l"><b>samples</b> ' + sampList(rel.samples) + '</div>' : '') +
+          (rel.sampled_by.length ? '<div class="sg-l"><b>sampled by</b> ' + sampList(rel.sampled_by.slice(0, 12)) + (rel.sampled_by_count > 12 ? ' <i>and ' + (rel.sampled_by_count - 12) + ' more</i>' : '') + '</div>' : '') +
+          '</div>';
+      }
+      if (d.tracker.length) {
+        html += '<h3 class="ds-h">on the Ye tracker</h3><div class="yt-list">' + d.tracker.map(function (x) {
+          var href = '/resources?tab=' + encodeURIComponent(x.tab) + '&era=' + encodeURIComponent(x.era) + '&q=' + encodeURIComponent(x.title);
+          return '<div class="yt-row thumb" data-go="' + esc(href) + '" style="cursor:pointer;"><div class="yt-cover sm">' + (x.art ? '<img src="' + esc(thumb(x.art, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+            '<div style="min-width:0;"><div class="yt-t">' + esc(x.title) + '</div><div class="yt-sub">' + esc([x.era, x.tab === 'Released' ? 'released' : '', x.leak ? (x.tab === 'Released' ? '' : 'leaked ') + x.leak : ''].filter(Boolean).join(' · ')) + '</div>' + (x.sub ? '<div class="ds-p">' + esc(x.sub.slice(0, 120)) + '</div>' : '') + '</div>' +
+            '<div class="ds-r"><span class="yt-sub" style="text-align:right;">' + esc([x.avail, x.quality].filter(Boolean).join(' · ')) + '</span></div></div>';
+        }).join('') + '</div>';
+      }
+      var tracks = (site && site.tracks) || [], albums = (site && site.albums) || [];
+      var want = String(d.title).toLowerCase().replace(/[^a-z0-9]+/g, '');
+      tracks = tracks.filter(function (x) { return String(x.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '').indexOf(want) >= 0; }).slice(0, 12);
+      if (tracks.length) {
+        html += '<h3 class="ds-h">edits on wavernrs</h3><div class="yt-list">' + tracks.map(function (x) {
+          var cv = x.cover_url || (x.albums && x.albums.cover_url) || '';
+          return '<div class="yt-row thumb" data-go="/track?id=' + encodeURIComponent(x.id) + '" style="cursor:pointer;"><div class="yt-cover sm">' + (cv ? '<img src="' + esc(thumb(cv, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+            '<div style="min-width:0;"><div class="yt-t">' + esc(x.title) + '</div><div class="yt-sub">' + esc((x.artists && x.artists.display_name) || x.archive_artist_name || '') + (x.play_count ? ' · ' + num(x.play_count) + ' plays' : '') + '</div></div><div class="ds-r"><span class="yt-sub">open ›</span></div></div>';
+        }).join('') + '</div>';
+      }
+      if (d.credits.length) {
+        html += '<h3 class="ds-h">with other artists</h3><div class="yt-list">' + d.credits.map(function (c) {
+          return '<div class="yt-row thumb"><div class="yt-cover sm">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div><div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc([c.artist, c.album, c.year].filter(Boolean).join(' · ')) + '</div></div><div class="ds-r"><span class="yt-sub">' + esc(c.roles.join(' + ')) + '</span></div></div>';
+        }).join('') + '</div>';
+      }
+      if (!rel && !d.tracker.length && !tracks.length && !d.credits.length) html += '<div class="yt-empty"><b>nothing found for that song</b>try the search</div>';
+      html += '<a class="yt-l" style="display:inline-block;margin-top:18px;" href="/search?q=' + encodeURIComponent(d.title) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">search everything for ' + esc(d.title) + ' ›</a>';
+      root.innerHTML = html;
+      document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
+      root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { navigate(c.getAttribute('data-go')); }; });
+      var pb = document.getElementById('sg-pv');
+      if (pb && rel) pb.onclick = function () {
+        if (_pv && !_pv.paused) { _pv.pause(); return; }
+        if (!_pv) { _pv = new Audio(rel.preview); _pv.onplay = function () { pb.textContent = '❚❚ 30s preview'; }; _pv.onpause = _pv.onended = function () { pb.textContent = '▶ 30s preview'; }; _pv.onerror = function () { pb.textContent = 'cant play this'; }; }
+        if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
+        _pv.play().catch(function () {});
+      };
+    }
+    window.yeSong = function (t) { if (typeof navigate === 'function') navigate('/resources?view=song&t=' + encodeURIComponent(t)); };
+    return { open: function () { if (st.started) return; st.started = true; if (st.t) load(st.t); else root.innerHTML = '<div class="yt-empty"><b>pick a song</b>open one from the discography or the tracker</div>'; } };
   })();
 
   // ── Yeezy ──────────────────────────────────────────────────────
