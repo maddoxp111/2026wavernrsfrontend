@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
-  <link rel="stylesheet" href="/css/style.css?v=0acb33bbd519">
-  <script src="/js/status-card.js?v=0acb33bbd519"></script>
-  <script src="/js/down.js?v=0acb33bbd519"></script>
+  <link rel="stylesheet" href="/css/style.css?v=649977439c35">
+  <script src="/js/status-card.js?v=649977439c35"></script>
+  <script src="/js/down.js?v=649977439c35"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=0acb33bbd519"></script>
-<script src="/js/layout.js?v=0acb33bbd519"></script>
-<script src="/js/player.js?v=0acb33bbd519"></script>
-<script src="/js/router.js?v=0acb33bbd519"></script>
+<script src="/js/api.js?v=649977439c35"></script>
+<script src="/js/layout.js?v=649977439c35"></script>
+<script src="/js/player.js?v=649977439c35"></script>
+<script src="/js/router.js?v=649977439c35"></script>
 <script>
   // Inject community styles once (works on both hard refresh and SPA navigation)
   if (!document.getElementById('comm-styles')) {
@@ -98,6 +98,10 @@
     s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/~~([^~\n]+?)~~/g, '<s>$1</s>');
     s = s.replace(/__([^_\n]+?)__/g, '<u>$1</u>');
+    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, function (m, pre, u) {
+      var tail = (u.match(/[).,!?]+$/) || [''])[0]; u = u.slice(0, u.length - tail.length);
+      return pre + '<a href="' + u + '" target="_blank" rel="noopener nofollow ugc" class="comm-link">' + u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60) + (u.length > 70 ? '…' : '') + '</a>' + tail;
+    });
     s = s.replace(/\n/g, '<br>');
     return s;
   }
@@ -444,6 +448,7 @@
       currentPost = data.post || data;
       currentComments = Array.isArray(data.comments) ? data.comments : [];
       renderPost();
+      unfurlPost();
     } catch (err) {
       document.getElementById('view').innerHTML =
         '<div style="max-width:740px;margin:0 auto;padding:28px 16px;">' +
@@ -451,6 +456,31 @@
           '<div style="color:var(--text-2);">couldnt load this post</div>' +
         '</div>';
     }
+  }
+
+  // Links to things on wavernrs get a little card under the post.
+  async function unfurlPost() {
+    var box = document.getElementById('post-cards'); if (!box || !currentPost || !currentPost.body) return;
+    var urls = (String(currentPost.body).match(/https?:\/\/(www\.)?wavernrs\.com\/[^\s<)]+/g) || []).slice(0, 3);
+    var pid = currentPost.id, cards = [];
+    for (var i = 0; i < urls.length; i++) {
+      var u; try { u = new URL(urls[i].replace(/[.,!?]+$/, '')); } catch (_) { continue; }
+      var q = u.searchParams, path = u.pathname.replace(/\.html$/, ''), c = null;
+      try {
+        if (path === '/album' && q.get('id')) { var a = await api('/albums/' + encodeURIComponent(q.get('id'))); a = a.album || a; if (a && a.title) c = { t: a.title, s: 'comp · ' + ((a.artists && a.artists.display_name) || a.archive_artist_name || ''), img: a.cover_url, href: '/album?id=' + encodeURIComponent(a.id) }; }
+        else if (path === '/track' && q.get('id')) { var t = await api('/tracks/' + encodeURIComponent(q.get('id'))); if (t && t.title) c = { t: t.title, s: 'edit · ' + ((t.artists && t.artists.display_name) || ''), img: t.cover_url || (t.albums && t.albums.cover_url), href: '/track?id=' + encodeURIComponent(t.id) }; }
+        else if (path === '/resources' && q.get('view') === 'song' && q.get('t')) { var sg = await api('/ye/song?t=' + encodeURIComponent(q.get('t'))); var r = sg.released && sg.released[0]; c = { t: sg.title, s: 'ye song · ' + (r ? r.album + ' ' + r.year : (sg.tracker || []).length + ' versions on the tracker'), img: r ? r.cover : ((sg.tracker || []).find(function (x) { return x.art; }) || {}).art, href: '/resources?view=song&t=' + encodeURIComponent(sg.title) }; }
+        else if (path === '/resources' && q.get('view') === 'disco' && q.get('album')) { var al = (await api('/ye/disco/' + encodeURIComponent(q.get('album')))).album; c = { t: al.title, s: 'ye album · ' + al.year, img: al.cover_sm, href: '/resources?view=disco&album=' + encodeURIComponent(al.slug) }; }
+        else if (path === '/resources' && q.get('view') === 'tweets' && q.get('tweet')) { var tw = (await api('/ye/tweets/' + encodeURIComponent(q.get('tweet')))).tweet; c = { t: String(tw.text || '').replace(/\s*https?:\/\/\S+/g, '').slice(0, 120), s: 'ye tweet · ' + new Date(tw.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), img: null, href: '/resources?view=tweets&tweet=' + encodeURIComponent(tw.id) }; }
+      } catch (_) { c = null; }
+      if (c) cards.push(c);
+    }
+    box = document.getElementById('post-cards');
+    if (!box || !currentPost || currentPost.id !== pid || !cards.length) return;
+    box.innerHTML = cards.map(function (c) {
+      var art = c.img ? (typeof wvImg === 'function' ? wvImg(c.img, 120) : c.img) : '';
+      return '<a class="comm-card" href="' + escHtml(c.href) + '" onclick="navigate(this.getAttribute(\'href\'));return false;"><div class="comm-card-art" style="background:' + coverGradient(c.t || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" alt="" onerror="this.remove()">' : '') + '</div><div style="min-width:0;"><div class="comm-card-t">' + escHtml(c.t) + '</div><div class="comm-card-s">' + escHtml(c.s) + '</div></div></a>';
+    }).join('');
   }
 
   function renderPost() {
@@ -501,7 +531,7 @@
             // Content
             '<div style="flex:1;min-width:0;">' +
               '<h1 style="margin:0 0 10px;font-size:22px;font-weight:800;letter-spacing:-0.025em;line-height:1.25;">' + escHtml(p.title) + '</h1>' +
-              (p.body ? '<div style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:14px;">' + renderMd(p.body) + '</div>' : '') +
+              (p.body ? '<div style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:14px;">' + renderMd(p.body) + '</div><div id="post-cards"></div>' : '') +
               '<div class="comm-meta">' +
                 avatarHTML(p.username, p.profile_image_url) +
                 '<span style="font-size:12.5px;">' + usernameLink(p.username, p.artist_id, p.user_id) + '</span>' +
