@@ -291,6 +291,10 @@
   .tlm-h b { font-size:16px; font-weight:800; letter-spacing:-.01em; }
   .tlm-h span { font-size:12px; color:var(--text-3); font-weight:600; }
   .tlm-b { display:flex; flex-direction:column; gap:8px; }
+  .tlm-ev { list-style:none; margin:0 0 2px; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .tlm-ev li { display:grid; grid-template-columns:26px minmax(0,1fr); gap:8px; font-size:14px; line-height:1.5; color:var(--text); }
+  .tlm-ev li b { font-size:12px; color:var(--brand); font-weight:800; text-align:right; padding-top:2px; font-variant-numeric:tabular-nums; }
+  .tlm-ev li span { overflow-wrap:anywhere; }
   .tlm-tw { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; }
   .tlm-t { background:var(--surface); border-radius:12px; padding:10px 12px; cursor:pointer; }
   .tlm-t:hover { background:var(--surface-2); }
@@ -1322,6 +1326,7 @@ window._ytBooted = false;
       if (mm.yeezy.count) bits.push(mm.yeezy.count + ' yeezy');
       if (mm.credits.length) bits.push(mm.credits.length + ' with others');
       var h = '<div class="tlm"><div class="tlm-h"><b>' + MONTHS[mm.m] + '</b><span>' + esc(bits.join(' · ')) + '</span></div><div class="tlm-b">';
+      if (mm.events && mm.events.length) h += '<ul class="tlm-ev">' + mm.events.map(function (e) { return '<li><b>' + (e.prec === 'day' ? (+e.date.slice(8, 10)) : '•') + '</b><span>' + esc(e.text) + '</span></li>'; }).join('') + '</ul>';
       if (mm.albums.length) h += '<div class="tl-albums">' + mm.albums.map(function (a) {
         return '<div class="tl-al" data-go="/resources?view=disco&album=' + encodeURIComponent(a.slug) + '"><div class="yt-cover"><img src="' + esc(thumb(a.cover_sm, 240)) + '" alt="" loading="lazy" onerror="this.remove()"></div><div><div class="tl-k">ALBUM' + (a.date && a.date.length === 10 ? ' · ' + esc(new Date(a.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) : '') + '</div><div class="tl-at">' + esc(a.title) + '</div><div class="yt-sub">' + a.tracks + ' songs' + (a.artist !== 'Kanye West' && a.artist !== 'Ye' ? ' · ' + esc(a.artist) : '') + '</div></div></div>';
       }).join('') + '</div>';
@@ -1335,6 +1340,7 @@ window._ytBooted = false;
     }
     function yearBlock(y, open) {
       var stats = [];
+      if (y.events) stats.push('<b>' + y.events + '</b> moment' + (y.events === 1 ? '' : 's'));
       if (y.albums.length) stats.push('<b>' + y.albums.length + '</b> album' + (y.albums.length === 1 ? '' : 's'));
       if (y.leaks && y.leaks.count) stats.push('<b>' + y.leaks.count.toLocaleString() + '</b> leaks');
       if (y.tweets.count) stats.push('<b>' + y.tweets.count.toLocaleString() + '</b> tweets');
@@ -1354,7 +1360,7 @@ window._ytBooted = false;
       root.innerHTML = '<div class="tl-nav"><div class="yt-tabs" id="tl-years">' + ys.map(function (y) { return '<button class="yt-tab" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div>' +
         '<select class="ye-sel" id="tl-order"><option value="new">newest first</option><option value="old">oldest first</option></select></div>' +
         '<div class="tl">' + ys.map(function (y, i) { return yearBlock(y, i < 2); }).join('') + '</div>' +
-        '<div class="ye-credit">built from the tweets, the Ye tracker, tours, the yeezy archive and musicbrainz credits on this page</div>';
+        '<div class="ye-credit">moments from <a href="https://en.wikipedia.org/wiki/Kanye_West" target="_blank" rel="noopener">Wikipedia</a>, the rest built from the tweets, the Ye tracker, tours, the yeezy archive and musicbrainz credits on this page</div>';
       var o = document.getElementById('tl-order'); o.value = st.order; o.onchange = function () { st.order = o.value; paint(); };
       root.querySelectorAll('[data-y]').forEach(function (b) { b.onclick = function () { var el = document.getElementById('tl-' + b.getAttribute('data-y')); if (el) { var det = el.querySelector('details'); if (det) det.open = true; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }; });
       root.querySelector('.tl').addEventListener('click', function (e) {
