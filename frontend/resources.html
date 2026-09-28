@@ -1029,7 +1029,7 @@ window._ytBooted = false;
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       try { st.d = await api('/ye/disco'); }
       catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt load the discography</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
-      api('/eratags').then(function (list) { var m = {}; (list || []).forEach(function (t) { m[norm(t.name)] = t.id; }); st.tags = m; var el = document.getElementById('ds-links'); if (el && st.cur) el.innerHTML = links(st.cur); }).catch(function () {});
+      api('/archive/eras').then(function (r) { var m = {}; ((r && r.items) || []).forEach(function (t) { m[norm(t.name)] = t; }); st.tags = m; var el = document.getElementById('ds-links'); if (el && st.cur) el.innerHTML = links(st.cur); if (st.sub === 'albums' && !st.album && document.getElementById('ds-body')) albums(document.getElementById('ds-body')); }).catch(function () {});
       if (st.album) openAlbum(st.album); else grid();
     }
     var SUBS = [['albums', 'Albums'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
@@ -1053,7 +1053,8 @@ window._ytBooted = false;
       var total = d.albums.reduce(function (n, a) { return n + a.tracks; }, 0);
       body.innerHTML = '<div class="yt-count">' + d.albums.length + ' albums · ' + total + ' songs · with producers and samples for every track</div>' +
         '<div class="yt-eras">' + d.albums.map(function (a) {
-          return '<div class="yt-era" data-a="' + esc(a.slug) + '">' + cover(a) + '<div class="yt-era-n">' + esc(a.title) + '</div><div class="yt-era-s">' + esc([a.year, a.artist !== 'Kanye West' && a.artist !== 'Ye' ? a.artist : '', a.tracks + ' songs'].filter(Boolean).join(' · ')) + '</div></div>';
+          var tg = tagFor(a.era);
+          return '<div class="yt-era" data-a="' + esc(a.slug) + '">' + cover(a) + '<div class="yt-era-n">' + esc(a.title) + '</div><div class="yt-era-s">' + esc([a.year, a.artist !== 'Kanye West' && a.artist !== 'Ye' ? a.artist : '', a.tracks + ' songs', tg && tg.comps ? tg.comps + ' comps' : ''].filter(Boolean).join(' · ')) + '</div></div>';
         }).join('') + '</div>';
       body.querySelectorAll('[data-a]').forEach(function (c) { c.onclick = function () { openAlbum(c.getAttribute('data-a')); window.scrollTo(0, 0); }; });
     }
@@ -1126,7 +1127,7 @@ window._ytBooted = false;
     function links(a) {
       var out = '';
       var tag = tagFor(a.era);
-      if (tag) out += '<a class="yt-l" href="/archive?era=' + encodeURIComponent(tag) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">yedits from this era ›</a>';
+      if (tag) out += '<a class="yt-l" href="/archive?era=' + encodeURIComponent(tag.id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">' + (tag.comps || tag.edits ? [tag.comps ? tag.comps.toLocaleString() + ' comps' : '', tag.edits ? tag.edits.toLocaleString() + ' edits' : ''].filter(Boolean).join(' · ') + ' from this era ›' : 'yedits from this era ›') + '</a>';
       out += '<a class="yt-l" href="/resources?era=' + encodeURIComponent(a.era) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">this era on the tracker ›</a>';
       out += '<a class="yt-l" href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">full credits ↗</a>';
       return out;
