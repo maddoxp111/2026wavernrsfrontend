@@ -289,6 +289,10 @@
   .qz-q { background:var(--surface); border-radius:16px; padding:18px; margin-bottom:12px; }
   .qz-text { font-size:22px; font-weight:800; letter-spacing:-.02em; line-height:1.3; margin-top:8px; overflow-wrap:anywhere; }
   .qz-text.tw { font-size:17px; font-weight:600; letter-spacing:0; white-space:pre-line; }
+  .qz-play { display:flex; align-items:center; gap:14px; width:100%; border:0; background:var(--surface-2); color:var(--text); font:inherit; border-radius:12px; padding:14px 16px; margin-top:10px; cursor:pointer; }
+  .qz-play span { width:44px; height:44px; border-radius:50%; background:var(--brand); color:#14121c; display:grid; place-items:center; font-size:15px; flex:none; }
+  .qz-play i { flex:1; height:6px; background:var(--surface-3, rgba(255,255,255,.12)); border-radius:99px; overflow:hidden; }
+  .qz-play b { display:block; height:100%; width:0; background:var(--brand); }
   .qz-opts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .qz-opts.imgs { grid-template-columns:repeat(4,1fr); }
   @media (max-width:560px) { .qz-opts { grid-template-columns:1fr; } .qz-opts.imgs { grid-template-columns:1fr 1fr; } .qz-text { font-size:19px; } }
@@ -1242,7 +1246,7 @@ window._ytBooted = false;
   // ── Quiz ───────────────────────────────────────────────────────
   var QZ = (function () {
     var root = document.getElementById('ye-quiz');
-    var MODES = [['', 'mixed', 'a bit of everything'], ['tweet', 'tweets', 'guess the year he tweeted it'], ['album', 'albums', 'which album is the song on'], ['sample', 'samples', 'which song samples it'], ['producer', 'producers', 'who helped produce it']];
+    var MODES = [['', 'mixed', 'a bit of everything'], ['tweet', 'tweets', 'guess the year he tweeted it'], ['album', 'albums', 'which album is the song on'], ['sample', 'samples', 'which song samples it'], ['producer', 'producers', 'who helped produce it'], ['listen', 'name that song', 'hear it, then name it']];
     var st = { mode: '', qs: [], i: 0, score: 0, streak: 0, best: 0, picked: null, started: false };
     function bestKey() { return 'wv_yequiz_best_' + (st.mode || 'mixed'); }
     function getBest() { try { return +localStorage.getItem(bestKey()) || 0; } catch (_) { return 0; } }
@@ -1260,19 +1264,34 @@ window._ytBooted = false;
       st.i = 0; st.score = 0; st.streak = 0; st.best = getBest(); st.picked = null;
       ask();
     }
+    var qa = null;
+    function stopAudio() { if (qa) { try { qa.pause(); } catch (_) {} qa = null; } }
     function ask() {
       var q = st.qs[st.i];
       st.picked = null;
+      stopAudio();
       var imgs = q.options.some(function (o) { return o.img; });
       root.innerHTML = '<div class="qz-bar"><button class="yt-back" id="qz-quit" style="margin:0;">← modes</button><span>' + (st.i + 1) + ' / ' + st.qs.length + '</span><span>score <b>' + st.score + '</b>' + (st.streak > 1 ? ' · 🔥 ' + st.streak : '') + '</span></div>' +
         '<div class="qz-prog"><i style="width:' + (st.i / st.qs.length * 100) + '%"></i></div>' +
         '<div class="qz-q"><div class="qz-k">' + esc(q.q) + '</div>' +
-          '<div class="qz-text' + (q.kind === 'tweet' ? ' tw' : '') + '">' + esc(q.text) + '</div>' + (q.sub ? '<div class="yt-sub" style="margin-top:6px;">' + esc(q.sub) + '</div>' : '') + '</div>' +
+          (q.audio ? '<button class="qz-play" id="qz-play"><span>▶</span><i><b id="qz-pb"></b></i></button>' : '<div class="qz-text' + (q.kind === 'tweet' ? ' tw' : '') + '">' + esc(q.text) + '</div>') + (q.sub ? '<div class="yt-sub" style="margin-top:6px;">' + esc(q.sub) + '</div>' : '') + '</div>' +
         '<div class="qz-opts' + (imgs ? ' imgs' : '') + '">' + q.options.map(function (o, k) {
           return '<button class="qz-opt" data-k="' + k + '">' + (o.img ? '<img src="' + esc(thumb(o.img, 240)) + '" alt="" onerror="this.remove()">' : '') + '<b>' + esc(o.label) + '</b>' + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + '</button>';
         }).join('') + '</div><div id="qz-after"></div>';
-      document.getElementById('qz-quit').onclick = menu;
+      document.getElementById('qz-quit').onclick = function () { stopAudio(); menu(); };
       root.querySelectorAll('.qz-opt').forEach(function (b) { b.onclick = function () { answer(+b.getAttribute('data-k')); }; });
+      if (q.audio) {
+        var pb = document.getElementById('qz-play');
+        qa = new Audio(q.audio);
+        var mine = qa;
+        qa.ontimeupdate = function () { var bar = document.getElementById('qz-pb'); if (bar && mine.duration) bar.style.width = (mine.currentTime / mine.duration * 100) + '%'; };
+        qa.onplay = function () { pb.querySelector('span').textContent = '❚❚'; };
+        qa.onpause = qa.onended = function () { pb.querySelector('span').textContent = '▶'; };
+        qa.onerror = function () { pb.querySelector('span').textContent = '✕'; pb.title = 'this preview wont play here'; };
+        pb.onclick = function () { if (mine.paused) mine.play().catch(function () {}); else mine.pause(); };
+        if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
+        mine.play().catch(function () {});
+      }
     }
     function answer(k) {
       if (st.picked != null) return;
@@ -1285,12 +1304,14 @@ window._ytBooted = false;
       else if (q.kind === 'producer' && q.extra) more = 'produced by ' + q.extra.all.join(', ');
       else if (q.kind === 'sample' && q.extra) more = q.answer + ' is on ' + q.extra.album;
       else if (q.kind === 'album' && q.extra) more = q.answer + ' came out in ' + q.extra.year;
+      else if (q.kind === 'listen' && q.extra) more = q.answer + ' is on ' + q.extra.album;
       var last = st.i === st.qs.length - 1;
       document.getElementById('qz-after').innerHTML = '<div class="qz-res ' + (right ? 'ok' : 'no') + '"><b>' + (right ? (st.streak > 2 ? 'on fire 🔥' : 'correct') : 'nope, it was ' + esc(q.answer)) + '</b>' + (more ? '<span>' + esc(more) + '</span>' : '') + '</div>' +
         '<button class="qz-next" id="qz-next">' + (last ? 'see your score' : 'next question') + '</button>';
       var nb = document.getElementById('qz-next'); nb.onclick = function () { if (last) done(); else { st.i++; ask(); } }; nb.focus();
     }
     function done() {
+      stopAudio();
       var n = st.qs.length, s = st.score, isBest = s > st.best;
       if (isBest) setBest(s);
       var line = s === n ? 'perfect. you might be ye' : s >= n * 0.8 ? 'certified ye head' : s >= n * 0.5 ? 'not bad, not bad' : s >= n * 0.3 ? 'you listen to the singles' : 'go run it back';
@@ -1306,6 +1327,7 @@ window._ytBooted = false;
         try { navigator.clipboard.writeText(shareText); if (typeof wvToast === 'function') wvToast('copied your score'); } catch (_) {}
       };
     }
+    if (window._pageCleanup) window._pageCleanup.push(stopAudio);
     return { open: function () { if (st.started) return; st.started = true; menu(); } };
   })();
 
