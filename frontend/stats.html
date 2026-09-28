@@ -55,8 +55,19 @@ async function loadStats() {
     html += '</div>';
     html += '<div style="margin-top:28px;"><div class="wv-sec-head"><h2 class="wv-sec-title">Releases per era</h2></div>' +
       bars((d.eras || []).slice().sort(function(a, b) { return b.releases - a.releases; }).slice(0, 12).map(function(e) { return { name: e.name, releases: e.releases, href: '/browse?era=' + e.id }; }), 'releases') + '</div>';
+    html += '<div id="st-ye"></div>';
     html += '<div style="font-size:12px;color:var(--text-3);margin-top:22px;">updated ' + (d.generated_at ? timeAgo(d.generated_at) : 'just now') + '</div>';
     el.innerHTML = html;
+    api('/ye/status').then(function (y) {
+      var box = document.getElementById('st-ye'); if (!box || !y) return;
+      box.innerHTML = '<div class="wv-sec-head" style="margin-top:28px;"><h2 class="wv-sec-title" onclick="navigate(\'/resources\')">The Ye archive</h2><button class="wv-see-all" onclick="navigate(\'/resources\')">Open</button></div><div class="wv-stat-grid">' +
+        (y.tweets ? tile('Tweets', fmtNum(y.tweets), 'every ye tweet') : '') +
+        (y.yeezy ? tile('Yeezy pieces', fmtNum(y.yeezy)) : '') +
+        (y.disco ? tile('Albums', fmtNum(y.disco), (y.disco_songs || 0) + ' songs with credits') : '') +
+        (y.credits ? tile('Songs with others', fmtNum(y.credits), 'produced or featured') : '') +
+        (y.tour_shows ? tile('Tour shows', fmtNum(y.tour_shows), 'across ' + y.tour_years + ' tours') : '') +
+        '</div>';
+    }).catch(function () {});
   } catch (e) {
     el.innerHTML = '<div class="wv-empty">couldnt load stats...' + escHtml(e.message) + '</div>';
   }
