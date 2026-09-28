@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=649977439c35">
-  <script src="/js/status-card.js?v=649977439c35"></script>
-  <script src="/js/down.js?v=649977439c35"></script>
+  <link rel="stylesheet" href="/css/style.css?v=f9421c13f68d">
+  <script src="/js/status-card.js?v=f9421c13f68d"></script>
+  <script src="/js/down.js?v=f9421c13f68d"></script>
 </head>
 <body>
 
@@ -410,10 +410,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=649977439c35"></script>
-<script src="/js/layout.js?v=649977439c35"></script>
-<script src="/js/player.js?v=649977439c35"></script>
-<script src="/js/router.js?v=649977439c35"></script>
+<script src="/js/api.js?v=f9421c13f68d"></script>
+<script src="/js/layout.js?v=f9421c13f68d"></script>
+<script src="/js/player.js?v=f9421c13f68d"></script>
+<script src="/js/router.js?v=f9421c13f68d"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1543,7 +1543,7 @@ window._ytBooted = false;
       var sub = rel ? 'released on ' + rel.album + ' · ' + rel.year : (unr.length ? 'unreleased' + (unr[0].era ? ' · ' + unr[0].era : '') : 'not on the tracker');
       var html = '<button class="yt-back" id="sg-back">← Ye archive</button>' +
         '<div class="yt-hero"><div class="yt-cover" style="background:' + (window.coverGradient ? coverGradient(d.title) : 'var(--surface-3)') + ';">' + (art ? '<img src="' + esc(thumb(art, 420)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
-          '<div class="yt-hero-i"><div class="yt-hero-k">SONG · <button class="sg-share" id="sg-share">share</button></div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
+          '<div class="yt-hero-i"><div class="yt-hero-k">SONG · <button class="sg-share" id="sg-share">share</button> · <button class="sg-share" id="sg-follow" title="get a notification when a new version of this song leaks">follow leaks</button></div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
           '<div class="yt-stats">' + (d.tracker.length ? '<span class="yt-stat"><b>' + d.tracker.length + '</b> on the tracker</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + '</div>' +
           (rel && (rel.preview || rel.links.spotify || rel.links.apple) ? '<div class="yt-links" style="justify-content:flex-start;margin-top:12px;">' + (rel.preview ? '<button class="yt-l" id="sg-pv" style="border:0;cursor:pointer;font-family:inherit;">▶ 30s preview</button>' : '') + (rel.links.spotify ? '<a class="yt-l" href="' + esc(rel.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (rel.links.apple ? '<a class="yt-l" href="' + esc(rel.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
           '</div></div>';
@@ -1591,6 +1591,17 @@ window._ytBooted = false;
       root.innerHTML = html;
       document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
       document.getElementById('sg-share').onclick = function () { yeShare('/resources?view=song&t=' + encodeURIComponent(d.title), d.title); };
+      var fb = document.getElementById('sg-follow');
+      var paintF = function (f) { if (!fb || !f) return; fb.textContent = f.following ? 'following leaks ✓' : 'follow leaks'; fb.title = (f.following ? 'you will get a notification when a new version leaks' : 'get a notification when a new version of this song leaks') + (f.count ? ' · ' + f.count + ' following' : ''); };
+      api('/resources/follow?t=' + encodeURIComponent(d.title)).then(paintF).catch(function () {});
+      fb.onclick = async function () {
+        var me = null; try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
+        if (!me) { if (typeof wvToast === 'function') wvToast('log in to follow songs'); navigate('/login'); return; }
+        fb.disabled = true;
+        try { var r = await api('/resources/follow', { method: 'POST', body: JSON.stringify({ t: d.title }) }); paintF(r); if (typeof wvToast === 'function') wvToast(r.following ? 'youll hear about new leaks of ' + d.title : 'unfollowed'); }
+        catch (e) { if (typeof wvToast === 'function') wvToast(e.message || 'couldnt do that'); }
+        fb.disabled = false;
+      };
       root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { navigate(c.getAttribute('data-go')); }; });
       root.querySelectorAll('[data-sgp]').forEach(function (b) {
         b.onclick = function (e) {

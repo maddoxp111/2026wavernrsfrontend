@@ -569,6 +569,7 @@
       follower_milestone:'🌟',
       comment:           '💬',
       tracker_add:       '📋',
+      song_leak:         '💧',
     };
     return icons[type] || '🔔';
   }
@@ -582,6 +583,7 @@
   }
 
   function _notifHref(n) {
+    if (n && n.type === 'song_leak' && n.title) return '/resources?view=song&t=' + encodeURIComponent(String(n.title).replace(/^new\s+/, '').replace(/\s+leaked$/, '')).replace(/'/g, '%27');
     if (!n || !n.entity_id) return '';
     if (n.entity_type === 'lp') return '/lp?id=' + n.entity_id;
     if (n.entity_type === 'track') return '/track?id=' + n.entity_id;
