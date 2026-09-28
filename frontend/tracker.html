@@ -89,6 +89,7 @@
     #view .fs-ls { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
     #view .fs-l { font-size:11.5px; font-weight:700; color:var(--text-2); background:var(--surface-2); border-radius:99px; padding:4px 10px; text-decoration:none; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     #view .fs-l:hover { background:var(--brand); color:#14121c; }
+    #view .fs-l.fs-here { background:color-mix(in srgb, var(--brand) 22%, var(--surface-2)); color:var(--text); }
     #view .fs-more { display:block; margin:18px auto 0; border:0; background:var(--surface-2); color:var(--text); font:inherit; font-weight:700; font-size:13.5px; padding:10px 22px; border-radius:99px; cursor:pointer; }
     #view .tk-tabs button { white-space:nowrap; flex:none; }
     #view .tk-tabs { max-width:100%; overflow-x:auto; scrollbar-width:none; }
@@ -232,6 +233,9 @@
     return _sheetGrid[k];
   }
 
+  function fsHere(u) {
+    try { var x = new URL(u); if (!/(^|\.)wavernrs\.com$/.test(x.hostname)) return null; if (!/^\/(album|track|artist|playlist|tracker|resources|archive)(\.html)?$/.test(x.pathname)) return null; return x.pathname.replace(/\.html$/, '') + x.search; } catch (_) { return null; }
+  }
   function fsHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'link'; } }
   function fsLinkLabel(l) {
     var t = String(l.t || '').trim();
@@ -289,7 +293,11 @@
         '<div class="fs-t">' + esc(b.title) + '</div>' +
         (b.fields.length ? '<div class="fs-f">' + b.fields.map(function (f) { return '<span>' + (f[0] ? '<b>' + esc(f[0]) + '</b>' : '') + esc(f[1]) + '</span>'; }).join('') + '</div>' : '') +
         (b.desc ? '<div class="fs-d" onclick="this.classList.toggle(\'open\')">' + esc(b.desc) + '</div>' : '') +
-        (b.links.length ? '<div class="fs-ls">' + b.links.slice(0, 12).map(function (l) { return '<a class="fs-l" href="' + esc(l.u) + '" target="_blank" rel="noopener" title="' + esc(l.u) + '">' + esc(fsLinkLabel(l)) + '</a>'; }).join('') + (b.links.length > 12 ? '<span class="fs-l">+' + (b.links.length - 12) + ' more</span>' : '') + '</div>' : '') +
+        (b.links.length ? '<div class="fs-ls">' + b.links.slice(0, 12).map(function (l) {
+          var here = fsHere(l.u);
+          if (here) return '<a class="fs-l fs-here" href="' + esc(here) + '" onclick="navigate(this.getAttribute(\'href\'));return false;" title="play it on wavernrs">▶ play here</a>';
+          return '<a class="fs-l" href="' + esc(l.u) + '" target="_blank" rel="noopener" title="' + esc(l.u) + '">' + esc(fsLinkLabel(l)) + '</a>';
+        }).join('') + (b.links.length > 12 ? '<span class="fs-l">+' + (b.links.length - 12) + ' more</span>' : '') + '</div>' : '') +
       '</div></div>';
   }
 
