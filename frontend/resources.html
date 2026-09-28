@@ -344,6 +344,7 @@
   .sg-play { position:absolute; inset:0; border:0; background:rgba(0,0,0,.45); color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .sg-play:hover { background:var(--brand); color:#14121c; }
   .sg-pl { font-size:12px; font-weight:700; color:var(--brand); margin-left:6px; letter-spacing:0; }
+  .sg-share { border:0; background:none; color:var(--brand); font:inherit; font-size:inherit; letter-spacing:inherit; font-weight:800; cursor:pointer; padding:0; }
   .sg-card { background:var(--surface); border-radius:14px; padding:14px 16px; margin:4px 0 8px; cursor:pointer; }
   .sg-card:hover { background:var(--surface-2); }
   .sg-l { font-size:13.5px; color:var(--text); margin-top:6px; line-height:1.5; overflow-wrap:anywhere; }
@@ -939,6 +940,11 @@ window._ytBooted = false;
   var P = new URLSearchParams(location.search);
   var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', quiz: 'ye-quiz', song: 'ye-song' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  window.yeShare = function (path, title) {
+    var link = location.origin + path;
+    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({ title: title || 'wavernrs', url: link }).catch(function () {}); return; }
+    try { navigator.clipboard.writeText(link).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }).catch(function () { prompt('copy this link', link); }); } catch (_) { prompt('copy this link', link); }
+  };
   function num(n) { n = +n || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K' : String(n); }
   function thumb(u, w) {
     if (!u) return '';
@@ -1207,6 +1213,7 @@ window._ytBooted = false;
       if (tag) out += '<a class="yt-l" href="/archive?era=' + encodeURIComponent(tag.id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">' + (tag.comps || tag.edits ? [tag.comps ? tag.comps.toLocaleString() + ' comps' : '', tag.edits ? tag.edits.toLocaleString() + ' edits' : ''].filter(Boolean).join(' · ') + ' from this era ›' : 'yedits from this era ›') + '</a>';
       out += '<a class="yt-l" href="/resources?era=' + encodeURIComponent(a.era) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">this era on the tracker ›</a>';
       out += '<a class="yt-l" href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">full credits ↗</a>';
+      out += '<button class="yt-l" data-share-path="' + esc('/resources?view=disco&album=' + encodeURIComponent(a.slug)) + '" data-share-title="' + esc(a.title) + '" style="border:0;cursor:pointer;font-family:inherit;">share</button>';
       return out;
     }
     function samp(list, label) {
@@ -1253,6 +1260,7 @@ window._ytBooted = false;
       root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
       liveTags(slug);
     }
+    root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share-path]'); if (b) { e.preventDefault(); yeShare(b.getAttribute('data-share-path'), b.getAttribute('data-share-title')); } });
     var _live = null;
     function liveTags(slug) {
       var nk = function (t) { return String(t || '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/[^a-z0-9]+/g, ''); };
@@ -1534,7 +1542,7 @@ window._ytBooted = false;
       var sub = rel ? 'released on ' + rel.album + ' · ' + rel.year : (unr.length ? 'unreleased' + (unr[0].era ? ' · ' + unr[0].era : '') : 'not on the tracker');
       var html = '<button class="yt-back" id="sg-back">← Ye archive</button>' +
         '<div class="yt-hero"><div class="yt-cover" style="background:' + (window.coverGradient ? coverGradient(d.title) : 'var(--surface-3)') + ';">' + (art ? '<img src="' + esc(thumb(art, 420)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
-          '<div class="yt-hero-i"><div class="yt-hero-k">SONG</div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
+          '<div class="yt-hero-i"><div class="yt-hero-k">SONG · <button class="sg-share" id="sg-share">share</button></div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
           '<div class="yt-stats">' + (d.tracker.length ? '<span class="yt-stat"><b>' + d.tracker.length + '</b> on the tracker</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + '</div>' +
           (rel && (rel.preview || rel.links.spotify || rel.links.apple) ? '<div class="yt-links" style="justify-content:flex-start;margin-top:12px;">' + (rel.preview ? '<button class="yt-l" id="sg-pv" style="border:0;cursor:pointer;font-family:inherit;">▶ 30s preview</button>' : '') + (rel.links.spotify ? '<a class="yt-l" href="' + esc(rel.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (rel.links.apple ? '<a class="yt-l" href="' + esc(rel.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
           '</div></div>';
@@ -1581,6 +1589,7 @@ window._ytBooted = false;
       html += '<a class="yt-l" style="display:inline-block;margin-top:18px;" href="/search?q=' + encodeURIComponent(d.title) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">search everything for ' + esc(d.title) + ' ›</a>';
       root.innerHTML = html;
       document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
+      document.getElementById('sg-share').onclick = function () { yeShare('/resources?view=song&t=' + encodeURIComponent(d.title), d.title); };
       root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { navigate(c.getAttribute('data-go')); }; });
       root.querySelectorAll('[data-sgp]').forEach(function (b) {
         b.onclick = function (e) {
