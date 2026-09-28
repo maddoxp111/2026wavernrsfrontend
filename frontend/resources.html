@@ -271,6 +271,8 @@
   .tl-bar span { font-size:9px; color:var(--text-3); font-weight:700; }
   .tl-with { display:flex; flex-wrap:wrap; gap:6px; }
   .tl-with span { font-size:12.5px; font-weight:700; background:var(--surface-2); border-radius:99px; padding:4px 10px; }
+  .tl-song { cursor:pointer; }
+  .tl-song:hover { background:var(--brand) !important; color:#14121c; }
   .tl-with i { font-style:normal; color:var(--text-3); margin-left:2px; }
   .tl-pics { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
   .tl-pics img { width:84px; height:84px; object-fit:contain; background:#fff; border-radius:8px; flex:none; }
@@ -1265,6 +1267,7 @@ window._ytBooted = false;
       if (y.tweets.count) stats.push('<b>' + y.tweets.count.toLocaleString() + '</b> tweets');
       if (y.tour) stats.push('<b>' + y.tour.shows + '</b> shows');
       if (y.yeezy.count) stats.push('<b>' + y.yeezy.count + '</b> yeezy pieces');
+      if (y.leaks && y.leaks.count) stats.push('<b>' + y.leaks.count.toLocaleString() + '</b> leaks');
       var html = '<section class="tl-y" id="tl-' + y.year + '"><div class="tl-dot"></div><h2 class="tl-yh">' + y.year + '</h2>' +
         '<div class="yt-stats" style="margin:4px 0 14px;">' + stats.map(function (s) { return '<span class="yt-stat">' + s + '</span>'; }).join('') + '</div>';
       if (y.albums.length) {
@@ -1278,6 +1281,10 @@ window._ytBooted = false;
       }
       if (y.tour) {
         html += '<div class="tl-card" data-go="/resources?view=tours&year=' + y.year + '"><div class="tl-k">TOUR</div><div class="tl-at">' + y.tour.shows + ' show' + (y.tour.shows === 1 ? '' : 's') + (y.tour.first ? ' · starting with ' + esc(String(y.tour.first).toLowerCase()) : '') + '</div><div class="yt-sub">' + [y.tour.videos ? y.tour.videos + ' videos' : '', y.tour.merch ? y.tour.merch + ' merch' : '', y.tour.yedia ? y.tour.yedia + ' fan photos and videos' : ''].filter(Boolean).join(' · ') + '</div></div>';
+      }
+      if (y.leaks && y.leaks.count) {
+        html += '<div class="tl-card" data-go="/resources?tab=Unreleased"><div class="tl-k">LEAKS · ' + y.leaks.count.toLocaleString() + ' SONG' + (y.leaks.count === 1 ? '' : 'S') + (y.leaks.full ? ' · ' + y.leaks.full.toLocaleString() + ' IN FULL' : '') + '</div><div class="tl-with">' +
+          y.leaks.top.map(function (t) { var clean = String(t.title).replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(); return '<span class="tl-song" data-song="' + esc(clean) + '">' + esc(t.title) + '</span>'; }).join('') + '</div></div>';
       }
       if (y.produced_with.length) {
         html += '<div class="tl-card" data-go="/resources?view=disco&sub=produced"><div class="tl-k">WORKED WITH</div><div class="tl-with">' + y.produced_with.map(function (p) { return '<span>' + esc(p.name) + (p.n > 1 ? ' <i>' + p.n + '</i>' : '') + '</span>'; }).join('') + '</div></div>';
@@ -1295,7 +1302,7 @@ window._ytBooted = false;
         '<div class="ye-credit">built from the tweets, tours, yeezy archive and musicbrainz credits on this page</div>';
       var o = document.getElementById('tl-order'); o.value = st.order; o.onchange = function () { st.order = o.value; paint(); };
       root.querySelectorAll('[data-y]').forEach(function (b) { b.onclick = function () { var el = document.getElementById('tl-' + b.getAttribute('data-y')); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
-      root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { go(c.getAttribute('data-go')); }; });
+      root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function (e) { var sg = e.target.closest && e.target.closest('[data-song]'); if (sg) { go('/resources?view=song&t=' + encodeURIComponent(sg.getAttribute('data-song'))); return; } go(c.getAttribute('data-go')); }; });
     }
     async function load() {
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
