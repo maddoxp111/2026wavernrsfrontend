@@ -1263,7 +1263,7 @@ window._ytBooted = false;
     root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share-path]'); if (b) { e.preventDefault(); yeShare(b.getAttribute('data-share-path'), b.getAttribute('data-share-title')); } });
     var _live = null;
     function liveTags(slug) {
-      var nk = function (t) { return String(t || '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/[^a-z0-9]+/g, ''); };
+      var nk = function (t) { return String(t || '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/\s+(feat|ft)\.?\s.*$/i, '').replace(/[^a-z0-9]+/g, ''); };
       if (!_live) _live = api('/ye/tour/songs').then(function (d) { var m = {}; (d.songs || []).forEach(function (x) { m[nk(x.song)] = x.plays; }); return m; }).catch(function () { _live = null; return {}; });
       _live.then(function (m) {
         if (st.album !== slug) return;
@@ -1492,7 +1492,8 @@ window._ytBooted = false;
     }
     var qzKey = function (e) {
       if (!document.getElementById('ye-quiz') || document.getElementById('ye-quiz').style.display === 'none') return;
-      var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) || e.metaKey || e.ctrlKey || e.altKey) return;
+      var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (t && t !== document.body && !(t.closest && t.closest('#ye-quiz'))) return;
       var opts = root.querySelectorAll('.qz-opts .qz-opt');
       if (/^[1-4]$/.test(e.key) && opts.length && st.picked == null) { var b = opts[+e.key - 1]; if (b) { e.preventDefault(); b.click(); } return; }
       if (e.key === 'Enter') { var nx = document.getElementById('qz-next'); if (nx) { e.preventDefault(); nx.click(); } return; }
@@ -1703,9 +1704,13 @@ window._ytBooted = false;
     function toSec(t) { var p = String(t || '').split(':').map(Number); return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : 0; }
     function pauseSite() { if (typeof pausePlayer === 'function') pausePlayer(); }
     async function load() {
+      var my = st.lseq = (st.lseq || 0) + 1;
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-      try { st.d = await api('/ye/tour' + (st.year ? '?year=' + st.year : '')); }
-      catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt load the tour archive</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
+      var got;
+      try { got = await api('/ye/tour' + (st.year ? '?year=' + st.year : '')); }
+      catch (e) { if (my === st.lseq) root.innerHTML = '<div class="yt-empty"><b>couldnt load the tour archive</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
+      if (my !== st.lseq) return;
+      st.d = got;
       st.year = st.d.year;
       if (!secs(st.d).some(function (x) { return x[0] === st.sec; })) st.sec = 'shows';
       url();

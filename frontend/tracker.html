@@ -406,8 +406,13 @@
     try {
       var r = await Promise.all([d ? d : api('/trackers/' + encodeURIComponent(slug) + '?kind=comp'), api('/trackers/' + encodeURIComponent(slug) + '/missing')]);
       d = _cache[slug + '|comp'] = r[0]; m = r[1];
-    } catch (e) { b.innerHTML = '<div class="wv-empty">couldnt load this</div>'; return; }
+    } catch (e) { if (_slug === slug && _kind === 'missing') b.innerHTML = '<div class="wv-empty">couldnt load this</div>'; return; }
     if (_slug !== slug || _kind !== 'missing') return;
+    sheetInfo(slug).then(function (info) {
+      if (!info || !info.kind || _slug !== slug || _kind !== 'missing') return;
+      var tabs = document.querySelector('#view .tk-tabs');
+      if (tabs && !tabs.querySelector('[data-sheet]')) tabs.insertAdjacentHTML('beforeend', '<button data-sheet onclick="tkKind(\'sheet\')">Full tracker</button>');
+    });
     history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(slug) + '&kind=missing');
     var html = header(d.tracker, 'missing') +
       '<div class="tk-sub" style="margin:-6px 0 14px;">' + m.total + ' comp' + (m.total === 1 ? '' : 's') + ' on this tracker are not on wavernrs yet. the links go to wherever the tracker has them</div>' +
@@ -537,6 +542,7 @@
     if (!slug) { navigate('/archive'); return; }
     if (typeof initPlayer === 'function') initPlayer();
     _slug = slug; _kind = kind;
+    if (era && (kind === 'sheet' || kind === 'missing')) { kind = 'comp'; _kind = 'comp'; }
     if (era) window.tkEra(era); else if (kind === 'sheet') renderSheet(slug, p.get('tab')); else renderTracker(slug, kind);
   })();
 })();
