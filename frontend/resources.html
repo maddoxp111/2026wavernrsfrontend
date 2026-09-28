@@ -1125,7 +1125,7 @@ window._ytBooted = false;
       if (!SUBS.some(function (x) { return x[0] === st.sub; })) st.sub = 'albums';
       url();
       root.innerHTML = '<div class="yt-tabs" id="ds-subs">' + SUBS.map(function (x) { return '<button class="yt-tab' + (st.sub === x[0] ? ' on' : '') + '" data-sub="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div id="ds-body"></div>' +
-        '<div class="ye-credit">credits from <a href="' + esc(st.d.source.url) + '" target="_blank" rel="noopener">MusicBrainz</a>, cover art from the Cover Art Archive</div>';
+        '<div class="ye-credit">credits from <a href="' + esc(st.d.source.url) + '" target="_blank" rel="noopener">MusicBrainz</a> and Wikipedia, cover art from the Cover Art Archive and Apple Music</div>';
       root.querySelectorAll('[data-sub]').forEach(function (b) { b.onclick = function () { grid(b.getAttribute('data-sub')); }; });
       var subs = document.getElementById('ds-subs'), onb = subs && subs.querySelector('.on'); if (onb && onb.offsetLeft + onb.offsetWidth > subs.clientWidth) subs.scrollLeft = onb.offsetLeft - 16;
       var body = document.getElementById('ds-body');
@@ -1226,7 +1226,8 @@ window._ytBooted = false;
       var tag = tagFor(a.era);
       if (tag) out += '<a class="yt-l" href="/archive?era=' + encodeURIComponent(tag.id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">' + (tag.comps || tag.edits ? [tag.comps ? tag.comps.toLocaleString() + ' comps' : '', tag.edits ? tag.edits.toLocaleString() + ' edits' : ''].filter(Boolean).join(' · ') + ' from this era ›' : 'yedits from this era ›') + '</a>';
       out += '<a class="yt-l" href="/resources?era=' + encodeURIComponent(a.era) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">this era on the tracker ›</a>';
-      out += '<a class="yt-l" href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">full credits ↗</a>';
+      if (a.release) out += '<a class="yt-l" href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">full credits ↗</a>';
+      if (a.wiki && /^https:\/\/en\.wikipedia\.org\//.test(a.wiki)) out += '<a class="yt-l" href="' + esc(a.wiki) + '" target="_blank" rel="noopener">wikipedia ↗</a>';
       out += '<button class="yt-l" data-share-path="' + esc('/resources?view=disco&album=' + encodeURIComponent(a.slug)) + '" data-share-title="' + esc(a.title) + '" style="border:0;cursor:pointer;font-family:inherit;">share</button>';
       return out;
     }
@@ -1264,7 +1265,7 @@ window._ytBooted = false;
         }).join('') + '</div>';
       });
       html += '<div class="ds-nav">' + (r.prev ? '<button class="yt-l" data-a="' + esc(r.prev.slug) + '">‹ ' + esc(r.prev.title) + '</button>' : '<span></span>') + (r.next ? '<button class="yt-l" data-a="' + esc(r.next.slug) + '">' + esc(r.next.title) + ' ›</button>' : '') + '</div>' +
-        '<div class="ye-credit">credits from <a href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">MusicBrainz</a>, cover art from the Cover Art Archive</div>';
+        '<div class="ye-credit">credits from ' + (a.release ? '<a href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">MusicBrainz</a>' : 'MusicBrainz') + (a.wiki ? ' and <a href="' + esc(a.wiki) + '" target="_blank" rel="noopener">Wikipedia</a>' : '') + ', cover art from the Cover Art Archive and Apple Music</div>';
       root.innerHTML = html;
       document.getElementById('ds-back').onclick = function () { grid('albums'); window.scrollTo(0, 0); };
       root.querySelectorAll('.ds-nav [data-a]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-a')); window.scrollTo(0, 0); }; });
