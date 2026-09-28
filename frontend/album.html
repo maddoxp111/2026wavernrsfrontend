@@ -856,11 +856,11 @@
     if (!hit) return;
     var d; try { d = (await api('/ye/disco/' + encodeURIComponent(hit.slug))).album; } catch (_) { return; }
     var off = []; d.discs.forEach(function (x) { x.tracks.forEach(function (t) { off.push(t); }); });
-    var seenOff = {}, order = [];
+    var seenOff = Object.create(null), order = [];
     off.forEach(function (t) { var k = _vsNorm(t.title); if (!k) return; if (!seenOff[k]) { order.push(k); seenOff[k] = t; } else if (t.title.length < seenOff[k].title.length) seenOff[k] = t; });
     off = order.map(function (k) { return seenOff[k]; });
     var mine = albumTracks.map(function (t) { var td = t.tracks || t; return { title: td.title, ks: String(td.title || '').split(/\s+[_\/+]\s+|\s+x\s+(?=[A-Z])/).map(_vsNorm).filter(Boolean) }; }).filter(function (t) { return t.ks.length; });
-    var mineK = {}; mine.forEach(function (t) { t.ks.forEach(function (k) { mineK[k] = 1; }); });
+    var mineK = Object.create(null); mine.forEach(function (t) { t.ks.forEach(function (k) { mineK[k] = 1; }); });
     var kept = off.filter(function (t) { return mineK[_vsNorm(t.title)]; });
     var missing = off.filter(function (t) { return !mineK[_vsNorm(t.title)]; });
     var extra = mine.filter(function (t) { return !t.ks.some(function (k) { return seenOff[k]; }); });

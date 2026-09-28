@@ -601,18 +601,19 @@
             (r.links && r.links.apple ? '<a class="wv-pill" style="font-size:12px;padding:5px 12px;font-weight:700;text-decoration:none;" href="' + escHtml(r.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
           '</div><span class="track-row-plays" style="white-space:nowrap;">credits ›</span></div>';
       }).join('');
-    var pv = null;
+    var pv = null, pvBtn = null;
+    var stopPv = function () { if (pv) pv.pause(); };
+    if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', stopPv);
+    if (window._pageCleanup) window._pageCleanup.push(function () { stopPv(); if (typeof audio !== 'undefined' && audio && audio.removeEventListener) audio.removeEventListener('play', stopPv); });
     el.querySelectorAll('[data-ypv]').forEach(function (b) {
       b.onclick = function (e) {
         e.stopPropagation();
-        if (pv && !pv.paused) { pv.pause(); return; }
-        if (!pv) {
-          pv = new Audio(b.getAttribute('data-ypv'));
-          pv.onplay = function () { b.textContent = '❚❚ 30s preview'; };
-          pv.onpause = pv.onended = function () { b.textContent = '▶ 30s preview'; };
-          if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', function () { pv.pause(); });
-          if (window._pageCleanup) window._pageCleanup.push(function () { pv.pause(); });
-        }
+        if (pv && pvBtn === b) { if (pv.paused) pv.play().catch(function () {}); else pv.pause(); return; }
+        stopPv();
+        pv = new Audio(b.getAttribute('data-ypv')); pvBtn = b;
+        pv.onplay = function () { b.textContent = '❚❚ 30s preview'; };
+        pv.onpause = pv.onended = function () { b.textContent = '▶ 30s preview'; };
+        pv.onerror = function () { b.textContent = 'cant play this'; };
         if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
         pv.play().catch(function () {});
       };

@@ -1034,6 +1034,7 @@ window._ytBooted = false;
     }
     var SUBS = [['albums', 'Albums'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
     function grid(sub) {
+      st.vt = (st.vt || 0) + 1;
       st.album = ''; st.cur = null;
       if (sub) st.sub = sub;
       if (!SUBS.some(function (x) { return x[0] === st.sub; })) st.sub = 'albums';
@@ -1068,8 +1069,9 @@ window._ytBooted = false;
     }
     function creditsView(body, role) {
       body.innerHTML = searchBar('ds-cq', role === 'produced' ? 'search songs ye produced...' : 'search songs ye is on...') + '<div class="ye-chips" id="ds-art"></div><div class="yt-count" id="ds-cc"></div><div id="ds-cl"><div class="loading"><div class="spinner"></div></div></div>';
-      var q = '', who = '', tm = null, data = null;
+      var q = '', who = '', tm = null, data = null, vt = st.vt, seq = 0;
       function paint() {
+        if (vt !== st.vt || !document.getElementById('ds-cl')) return;
         var items = data.items.filter(function (c) { return !who || c.lead === who; });
         document.getElementById('ds-cc').textContent = items.length + (role === 'produced' ? ' songs ye produced for other artists' : ' songs ye is featured on');
         var html = '', lastY = null;
@@ -1085,9 +1087,13 @@ window._ytBooted = false;
         document.getElementById('ds-cl').innerHTML = html || '<div class="yt-empty"><b>nothing matches</b>try something else</div>';
       }
       async function load() {
-        try { data = await api('/ye/disco/credits?role=' + role + (q ? '&q=' + encodeURIComponent(q) : '')); }
-        catch (e) { document.getElementById('ds-cl').innerHTML = '<div class="yt-empty"><b>couldnt load these</b>' + esc(e.message || '') + '</div>'; return; }
+        var my = ++seq, got;
+        try { got = await api('/ye/disco/credits?role=' + role + (q ? '&q=' + encodeURIComponent(q) : '')); }
+        catch (e) { if (my === seq && vt === st.vt && document.getElementById('ds-cl')) document.getElementById('ds-cl').innerHTML = '<div class="yt-empty"><b>couldnt load these</b>' + esc(e.message || '') + '</div>'; return; }
+        if (my !== seq || vt !== st.vt) return;
+        data = got;
         var ar = document.getElementById('ds-art');
+        if (!ar) return;
         ar.innerHTML = '<button class="ye-chip' + (!who ? ' on' : '') + '" data-w="">everyone</button>' + data.artists.slice(0, 16).map(function (a) { return '<button class="ye-chip' + (who === a.name ? ' on' : '') + '" data-w="' + esc(a.name) + '">' + esc(a.name) + ' <span style="opacity:.6;">' + a.n + '</span></button>'; }).join('');
         ar.querySelectorAll('[data-w]').forEach(function (b) { b.onclick = function () { who = b.getAttribute('data-w'); ar.querySelectorAll('[data-w]').forEach(function (x) { x.classList.toggle('on', x === b); }); paint(); }; });
         paint();
@@ -1098,8 +1104,9 @@ window._ytBooted = false;
     }
     function samplesView(body) {
       body.innerHTML = searchBar('ds-sq', 'search samples...') + '<div class="yt-count" id="ds-sc"></div><div id="ds-sl"><div class="loading"><div class="spinner"></div></div></div>';
-      var data = null;
+      var data = null, vt = st.vt;
       function paint(q) {
+        if (vt !== st.vt || !document.getElementById('ds-sl')) return;
         var w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
         var items = data.items.filter(function (s) { var h = (s.t + ' ' + s.a + ' ' + s.used.map(function (u) { return u.title + ' ' + u.album; }).join(' ')).toLowerCase(); return w.every(function (x) { return h.indexOf(x) >= 0; }); });
         document.getElementById('ds-sc').textContent = items.length + ' songs ye sampled';
@@ -1110,14 +1117,17 @@ window._ytBooted = false;
         }).join('') + '</div>';
         document.querySelectorAll('#ds-sl [data-go]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-go')); window.scrollTo(0, 0); }; });
       }
-      api('/ye/disco/samples').then(function (d) { data = d; paint(''); var qi = document.getElementById('ds-sq'), tm = null; qi.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { paint(qi.value); }, 150); }; })
-        .catch(function (e) { document.getElementById('ds-sl').innerHTML = '<div class="yt-empty"><b>couldnt load the samples</b></div>'; });
+      api('/ye/disco/samples').then(function (d) { if (vt !== st.vt) return; data = d; paint(''); var qi = document.getElementById('ds-sq'), tm = null; if (!qi) return; qi.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { paint(qi.value); }, 150); }; })
+        .catch(function (e) { var el = document.getElementById('ds-sl'); if (el && vt === st.vt) el.innerHTML = '<div class="yt-empty"><b>couldnt load the samples</b></div>'; });
     }
     async function producer(name) {
       var box = document.getElementById('ds-prod'); if (!box) return;
+      var vt = st.vt, my = st.pseq = (st.pseq || 0) + 1;
       box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       try {
         var r = await api('/ye/disco/producer/' + encodeURIComponent(name));
+        if (vt !== st.vt || my !== st.pseq) return;
+        box = document.getElementById('ds-prod'); if (!box) return;
         box.innerHTML = '<div class="yt-count" style="margin:4px 0 8px;">' + r.items.length + ' songs produced by ' + esc(name) + '</div><div class="yt-list">' + r.items.map(function (t) {
           return '<div class="yt-row thumb ds-go" data-a="' + esc(t.slug) + '"><div class="yt-cover sm" style="cursor:pointer;"><img src="' + esc(thumb(t.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()"></div><div style="min-width:0;"><div class="yt-t">' + esc(t.title) + '</div><div class="yt-sub">' + esc(t.album + ' · ' + t.year + (t.producers.length > 1 ? ' · with ' + t.producers.filter(function (p) { return p.toLowerCase() !== name.toLowerCase(); }).join(', ') : '')) + '</div></div><div class="yt-sub">' + tlen(t.len) + '</div></div>';
         }).join('') + '</div>';
@@ -1137,6 +1147,7 @@ window._ytBooted = false;
       return '<div class="ds-s"><b>' + label + '</b> ' + list.map(function (x) { return '<span>' + esc(x.t) + (x.a ? ' <i>by ' + esc(x.a) + '</i>' : '') + '</span>'; }).join('') + '</div>';
     }
     async function openAlbum(slug) {
+      st.vt = (st.vt || 0) + 1;
       st.album = slug; url();
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       var r;
@@ -1287,6 +1298,13 @@ window._ytBooted = false;
       catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt start the quiz</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
       if (!st.qs.length) { root.innerHTML = '<div class="yt-empty"><b>no questions yet</b>the archive is still loading, try again in a minute</div>'; return; }
       st.i = 0; st.score = 0; st.streak = 0; st.best = getBest(); st.picked = null; st.res = '';
+      if (st.daily) {
+        var pg = {}; try { pg = JSON.parse(localStorage.getItem('wv_yedaily_prog') || '{}') || {}; } catch (_) {}
+        if (pg.day === st.day && pg.res) {
+          st.res = String(pg.res).slice(0, st.qs.length); st.i = st.res.length; st.score = st.res.split('1').length - 1;
+          if (st.i >= st.qs.length) { done(); return; }
+        }
+      }
       ask();
     }
     var qa = null;
@@ -1324,6 +1342,7 @@ window._ytBooted = false;
       var right = q.options[k].label === q.answer;
       if (right) { st.score++; st.streak++; } else st.streak = 0;
       st.res += right ? '1' : '0';
+      if (st.daily) { try { localStorage.setItem('wv_yedaily_prog', JSON.stringify({ day: st.day, res: st.res })); } catch (_) {} }
       root.querySelectorAll('.qz-opt').forEach(function (b, j) { var o = q.options[j]; b.disabled = true; if (o.label === q.answer) b.classList.add('right'); else if (j === k) b.classList.add('wrong'); });
       var more = '';
       if (q.kind === 'tweet' && q.extra) more = 'tweeted ' + new Date(q.extra.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) + (q.extra.likes ? ' · ♥ ' + num(q.extra.likes) : '');
@@ -1340,9 +1359,10 @@ window._ytBooted = false;
       stopAudio();
       if (st.daily) {
         var prev = dailyState(), day = st.day || today();
-        var y = new Date(new Date(day + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
+        var y = new Date(new Date(day + 'T12:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
         var streak = prev.day === y ? (prev.streak || 0) + 1 : prev.day === day ? (prev.streak || 1) : 1;
-        try { localStorage.setItem('wv_yedaily', JSON.stringify({ day: day, res: st.res, streak: streak })); } catch (_) {}
+        if (prev.day === day && prev.res) streak = prev.streak || 1;
+        try { localStorage.setItem('wv_yedaily', JSON.stringify({ day: day, res: prev.day === day && prev.res ? prev.res : st.res, streak: streak })); localStorage.removeItem('wv_yedaily_prog'); } catch (_) {}
         root.innerHTML = '<div class="qz-done"><div class="qz-k">DAILY YE</div><div class="qz-big">' + st.score + '<span>/' + st.qs.length + '</span></div><div class="qz-dg big">' + grid(st.res) + '</div>' +
           (streak > 1 ? '<div class="yt-sub">🔥 ' + streak + ' day streak</div>' : '<div class="yt-sub">come back tomorrow for a new one</div>') +
           '<div class="qz-acts"><button class="qz-next" id="qz-dshare2">share</button><button class="qz-opt" id="qz-menu" style="width:auto;">practice</button></div></div>';
