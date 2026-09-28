@@ -4,18 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=e9f8784ef22a">
-  <script src="/js/status-card.js?v=e9f8784ef22a"></script>
-  <script src="/js/down.js?v=e9f8784ef22a"></script>
+  <link rel="stylesheet" href="/css/style.css?v=6f23d1635af9">
+  <script src="/js/status-card.js?v=6f23d1635af9"></script>
+  <script src="/js/down.js?v=6f23d1635af9"></script>
 </head>
 <body>
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=e9f8784ef22a"></script>
-<script src="/js/layout.js?v=e9f8784ef22a"></script>
-<script src="/js/player.js?v=e9f8784ef22a"></script>
-<script src="/js/router.js?v=e9f8784ef22a"></script>
+<script src="/js/api.js?v=6f23d1635af9"></script>
+<script src="/js/layout.js?v=6f23d1635af9"></script>
+<script src="/js/player.js?v=6f23d1635af9"></script>
+<script src="/js/router.js?v=6f23d1635af9"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -276,7 +276,7 @@ function arcEraHero() {
       '<div style="width:88px;height:88px;border-radius:12px;overflow:hidden;flex-shrink:0;background:' + coverGradient(era.name || '') + ';box-shadow:0 8px 24px rgba(0,0,0,.35);">' +
         (era.cover ? '<img src="' + escHtml(era.cover) + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.remove()">' : '') +
       '</div>' +
-      '<div style="min-width:0;flex:1;">' +
+      '<div style="min-width:180px;flex:1;">' +
         '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Era</div>' +
         '<h2 style="margin:3px 0 4px;font-size:27px;font-weight:800;letter-spacing:-.03em;">' + escHtml(era.name) + '</h2>' +
         '<div style="font-size:12.5px;color:var(--text-3);">' + (bits.join(' · ') || 'nothing yet') + '</div>' +
@@ -285,8 +285,27 @@ function arcEraHero() {
       '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/eras\')">All eras</button>' +
       (era.name && !/^other$/i.test(era.name) ? '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/resources?tab=Unreleased&era=' + encodeURIComponent(era.name).replace(/'/g, '%27') + '\')" title="see this era on the Ye tracker">on the Ye tracker ›</button>' : '') +
       '<span id="arc-era-album"></span>' +
-    '</div>';
+    '</div><div id="arc-era-picks"></div>';
   arcEraAlbum(era);
+  arcEraPicks(era);
+}
+
+// The comps the trackers star for this era, so newcomers know where to start.
+var _arcPicks = {};
+function arcEraPicks(era) {
+  if (!era || /^other$/i.test(era.name || '')) return;
+  if (!_arcPicks[era.id]) _arcPicks[era.id] = api('/trackers/picks?era=' + encodeURIComponent(era.name)).then(function (d) { return (d && d.items) || []; }).catch(function () { delete _arcPicks[era.id]; return []; });
+  _arcPicks[era.id].then(function (items) {
+    var el = document.getElementById('arc-era-picks');
+    if (!el || _arcEra !== era.id || items.length < 2) return;
+    el.innerHTML = '<div class="arc-picks"><div class="arc-picks-h">tracker picks <span>starred on the Yedits trackers</span></div><div class="scroll-row">' + items.map(function (x) {
+      var a = x.album, art = a.cover_url ? (typeof wvImg === 'function' ? wvImg(a.cover_url, 240) : a.cover_url) : '';
+      return '<div class="scroll-card" onclick="navigate(\'/album?id=' + encodeURIComponent(a.id) + '\')" style="flex-shrink:0;width:132px;">' +
+        '<div class="scroll-card-cover" style="background:' + coverGradient(a.title || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="scroll-card-title">' + (x.stars > 1 ? '⭐'.repeat(Math.min(x.stars, 3)) + ' ' : '⭐ ') + escHtml(x.n || a.title) + '</div>' +
+        '<div class="scroll-card-sub" title="' + escHtml('on ' + x.trackers.join(', ')) + '">' + escHtml([x.c, x.trackers.length > 1 ? 'on ' + x.trackers.length + ' trackers' : x.trackers[0]].filter(Boolean).join(' · ')) + '</div></div>';
+    }).join('') + '</div></div>';
+  });
 }
 
 // The released album for the era, from the discography, when there is one.
