@@ -121,6 +121,32 @@ async function lp(id) {
   };
 }
 
+const YE_VIEWS = {
+  tracker: ['The Ye tracker', 'every Ye song, leak and snippet, era by era'],
+  tweets: ['Every Ye tweet', 'search thousands of Ye tweets by year, with photos, videos and polls'],
+  yeezy: ['The Yeezy archive', 'every Yeezy piece, season by season'],
+  tours: ['Ye tours', 'shows, setlists, merch and fan footage from every tour'],
+  disco: ['Ye discography', 'every album with producers, samples and the songs he made for other artists'],
+  timeline: ['Ye, year by year', 'albums, tweets, tours, Yeezy and collaborations on one timeline'],
+  quiz: ['The Ye quiz', 'how well do you know ye? tweets, albums, samples, producers and name that song'],
+};
+async function ye(params) {
+  const view = YE_VIEWS[params.get('view')] ? params.get('view') : 'tracker';
+  if (view === 'disco' && params.get('album')) {
+    const d = await getJSON('/ye/disco/' + encodeURIComponent(params.get('album')));
+    const a = d && d.album;
+    if (a) {
+      const tracks = a.discs.reduce((n, x) => n + x.tracks.length, 0);
+      const prod = {};
+      a.discs.forEach(x => x.tracks.forEach(t => t.producers.forEach(p => { if (!/^(ye|kanye west)$/i.test(p)) prod[p] = (prod[p] || 0) + 1; })));
+      const top = Object.keys(prod).sort((x, y) => prod[y] - prod[x]).slice(0, 3);
+      return { title: a.title + ' — ' + a.artist + ' (' + a.year + ')', description: joinParts([tracks + ' songs', top.length ? 'with ' + top.join(', ') : null, 'credits and samples on wavernrs']), image: a.cover || FALLBACK_IMAGE, type: 'music.album' };
+    }
+  }
+  if (view === 'tweets' && params.get('filter') === 'today') return { title: 'On this day in Ye history', description: 'what ye tweeted on this date, every year', image: FALLBACK_IMAGE, type: 'website' };
+  return { title: YE_VIEWS[view][0] + ' — wavernrs', description: YE_VIEWS[view][1], image: FALLBACK_IMAGE, type: 'website' };
+}
+
 const LOADERS = { album, track, artist, playlist, lp };
 
 function page(meta, url) {
@@ -154,8 +180,14 @@ module.exports = async (req, res) => {
   const canonical = SITE + '/' + type + (id ? '?id=' + encodeURIComponent(id) : '');
 
   let meta = null;
+  let where = canonical;
   try {
-    if (id && LOADERS[type]) meta = await LOADERS[type](id);
+    if (type === 'ye') {
+      const keep = new URLSearchParams();
+      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
+      where = SITE + '/resources' + (keep.toString() ? '?' + keep.toString() : '');
+      meta = await ye(url.searchParams);
+    } else if (id && LOADERS[type]) meta = await LOADERS[type](id);
   } catch (_) {
     meta = null;
   }
@@ -170,5 +202,5 @@ module.exports = async (req, res) => {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400');
-  res.status(200).send(page(meta, canonical));
+  res.status(200).send(page(meta, where));
 };
