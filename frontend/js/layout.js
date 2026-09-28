@@ -559,6 +559,7 @@
       follower:          '👤',
       follower_milestone:'🌟',
       comment:           '💬',
+      tracker_add:       '📋',
     };
     return icons[type] || '🔔';
   }
