@@ -191,7 +191,7 @@ async function fillOnThisDay() {
     var t = y.items && y.items[0]; if (!t) return;
     var text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim() || (t.media && t.media.length ? '[photo]' : '');
     if (!text) return;
-    cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : (t.likes || 0)) + '</div></div>');
+    cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">' + (t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : 'read it ›') + '</div></div>');
   });
   if (!cards.length) return;
   var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
