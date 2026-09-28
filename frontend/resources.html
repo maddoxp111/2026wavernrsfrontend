@@ -1411,7 +1411,7 @@ window._ytBooted = false;
         '<div class="qz-q"><div class="qz-k">' + esc(q.q) + '</div>' +
           (q.audio ? '<button class="qz-play" id="qz-play"><span>▶</span><i><b id="qz-pb"></b></i></button>' : '<div class="qz-text' + (q.kind === 'tweet' ? ' tw' : '') + '">' + esc(q.text) + '</div>') + (q.sub ? '<div class="yt-sub" style="margin-top:6px;">' + esc(q.sub) + '</div>' : '') + '</div>' +
         '<div class="qz-opts' + (imgs ? ' imgs' : '') + '">' + q.options.map(function (o, k) {
-          return '<button class="qz-opt" data-k="' + k + '">' + (o.img ? '<img src="' + esc(thumb(o.img, 240)) + '" alt="" onerror="this.remove()">' : '') + '<b>' + esc(o.label) + '</b>' + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + '</button>';
+          return '<button class="qz-opt" data-k="' + k + '" title="press ' + (k + 1) + '">' + (o.img ? '<img src="' + esc(thumb(o.img, 240)) + '" alt="" onerror="this.remove()">' : '') + '<b>' + esc(o.label) + '</b>' + (o.sub ? '<span>' + esc(o.sub) + '</span>' : '') + '</button>';
         }).join('') + '</div><div id="qz-after"></div>';
       document.getElementById('qz-quit').onclick = function () { stopAudio(); menu(); };
       root.querySelectorAll('.qz-opt').forEach(function (b) { b.onclick = function () { answer(+b.getAttribute('data-k')); }; });
@@ -1482,7 +1482,16 @@ window._ytBooted = false;
         try { navigator.clipboard.writeText(shareText).then(function () { if (typeof wvToast === 'function') wvToast('copied your score'); }).catch(function () { prompt('copy this', shareText); }); } catch (_) { prompt('copy this', shareText); }
       };
     }
-    if (window._pageCleanup) window._pageCleanup.push(stopAudio);
+    var qzKey = function (e) {
+      if (!document.getElementById('ye-quiz') || document.getElementById('ye-quiz').style.display === 'none') return;
+      var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) || e.metaKey || e.ctrlKey || e.altKey) return;
+      var opts = root.querySelectorAll('.qz-opts .qz-opt');
+      if (/^[1-4]$/.test(e.key) && opts.length && st.picked == null) { var b = opts[+e.key - 1]; if (b) { e.preventDefault(); b.click(); } return; }
+      if (e.key === 'Enter') { var nx = document.getElementById('qz-next'); if (nx) { e.preventDefault(); nx.click(); } return; }
+      if (e.key === ' ' && document.getElementById('qz-play')) { e.preventDefault(); document.getElementById('qz-play').click(); }
+    };
+    document.addEventListener('keydown', qzKey);
+    if (window._pageCleanup) window._pageCleanup.push(function () { stopAudio(); document.removeEventListener('keydown', qzKey); });
     return { open: function () { if (st.started) return; st.started = true; menu(); } };
   })();
 
