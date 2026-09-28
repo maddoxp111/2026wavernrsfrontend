@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=b5c1d6cfdde2">
-  <script src="/js/status-card.js?v=b5c1d6cfdde2"></script>
-  <script src="/js/down.js?v=b5c1d6cfdde2"></script>
+  <link rel="stylesheet" href="/css/style.css?v=a1e4d2379ab9">
+  <script src="/js/status-card.js?v=a1e4d2379ab9"></script>
+  <script src="/js/down.js?v=a1e4d2379ab9"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=b5c1d6cfdde2"></script>
-<script src="/js/layout.js?v=b5c1d6cfdde2"></script>
-<script src="/js/player.js?v=b5c1d6cfdde2"></script>
-<script src="/js/router.js?v=b5c1d6cfdde2"></script>
-<script src="/js/playlists.js?v=b5c1d6cfdde2"></script>
+<script src="/js/api.js?v=a1e4d2379ab9"></script>
+<script src="/js/layout.js?v=a1e4d2379ab9"></script>
+<script src="/js/player.js?v=a1e4d2379ab9"></script>
+<script src="/js/router.js?v=a1e4d2379ab9"></script>
+<script src="/js/playlists.js?v=a1e4d2379ab9"></script>
 <script>
 initPlayer();
 
@@ -194,6 +194,12 @@ async function fillOnThisDay() {
     var text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim() || (t.media && t.media.length ? '[photo]' : '');
     if (!text) return;
     cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">' + (t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : 'read it ›') + '</div></div>');
+  });
+  ((d.leaks && d.leaks.items) || []).slice(0, 8).forEach(function (l) {
+    var clean = String(l.title).replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
+    var art = l.art ? (typeof wvImg === 'function' ? wvImg(l.art, 320) : l.art) : '';
+    cards.push('<div class="scroll-card" onclick="navigate(\'/resources?view=song&t=' + encodeURIComponent(clean).replace(/'/g, '%27') + '\')" style="flex-shrink:0;width:150px;"><div class="scroll-card-cover" style="background:' + coverGradient(l.era || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="scroll-card-title">' + escHtml(l.title) + '</div><div class="scroll-card-sub">leaked this day in ' + escHtml(l.year) + '</div></div>');
   });
   var dly = {}; try { dly = JSON.parse(localStorage.getItem('wv_yedaily') || '{}') || {}; } catch (_) {}
   var todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });

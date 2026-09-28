@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=b5c1d6cfdde2">
-  <script src="/js/status-card.js?v=b5c1d6cfdde2"></script>
-  <script src="/js/down.js?v=b5c1d6cfdde2"></script>
+  <link rel="stylesheet" href="/css/style.css?v=a1e4d2379ab9">
+  <script src="/js/status-card.js?v=a1e4d2379ab9"></script>
+  <script src="/js/down.js?v=a1e4d2379ab9"></script>
 </head>
 <body>
 
@@ -395,10 +395,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=b5c1d6cfdde2"></script>
-<script src="/js/layout.js?v=b5c1d6cfdde2"></script>
-<script src="/js/player.js?v=b5c1d6cfdde2"></script>
-<script src="/js/router.js?v=b5c1d6cfdde2"></script>
+<script src="/js/api.js?v=a1e4d2379ab9"></script>
+<script src="/js/layout.js?v=a1e4d2379ab9"></script>
+<script src="/js/player.js?v=a1e4d2379ab9"></script>
+<script src="/js/router.js?v=a1e4d2379ab9"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1003,8 +1003,10 @@ window._ytBooted = false;
         var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
         document.getElementById('tw-count').textContent = d.tweets.toLocaleString() + ' tweet' + (d.tweets === 1 ? '' : 's') + ' on ' + day + ' across ' + d.years.length + ' year' + (d.years.length === 1 ? '' : 's');
         var html = d.albums.map(function (a) { return '<div class="tw-day">' + esc(a.year) + ' · ' + esc(a.title) + ' came out today</div>'; }).join('');
+        if (d.leaks && d.leaks.items && d.leaks.items.length) html += '<div class="tw-day">leaked on this day</div><div class="ye-chips">' + d.leaks.items.map(function (l) { var clean = String(l.title).replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(); return '<button class="ye-chip" data-songhub="' + esc(clean) + '">' + esc(l.title) + ' <span style="opacity:.6;">' + esc(l.year) + '</span></button>'; }).join('') + '</div>';
         html += d.years.map(function (y) { return '<div class="tw-day">' + esc(y.year) + '</div>' + y.items.map(card).join(''); }).join('');
         feed.innerHTML = html || '<div class="yt-empty"><b>nothing on ' + esc(day) + '</b>ye didnt tweet on this day</div>';
+        feed.querySelectorAll('[data-songhub]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-songhub'))); }; });
       } catch (e) { feed.innerHTML = '<div class="yt-empty"><b>couldnt load this day</b>' + esc(e.message || '') + '</div>'; }
     }
     function shareTweet(id) {
