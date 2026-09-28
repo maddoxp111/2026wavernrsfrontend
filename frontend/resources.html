@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=02df03d9ff62">
-  <script src="/js/status-card.js?v=02df03d9ff62"></script>
-  <script src="/js/down.js?v=02df03d9ff62"></script>
+  <link rel="stylesheet" href="/css/style.css?v=bd6eefbee73f">
+  <script src="/js/status-card.js?v=bd6eefbee73f"></script>
+  <script src="/js/down.js?v=bd6eefbee73f"></script>
 </head>
 <body>
 
@@ -274,6 +274,10 @@
   .tl-pics img { width:84px; height:84px; object-fit:contain; background:#fff; border-radius:8px; flex:none; }
   @media (max-width:640px) { .tl { padding-left:20px; } .tl-dot { left:-20px; } .tl::before { left:4px; } .tl-yh { font-size:28px; } .tl-albums { grid-template-columns:1fr; } }
   #ye-quiz { margin-top:16px; max-width:720px; }
+  .qz-daily { display:flex; align-items:center; justify-content:space-between; gap:14px; background:linear-gradient(135deg, color-mix(in srgb, var(--brand) 22%, var(--surface)), var(--surface)); border-radius:16px; padding:16px 18px; }
+  .qz-daily b { font-size:17px; display:block; margin-top:3px; }
+  .qz-dg { font-size:20px; letter-spacing:2px; margin:4px 0 2px; }
+  .qz-dg.big { font-size:30px; margin:8px 0; }
   .qz-hero h2, .qz-done h2 { font-size:28px; font-weight:800; letter-spacing:-.03em; margin:4px 0 6px; }
   .qz-hero p { color:var(--text-2); margin:0 0 18px; font-size:14px; }
   .qz-k { font-size:11px; font-weight:800; letter-spacing:.09em; color:var(--text-3); }
@@ -366,10 +370,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=02df03d9ff62"></script>
-<script src="/js/layout.js?v=02df03d9ff62"></script>
-<script src="/js/player.js?v=02df03d9ff62"></script>
-<script src="/js/router.js?v=02df03d9ff62"></script>
+<script src="/js/api.js?v=bd6eefbee73f"></script>
+<script src="/js/layout.js?v=bd6eefbee73f"></script>
+<script src="/js/player.js?v=bd6eefbee73f"></script>
+<script src="/js/router.js?v=bd6eefbee73f"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1251,17 +1255,37 @@ window._ytBooted = false;
     function bestKey() { return 'wv_yequiz_best_' + (st.mode || 'mixed'); }
     function getBest() { try { return +localStorage.getItem(bestKey()) || 0; } catch (_) { return 0; } }
     function setBest(n) { try { localStorage.setItem(bestKey(), String(n)); } catch (_) {} }
+    function dailyState() { try { return JSON.parse(localStorage.getItem('wv_yedaily') || '{}') || {}; } catch (_) { return {}; } }
+    function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }); }
+    function grid(r) { return r.split('').map(function (c) { return c === '1' ? '🟩' : '🟥'; }).join(''); }
+    function dailyCard() {
+      var d = dailyState(), done = d.day === today() && d.res;
+      return '<div class="qz-daily' + (done ? ' done' : '') + '"><div><div class="qz-k">DAILY YE · ' + esc(new Date(today() + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) + '</div>' +
+        (done ? '<div class="qz-dg">' + grid(d.res) + '</div><div class="yt-sub">you got ' + (d.res.split('1').length - 1) + '/5 today' + (d.streak > 1 ? ' · 🔥 ' + d.streak + ' day streak' : '') + ' · new one at midnight</div>'
+              : '<b>5 questions, same for everyone</b><div class="yt-sub">one try a day' + (d.streak > 0 && d.day ? ' · keep your ' + d.streak + ' day streak going' : '') + '</div>') + '</div>' +
+        (done ? '<button class="qz-opt" id="qz-dshare" style="width:auto;flex-direction:row;font-weight:700;font-size:13px;border-radius:99px;">share</button>' : '<button class="qz-next" id="qz-dplay" style="margin:0;">play</button>') + '</div>';
+    }
+    function shareDaily() {
+      var d = dailyState(); if (!d.res) return;
+      var text = 'daily ye ' + d.day + ' — ' + (d.res.split('1').length - 1) + '/5\n' + grid(d.res) + '\n' + location.origin + '/resources?view=quiz';
+      if (navigator.share) { navigator.share({ text: text }).catch(function () {}); return; }
+      try { navigator.clipboard.writeText(text); if (typeof wvToast === 'function') wvToast('copied'); } catch (_) {}
+    }
     function menu() {
-      root.innerHTML = '<div class="qz-hero"><div class="qz-k">YE QUIZ</div><h2>how well do you know ye?</h2><p>10 questions from his tweets, albums, samples and credits. pick a mode</p></div>' +
+      stopAudio(); st.daily = false;
+      root.innerHTML = '<div class="qz-hero"><div class="qz-k">YE QUIZ</div><h2>how well do you know ye?</h2><p>questions from his tweets, albums, samples and credits</p></div>' + dailyCard() +
+        '<div class="qz-k" style="margin:22px 0 10px;">PRACTICE · 10 QUESTIONS</div>' +
         '<div class="qz-modes">' + MODES.map(function (m) { var b = 0; try { b = +localStorage.getItem('wv_yequiz_best_' + (m[0] || 'mixed')) || 0; } catch (_) {} return '<button class="qz-mode" data-m="' + m[0] + '"><b>' + m[1] + '</b><span>' + m[2] + '</span>' + (b ? '<i>best ' + b + '/10</i>' : '') + '</button>'; }).join('') + '</div>';
-      root.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { st.mode = b.getAttribute('data-m'); start(); }; });
+      root.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { st.mode = b.getAttribute('data-m'); st.daily = false; start(); }; });
+      var dp = document.getElementById('qz-dplay'); if (dp) dp.onclick = function () { st.daily = true; st.mode = ''; start(); };
+      var ds = document.getElementById('qz-dshare'); if (ds) ds.onclick = shareDaily;
     }
     async function start() {
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-      try { var d = await api('/ye/quiz?n=10' + (st.mode ? '&kinds=' + st.mode : '')); st.qs = d.questions || []; }
+      try { var d = await api(st.daily ? '/ye/quiz?daily=1' : '/ye/quiz?n=10' + (st.mode ? '&kinds=' + st.mode : '')); st.qs = d.questions || []; st.day = d.day || null; }
       catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt start the quiz</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
       if (!st.qs.length) { root.innerHTML = '<div class="yt-empty"><b>no questions yet</b>the archive is still loading, try again in a minute</div>'; return; }
-      st.i = 0; st.score = 0; st.streak = 0; st.best = getBest(); st.picked = null;
+      st.i = 0; st.score = 0; st.streak = 0; st.best = getBest(); st.picked = null; st.res = '';
       ask();
     }
     var qa = null;
@@ -1298,6 +1322,7 @@ window._ytBooted = false;
       var q = st.qs[st.i]; st.picked = k;
       var right = q.options[k].label === q.answer;
       if (right) { st.score++; st.streak++; } else st.streak = 0;
+      st.res += right ? '1' : '0';
       root.querySelectorAll('.qz-opt').forEach(function (b, j) { var o = q.options[j]; b.disabled = true; if (o.label === q.answer) b.classList.add('right'); else if (j === k) b.classList.add('wrong'); });
       var more = '';
       if (q.kind === 'tweet' && q.extra) more = 'tweeted ' + new Date(q.extra.date).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) + (q.extra.likes ? ' · ♥ ' + num(q.extra.likes) : '');
@@ -1312,6 +1337,18 @@ window._ytBooted = false;
     }
     function done() {
       stopAudio();
+      if (st.daily) {
+        var prev = dailyState(), day = st.day || today();
+        var y = new Date(new Date(day + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
+        var streak = prev.day === y ? (prev.streak || 0) + 1 : prev.day === day ? (prev.streak || 1) : 1;
+        try { localStorage.setItem('wv_yedaily', JSON.stringify({ day: day, res: st.res, streak: streak })); } catch (_) {}
+        root.innerHTML = '<div class="qz-done"><div class="qz-k">DAILY YE</div><div class="qz-big">' + st.score + '<span>/' + st.qs.length + '</span></div><div class="qz-dg big">' + grid(st.res) + '</div>' +
+          (streak > 1 ? '<div class="yt-sub">🔥 ' + streak + ' day streak</div>' : '<div class="yt-sub">come back tomorrow for a new one</div>') +
+          '<div class="qz-acts"><button class="qz-next" id="qz-dshare2">share</button><button class="qz-opt" id="qz-menu" style="width:auto;">practice</button></div></div>';
+        document.getElementById('qz-dshare2').onclick = shareDaily;
+        document.getElementById('qz-menu').onclick = menu;
+        return;
+      }
       var n = st.qs.length, s = st.score, isBest = s > st.best;
       if (isBest) setBest(s);
       var line = s === n ? 'perfect. you might be ye' : s >= n * 0.8 ? 'certified ye head' : s >= n * 0.5 ? 'not bad, not bad' : s >= n * 0.3 ? 'you listen to the singles' : 'go run it back';

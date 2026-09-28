@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=02df03d9ff62">
-  <script src="/js/status-card.js?v=02df03d9ff62"></script>
-  <script src="/js/down.js?v=02df03d9ff62"></script>
+  <link rel="stylesheet" href="/css/style.css?v=bd6eefbee73f">
+  <script src="/js/status-card.js?v=bd6eefbee73f"></script>
+  <script src="/js/down.js?v=bd6eefbee73f"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=02df03d9ff62"></script>
-<script src="/js/layout.js?v=02df03d9ff62"></script>
-<script src="/js/player.js?v=02df03d9ff62"></script>
-<script src="/js/router.js?v=02df03d9ff62"></script>
-<script src="/js/playlists.js?v=02df03d9ff62"></script>
+<script src="/js/api.js?v=bd6eefbee73f"></script>
+<script src="/js/layout.js?v=bd6eefbee73f"></script>
+<script src="/js/player.js?v=bd6eefbee73f"></script>
+<script src="/js/router.js?v=bd6eefbee73f"></script>
+<script src="/js/playlists.js?v=bd6eefbee73f"></script>
 <script>
 initPlayer();
 
@@ -193,6 +193,10 @@ async function fillOnThisDay() {
     if (!text) return;
     cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">' + (t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : 'read it ›') + '</div></div>');
   });
+  var dly = {}; try { dly = JSON.parse(localStorage.getItem('wv_yedaily') || '{}') || {}; } catch (_) {}
+  var todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+  var played = dly.day === todayKey && dly.res;
+  cards.unshift('<div class="wv-otd-tw wv-otd-quiz" onclick="navigate(\'/resources?view=quiz\')"><div class="wv-otd-y">DAILY YE</div><div class="wv-otd-t">' + (played ? escHtml(dly.res.split('').map(function (c) { return c === '1' ? '🟩' : '🟥'; }).join('')) + '<br>you got ' + (dly.res.split('1').length - 1) + '/5 today' : 'today\u2019s 5 questions. same for everyone, one try') + '</div><div class="wv-otd-s">' + (played ? (dly.streak > 1 ? '🔥 ' + dly.streak + ' day streak' : 'new one at midnight') : 'play ›') + '</div></div>');
   if (!cards.length) return;
   var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources?view=tweets&filter=today\')">On this day in Ye history</h2><button class="wv-see-all" onclick="navigate(\'/resources?view=tweets&filter=today\')">' + escHtml(day) + '</button></div>' +
