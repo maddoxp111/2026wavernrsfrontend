@@ -125,6 +125,7 @@ function renderHome() {
   html += awardsBlock();
   html += '<div id="home-leaks"></div>';
   html += '<div id="home-otd"></div>';
+  html += '<div id="home-tnew"></div>';
   html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts');
@@ -144,6 +145,7 @@ function renderHome() {
   fillLiveLps();
   fillLeaks();
   fillOnThisDay();
+  fillTrackerNew();
 }
 
 // Newest leaks from the Ye tracker.
@@ -201,6 +203,26 @@ async function fillOnThisDay() {
   var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
   el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources?view=tweets&filter=today\')">On this day in Ye history</h2><button class="wv-see-all" onclick="navigate(\'/resources?view=tweets&filter=today\')">' + escHtml(day) + '</button></div>' +
     '<div class="scroll-row">' + cards.join('') + '</div></div>';
+}
+
+// Comps that just landed on the Yedits trackers and are playable here.
+var _tnewCache = { at: 0, items: null };
+async function fillTrackerNew() {
+  if (_homeFilter === 'edits') return;
+  try {
+    if (!_tnewCache.items || Date.now() - _tnewCache.at > 10 * 60000) _tnewCache = { at: Date.now(), items: ((await api('/trackers/changes?fresh=1')) || {}).items || [] };
+  } catch (_) { return; }
+  var el = document.getElementById('home-tnew');
+  var items = (_tnewCache.items || []).filter(function (e) { return e && e.album && e.album.id; });
+  if (!el || items.length < 3) return;
+  el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/tracker?t=' + encodeURIComponent(items[0].slug) + '\')">New on the trackers</h2><button class="wv-see-all" onclick="navigate(\'/tracker?t=' + encodeURIComponent(items[0].slug) + '\')">What’s new</button></div>' +
+    '<div class="scroll-row">' + items.map(function (e) {
+      var a = e.album, art = a.cover_url ? (typeof wvImg === 'function' ? wvImg(a.cover_url, 320) : a.cover_url) : '';
+      return '<div class="scroll-card" onclick="navigate(\'/album?id=' + encodeURIComponent(a.id) + '\')" style="flex-shrink:0;width:150px;">' +
+        '<div class="scroll-card-cover" style="background:' + coverGradient(a.title || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="scroll-card-title">' + escHtml(e.n || a.title) + '</div>' +
+        '<div class="scroll-card-sub">' + escHtml([e.c, e.era].filter(Boolean).join(' · ')) + '</div></div>';
+    }).join('') + '</div></div>';
 }
 
 // Live listening parties go right at the top so people actually find them.
