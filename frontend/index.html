@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=2dfca673db84">
-  <script src="/js/status-card.js?v=2dfca673db84"></script>
-  <script src="/js/down.js?v=2dfca673db84"></script>
+  <link rel="stylesheet" href="/css/style.css?v=0acb33bbd519">
+  <script src="/js/status-card.js?v=0acb33bbd519"></script>
+  <script src="/js/down.js?v=0acb33bbd519"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=2dfca673db84"></script>
-<script src="/js/layout.js?v=2dfca673db84"></script>
-<script src="/js/player.js?v=2dfca673db84"></script>
-<script src="/js/router.js?v=2dfca673db84"></script>
-<script src="/js/playlists.js?v=2dfca673db84"></script>
+<script src="/js/api.js?v=0acb33bbd519"></script>
+<script src="/js/layout.js?v=0acb33bbd519"></script>
+<script src="/js/player.js?v=0acb33bbd519"></script>
+<script src="/js/router.js?v=0acb33bbd519"></script>
+<script src="/js/playlists.js?v=0acb33bbd519"></script>
 <script>
 initPlayer();
 
@@ -102,6 +102,7 @@ function renderHome() {
     '</div>';
 
   html += '<div id="home-lp"></div>';
+  html += newsCard();
   html += eraStrip();
 
   // Jump back in — dense 2×4 tile grid, first screen
@@ -236,6 +237,23 @@ async function fillTrackerNew() {
         '<div class="scroll-card-sub">' + escHtml([e.c, e.era].filter(Boolean).join(' · ')) + '</div></div>';
     }).join('') + '</div></div>';
 }
+
+// A one-time heads up about new corners of the site. Dismissed for good once closed.
+var WV_NEWS = { id: 'ye-archive-2026-09-28', items: [
+  ['Daily Ye', '5 questions a day, same for everyone', '/resources?view=quiz'],
+  ['Discography', 'producers, samples and previews for every album', '/resources?view=disco'],
+  ['Song pages', 'every version of a song, leaks, credits and live shows', '/resources?view=song&t=Runaway'],
+  ['Timeline', 'ye year by year', '/resources?view=timeline'],
+] };
+function newsCard() {
+  try { if (localStorage.getItem('wv_news_seen') === WV_NEWS.id) return ''; } catch (_) { return ''; }
+  return '<div class="wv-news" id="wv-news"><div class="wv-news-h"><b>new on wavernrs</b><button onclick="closeNews()" aria-label="dismiss">✕</button></div><div class="wv-news-row">' +
+    WV_NEWS.items.map(function (x) { return '<a href="' + x[2] + '" onclick="closeNews(true);navigate(this.getAttribute(\'href\'));return false;"><b>' + escHtml(x[0]) + '</b><span>' + escHtml(x[1]) + '</span></a>'; }).join('') + '</div></div>';
+}
+window.closeNews = function (keepVisible) {
+  try { localStorage.setItem('wv_news_seen', WV_NEWS.id); } catch (_) {}
+  if (!keepVisible) { var el = document.getElementById('wv-news'); if (el) el.remove(); }
+};
 
 // Live listening parties go right at the top so people actually find them.
 var _lpCache = { at: 0, live: [] };
