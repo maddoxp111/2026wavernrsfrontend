@@ -473,11 +473,18 @@ initPlayer();
   }
 
   // ── Chat ─────────────────────────────────────────────────────
+  function lpLinks(h) {
+    return h.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, function (m, pre, u) {
+      var tail = (u.match(/[).,!?]+$/) || [''])[0]; u = u.slice(0, u.length - tail.length);
+      var inside = /^https?:\/\/(www\.)?wavernrs\.com\//.test(u);
+      return pre + '<a href="' + u + '" target="_blank" rel="noopener' + (inside ? '' : ' nofollow ugc') + '" style="color:var(--brand);word-break:break-all;">' + u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 50) + (u.length > 58 ? '…' : '') + '</a>' + tail;
+    });
+  }
   function msgHtml(m) {
     var mine = me && m.user && m.user.id === me.id;
     var canDel = mine || S.host;
     var t = new Date(m.created_at);
-    return '<div class="lp-msg" data-mid="' + m.id + '">' + av(m.user) + '<div class="lp-msg-b"><span class="lp-msg-n">' + who(m.user) + '</span><span class="lp-msg-t">' + t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + '</span><div>' + escHtml(m.body) + '</div></div>' +
+    return '<div class="lp-msg" data-mid="' + m.id + '">' + av(m.user) + '<div class="lp-msg-b"><span class="lp-msg-n">' + who(m.user) + '</span><span class="lp-msg-t">' + t.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + '</span><div>' + lpLinks(escHtml(m.body)) + '</div></div>' +
       (canDel ? '<button class="lp-msg-x" data-del="' + m.id + '" title="Delete">✕</button>' : '') + '</div>';
   }
   function paintChat(scroll) {
