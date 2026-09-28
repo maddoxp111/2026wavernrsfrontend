@@ -1525,12 +1525,17 @@ window._ytBooted = false;
             '<div style="min-width:0;"><div class="yt-t">' + esc(x.title) + '</div><div class="yt-sub">' + esc((x.artists && x.artists.display_name) || x.archive_artist_name || '') + (x.play_count ? ' · ' + num(x.play_count) + ' plays' : '') + '</div></div><div class="ds-r"><span class="yt-sub">open ›</span></div></div>';
         }).join('') + '</div>';
       }
+      if (d.live && d.live.length) {
+        html += '<h3 class="ds-h">played live at ' + d.live.length + ' show' + (d.live.length === 1 ? '' : 's') + '</h3><div class="ye-chips">' + d.live.map(function (x) {
+          return '<button class="ye-chip" data-go="/resources?view=tours&year=' + encodeURIComponent(x.year) + '&show=' + encodeURIComponent(x.id) + (x.time ? '&at=' + encodeURIComponent(x.time) : '') + '">' + esc(x.year + ' · ' + String(x.show).toLowerCase()) + (x.time ? ' <span style="opacity:.6;">' + esc(x.time) + '</span>' : '') + '</button>';
+        }).join('') + '</div>';
+      }
       if (d.credits.length) {
         html += '<h3 class="ds-h">with other artists</h3><div class="yt-list">' + d.credits.map(function (c) {
           return '<div class="yt-row thumb"><div class="yt-cover sm">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div><div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc([c.artist, c.album, c.year].filter(Boolean).join(' · ')) + '</div></div><div class="ds-r"><span class="yt-sub">' + esc(c.roles.join(' + ')) + '</span></div></div>';
         }).join('') + '</div>';
       }
-      if (!rel && !d.tracker.length && !tracks.length && !d.credits.length) html += '<div class="yt-empty"><b>nothing found for that song</b>try the search</div>';
+      if (!rel && !d.tracker.length && !tracks.length && !d.credits.length && !(d.live && d.live.length)) html += '<div class="yt-empty"><b>nothing found for that song</b>try the search</div>';
       html += '<a class="yt-l" style="display:inline-block;margin-top:18px;" href="/search?q=' + encodeURIComponent(d.title) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">search everything for ' + esc(d.title) + ' ›</a>';
       root.innerHTML = html;
       document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
@@ -1628,7 +1633,7 @@ window._ytBooted = false;
   // ── Tours (from YE TOUR ARCHIVE) ───────────────────────────────
   var TR = (function () {
     var root = document.getElementById('ye-tours');
-    var st = { year: P.get('year') || '', sec: P.get('sec') || 'shows', music: 'videos', venue: '', yshow: '', ykind: '', d: null, ymedia: [], ytotal: 0, started: false };
+    var st = { year: P.get('year') || '', sec: P.get('sec') || 'shows', music: 'videos', venue: '', yshow: '', ykind: '', d: null, ymedia: [], ytotal: 0, started: false, pending: P.get('show') ? { id: P.get('show'), time: P.get('at') || '' } : null };
     function secs(d) {
       return [['shows', 'Shows', d.shows.length], ['music', 'Music', d.videos.length + d.audio.length + d.visualizers.length], ['merch', 'Merch', d.merch.length], ['yedia', 'Yedia', d.yedia_count], ['songs', 'Most played', 'every tour']].filter(function (x) { return typeof x[2] === 'string' || x[2] > 0; });
     }
