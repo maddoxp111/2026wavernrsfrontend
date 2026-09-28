@@ -972,6 +972,21 @@ window._ytBooted = false;
   var P = new URLSearchParams(location.search);
   var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', today: 'ye-today', song: 'ye-song' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  window.yeVideo = function (v, title) {
+    if (!v || !v.preview) return;
+    if (typeof pausePlayer === 'function') { try { pausePlayer(); } catch (_) {} }
+    var wrap = document.createElement('div'); wrap.className = 'yz-modal';
+    wrap.innerHTML = '<div class="yz-box tr-box"><div class="tr-vid"><video controls autoplay playsinline preload="metadata"></video></div><div class="tr-vinfo"><h3></h3><div class="yz-sub">preview from Apple Music</div><div class="yt-links" style="justify-content:flex-start;margin-top:12px;"></div></div><button class="yz-x" title="close">✕</button></div>';
+    var vid = wrap.querySelector('video'); vid.src = v.preview; if (v.art) vid.poster = v.art;
+    wrap.querySelector('h3').textContent = title || v.title || 'music video';
+    if (v.url) { var a = document.createElement('a'); a.className = 'yt-l'; a.href = v.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'watch the whole video on Apple Music ↗'; wrap.querySelector('.yt-links').appendChild(a); }
+    document.body.appendChild(wrap);
+    var close = function () { try { vid.pause(); } catch (_) {} wrap.remove(); document.removeEventListener('keydown', key); };
+    var key = function (e) { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', key);
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
+    wrap.querySelector('.yz-x').onclick = close;
+  };
   window.yeShare = function (path, title) {
     var link = location.origin + path;
     if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({ title: title || 'wavernrs', url: link }).catch(function () {}); return; }
@@ -1121,7 +1136,7 @@ window._ytBooted = false;
       api('/archive/eras').then(function (r) { var m = {}; ((r && r.items) || []).forEach(function (t) { m[norm(t.name)] = t; }); st.tags = m; var el = document.getElementById('ds-links'); if (el && st.cur) el.innerHTML = links(st.cur); if (st.sub === 'albums' && !st.album && document.getElementById('ds-body')) albums(document.getElementById('ds-body')); }).catch(function () {});
       if (st.album) openAlbum(st.album); else grid();
     }
-    var SUBS = [['albums', 'Albums'], ['unreleased', 'Unreleased'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
+    var SUBS = [['albums', 'Albums'], ['unreleased', 'Unreleased'], ['videos', 'Videos'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
     function grid(sub) {
       st.vt = (st.vt || 0) + 1;
       st.album = ''; st.cur = null;
@@ -1135,6 +1150,7 @@ window._ytBooted = false;
       var body = document.getElementById('ds-body');
       if (st.sub === 'albums') albums(body);
       else if (st.sub === 'unreleased') unreleased(body);
+      else if (st.sub === 'videos') videos(body);
       else if (st.sub === 'producers') producers(body);
       else if (st.sub === 'samples') samplesView(body);
       else creditsView(body, st.sub);
@@ -1148,6 +1164,18 @@ window._ytBooted = false;
           return '<div class="yt-era" data-a="' + esc(a.slug) + '">' + cover(a) + '<div class="yt-era-n">' + esc(a.title) + '</div><div class="yt-era-s">' + esc([a.year, a.artist !== 'Kanye West' && a.artist !== 'Ye' ? a.artist : '', a.tracks + ' songs', tg && tg.comps ? tg.comps + ' comps' : ''].filter(Boolean).join(' · ')) + '</div></div>';
         }).join('') + '</div>';
       body.querySelectorAll('[data-a]').forEach(function (c) { c.onclick = function () { openAlbum(c.getAttribute('data-a')); window.scrollTo(0, 0); }; });
+    }
+    function videos(body) {
+      var vt = st.vt;
+      body.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      api('/ye/disco/videos').then(function (d) {
+        if (vt !== st.vt || !document.getElementById('ds-body')) return;
+        var items = d.items || [];
+        body.innerHTML = '<div class="yt-count">' + items.length + ' music videos and visualizers. tap one to watch a preview</div><div class="tr-grid">' + items.map(function (v, i) {
+          return '<div class="tr-v" data-vi="' + i + '"><div class="tr-thumb">' + (v.art ? '<img src="' + esc(v.art) + '" data-nocdn alt="" loading="lazy" onerror="this.remove()">' : '') + '<span class="tr-play">▶</span></div><div class="tr-vt">' + esc(v.title) + '</div><div class="tr-vs">' + esc([v.artist, v.date ? v.date.slice(0, 4) : '', v.kind !== 'video' ? v.kind : ''].filter(Boolean).join(' · ')) + '</div></div>';
+        }).join('') + '</div>';
+        body.querySelectorAll('[data-vi]').forEach(function (c) { c.onclick = function () { var v = items[+c.getAttribute('data-vi')]; yeVideo(v, v.title); }; });
+      }).catch(function (e) { if (vt === st.vt) body.innerHTML = '<div class="yt-empty"><b>couldnt load the videos</b>' + esc(e.message || '') + '</div>'; });
     }
     function unreleased(body) {
       var vt = st.vt;
@@ -1279,7 +1307,7 @@ window._ytBooted = false;
             samp(t.samples, 'samples') +
             (t.sampled_by_count ? '<details class="ds-by"><summary>sampled by ' + t.sampled_by_count + (t.sampled_by_count === 1 ? ' song' : ' songs') + '</summary>' + samp(t.sampled_by, '') + '</details>' : '') +
             ((t.links && (t.links.spotify || t.links.apple)) ? '<div class="ds-ls">' + (t.links.spotify ? '<a href="' + esc(t.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (t.links.apple ? '<a href="' + esc(t.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
-            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span>' + (t.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(t.preview) + '" title="play a 30 second preview">▶ preview</button>' : '') + '<button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button><span class="ds-go-arrow" aria-hidden="true">›</span></div></div>';
+            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span>' + (t.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(t.preview) + '" title="play a 30 second preview">▶ preview</button>' : '') + (t.video ? '<button class="ds-find" data-vid="' + esc(t.title) + '" title="watch the music video">▶ video</button>' : '') + '<button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button><span class="ds-go-arrow" aria-hidden="true">›</span></div></div>';
         }).join('') + '</div>';
       });
       html += '<div class="ds-nav">' + (r.prev ? '<button class="yt-l" data-a="' + esc(r.prev.slug) + '">‹ ' + esc(r.prev.title) + '</button>' : '<span></span>') + (r.next ? '<button class="yt-l" data-a="' + esc(r.next.slug) + '">' + esc(r.next.title) + ' ›</button>' : '') + '</div>' +
@@ -1290,6 +1318,7 @@ window._ytBooted = false;
       root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
       root.querySelectorAll('.ds-find[data-q]').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
       root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); preview(b); }; });
+      root.querySelectorAll('[data-vid]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); var tt = b.getAttribute('data-vid'), tr = null; a.discs.forEach(function (d) { d.tracks.forEach(function (x) { if (x.title === tt) tr = x; }); }); if (tr && tr.video) { if (_pv) _pv.pause(); yeVideo(tr.video, tr.title); } }; });
       root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
       root.querySelectorAll('[data-row-song]').forEach(function (r) { r.onclick = function (e) { if (e.target.closest && e.target.closest('button, a, summary, details .ds-s')) return; navigate('/resources?view=song&t=' + encodeURIComponent(r.getAttribute('data-row-song'))); }; });
       liveTags(slug);
@@ -1585,7 +1614,7 @@ window._ytBooted = false;
         '<div class="yt-hero"><div class="yt-cover" style="background:' + (window.coverGradient ? coverGradient(d.title) : 'var(--surface-3)') + ';">' + (art ? '<img src="' + esc(thumb(art, 420)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
           '<div class="yt-hero-i"><div class="yt-hero-k">SONG · <button class="sg-share" id="sg-share">share</button> · <button class="sg-share" id="sg-follow" title="get a notification when a new version of this song leaks">follow leaks</button></div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
           '<div class="yt-stats">' + (d.tracker.length ? '<span class="yt-stat"><b>' + d.tracker.length + '</b> on the tracker</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + '</div>' +
-          (rel && (rel.preview || rel.links.spotify || rel.links.apple) ? '<div class="yt-links" style="justify-content:flex-start;margin-top:12px;">' + (rel.preview ? '<button class="yt-l" id="sg-pv" style="border:0;cursor:pointer;font-family:inherit;">▶ 30s preview</button>' : '') + (rel.links.spotify ? '<a class="yt-l" href="' + esc(rel.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (rel.links.apple ? '<a class="yt-l" href="' + esc(rel.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
+          (rel && (rel.preview || rel.video || rel.links.spotify || rel.links.apple) ? '<div class="yt-links" style="justify-content:flex-start;margin-top:12px;">' + (rel.preview ? '<button class="yt-l" id="sg-pv" style="border:0;cursor:pointer;font-family:inherit;">▶ 30s preview</button>' : '') + (rel.video ? '<button class="yt-l" id="sg-vid" style="border:0;cursor:pointer;font-family:inherit;">▶ music video</button>' : '') + (rel.links.spotify ? '<a class="yt-l" href="' + esc(rel.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (rel.links.apple ? '<a class="yt-l" href="' + esc(rel.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
           '</div></div>';
       if (rel) {
         html += '<div class="sg-card" data-go="/resources?view=disco&album=' + encodeURIComponent(rel.slug) + '"><div class="tl-k">CREDITS · ' + esc(rel.album.toUpperCase()) + '</div>' +
@@ -1651,6 +1680,7 @@ window._ytBooted = false;
           playTrack({ id: 'ys-' + String(x.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60), title: x.title, artist_name: 'Kanye West · ' + x.era, ia_url: sgAudio(x.links), cover_url: x.art ? thumb(x.art, 300) : '' });
         };
       });
+      var vb = document.getElementById('sg-vid'); if (vb && rel) vb.onclick = function () { stopPv(); yeVideo(rel.video, rel.title); };
       var pb = document.getElementById('sg-pv');
       if (pb && rel) pb.onclick = function () {
         if (_pv && !_pv.paused) { _pv.pause(); return; }
