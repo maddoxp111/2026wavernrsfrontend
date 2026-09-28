@@ -57,6 +57,27 @@
     }
   });
 
+  function yeArchiveSection(ya, q) {
+    var row = function (img, title, sub, href, extra) {
+      var art = img ? (typeof wvImg === 'function' ? wvImg(img, 96) : img) : '';
+      return '<div class="track-row" style="cursor:pointer;" onclick="navigate(\'' + href.replace(/'/g, "\\'") + '\')">' +
+        '<div style="width:44px;height:44px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:' + coverGradient(title) + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="track-row-info"><div class="track-row-title">' + escHtml(title) + '</div><div class="track-row-artist">' + escHtml(sub) + '</div></div>' +
+        (extra ? '<span class="track-row-plays" style="white-space:nowrap;">' + escHtml(extra) + '</span>' : '') + '</div>';
+    };
+    var disco = function (slug) { return '/resources?view=disco&album=' + encodeURIComponent(slug); };
+    var out = '<div class="search-results-section"><div class="search-results-title">From the Ye archive</div><div class="track-list">';
+    (ya.albums || []).forEach(function (a) { out += row(a.cover_sm, a.title, 'album · ' + a.year + ' · ' + a.tracks + ' songs', disco(a.slug), 'discography'); });
+    (ya.songs || []).forEach(function (t) { out += row(t.cover, t.title, t.album + ' · ' + t.year + (t.producers.length ? ' · prod. ' + t.producers.join(', ') : ''), disco(t.slug), 'song'); });
+    (ya.samples || []).forEach(function (x) { out += row(x.cover, x.t + (x.a ? ' — ' + x.a : ''), 'sampled on ' + x.song + ' (' + x.album + ')', disco(x.slug), 'sample'); });
+    (ya.credits || []).forEach(function (c) { out += row(c.cover, c.title, c.artist + (c.album && c.album !== c.title ? ' · ' + c.album : '') + (c.year ? ' · ' + c.year : ''), '/resources?view=disco&sub=' + (c.roles.indexOf('produced') >= 0 ? 'produced' : 'featured'), c.roles.indexOf('produced') >= 0 ? 'ye produced' : 'ye featured'); });
+    (ya.yeezy || []).forEach(function (x) { out += row(x.img, x.title, 'yeezy' + (x.year ? ' · ' + x.year : ''), '/resources?view=yeezy&item=' + encodeURIComponent(x.id), 'yeezy'); });
+    (ya.tweets || []).forEach(function (t) { out += row(null, String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').slice(0, 140), 'tweet · ' + new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), '/resources?view=tweets&q=' + encodeURIComponent(q), t.likes ? '♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) : ''); });
+    out += '</div>';
+    if (ya.tweet_count > (ya.tweets || []).length) out += '<a href="/resources?view=tweets&q=' + encodeURIComponent(q) + '" onclick="navigate(this.getAttribute(\'href\'));return false;" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--brand);">see all ' + ya.tweet_count + ' tweets ›</a>';
+    return out + '</div>';
+  }
+
   async function doSearch(q) {
     if (!q || q.length < 2) return;
     document.title = '"' + q + '" — wavernrs';
@@ -68,7 +89,10 @@
         api('/search?q=' + encodeURIComponent(q)),
         getBadgeData().catch(function(){ return { verified_artists:[], highlighted_albums:[], exclusive_albums:[] }; }),
         api('/resources/search?q=' + encodeURIComponent(q)).catch(function(){ return { results: [] }; }),
+        api('/ye/search?q=' + encodeURIComponent(q)).catch(function(){ return null; }),
       ]);
+      var ya = _results[3] || {};
+      var yaAny = ['albums', 'songs', 'credits', 'samples', 'tweets', 'yeezy'].some(function (k) { return ya[k] && ya[k].length; });
       var ye = (_results[2] && _results[2].results) || [];
       var yeTotal = (_results[2] && _results[2].total) || ye.length;
       var results = _results[0];
@@ -79,7 +103,7 @@
       var albums = results.albums || [];
       var archived = results.archived || [];
 
-      if (!tracks.length && !artists.length && !albums.length && !archived.length && !ye.length) {
+      if (!tracks.length && !artists.length && !albums.length && !archived.length && !ye.length && !yaAny) {
         el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">nothing for "' + escHtml(q) + '"</div><div class="empty-desc">try searching something else</div></div>';
         return;
       }
@@ -201,6 +225,7 @@
           }).join('') + '</div></div>';
       }
 
+      if (yaAny) html += yeArchiveSection(ya, q);
       el.innerHTML = html;
       // Background: first track/album cover, falling back to first artist pfp.
       if (typeof window.setPageBgImage === 'function') {
