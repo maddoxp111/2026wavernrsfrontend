@@ -197,6 +197,16 @@
   .yz-desc { margin-top:14px; font-size:13.5px; line-height:1.6; color:var(--text-2); white-space:pre-line; }
   @media (max-width:760px) { .yz-box { flex-direction:column; padding:16px; max-height:none; overflow:visible; flex:none; margin:auto 0; } .yz-modal { padding:10px 10px calc(28px + env(safe-area-inset-bottom)); align-items:flex-start; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; } .tr-mbox { margin:auto; } .yz-x { position:fixed; top:calc(18px + env(safe-area-inset-top)); right:18px; box-shadow:0 2px 10px rgba(0,0,0,.5); } }
 
+  .tr-top { display:flex; flex-direction:column; gap:2px; }
+  .tr-song-row summary { list-style:none; display:grid; grid-template-columns:30px minmax(0,1fr) 36px; gap:10px; align-items:center; padding:8px 10px; border-radius:10px; cursor:pointer; }
+  .tr-song-row summary::-webkit-details-marker { display:none; }
+  .tr-song-row summary:hover, .tr-song-row[open] summary { background:var(--surface); }
+  .tr-song-row .n { font-size:12px; color:var(--text-3); text-align:right; font-variant-numeric:tabular-nums; }
+  .tr-song-row .t { position:relative; min-width:0; }
+  .tr-song-row .t b { position:relative; z-index:1; font-size:14px; overflow-wrap:anywhere; }
+  .tr-song-row .t i { position:absolute; left:-6px; top:-4px; bottom:-4px; background:color-mix(in srgb, var(--brand) 16%, transparent); border-radius:6px; }
+  .tr-song-row .c { font-weight:800; font-size:13px; text-align:right; font-variant-numeric:tabular-nums; }
+  .tr-song-more { padding:4px 10px 12px 50px; }
   .tr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px 14px; }
   @media (max-width:640px) { .tr-grid { grid-template-columns:1fr; } }
   .tr-v { cursor:pointer; min-width:0; }
@@ -1620,7 +1630,7 @@ window._ytBooted = false;
     var root = document.getElementById('ye-tours');
     var st = { year: P.get('year') || '', sec: P.get('sec') || 'shows', music: 'videos', venue: '', yshow: '', ykind: '', d: null, ymedia: [], ytotal: 0, started: false };
     function secs(d) {
-      return [['shows', 'Shows', d.shows.length], ['music', 'Music', d.videos.length + d.audio.length + d.visualizers.length], ['merch', 'Merch', d.merch.length], ['yedia', 'Yedia', d.yedia_count]].filter(function (x) { return x[2] > 0; });
+      return [['shows', 'Shows', d.shows.length], ['music', 'Music', d.videos.length + d.audio.length + d.visualizers.length], ['merch', 'Merch', d.merch.length], ['yedia', 'Yedia', d.yedia_count], ['songs', 'Most played', 'every tour']].filter(function (x) { return typeof x[2] === 'string' || x[2] > 0; });
     }
     function url() {
       var q = new URLSearchParams(); q.set('view', 'tours'); if (st.year) q.set('year', st.year); if (st.sec !== 'shows') q.set('sec', st.sec);
@@ -1636,6 +1646,27 @@ window._ytBooted = false;
       if (!secs(st.d).some(function (x) { return x[0] === st.sec; })) st.sec = 'shows';
       url();
       paint();
+      if (st.pending) {
+        var pd = st.pending; st.pending = null;
+        var x = st.d.shows.find(function (s) { return String(s.id) === String(pd.id); });
+        if (x) { var w = videoModal(x); var v = w && w.querySelector('video'); if (v && pd.time) { var go = function () { try { v.currentTime = toSec(pd.time); } catch (_) {} }; if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true }); } }
+      }
+    }
+    async function songsSec(el) {
+      el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try { if (!st.songs) st.songs = await api('/ye/tour/songs'); }
+      catch (e) { el.innerHTML = '<div class="yt-empty"><b>couldnt load the setlists</b></div>'; return; }
+      if (st.sec !== 'songs' || !document.getElementById('tr-body')) return;
+      var d = st.songs, max = (d.songs[0] || {}).plays || 1;
+      el.innerHTML = '<div class="yt-count">' + d.songs.length + ' songs across ' + d.shows + ' shows with setlists. tap a song to see where he played it</div><div class="tr-top">' + d.songs.slice(0, 80).map(function (x, i) {
+        var yrs = x.years.length > 1 ? x.years[0] + '–' + x.years[x.years.length - 1] : x.years[0];
+        return '<details class="tr-song-row"><summary><span class="n">' + (i + 1) + '</span><span class="t"><b>' + esc(x.song) + '</b><i style="width:' + Math.round(x.plays / max * 100) + '%"></i></span><span class="c">' + x.plays + '</span></summary>' +
+          '<div class="tr-song-more"><div class="yt-sub">played at ' + x.plays + ' of ' + d.shows + ' shows · ' + esc(yrs) + (x.opener ? ' · opened ' + x.opener : '') + (x.closer ? ' · closed ' + x.closer : '') + '</div>' +
+          '<div class="ye-chips" style="margin:8px 0 6px;">' + x.shows.map(function (sh) { return '<button class="ye-chip" data-show="' + esc(sh.id) + '" data-sy="' + esc(sh.year) + '" data-st="' + esc(sh.time || '') + '">' + esc(sh.year + ' · ' + String(sh.show).toLowerCase()) + (sh.time ? ' <span style="opacity:.6;">' + esc(sh.time) + '</span>' : '') + '</button>'; }).join('') + '</div>' +
+          '<button class="yt-l" data-hubsong="' + esc(x.song) + '" style="border:0;cursor:pointer;font-family:inherit;">every version of ' + esc(x.song) + ' ›</button></div></details>';
+      }).join('') + '</div>';
+      el.querySelectorAll('[data-show]').forEach(function (b) { b.onclick = function () { st.pending = { id: b.getAttribute('data-show'), time: b.getAttribute('data-st') }; var y = b.getAttribute('data-sy'); if (y === st.year) { st.sec = 'shows'; url(); load(); } else { st.year = y; st.sec = 'shows'; url(); load(); } }; });
+      el.querySelectorAll('[data-hubsong]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-hubsong'))); }; });
     }
     function paint() {
       var d = st.d;
@@ -1652,6 +1683,7 @@ window._ytBooted = false;
     }
     function body() {
       var d = st.d, el = document.getElementById('tr-body'); if (!el) return;
+      if (st.sec === 'songs') { songsSec(el); return; }
       if (st.sec === 'shows') {
         el.innerHTML = '<div class="tr-grid">' + d.shows.map(function (x, i) { return vcard(x, [x.spec, x.setlist.length ? x.setlist.length + ' songs' : ''].filter(Boolean).join(' · '), i, 'shows'); }).join('') + '</div>';
       } else if (st.sec === 'music') {
@@ -1721,6 +1753,7 @@ window._ytBooted = false;
         '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
       var v = w.querySelector('video');
       w.querySelectorAll('.tr-song').forEach(function (b) { b.onclick = function () { try { v.currentTime = +b.getAttribute('data-t'); v.play(); } catch (_) {} }; });
+      return w;
     }
     function merchModal(m) {
       var w = modal('<div class="yz-gal"><div class="yz-main"><img id="tr-mm" src="' + esc(thumb(m.images[0], 900)) + '" alt=""></div>' +
