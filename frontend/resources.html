@@ -238,9 +238,13 @@
   #ye-views button { flex:none; }
   @media (max-width:420px) { #ye-views button { padding-left:12px; padding-right:12px; } }
   #ye-disco { margin-top:16px; }
+  #ds-subs { margin-top:0; }
   #ye-disco .yt-row:not(.thumb) { grid-template-columns:34px minmax(0,1fr) auto; }
   #ye-disco .yt-row:not(.thumb) > .yt-num { grid-column:auto; grid-row:auto; }
   #ye-disco .yt-row:not(.thumb) > .ds-r { grid-column:auto; grid-row:auto; }
+  #ye-disco .yt-row.thumb { grid-template-columns:56px minmax(0,1fr) auto; }
+  #ye-disco .yt-row.thumb > * { grid-column:auto; grid-row:auto; }
+  @media (max-width:640px) { #ye-disco .yt-row.thumb { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } #ye-disco .yt-row.thumb .yt-cover.sm { width:48px; height:48px; } }
   @media (max-width:640px) { #ye-disco .yt-row:not(.thumb) { grid-template-columns:24px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } }
   .ds-h { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:30px 0 10px; }
   .ds-prods { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
@@ -920,12 +924,12 @@ window._ytBooted = false;
   // ── Discography (MusicBrainz) ──────────────────────────────────
   var DS = (function () {
     var root = document.getElementById('ye-disco');
-    var st = { d: null, album: P.get('album') || '', producer: '', started: false, tags: null };
+    var st = { d: null, album: P.get('album') || '', sub: P.get('sub') || 'albums', prod: '', started: false, tags: null };
     function dur(ms) { var s = Math.round((ms || 0) / 1000); if (!s) return ''; var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? h + ' hr ' + m + ' min' : m + ' min'; }
     function tlen(ms) { var s = Math.round((ms || 0) / 1000); return s ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : ''; }
     function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
     function url() {
-      var q = new URLSearchParams(); q.set('view', 'disco'); if (st.album) q.set('album', st.album);
+      var q = new URLSearchParams(); q.set('view', 'disco'); if (st.album) q.set('album', st.album); else if (st.sub && st.sub !== 'albums') q.set('sub', st.sub);
       try { history.replaceState(history.state, '', location.pathname + '?' + q.toString()); } catch (_) {}
     }
     function cover(a, big) {
@@ -947,18 +951,85 @@ window._ytBooted = false;
       api('/eratags').then(function (list) { var m = {}; (list || []).forEach(function (t) { m[norm(t.name)] = t.id; }); st.tags = m; var el = document.getElementById('ds-links'); if (el && st.cur) el.innerHTML = links(st.cur); }).catch(function () {});
       if (st.album) openAlbum(st.album); else grid();
     }
-    function grid() {
-      st.album = ''; st.cur = null; url();
+    var SUBS = [['albums', 'Albums'], ['produced', 'Produced for others'], ['featured', 'Features'], ['samples', 'Samples'], ['producers', 'Producers']];
+    function grid(sub) {
+      st.album = ''; st.cur = null;
+      if (sub) st.sub = sub;
+      if (!SUBS.some(function (x) { return x[0] === st.sub; })) st.sub = 'albums';
+      url();
+      root.innerHTML = '<div class="yt-tabs" id="ds-subs">' + SUBS.map(function (x) { return '<button class="yt-tab' + (st.sub === x[0] ? ' on' : '') + '" data-sub="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div id="ds-body"></div>' +
+        '<div class="ye-credit">credits from <a href="' + esc(st.d.source.url) + '" target="_blank" rel="noopener">MusicBrainz</a>, cover art from the Cover Art Archive</div>';
+      root.querySelectorAll('[data-sub]').forEach(function (b) { b.onclick = function () { grid(b.getAttribute('data-sub')); }; });
+      var subs = document.getElementById('ds-subs'), onb = subs && subs.querySelector('.on'); if (onb && onb.offsetLeft + onb.offsetWidth > subs.clientWidth) subs.scrollLeft = onb.offsetLeft - 16;
+      var body = document.getElementById('ds-body');
+      if (st.sub === 'albums') albums(body);
+      else if (st.sub === 'producers') producers(body);
+      else if (st.sub === 'samples') samplesView(body);
+      else creditsView(body, st.sub);
+    }
+    function albums(body) {
       var d = st.d;
       var total = d.albums.reduce(function (n, a) { return n + a.tracks; }, 0);
-      root.innerHTML = '<div class="yt-count" style="margin-top:6px;">' + d.albums.length + ' albums · ' + total + ' songs · with producers and samples for every track</div>' +
+      body.innerHTML = '<div class="yt-count">' + d.albums.length + ' albums · ' + total + ' songs · with producers and samples for every track</div>' +
         '<div class="yt-eras">' + d.albums.map(function (a) {
           return '<div class="yt-era" data-a="' + esc(a.slug) + '">' + cover(a) + '<div class="yt-era-n">' + esc(a.title) + '</div><div class="yt-era-s">' + esc([a.year, a.artist !== 'Kanye West' && a.artist !== 'Ye' ? a.artist : '', a.tracks + ' songs'].filter(Boolean).join(' · ')) + '</div></div>';
-        }).join('') + '</div>' +
-        '<h3 class="ds-h">producers</h3><div class="ds-prods">' + d.producers.slice(0, 40).map(function (p) { return '<button class="ye-chip" data-p="' + esc(p.name) + '">' + esc(p.name) + ' <span>' + p.tracks + '</span></button>'; }).join('') + '</div><div id="ds-prod"></div>' +
-        '<div class="ye-credit">credits from <a href="' + esc(d.source.url) + '" target="_blank" rel="noopener">MusicBrainz</a>, cover art from the Cover Art Archive</div>';
-      root.querySelectorAll('[data-a]').forEach(function (c) { c.onclick = function () { openAlbum(c.getAttribute('data-a')); window.scrollTo(0, 0); }; });
-      root.querySelectorAll('[data-p]').forEach(function (b) { b.onclick = function () { root.querySelectorAll('[data-p]').forEach(function (x) { x.classList.toggle('on', x === b); }); producer(b.getAttribute('data-p')); }; });
+        }).join('') + '</div>';
+      body.querySelectorAll('[data-a]').forEach(function (c) { c.onclick = function () { openAlbum(c.getAttribute('data-a')); window.scrollTo(0, 0); }; });
+    }
+    function producers(body) {
+      body.innerHTML = '<div class="yt-count">who produced ye\'s albums, by number of songs. tap a name to see their songs</div><div class="ds-prods">' + st.d.producers.map(function (p) { return '<button class="ye-chip" data-p="' + esc(p.name) + '">' + esc(p.name) + ' <span>' + p.tracks + '</span></button>'; }).join('') + '</div><div id="ds-prod"></div>';
+      body.querySelectorAll('[data-p]').forEach(function (b) { b.onclick = function () { body.querySelectorAll('[data-p]').forEach(function (x) { x.classList.toggle('on', x === b); }); producer(b.getAttribute('data-p')); }; });
+      if (st.prod) { var c = body.querySelector('[data-p="' + CSS.escape(st.prod) + '"]'); if (c) c.classList.add('on'); producer(st.prod); }
+    }
+    function searchBar(id, ph) {
+      return '<div class="yt-bar"><label class="yt-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="' + id + '" placeholder="' + esc(ph) + '" autocomplete="off"></label></div>';
+    }
+    function creditsView(body, role) {
+      body.innerHTML = searchBar('ds-cq', role === 'produced' ? 'search songs ye produced...' : 'search songs ye is on...') + '<div class="ye-chips" id="ds-art"></div><div class="yt-count" id="ds-cc"></div><div id="ds-cl"><div class="loading"><div class="spinner"></div></div></div>';
+      var q = '', who = '', tm = null, data = null;
+      function paint() {
+        var items = data.items.filter(function (c) { return !who || c.lead === who; });
+        document.getElementById('ds-cc').textContent = items.length + (role === 'produced' ? ' songs ye produced for other artists' : ' songs ye is featured on');
+        var html = '', lastY = null;
+        items.filter(function (c) { return c.year; }).reverse().concat(items.filter(function (c) { return !c.year; })).forEach(function (c) {
+          var y = c.year || 'unknown year';
+          if (y !== lastY) { html += (lastY === null ? '' : '</div>') + '<h3 class="ds-h">' + esc(y) + '</h3><div class="yt-list">'; lastY = y; }
+          html += '<div class="yt-row thumb"><div class="yt-cover sm" style="background:' + (window.coverGradient ? coverGradient(c.album || c.title) : 'var(--surface-3)') + ';">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+            '<div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc(c.artist) + (c.album && c.album !== c.title ? ' · ' + esc(c.album) : '') + '</div>' +
+            (c.roles.length > 1 ? '<div class="ds-p">produced and featured</div>' : '') + '</div>' +
+            '<div class="ds-r"><span class="yt-sub">' + tlen(c.len) + '</span><a class="ds-find" href="https://musicbrainz.org/recording/' + esc(c.rec) + '" target="_blank" rel="noopener">credits</a></div></div>';
+        });
+        if (lastY !== null) html += '</div>';
+        document.getElementById('ds-cl').innerHTML = html || '<div class="yt-empty"><b>nothing matches</b>try something else</div>';
+      }
+      async function load() {
+        try { data = await api('/ye/disco/credits?role=' + role + (q ? '&q=' + encodeURIComponent(q) : '')); }
+        catch (e) { document.getElementById('ds-cl').innerHTML = '<div class="yt-empty"><b>couldnt load these</b>' + esc(e.message || '') + '</div>'; return; }
+        var ar = document.getElementById('ds-art');
+        ar.innerHTML = '<button class="ye-chip' + (!who ? ' on' : '') + '" data-w="">everyone</button>' + data.artists.slice(0, 16).map(function (a) { return '<button class="ye-chip' + (who === a.name ? ' on' : '') + '" data-w="' + esc(a.name) + '">' + esc(a.name) + ' <span style="opacity:.6;">' + a.n + '</span></button>'; }).join('');
+        ar.querySelectorAll('[data-w]').forEach(function (b) { b.onclick = function () { who = b.getAttribute('data-w'); ar.querySelectorAll('[data-w]').forEach(function (x) { x.classList.toggle('on', x === b); }); paint(); }; });
+        paint();
+      }
+      var qi = document.getElementById('ds-cq');
+      qi.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { q = qi.value.trim(); who = ''; load(); }, 250); };
+      load();
+    }
+    function samplesView(body) {
+      body.innerHTML = searchBar('ds-sq', 'search samples...') + '<div class="yt-count" id="ds-sc"></div><div id="ds-sl"><div class="loading"><div class="spinner"></div></div></div>';
+      var data = null;
+      function paint(q) {
+        var w = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+        var items = data.items.filter(function (s) { var h = (s.t + ' ' + s.a + ' ' + s.used.map(function (u) { return u.title + ' ' + u.album; }).join(' ')).toLowerCase(); return w.every(function (x) { return h.indexOf(x) >= 0; }); });
+        document.getElementById('ds-sc').textContent = items.length + ' songs ye sampled';
+        document.getElementById('ds-sl').innerHTML = '<div class="yt-list">' + items.slice(0, 400).map(function (s) {
+          return '<div class="yt-row thumb"><div class="yt-cover sm"><img src="' + esc(thumb(s.used[0].cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()"></div><div style="min-width:0;"><div class="yt-t">' + esc(s.t) + '</div><div class="yt-sub">' + esc(s.a || 'unknown artist') + '</div>' +
+            '<div class="ds-p">used in ' + s.used.map(function (u) { return '<button data-go="' + esc(u.slug) + '">' + esc(u.title) + '</button> <span style="opacity:.7;">(' + esc(u.album) + ')</span>'; }).join(', ') + '</div></div>' +
+            '<div class="ds-r"><a class="ds-find" href="https://www.youtube.com/results?search_query=' + encodeURIComponent(s.t + ' ' + (s.a || '')) + '" target="_blank" rel="noopener">listen ↗</a></div></div>';
+        }).join('') + '</div>';
+        document.querySelectorAll('#ds-sl [data-go]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-go')); window.scrollTo(0, 0); }; });
+      }
+      api('/ye/disco/samples').then(function (d) { data = d; paint(''); var qi = document.getElementById('ds-sq'), tm = null; qi.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { paint(qi.value); }, 150); }; })
+        .catch(function (e) { document.getElementById('ds-sl').innerHTML = '<div class="yt-empty"><b>couldnt load the samples</b></div>'; });
     }
     async function producer(name) {
       var box = document.getElementById('ds-prod'); if (!box) return;
@@ -988,7 +1059,7 @@ window._ytBooted = false;
       root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       var r;
       try { r = await api('/ye/disco/' + encodeURIComponent(slug)); }
-      catch (e) { root.innerHTML = '<button class="yt-back" id="ds-back">← discography</button><div class="yt-empty"><b>couldnt load that album</b></div>'; document.getElementById('ds-back').onclick = grid; return; }
+      catch (e) { root.innerHTML = '<button class="yt-back" id="ds-back">← discography</button><div class="yt-empty"><b>couldnt load that album</b></div>'; document.getElementById('ds-back').onclick = function () { grid('albums'); }; return; }
       if (st.album !== slug) return;
       var a = r.album; st.cur = a;
       var tracks = a.discs.reduce(function (n, d) { return n + d.tracks.length; }, 0);
@@ -1013,9 +1084,9 @@ window._ytBooted = false;
       html += '<div class="ds-nav">' + (r.prev ? '<button class="yt-l" data-a="' + esc(r.prev.slug) + '">‹ ' + esc(r.prev.title) + '</button>' : '<span></span>') + (r.next ? '<button class="yt-l" data-a="' + esc(r.next.slug) + '">' + esc(r.next.title) + ' ›</button>' : '') + '</div>' +
         '<div class="ye-credit">credits from <a href="https://musicbrainz.org/release/' + esc(a.release) + '" target="_blank" rel="noopener">MusicBrainz</a>, cover art from the Cover Art Archive</div>';
       root.innerHTML = html;
-      document.getElementById('ds-back').onclick = function () { grid(); window.scrollTo(0, 0); };
+      document.getElementById('ds-back').onclick = function () { grid('albums'); window.scrollTo(0, 0); };
       root.querySelectorAll('.ds-nav [data-a]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-a')); window.scrollTo(0, 0); }; });
-      root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { var n = b.getAttribute('data-pp'); grid(); var c = root.querySelector('[data-p="' + CSS.escape(n) + '"]'); if (c) c.classList.add('on'); producer(n); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60); }; });
+      root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
       root.querySelectorAll('.ds-find').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
     }
     return { open: function () { if (st.started) return; st.started = true; load(); } };
