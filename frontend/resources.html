@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=f9421c13f68d">
-  <script src="/js/status-card.js?v=f9421c13f68d"></script>
-  <script src="/js/down.js?v=f9421c13f68d"></script>
+  <link rel="stylesheet" href="/css/style.css?v=dcfa91b69b5b">
+  <script src="/js/status-card.js?v=dcfa91b69b5b"></script>
+  <script src="/js/down.js?v=dcfa91b69b5b"></script>
 </head>
 <body>
 
@@ -359,7 +359,11 @@
   .qz-acts .qz-next, .qz-acts .qz-opt { margin-top:0; padding:11px 20px; border-radius:99px; font-weight:700; font-size:14px; flex-direction:row; }
   .ds-live { font-size:10.5px; font-weight:700; color:var(--brand); background:color-mix(in srgb, var(--brand) 14%, transparent); border-radius:99px; padding:1px 7px; vertical-align:2px; margin-left:4px; white-space:nowrap; }
   .ds-song { border:0; background:none; padding:0; font:inherit; color:inherit; cursor:pointer; text-align:left; }
-  .ds-song:hover { text-decoration:underline; }
+  .ds-row { cursor:pointer; }
+  .ds-row:hover .ds-song, .ds-row:hover > div > .yt-t { text-decoration:underline; }
+  .ds-row { position:relative; padding-right:30px !important; }
+  .ds-go-arrow { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:22px; line-height:1; color:var(--text-3); font-weight:700; }
+  .ds-row:hover .ds-go-arrow { color:var(--brand); }
   .sg-play { position:absolute; inset:0; border:0; background:rgba(0,0,0,.45); color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .sg-play:hover { background:var(--brand); color:#14121c; }
   .sg-pl { font-size:12px; font-weight:700; color:var(--brand); margin-left:6px; letter-spacing:0; }
@@ -434,10 +438,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=f9421c13f68d"></script>
-<script src="/js/layout.js?v=f9421c13f68d"></script>
-<script src="/js/player.js?v=f9421c13f68d"></script>
-<script src="/js/router.js?v=f9421c13f68d"></script>
+<script src="/js/api.js?v=dcfa91b69b5b"></script>
+<script src="/js/layout.js?v=dcfa91b69b5b"></script>
+<script src="/js/player.js?v=dcfa91b69b5b"></script>
+<script src="/js/router.js?v=dcfa91b69b5b"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1159,14 +1163,15 @@ window._ytBooted = false;
         items.filter(function (c) { return c.year; }).reverse().concat(items.filter(function (c) { return !c.year; })).forEach(function (c) {
           var y = c.year || 'unknown year';
           if (y !== lastY) { html += (lastY === null ? '' : '</div>') + '<h3 class="ds-h">' + esc(y) + '</h3><div class="yt-list">'; lastY = y; }
-          html += '<div class="yt-row thumb"><div class="yt-cover sm" style="background:' + (window.coverGradient ? coverGradient(c.album || c.title) : 'var(--surface-3)') + ';">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+          html += '<div class="yt-row thumb ds-row" data-row-song="' + esc(c.title) + '"><div class="yt-cover sm" style="background:' + (window.coverGradient ? coverGradient(c.album || c.title) : 'var(--surface-3)') + ';">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
             '<div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc(c.artist) + (c.album && c.album !== c.title ? ' · ' + esc(c.album) : '') + '</div>' +
             (c.roles.length > 1 ? '<div class="ds-p">produced and featured</div>' : '') + '</div>' +
-            '<div class="ds-r"><span class="yt-sub">' + tlen(c.len) + '</span>' + (c.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(c.preview) + '">▶ preview</button>' : '') + (c.apple ? '<a class="ds-find" href="' + esc(c.apple) + '" target="_blank" rel="noopener">apple ↗</a>' : '<a class="ds-find" href="https://musicbrainz.org/recording/' + esc(c.rec) + '" target="_blank" rel="noopener">credits</a>') + '</div></div>';
+            '<div class="ds-r"><span class="yt-sub">' + tlen(c.len) + '</span>' + (c.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(c.preview) + '">▶ preview</button>' : '') + (c.apple ? '<a class="ds-find" href="' + esc(c.apple) + '" target="_blank" rel="noopener">apple ↗</a>' : '<a class="ds-find" href="https://musicbrainz.org/recording/' + esc(c.rec) + '" target="_blank" rel="noopener">credits</a>') + '<span class="ds-go-arrow" aria-hidden="true">›</span></div></div>';
         });
         if (lastY !== null) html += '</div>';
         document.getElementById('ds-cl').innerHTML = html || '<div class="yt-empty"><b>nothing matches</b>try something else</div>';
-        document.querySelectorAll('#ds-cl [data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
+        document.querySelectorAll('#ds-cl [data-pv]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); preview(b); }; });
+        document.querySelectorAll('#ds-cl [data-row-song]').forEach(function (r) { r.onclick = function (e) { if (e.target.closest && e.target.closest('button, a')) return; navigate('/resources?view=song&t=' + encodeURIComponent(r.getAttribute('data-row-song'))); }; });
       }
       async function load() {
         var my = ++seq, got;
@@ -1248,14 +1253,14 @@ window._ytBooted = false;
       a.discs.forEach(function (d, di) {
         if (a.discs.length > 1) html += '<h3 class="ds-h">' + esc(d.title || 'disc ' + (di + 1)) + '</h3>';
         html += '<div class="yt-list">' + d.tracks.map(function (t) {
-          return '<div class="yt-row"><div class="yt-num">' + esc(t.n) + '</div><div style="min-width:0;">' +
+          return '<div class="yt-row ds-row" data-row-song="' + esc(t.title) + '"><div class="yt-num">' + esc(t.n) + '</div><div style="min-width:0;">' +
             '<div class="yt-t"><button class="ds-song" data-song="' + esc(t.title) + '" title="every version of this song">' + esc(t.title) + '</button></div>' +
             (t.feat.length ? '<div class="yt-sub">with ' + esc(t.feat.join(', ')) + '</div>' : '') +
             (t.producers.length ? '<div class="ds-p">prod. ' + t.producers.map(function (p) { return '<button data-pp="' + esc(p) + '">' + esc(p) + '</button>'; }).join(', ') + '</div>' : '') +
             samp(t.samples, 'samples') +
             (t.sampled_by_count ? '<details class="ds-by"><summary>sampled by ' + t.sampled_by_count + (t.sampled_by_count === 1 ? ' song' : ' songs') + '</summary>' + samp(t.sampled_by, '') + '</details>' : '') +
             ((t.links && (t.links.spotify || t.links.apple)) ? '<div class="ds-ls">' + (t.links.spotify ? '<a href="' + esc(t.links.spotify) + '" target="_blank" rel="noopener">spotify ↗</a>' : '') + (t.links.apple ? '<a href="' + esc(t.links.apple) + '" target="_blank" rel="noopener">apple music ↗</a>' : '') + '</div>' : '') +
-            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span>' + (t.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(t.preview) + '" title="play a 30 second preview">▶ preview</button>' : '') + '<button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button></div></div>';
+            '</div><div class="ds-r"><span class="yt-sub">' + tlen(t.len) + '</span>' + (t.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(t.preview) + '" title="play a 30 second preview">▶ preview</button>' : '') + '<button class="ds-find" data-q="' + esc(t.title.replace(/\s*\(.*?\)\s*/g, ' ').trim()) + '" title="find edits of this song on wavernrs">edits</button><span class="ds-go-arrow" aria-hidden="true">›</span></div></div>';
         }).join('') + '</div>';
       });
       html += '<div class="ds-nav">' + (r.prev ? '<button class="yt-l" data-a="' + esc(r.prev.slug) + '">‹ ' + esc(r.prev.title) + '</button>' : '<span></span>') + (r.next ? '<button class="yt-l" data-a="' + esc(r.next.slug) + '">' + esc(r.next.title) + ' ›</button>' : '') + '</div>' +
@@ -1265,8 +1270,9 @@ window._ytBooted = false;
       root.querySelectorAll('.ds-nav [data-a]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-a')); window.scrollTo(0, 0); }; });
       root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
       root.querySelectorAll('.ds-find[data-q]').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
-      root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
-      root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
+      root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); preview(b); }; });
+      root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
+      root.querySelectorAll('[data-row-song]').forEach(function (r) { r.onclick = function (e) { if (e.target.closest && e.target.closest('button, a, summary, details .ds-s')) return; navigate('/resources?view=song&t=' + encodeURIComponent(r.getAttribute('data-row-song'))); }; });
       liveTags(slug);
     }
     root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share-path]'); if (b) { e.preventDefault(); yeShare(b.getAttribute('data-share-path'), b.getAttribute('data-share-title')); } });

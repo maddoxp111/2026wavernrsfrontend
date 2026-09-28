@@ -2512,3 +2512,49 @@ window.wvClampDesc = function (el) {
   setInterval(check, 60000);
   document.addEventListener('click', function () { setTimeout(paint, 400); }, true);
 })();
+
+// Horizontal tab bars hide their overflow; show a fade and an arrow so people
+// know there is more to scroll to.
+(function () {
+  var SEL = '#ye-views, .yt-tabs, .fs-tabs, .tk-tabs, .art-eras, .wv-home-chips';
+  function update(el) {
+    var max = el.scrollWidth - el.clientWidth;
+    var l = el.scrollLeft > 4, r = max > 4 && el.scrollLeft < max - 4;
+    el.classList.toggle('sh-l', l); el.classList.toggle('sh-r', r);
+    var w = el._shWrap; if (!w) return;
+    w.querySelector('.sh-btn.l').hidden = !l;
+    w.querySelector('.sh-btn.r').hidden = !r;
+  }
+  function attach(el) {
+    if (el._sh || !el.parentNode) return;
+    var cs = getComputedStyle(el);
+    if (cs.overflowX !== 'auto' && cs.overflowX !== 'scroll') return;
+    el._sh = true;
+    var wrap = document.createElement('div');
+    wrap.className = 'sh-wrap';
+    wrap.style.display = cs.display === 'inline-flex' || cs.display === 'inline-block' ? 'inline-block' : 'block';
+    wrap.style.maxWidth = '100%';
+    if (cs.flexGrow !== '0' || cs.flexShrink !== '1') { wrap.style.flex = cs.flexGrow + ' ' + cs.flexShrink + ' ' + cs.flexBasis; wrap.style.minWidth = '0'; }
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el);
+    ['l', 'r'].forEach(function (d) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'sh-btn ' + d; b.hidden = true;
+      b.setAttribute('aria-label', d === 'l' ? 'scroll left' : 'scroll right');
+      b.textContent = d === 'l' ? '‹' : '›';
+      b.onclick = function (e) { e.stopPropagation(); el.scrollBy({ left: (d === 'l' ? -1 : 1) * Math.max(120, el.clientWidth * 0.7), behavior: 'smooth' }); };
+      wrap.appendChild(b);
+    });
+    el._shWrap = wrap;
+    el.addEventListener('scroll', function () { update(el); }, { passive: true });
+    update(el);
+    setTimeout(function () { update(el); }, 400);
+  }
+  function scan() { document.querySelectorAll(SEL).forEach(function (el) { if (el._sh) update(el); else attach(el); }); }
+  var t = null;
+  function soon() { clearTimeout(t); t = setTimeout(scan, 120); }
+  if (typeof MutationObserver === 'function') new MutationObserver(soon).observe(document.documentElement, { childList: true, subtree: true });
+  window.addEventListener('resize', soon);
+  document.addEventListener('DOMContentLoaded', soon);
+  soon();
+})();
