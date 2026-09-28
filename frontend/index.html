@@ -201,6 +201,11 @@ async function fillOnThisDay() {
     cards.push('<div class="scroll-card" onclick="navigate(\'/resources?view=song&t=' + encodeURIComponent(clean).replace(/'/g, '%27') + '\')" style="flex-shrink:0;width:150px;"><div class="scroll-card-cover" style="background:' + coverGradient(l.era || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
       '<div class="scroll-card-title">' + escHtml(l.title) + '</div><div class="scroll-card-sub">leaked this day in ' + escHtml(l.year) + '</div></div>');
   });
+  (d.yeezy || []).slice(0, 4).forEach(function (x) {
+    var art = typeof wvImg === 'function' ? wvImg(x.img, 320) : x.img;
+    cards.push('<div class="scroll-card" onclick="navigate(\'/resources?view=yeezy&item=' + encodeURIComponent(x.id).replace(/'/g, '%27') + '\')" style="flex-shrink:0;width:150px;"><div class="scroll-card-cover" style="background:#fff;"><img src="' + escHtml(art) + '" loading="lazy" style="object-fit:contain;" onerror="this.remove()"></div>' +
+      '<div class="scroll-card-title">' + escHtml(x.title) + '</div><div class="scroll-card-sub">yeezy · ' + escHtml(x.year) + '</div></div>');
+  });
   var dly = {}; try { dly = JSON.parse(localStorage.getItem('wv_yedaily') || '{}') || {}; } catch (_) {}
   var todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
   var played = dly.day === todayKey && dly.res;

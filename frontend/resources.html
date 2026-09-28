@@ -1015,8 +1015,10 @@ window._ytBooted = false;
         document.getElementById('tw-count').textContent = d.tweets.toLocaleString() + ' tweet' + (d.tweets === 1 ? '' : 's') + ' on ' + day + ' across ' + d.years.length + ' year' + (d.years.length === 1 ? '' : 's');
         var html = d.albums.map(function (a) { return '<div class="tw-day">' + esc(a.year) + ' · ' + esc(a.title) + ' came out today</div>'; }).join('');
         if (d.leaks && d.leaks.items && d.leaks.items.length) html += '<div class="tw-day">leaked on this day</div><div class="ye-chips">' + d.leaks.items.map(function (l) { var clean = String(l.title).replace(/\s*\[[^\]]*\]\s*/g, ' ').trim(); return '<button class="ye-chip" data-songhub="' + esc(clean) + '">' + esc(l.title) + ' <span style="opacity:.6;">' + esc(l.year) + '</span></button>'; }).join('') + '</div>';
+        if (d.yeezy && d.yeezy.length) html += '<div class="tw-day">yeezy on this day</div><div class="tl-pics" style="margin-bottom:6px;">' + d.yeezy.map(function (x) { return '<img src="' + esc(thumb(x.img, 200)) + '" alt="' + esc(x.title) + '" title="' + esc(x.title + ' · ' + x.year) + '" data-yz="' + esc(x.id) + '" loading="lazy" style="cursor:pointer;" onerror="this.remove()">'; }).join('') + '</div>';
         html += d.years.map(function (y) { return '<div class="tw-day">' + esc(y.year) + '</div>' + y.items.map(card).join(''); }).join('');
         feed.innerHTML = html || '<div class="yt-empty"><b>nothing on ' + esc(day) + '</b>ye didnt tweet on this day</div>';
+        feed.querySelectorAll('[data-yz]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=yeezy&item=' + encodeURIComponent(b.getAttribute('data-yz'))); }; });
         feed.querySelectorAll('[data-songhub]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-songhub'))); }; });
       } catch (e) { feed.innerHTML = '<div class="yt-empty"><b>couldnt load this day</b>' + esc(e.message || '') + '</div>'; }
     }
