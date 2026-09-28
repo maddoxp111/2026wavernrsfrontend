@@ -90,6 +90,23 @@
     #view .fs-l { font-size:11.5px; font-weight:700; color:var(--text-2); background:var(--surface-2); border-radius:99px; padding:4px 10px; text-decoration:none; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     #view .fs-l:hover { background:var(--brand); color:#14121c; }
     #view .fs-more { display:block; margin:18px auto 0; border:0; background:var(--surface-2); color:var(--text); font:inherit; font-weight:700; font-size:13.5px; padding:10px 22px; border-radius:99px; cursor:pointer; }
+    #view .tk-tabs button { white-space:nowrap; }
+    @media (max-width:480px) { #view .tk-tabs button { padding:8px 14px; font-size:13.5px; } }
+    #view .tk-new { background:var(--surface); border-radius:14px; padding:12px 16px; margin:0 0 22px; }
+    #view .tk-new summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:14px; font-weight:700; }
+    #view .tk-new summary::-webkit-details-marker { display:none; }
+    #view .tk-new summary .d { font-size:12px; color:var(--text-3); font-weight:600; }
+    #view .tk-new summary .pl { color:#4ade80; font-size:12.5px; }
+    #view .tk-new summary .mi { color:#f87171; font-size:12.5px; }
+    #view .tk-new summary .ar { margin-left:auto; color:var(--text-3); font-size:12px; }
+    #view .tk-new[open] summary .ar { transform:rotate(180deg); }
+    #view .tk-new h4 { margin:14px 0 6px; font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--text-3); }
+    #view .tk-new ul { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:2px 16px; }
+    #view .tk-new li { font-size:13px; padding:4px 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #view .tk-new li span { color:var(--text-3); }
+    #view .tk-new li a { color:var(--text); text-decoration:none; font-weight:600; }
+    #view .tk-new li a:hover { text-decoration:underline; }
+    #view .tk-new .older { font-size:12px; color:var(--text-3); margin-top:12px; }
   </style>
   <div id="tk-body"><div class="loading"><div class="spinner"></div></div></div>
 </div>
@@ -176,6 +193,7 @@
     });
     b.innerHTML = html;
     history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind));
+    if (kind === 'comp') paintChanges(slug);
     sheetInfo(slug).then(function (info) {
       if (!info || !info.kind || _slug !== slug || _kind !== kind) return;
       var tabs = document.querySelector('#view .tk-tabs');
@@ -340,6 +358,28 @@
         (src ? '<a class="fs-src" href="' + esc(src) + '" target="_blank" rel="noopener">' + (info.kind === 'gsheet' ? 'open the sheet ↗' : 'original ↗') + '</a>' : '') + '</div>' +
       '<div class="fs-count" id="fs-count"></div><div id="fs-out"></div>';
     fsTab(tabId || tabs[0].id);
+  }
+
+  var _changes = {};
+  function tkWhen(iso) { var d = new Date(iso); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+  function tkItem(x) {
+    var name = esc(x.n) + (x.c ? ' <span>by ' + esc(x.c) + '</span>' : '');
+    return '<li title="' + esc(x.era + ' · ' + x.n + (x.c ? ' by ' + x.c : '')) + '">' + (x.a ? '<a href="/album?id=' + esc(x.a) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">' + name + '</a>' : name) + ' <span>· ' + esc(x.era) + '</span></li>';
+  }
+  async function paintChanges(slug) {
+    if (!_changes[slug]) _changes[slug] = api('/trackers/changes?slug=' + encodeURIComponent(slug)).catch(function () { delete _changes[slug]; return null; });
+    var d = await _changes[slug];
+    if (!d || !d.items || !d.items.length || _slug !== slug || _kind !== 'comp') return;
+    var top = document.querySelector('#view .tk-top'); if (!top || document.querySelector('#view .tk-new')) return;
+    var x = d.items[0];
+    var html = '<details class="tk-new"><summary>What’s new <span class="d">updated ' + esc(tkWhen(x.at)) + '</span>' +
+      (x.added_count ? '<span class="pl">+' + x.added_count + ' added</span>' : '') + (x.removed_count ? '<span class="mi">−' + x.removed_count + ' removed</span>' : '') + '<span class="ar">▾</span></summary>' +
+      (x.added.length ? '<h4>added</h4><ul>' + x.added.map(tkItem).join('') + '</ul>' : '') +
+      (x.removed.length ? '<h4>removed from the tracker</h4><ul>' + x.removed.map(tkItem).join('') + '</ul>' : '') +
+      (x.added_count > x.added.length || x.removed_count > x.removed.length ? '<div class="older">showing the first ' + Math.max(x.added.length, x.removed.length) + '</div>' : '') +
+      (d.items.length > 1 ? '<div class="older">earlier: ' + d.items.slice(1, 6).map(function (o) { return esc(tkWhen(o.at)) + ' (+' + o.added_count + ' / −' + o.removed_count + ')'; }).join(' · ') + '</div>' : '') +
+      '</details>';
+    top.insertAdjacentHTML('afterend', html);
   }
 
   window.tkKind = function (kind) { renderTracker(_slug, kind); window.scrollTo(0, 0); };
