@@ -2532,14 +2532,21 @@ window.wvClampDesc = function (el) {
     el._sh = true;
     var wrap = document.createElement('div');
     wrap.className = 'sh-wrap';
-    wrap.style.display = cs.display === 'inline-flex' || cs.display === 'inline-block' ? 'inline-block' : 'block';
+    wrap.style.display = cs.display === 'inline-flex' || cs.display === 'inline-block' ? 'inline-flex' : 'block';
     wrap.style.maxWidth = '100%';
     if (cs.flexGrow !== '0' || cs.flexShrink !== '1') { wrap.style.flex = cs.flexGrow + ' ' + cs.flexShrink + ' ' + cs.flexBasis; wrap.style.minWidth = '0'; }
+    wrap.style.margin = cs.marginTop + ' ' + cs.marginRight + ' ' + cs.marginBottom + ' ' + cs.marginLeft;
+    el.style.margin = '0';
     el.parentNode.insertBefore(wrap, el);
     wrap.appendChild(el);
+    var bg = cs.backgroundColor;
+    if (!bg || bg === 'transparent' || /rgba\(.*,\s*0\)$/.test(bg)) bg = getComputedStyle(document.body).getPropertyValue('--page-bg-base').trim() || '#121212';
     ['l', 'r'].forEach(function (d) {
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'sh-btn ' + d; b.hidden = true;
+      b.style.background = 'linear-gradient(' + (d === 'l' ? '270deg' : '90deg') + ', transparent, ' + bg + ' 55%)';
+      b.style.borderRadius = d === 'l' ? cs.borderTopLeftRadius + ' 0 0 ' + cs.borderBottomLeftRadius : '0 ' + cs.borderTopRightRadius + ' ' + cs.borderBottomRightRadius + ' 0';
+      b.style.top = cs.borderTopWidth; b.style.bottom = (parseFloat(cs.paddingBottom) > 6 ? cs.paddingBottom : '0');
       b.setAttribute('aria-label', d === 'l' ? 'scroll left' : 'scroll right');
       b.textContent = d === 'l' ? '‹' : '›';
       b.onclick = function (e) { e.stopPropagation(); el.scrollBy({ left: (d === 'l' ? -1 : 1) * Math.max(120, el.clientWidth * 0.7), behavior: 'smooth' }); };
