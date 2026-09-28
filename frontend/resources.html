@@ -276,6 +276,13 @@
   .tl-pics img { width:84px; height:84px; object-fit:contain; background:#fff; border-radius:8px; flex:none; }
   @media (max-width:640px) { .tl { padding-left:20px; } .tl-dot { left:-20px; } .tl::before { left:4px; } .tl-yh { font-size:28px; } .tl-albums { grid-template-columns:1fr; } }
   #ye-quiz { margin-top:16px; max-width:720px; }
+  .qz-dist { max-width:320px; margin:22px auto 0; text-align:left; }
+  .qz-drow { display:grid; grid-template-columns:16px 1fr 34px; gap:8px; align-items:center; font-size:12px; color:var(--text-3); margin:4px 0; }
+  .qz-drow i { height:14px; background:var(--surface-2); border-radius:4px; overflow:hidden; }
+  .qz-drow b { display:block; height:100%; background:var(--text-3); border-radius:4px; }
+  .qz-drow.me b { background:var(--brand); }
+  .qz-drow.me { color:var(--text); font-weight:700; }
+  .qz-drow em { font-style:normal; text-align:right; }
   .qz-daily { display:flex; align-items:center; justify-content:space-between; gap:14px; background:linear-gradient(135deg, color-mix(in srgb, var(--brand) 22%, var(--surface)), var(--surface)); border-radius:16px; padding:16px 18px; }
   .qz-daily b { font-size:17px; display:block; margin-top:3px; }
   .qz-dg { font-size:20px; letter-spacing:2px; margin:4px 0 2px; }
@@ -1317,6 +1324,12 @@ window._ytBooted = false;
               : '<b>5 questions, same for everyone</b><div class="yt-sub">one try a day' + (d.streak > 0 && d.day ? ' · keep your ' + d.streak + ' day streak going' : '') + '</div>') + '</div>' +
         (done ? '<button class="qz-opt" id="qz-dshare" style="width:auto;flex-direction:row;font-weight:700;font-size:13px;border-radius:99px;">share</button>' : '<button class="qz-next" id="qz-dplay" style="margin:0;">play</button>') + '</div>';
     }
+    function paintDist(r, mine) {
+      var el = document.getElementById('qz-dist'); if (!el || !r || !r.total) return;
+      var max = Math.max.apply(null, r.counts) || 1;
+      el.innerHTML = '<div class="qz-dist"><div class="qz-k" style="margin-bottom:8px;">' + r.total.toLocaleString() + ' ' + (r.total === 1 ? 'player' : 'players') + ' today' + (r.beat != null && r.total > 1 ? ' · you beat ' + r.beat + '%' : '') + '</div>' +
+        r.counts.map(function (n, i) { return '<div class="qz-drow' + (i === mine ? ' me' : '') + '"><span>' + i + '</span><i><b style="width:' + Math.max(n ? 6 : 0, Math.round(n / max * 100)) + '%"></b></i><em>' + n + '</em></div>'; }).reverse().join('') + '</div>';
+    }
     function shareDaily() {
       var d = dailyState(); if (!d.res) return;
       var text = 'daily ye ' + d.day + ' — ' + (d.res.split('1').length - 1) + '/5\n' + grid(d.res) + '\n' + location.origin + '/resources?view=quiz';
@@ -1408,6 +1421,11 @@ window._ytBooted = false;
           '<div class="qz-acts"><button class="qz-next" id="qz-dshare2">share</button><button class="qz-opt" id="qz-menu" style="width:auto;">practice</button></div></div>';
         document.getElementById('qz-dshare2').onclick = shareDaily;
         document.getElementById('qz-menu').onclick = menu;
+        var box = document.querySelector('.qz-done');
+        if (box) box.insertAdjacentHTML('beforeend', '<div id="qz-dist"></div>');
+        var send = !prev.res || prev.day !== day;
+        (send ? api('/ye/quiz/daily/result', { method: 'POST', body: JSON.stringify({ day: day, res: st.res }) }) : api('/ye/quiz/daily/stats'))
+          .then(function (r) { paintDist(r, st.score); }).catch(function () {});
         return;
       }
       var n = st.qs.length, s = st.score, isBest = s > st.best;
