@@ -246,6 +246,33 @@
   #ye-disco .yt-row.thumb > * { grid-column:auto; grid-row:auto; }
   @media (max-width:640px) { #ye-disco .yt-row.thumb { grid-template-columns:48px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } #ye-disco .yt-row.thumb .yt-cover.sm { width:48px; height:48px; } }
   @media (max-width:640px) { #ye-disco .yt-row:not(.thumb) { grid-template-columns:24px minmax(0,1fr) auto; gap:10px; padding:10px 4px; } }
+  #ye-timeline { margin-top:16px; }
+  .tl-nav { display:flex; gap:10px; align-items:center; position:sticky; top:0; z-index:5; background:var(--page-bg-base, var(--bg)); padding:6px 0 2px; }
+  .tl-nav .yt-tabs { flex:1; min-width:0; margin:0; border:0; padding-bottom:4px; }
+  .tl { position:relative; padding-left:26px; margin-top:10px; }
+  .tl::before { content:''; position:absolute; left:6px; top:12px; bottom:0; width:2px; background:var(--hair, rgba(255,255,255,.1)); }
+  .tl-y { position:relative; padding:4px 0 26px; scroll-margin-top:70px; }
+  .tl-nav .ye-sel { flex:none; font-size:13px; }
+  .tl-dot { position:absolute; left:-26px; top:14px; width:14px; height:14px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 4px var(--page-bg-base, #111); }
+  .tl-yh { font-size:34px; font-weight:800; letter-spacing:-.04em; margin:0; line-height:1.15; }
+  .tl-albums { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; margin-bottom:10px; }
+  .tl-al { display:flex; gap:12px; align-items:center; background:var(--surface); border-radius:12px; padding:10px; cursor:pointer; min-width:0; }
+  .tl-al:hover, .tl-card:hover { background:var(--surface-2); }
+  .tl-al .yt-cover { width:64px; height:64px; border-radius:8px; }
+  .tl-at { font-weight:750; font-size:15px; line-height:1.25; overflow-wrap:anywhere; }
+  .tl-k { font-size:10.5px; font-weight:800; letter-spacing:.08em; color:var(--text-3); margin-bottom:4px; }
+  .tl-card { background:var(--surface); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+  .tl-tw { font-size:14.5px; line-height:1.45; white-space:pre-line; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+  .tl-bars { display:flex; gap:4px; align-items:flex-end; height:54px; margin-top:12px; max-width:360px; }
+  .tl-bar { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:3px; }
+  .tl-bar i { display:block; width:100%; background:var(--brand); border-radius:3px 3px 1px 1px; max-height:40px; }
+  .tl-bar span { font-size:9px; color:var(--text-3); font-weight:700; }
+  .tl-with { display:flex; flex-wrap:wrap; gap:6px; }
+  .tl-with span { font-size:12.5px; font-weight:700; background:var(--surface-2); border-radius:99px; padding:4px 10px; }
+  .tl-with i { font-style:normal; color:var(--text-3); margin-left:2px; }
+  .tl-pics { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+  .tl-pics img { width:84px; height:84px; object-fit:contain; background:#fff; border-radius:8px; flex:none; }
+  @media (max-width:640px) { .tl { padding-left:20px; } .tl-dot { left:-20px; } .tl::before { left:4px; } .tl-yh { font-size:28px; } .tl-albums { grid-template-columns:1fr; } }
   .ds-h { font-size:17px; font-weight:800; letter-spacing:-.02em; margin:30px 0 10px; }
   .ds-prods { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
   .ds-prods .ye-chip span { opacity:.6; font-weight:600; margin-left:3px; }
@@ -277,6 +304,7 @@
       <button role="tab" aria-selected="false" data-view="yeezy">Yeezy</button>
       <button role="tab" aria-selected="false" data-view="tours">Tours</button>
       <button role="tab" aria-selected="false" data-view="disco">Discography</button>
+      <button role="tab" aria-selected="false" data-view="timeline">Timeline</button>
     </div>
   </div>
   <div id="ye-tracker">
@@ -288,6 +316,7 @@
   <div id="ye-yeezy" style="display:none;"></div>
   <div id="ye-tours" style="display:none;"></div>
   <div id="ye-disco" style="display:none;"></div>
+  <div id="ye-timeline" style="display:none;"></div>
 </div>
 </div><!-- /view -->
 
@@ -811,7 +840,7 @@ window._ytBooted = false;
 // ── Ye archive views: Tracker / Tweets / Yeezy ──────────────────
 (function () {
   var P = new URLSearchParams(location.search);
-  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco' };
+  var views = { tracker: 'ye-tracker', tweets: 'ye-tweets', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline' };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function num(n) { n = +n || 0; return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K' : String(n); }
   function thumb(u, w) {
@@ -825,9 +854,10 @@ window._ytBooted = false;
     cur = v;
     Object.keys(views).forEach(function (k) { var el = document.getElementById(views[k]); if (el) el.style.display = k === v ? '' : 'none'; });
     document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { var on = b.getAttribute('data-view') === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
+    var yv = document.getElementById('ye-views'), yb = yv && yv.querySelector('.on'); if (yb && yb.offsetLeft + yb.offsetWidth > yv.scrollLeft + yv.clientWidth) yv.scrollLeft = yb.offsetLeft + yb.offsetWidth - yv.clientWidth + 12;
     if (v === 'tracker') { if (typeof window._ytBoot === 'function') window._ytBoot(); if (push && typeof window._ytSetUrl === 'function') window._ytSetUrl(); return; }
     if (push) { try { history.replaceState(history.state, '', location.pathname + '?view=' + v); } catch (_) {} }
-    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else YZ.open();
+    if (v === 'tweets') TW.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else YZ.open();
   }
   document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { b.onclick = function () { setView(b.getAttribute('data-view'), true); }; });
 
@@ -1089,6 +1119,64 @@ window._ytBooted = false;
       root.querySelectorAll('.ds-nav [data-a]').forEach(function (b) { b.onclick = function () { openAlbum(b.getAttribute('data-a')); window.scrollTo(0, 0); }; });
       root.querySelectorAll('[data-pp]').forEach(function (b) { b.onclick = function () { st.prod = b.getAttribute('data-pp'); grid('producers'); setTimeout(function () { var el = document.getElementById('ds-prod'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300); }; });
       root.querySelectorAll('.ds-find').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
+    }
+    return { open: function () { if (st.started) return; st.started = true; load(); } };
+  })();
+
+  // ── Timeline ───────────────────────────────────────────────────
+  var TL = (function () {
+    var root = document.getElementById('ye-timeline');
+    var st = { d: null, started: false, order: 'new' };
+    var MON = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    function go(href) { navigate(href); }
+    function bars(months) {
+      var max = Math.max.apply(null, months) || 1;
+      return '<div class="tl-bars" title="tweets by month">' + months.map(function (n, i) { return '<div class="tl-bar"><i style="height:' + Math.max(n ? 8 : 2, Math.round(n / max * 100)) + '%;' + (n ? '' : 'opacity:.25;') + '" title="' + n + ' tweets"></i><span>' + MON[i] + '</span></div>'; }).join('') + '</div>';
+    }
+    function yearBlock(y) {
+      var stats = [];
+      if (y.albums.length) stats.push('<b>' + y.albums.length + '</b> album' + (y.albums.length === 1 ? '' : 's'));
+      if (y.produced_count) stats.push('<b>' + y.produced_count + '</b> songs for others');
+      if (y.tweets.count) stats.push('<b>' + y.tweets.count.toLocaleString() + '</b> tweets');
+      if (y.tour) stats.push('<b>' + y.tour.shows + '</b> shows');
+      if (y.yeezy.count) stats.push('<b>' + y.yeezy.count + '</b> yeezy pieces');
+      var html = '<section class="tl-y" id="tl-' + y.year + '"><div class="tl-dot"></div><h2 class="tl-yh">' + y.year + '</h2>' +
+        '<div class="yt-stats" style="margin:4px 0 14px;">' + stats.map(function (s) { return '<span class="yt-stat">' + s + '</span>'; }).join('') + '</div>';
+      if (y.albums.length) {
+        html += '<div class="tl-albums">' + y.albums.map(function (a) {
+          return '<div class="tl-al" data-go="/resources?view=disco&album=' + encodeURIComponent(a.slug) + '"><div class="yt-cover"><img src="' + esc(thumb(a.cover_sm, 240)) + '" alt="" loading="lazy" onerror="this.remove()"></div><div><div class="tl-k">ALBUM' + (a.date && a.date.length === 10 ? ' · ' + esc(new Date(a.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) : '') + '</div><div class="tl-at">' + esc(a.title) + '</div><div class="yt-sub">' + a.tracks + ' songs' + (a.artist !== 'Kanye West' && a.artist !== 'Ye' ? ' · ' + esc(a.artist) : '') + '</div></div></div>';
+        }).join('') + '</div>';
+      }
+      if (y.tweets.top) {
+        var t = y.tweets.top;
+        html += '<div class="tl-card" data-go="/resources?view=tweets&year=' + y.year + '"><div class="tl-k">MOST LIKED TWEET' + (t.likes ? ' · ♥ ' + num(t.likes) : '') + '</div><div class="tl-tw">' + esc(String(t.text || '').replace(/\s*https?:\/\/\S+/g, '')) + '</div>' + (y.tweets.count > 20 ? bars(y.tweets.months) : '') + '</div>';
+      }
+      if (y.tour) {
+        html += '<div class="tl-card" data-go="/resources?view=tours&year=' + y.year + '"><div class="tl-k">TOUR</div><div class="tl-at">' + y.tour.shows + ' show' + (y.tour.shows === 1 ? '' : 's') + (y.tour.first ? ' · starting with ' + esc(String(y.tour.first).toLowerCase()) : '') + '</div><div class="yt-sub">' + [y.tour.videos ? y.tour.videos + ' videos' : '', y.tour.merch ? y.tour.merch + ' merch' : '', y.tour.yedia ? y.tour.yedia + ' fan photos and videos' : ''].filter(Boolean).join(' · ') + '</div></div>';
+      }
+      if (y.produced_with.length) {
+        html += '<div class="tl-card" data-go="/resources?view=disco&sub=produced"><div class="tl-k">WORKED WITH</div><div class="tl-with">' + y.produced_with.map(function (p) { return '<span>' + esc(p.name) + (p.n > 1 ? ' <i>' + p.n + '</i>' : '') + '</span>'; }).join('') + '</div></div>';
+      }
+      if (y.yeezy.pics.length) {
+        html += '<div class="tl-card" data-go="/resources?view=yeezy"><div class="tl-k">YEEZY</div><div class="tl-pics">' + y.yeezy.pics.map(function (p) { return '<img src="' + esc(thumb(p.img, 200)) + '" alt="' + esc(p.title) + '" title="' + esc(p.title) + '" loading="lazy" onerror="this.remove()">'; }).join('') + '</div></div>';
+      }
+      return html + '</section>';
+    }
+    function paint() {
+      var ys = st.order === 'new' ? st.d.years : st.d.years.slice().reverse();
+      root.innerHTML = '<div class="tl-nav"><div class="yt-tabs" id="tl-years">' + ys.map(function (y) { return '<button class="yt-tab" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div>' +
+        '<select class="ye-sel" id="tl-order"><option value="new">newest first</option><option value="old">oldest first</option></select></div>' +
+        '<div class="tl">' + ys.map(yearBlock).join('') + '</div>' +
+        '<div class="ye-credit">built from the tweets, tours, yeezy archive and musicbrainz credits on this page</div>';
+      var o = document.getElementById('tl-order'); o.value = st.order; o.onchange = function () { st.order = o.value; paint(); };
+      root.querySelectorAll('[data-y]').forEach(function (b) { b.onclick = function () { var el = document.getElementById('tl-' + b.getAttribute('data-y')); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
+      root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { go(c.getAttribute('data-go')); }; });
+    }
+    async function load() {
+      root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      try { st.d = await api('/ye/timeline'); }
+      catch (e) { root.innerHTML = '<div class="yt-empty"><b>couldnt load the timeline</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
+      paint();
     }
     return { open: function () { if (st.started) return; st.started = true; load(); } };
   })();
