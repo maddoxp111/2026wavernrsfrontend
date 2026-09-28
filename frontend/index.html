@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=292b9f91890f">
-  <script src="/js/status-card.js?v=292b9f91890f"></script>
-  <script src="/js/down.js?v=292b9f91890f"></script>
+  <link rel="stylesheet" href="/css/style.css?v=b9903c4d129f">
+  <script src="/js/status-card.js?v=b9903c4d129f"></script>
+  <script src="/js/down.js?v=b9903c4d129f"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=292b9f91890f"></script>
-<script src="/js/layout.js?v=292b9f91890f"></script>
-<script src="/js/player.js?v=292b9f91890f"></script>
-<script src="/js/router.js?v=292b9f91890f"></script>
-<script src="/js/playlists.js?v=292b9f91890f"></script>
+<script src="/js/api.js?v=b9903c4d129f"></script>
+<script src="/js/layout.js?v=b9903c4d129f"></script>
+<script src="/js/player.js?v=b9903c4d129f"></script>
+<script src="/js/router.js?v=b9903c4d129f"></script>
+<script src="/js/playlists.js?v=b9903c4d129f"></script>
 <script>
 initPlayer();
 
@@ -124,6 +124,7 @@ function renderHome() {
     .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
   html += awardsBlock();
   html += '<div id="home-leaks"></div>';
+  html += '<div id="home-otd"></div>';
   html += rail('Your most played this month', _filterItems(mostPlayed), '/history');
   html += rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted');
   html += rail('Trending now', _filterItems(_home.trending), '/charts');
@@ -142,6 +143,7 @@ function renderHome() {
   view.innerHTML = html;
   fillLiveLps();
   fillLeaks();
+  fillOnThisDay();
 }
 
 // Newest leaks from the Ye tracker.
@@ -166,6 +168,35 @@ async function fillLeaks() {
         '<div class="scroll-card-title">' + escHtml(t) + '</div>' +
         '<div class="scroll-card-sub">' + escHtml(r.era) + (r.leak ? ' · ' + escHtml(r.leak.replace(/, \d{4}$/, '')) : '') + '</div></div>';
     }).join('') + '</div></div>';
+}
+
+// On this day in Ye history: tweets from this date in past years and album birthdays.
+var _otdCache = { at: 0, d: null };
+async function fillOnThisDay() {
+  if (_homeFilter !== 'all') return;
+  try {
+    if (!_otdCache.d || Date.now() - _otdCache.at > 30 * 60000) _otdCache = { at: Date.now(), d: await api('/ye/onthisday') };
+  } catch (_) { return; }
+  var d = _otdCache.d, el = document.getElementById('home-otd');
+  if (!el || !d) return;
+  var cards = [];
+  (d.week || []).forEach(function (a) {
+    var when = a.days === 0 ? 'turns ' + a.age + ' today' : 'turns ' + a.age + (a.days === 1 ? ' tomorrow' : ' in ' + a.days + ' days');
+    var href = '/resources?view=disco&album=' + encodeURIComponent(a.slug);
+    var art = typeof wvImg === 'function' ? wvImg(a.cover_sm, 320) : a.cover_sm;
+    cards.push('<div class="scroll-card" onclick="navigate(\'' + href + '\')" style="flex-shrink:0;width:150px;"><div class="scroll-card-cover" style="background:' + coverGradient(a.title) + ';"><img src="' + escHtml(art) + '" loading="lazy" onerror="this.remove()"></div>' +
+      '<div class="scroll-card-title">' + escHtml(a.title) + '</div><div class="scroll-card-sub">' + escHtml(when) + '</div></div>');
+  });
+  (d.years || []).forEach(function (y) {
+    var t = y.items && y.items[0]; if (!t) return;
+    var text = String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').trim() || (t.media && t.media.length ? '[photo]' : '');
+    if (!text) return;
+    cards.push('<div class="wv-otd-tw" onclick="navigate(\'/resources?view=tweets&filter=today\')"><div class="wv-otd-y">' + escHtml(y.year) + (y.count > 1 ? ' · ' + y.count + ' tweets' : '') + '</div><div class="wv-otd-t">' + escHtml(text) + '</div><div class="wv-otd-s">♥ ' + (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : (t.likes || 0)) + '</div></div>');
+  });
+  if (!cards.length) return;
+  var day = new Date('2000-' + d.md + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+  el.innerHTML = '<div class="home-section"><div class="wv-sec-head"><h2 class="wv-sec-title" onclick="navigate(\'/resources?view=tweets&filter=today\')">On this day in Ye history</h2><button class="wv-see-all" onclick="navigate(\'/resources?view=tweets&filter=today\')">' + escHtml(day) + '</button></div>' +
+    '<div class="scroll-row">' + cards.join('') + '</div></div>';
 }
 
 // Live listening parties go right at the top so people actually find them.

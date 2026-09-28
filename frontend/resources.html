@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=292b9f91890f">
-  <script src="/js/status-card.js?v=292b9f91890f"></script>
-  <script src="/js/down.js?v=292b9f91890f"></script>
+  <link rel="stylesheet" href="/css/style.css?v=b9903c4d129f">
+  <script src="/js/status-card.js?v=b9903c4d129f"></script>
+  <script src="/js/down.js?v=b9903c4d129f"></script>
 </head>
 <body>
 
@@ -291,10 +291,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=292b9f91890f"></script>
-<script src="/js/layout.js?v=292b9f91890f"></script>
-<script src="/js/player.js?v=292b9f91890f"></script>
-<script src="/js/router.js?v=292b9f91890f"></script>
+<script src="/js/api.js?v=b9903c4d129f"></script>
+<script src="/js/layout.js?v=b9903c4d129f"></script>
+<script src="/js/player.js?v=b9903c4d129f"></script>
+<script src="/js/router.js?v=b9903c4d129f"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -834,7 +834,7 @@ window._ytBooted = false;
   // ── Tweets ─────────────────────────────────────────────────────
   var TW = (function () {
     var root = document.getElementById('ye-tweets');
-    var st = { year: P.get('year') || '', q: P.get('q') || '', sort: 'new', filter: '', items: [], total: 0, years: [], profiles: {}, busy: false, started: false };
+    var st = { year: P.get('year') || '', q: P.get('q') || '', sort: 'new', filter: P.get('filter') === 'today' ? 'today' : '', items: [], total: 0, years: [], profiles: {}, busy: false, started: false };
     function linkify(t, hasMedia) {
       var h = esc(t);
       if (hasMedia) h = h.replace(/\s*https?:\/\/pic\.(twitter|x)\.com\/\S+/g, '');
@@ -864,7 +864,7 @@ window._ytBooted = false;
         '<a href="https://x.com/kanyewest/status/' + esc(t.id) + '" target="_blank" rel="noopener nofollow">original ↗</a></div></div></article>';
     }
     function url() {
-      var q = new URLSearchParams(); q.set('view', 'tweets'); if (st.year) q.set('year', st.year); if (st.q) q.set('q', st.q);
+      var q = new URLSearchParams(); q.set('view', 'tweets'); if (st.year) q.set('year', st.year); if (st.q) q.set('q', st.q); if (st.filter === 'today') q.set('filter', 'today');
       try { history.replaceState(history.state, '', location.pathname + '?' + q.toString()); } catch (_) {}
     }
     async function load(more) {
@@ -883,6 +883,7 @@ window._ytBooted = false;
     }
     async function today() {
       var feed = document.getElementById('tw-feed');
+      if (!st.years.length) { try { var y0 = await api('/ye/tweets?limit=1'); st.years = y0.years || []; st.profiles = y0.profiles || {}; st.items = []; st.total = 0; paint(); feed.innerHTML = '<div class="loading"><div class="spinner"></div></div>'; } catch (_) {} }
       try {
         var d = await api('/ye/onthisday');
         st.profiles = d.profiles || st.profiles;
@@ -904,7 +905,7 @@ window._ytBooted = false;
       var qi = document.getElementById('tw-q'), tm = null;
       qi.oninput = function () { clearTimeout(tm); tm = setTimeout(function () { st.q = qi.value.trim(); url(); load(false); }, 250); };
       var so = document.getElementById('tw-sort'); so.value = st.sort; so.onchange = function () { st.sort = so.value; load(false); };
-      root.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { st.filter = b.getAttribute('data-f'); root.querySelectorAll('[data-f]').forEach(function (x) { x.classList.toggle('on', x === b); }); load(false); }; });
+      root.querySelectorAll('[data-f]').forEach(function (b) { b.onclick = function () { st.filter = b.getAttribute('data-f'); url(); root.querySelectorAll('[data-f]').forEach(function (x) { x.classList.toggle('on', x === b); }); load(false); }; });
     }
     function paint() {
       var yrs = document.getElementById('tw-years');
