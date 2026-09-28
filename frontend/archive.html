@@ -284,7 +284,24 @@ function arcEraHero() {
       '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="arcClearEra()">Clear</button>' +
       '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/eras\')">All eras</button>' +
       (era.name && !/^other$/i.test(era.name) ? '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/resources?tab=Unreleased&era=' + encodeURIComponent(era.name).replace(/'/g, '%27') + '\')" title="see this era on the Ye tracker">on the Ye tracker ›</button>' : '') +
+      '<span id="arc-era-album"></span>' +
     '</div>';
+  arcEraAlbum(era);
+}
+
+// The released album for the era, from the discography, when there is one.
+var _arcDisco = null;
+function arcEraAlbum(era) {
+  var n = function (x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); };
+  if (!_arcDisco) _arcDisco = api('/ye/disco').then(function (d) { return (d && d.albums) || []; }).catch(function () { _arcDisco = null; return []; });
+  _arcDisco.then(function (list) {
+    var el = document.getElementById('arc-era-album');
+    if (!el || _arcEra !== era.id) return;
+    var k = n(era.name), a = list.filter(function (x) { return n(x.era) === k || n(x.title) === k; })[0];
+    if (!a && /^vultures/.test(k)) a = list.filter(function (x) { return /^vultures1/.test(n(x.title)); })[0];
+    if (!a) return;
+    el.outerHTML = '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;font-weight:700;" onclick="navigate(\'/resources?view=disco&album=' + encodeURIComponent(a.slug) + '\')" title="the released album, with producers and samples">' + escHtml(a.title) + ' credits ›</button>';
+  });
 }
 
 window.arcClearEra = function () {
