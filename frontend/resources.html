@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=0f5af83a1673">
-  <script src="/js/status-card.js?v=0f5af83a1673"></script>
-  <script src="/js/down.js?v=0f5af83a1673"></script>
+  <link rel="stylesheet" href="/css/style.css?v=aeb267037165">
+  <script src="/js/status-card.js?v=aeb267037165"></script>
+  <script src="/js/down.js?v=aeb267037165"></script>
 </head>
 <body>
 
@@ -395,10 +395,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=0f5af83a1673"></script>
-<script src="/js/layout.js?v=0f5af83a1673"></script>
-<script src="/js/player.js?v=0f5af83a1673"></script>
-<script src="/js/router.js?v=0f5af83a1673"></script>
+<script src="/js/api.js?v=aeb267037165"></script>
+<script src="/js/layout.js?v=aeb267037165"></script>
+<script src="/js/player.js?v=aeb267037165"></script>
+<script src="/js/router.js?v=aeb267037165"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1012,7 +1012,7 @@ window._ytBooted = false;
     function shareTweet(id) {
       var link = location.origin + '/resources?view=tweets&tweet=' + encodeURIComponent(id);
       if (navigator.share && /Mobi|Android|iPhone/i.test(navigator.userAgent)) { navigator.share({ url: link }).catch(function () {}); return; }
-      try { navigator.clipboard.writeText(link); if (typeof wvToast === 'function') wvToast('link copied'); } catch (_) {}
+      try { navigator.clipboard.writeText(link).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }).catch(function () { prompt('copy this link', link); }); } catch (_) { prompt('copy this link', link); }
     }
     async function loadOne(id) {
       var box = document.getElementById('tw-one'); if (!box) return;
@@ -1343,7 +1343,7 @@ window._ytBooted = false;
       var d = dailyState(); if (!d.res) return;
       var text = 'daily ye ' + d.day + ' — ' + (d.res.split('1').length - 1) + '/5\n' + grid(d.res) + '\n' + location.origin + '/resources?view=quiz';
       if (navigator.share) { navigator.share({ text: text }).catch(function () {}); return; }
-      try { navigator.clipboard.writeText(text); if (typeof wvToast === 'function') wvToast('copied'); } catch (_) {}
+      try { navigator.clipboard.writeText(text).then(function () { if (typeof wvToast === 'function') wvToast('copied'); }).catch(function () { prompt('copy this', text); }); } catch (_) { prompt('copy this', text); }
     }
     function menu() {
       stopAudio(); st.daily = false;
@@ -1449,7 +1449,7 @@ window._ytBooted = false;
       document.getElementById('qz-menu').onclick = menu;
       document.getElementById('qz-share').onclick = function () {
         if (navigator.share) { navigator.share({ text: shareText }).catch(function () {}); return; }
-        try { navigator.clipboard.writeText(shareText); if (typeof wvToast === 'function') wvToast('copied your score'); } catch (_) {}
+        try { navigator.clipboard.writeText(shareText).then(function () { if (typeof wvToast === 'function') wvToast('copied your score'); }).catch(function () { prompt('copy this', shareText); }); } catch (_) { prompt('copy this', shareText); }
       };
     }
     if (window._pageCleanup) window._pageCleanup.push(stopAudio);
@@ -1507,7 +1507,7 @@ window._ytBooted = false;
       }
       var tracks = (site && site.tracks) || [], albums = (site && site.albums) || [];
       var want = String(d.title).toLowerCase().replace(/[^a-z0-9]+/g, '');
-      tracks = tracks.filter(function (x) { return String(x.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '').indexOf(want) >= 0; }).slice(0, 12);
+      tracks = want.length < 2 ? [] : tracks.filter(function (x) { return String(x.title || '').toLowerCase().replace(/[^a-z0-9]+/g, '').indexOf(want) >= 0; }).slice(0, 12);
       if (tracks.length) {
         html += '<h3 class="ds-h">edits on wavernrs</h3><div class="yt-list">' + tracks.map(function (x) {
           var cv = x.cover_url || (x.albums && x.albums.cover_url) || '';

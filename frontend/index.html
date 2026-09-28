@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=0f5af83a1673">
-  <script src="/js/status-card.js?v=0f5af83a1673"></script>
-  <script src="/js/down.js?v=0f5af83a1673"></script>
+  <link rel="stylesheet" href="/css/style.css?v=aeb267037165">
+  <script src="/js/status-card.js?v=aeb267037165"></script>
+  <script src="/js/down.js?v=aeb267037165"></script>
 </head>
 <body>
 <div id="view">
@@ -24,11 +24,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=0f5af83a1673"></script>
-<script src="/js/layout.js?v=0f5af83a1673"></script>
-<script src="/js/player.js?v=0f5af83a1673"></script>
-<script src="/js/router.js?v=0f5af83a1673"></script>
-<script src="/js/playlists.js?v=0f5af83a1673"></script>
+<script src="/js/api.js?v=aeb267037165"></script>
+<script src="/js/layout.js?v=aeb267037165"></script>
+<script src="/js/player.js?v=aeb267037165"></script>
+<script src="/js/router.js?v=aeb267037165"></script>
+<script src="/js/playlists.js?v=aeb267037165"></script>
 <script>
 initPlayer();
 
@@ -218,6 +218,7 @@ async function fillTrackerNew() {
   try {
     if (!_tnewCache.items || Date.now() - _tnewCache.at > 10 * 60000) _tnewCache = { at: Date.now(), items: ((await api('/trackers/changes?fresh=1')) || {}).items || [] };
   } catch (_) { return; }
+  if (_homeFilter === 'edits') return;
   var el = document.getElementById('home-tnew');
   var items = (_tnewCache.items || []).filter(function (e) { return e && e.album && e.album.id; });
   if (!el || items.length < 3) return;

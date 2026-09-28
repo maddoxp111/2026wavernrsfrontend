@@ -442,7 +442,10 @@
     _sugTimer = setTimeout(function() {
       var seq = ++_sugSeq;
       var base = (typeof API_BASE !== 'undefined' ? API_BASE : '/api');
-      var yeP = fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+      var yeP = Promise.race([
+        fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+        new Promise(function(res) { setTimeout(function() { res(null); }, 700); })
+      ]);
       fetch(base + '/search?q=' + encodeURIComponent(q))
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) { return yeP.then(function(ye) { if (d) d._ye = ye; return d; }); })
