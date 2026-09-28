@@ -341,6 +341,9 @@
   .ds-live { font-size:10.5px; font-weight:700; color:var(--brand); background:color-mix(in srgb, var(--brand) 14%, transparent); border-radius:99px; padding:1px 7px; vertical-align:2px; margin-left:4px; white-space:nowrap; }
   .ds-song { border:0; background:none; padding:0; font:inherit; color:inherit; cursor:pointer; text-align:left; }
   .ds-song:hover { text-decoration:underline; }
+  .sg-play { position:absolute; inset:0; border:0; background:rgba(0,0,0,.45); color:#fff; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .sg-play:hover { background:var(--brand); color:#14121c; }
+  .sg-pl { font-size:12px; font-weight:700; color:var(--brand); margin-left:6px; letter-spacing:0; }
   .sg-card { background:var(--surface); border-radius:14px; padding:14px 16px; margin:4px 0 8px; cursor:pointer; }
   .sg-card:hover { background:var(--surface-2); }
   .sg-l { font-size:13.5px; color:var(--text); margin-top:6px; line-height:1.5; overflow-wrap:anywhere; }
@@ -1491,6 +1494,17 @@ window._ytBooted = false;
     function sampList(list) { return list.map(function (x) { return esc(x.t) + (x.a ? ' <i>by ' + esc(x.a) + '</i>' : ''); }).join('<span class="sg-dot"> · </span>'); }
     var _pv = null;
     function stopPv() { if (_pv) { try { _pv.pause(); } catch (_) {} } }
+    var SG_APPLE = /iPad|iPhone|iPod/.test(navigator.platform || '') || (/Mac/.test(navigator.userAgent) && 'ontouchend' in document);
+    function sgAudio(links) {
+      var a = null;
+      (links || []).some(function (u) {
+        var m = String(u).match(/(?:pillows|pillowcase)\.su\/f\/([a-z0-9]+)/i);
+        if (m) { a = API_BASE + '/resources/audio/' + m[1].toLowerCase() + (SG_APPLE ? '?ios=1' : ''); return true; }
+        if (/^https:\/\/[^\s]+\.(mp3|m4a|wav|flac|ogg|aac|opus)(\?|#|$)/i.test(u) || /^https:\/\/(cdn\.samply\.app|archive\.org\/download)/i.test(u)) { a = u; return true; }
+        return false;
+      });
+      return a;
+    }
     if (typeof audio !== 'undefined' && audio && audio.addEventListener) audio.addEventListener('play', stopPv);
     if (window._pageCleanup) window._pageCleanup.push(function () { stopPv(); if (typeof audio !== 'undefined' && audio && audio.removeEventListener) audio.removeEventListener('play', stopPv); });
     async function load(t) {
@@ -1525,9 +1539,11 @@ window._ytBooted = false;
           '</div>';
       }
       if (d.tracker.length) {
-        html += '<h3 class="ds-h">on the Ye tracker</h3><div class="yt-list">' + d.tracker.map(function (x) {
+        var playable = d.tracker.filter(function (x) { return x.tab !== 'Released' && sgAudio(x.links); }).length;
+        html += '<h3 class="ds-h">on the Ye tracker' + (playable ? ' <span class="sg-pl">' + playable + ' playable</span>' : '') + '</h3><div class="yt-list">' + d.tracker.map(function (x, xi) {
           var href = '/resources?tab=' + encodeURIComponent(x.tab) + '&era=' + encodeURIComponent(x.era) + '&q=' + encodeURIComponent(x.title);
-          return '<div class="yt-row thumb" data-go="' + esc(href) + '" style="cursor:pointer;"><div class="yt-cover sm">' + (x.art ? '<img src="' + esc(thumb(x.art, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+          var au = x.tab !== 'Released' ? sgAudio(x.links) : null;
+          return '<div class="yt-row thumb" data-go="' + esc(href) + '" style="cursor:pointer;"><div class="yt-cover sm">' + (x.art ? '<img src="' + esc(thumb(x.art, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + (au ? '<button class="sg-play" data-sgp="' + xi + '" title="play this version">▶</button>' : '') + '</div>' +
             '<div style="min-width:0;"><div class="yt-t">' + esc(x.title) + '</div><div class="yt-sub">' + esc([x.era, x.tab === 'Released' ? 'released' : '', x.leak ? (x.tab === 'Released' ? '' : 'leaked ') + x.leak : ''].filter(Boolean).join(' · ')) + '</div>' + (x.sub ? '<div class="ds-p">' + esc(x.sub.slice(0, 120)) + '</div>' : '') + '</div>' +
             '<div class="ds-r"><span class="yt-sub" style="text-align:right;">' + esc([x.avail, x.quality].filter(Boolean).join(' · ')) + '</span></div></div>';
         }).join('') + '</div>';
@@ -1557,6 +1573,14 @@ window._ytBooted = false;
       root.innerHTML = html;
       document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
       root.querySelectorAll('[data-go]').forEach(function (c) { c.onclick = function () { navigate(c.getAttribute('data-go')); }; });
+      root.querySelectorAll('[data-sgp]').forEach(function (b) {
+        b.onclick = function (e) {
+          e.stopPropagation();
+          var x = d.tracker[+b.getAttribute('data-sgp')]; if (!x || typeof playTrack !== 'function') return;
+          stopPv();
+          playTrack({ id: 'ys-' + String(x.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60), title: x.title, artist_name: 'Kanye West · ' + x.era, ia_url: sgAudio(x.links), cover_url: x.art ? thumb(x.art, 300) : '' });
+        };
+      });
       var pb = document.getElementById('sg-pv');
       if (pb && rel) pb.onclick = function () {
         if (_pv && !_pv.paused) { _pv.pause(); return; }
