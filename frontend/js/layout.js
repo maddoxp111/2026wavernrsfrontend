@@ -441,11 +441,17 @@
     if (q.length < 2) { _closeSuggest(); return; }
     _sugTimer = setTimeout(function() {
       var seq = ++_sugSeq;
-      fetch((typeof API_BASE !== 'undefined' ? API_BASE : '/api') + '/search?q=' + encodeURIComponent(q))
+      var base = (typeof API_BASE !== 'undefined' ? API_BASE : '/api');
+      var yeP = fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+      fetch(base + '/search?q=' + encodeURIComponent(q))
         .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { return yeP.then(function(ye) { if (d) d._ye = ye; return d; }); })
         .then(function(d) {
           if (!d || seq !== _sugSeq || document.activeElement !== inp) return;
           var rows = [];
+          var ye = d._ye || {}, enc = function (x) { return encodeURIComponent(x).replace(/'/g, '%27'); };
+          (ye.albums || []).slice(0, 1).forEach(function(a) { rows.push(_sugRow('/resources?view=disco&album=' + enc(a.slug), a.cover_sm, a.title, 'Ye album · ' + a.year)); });
+          (ye.songs || []).slice(0, 2).forEach(function(t) { rows.push(_sugRow('/resources?view=song&t=' + enc(t.title), t.cover, t.title, 'Ye song · ' + t.album)); });
           (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist?id=' + a.id, a.profile_image_url, a.display_name, 'Artist', true)); });
           (d.albums || []).slice(0, 4).forEach(function(a) { rows.push(_sugRow('/album?id=' + a.id, a.cover_url, a.title, 'Comp · ' + (a.artists ? a.artists.display_name : ''))); });
           (d.tracks || []).slice(0, 4).forEach(function(t) { rows.push(_sugRow('/track?id=' + t.id, t.cover_url || (t.albums && t.albums.cover_url), t.title, 'Edit · ' + (t.artists ? t.artists.display_name : ''))); });
