@@ -338,6 +338,7 @@
   .qz-big span { font-size:34px; color:var(--text-3); margin-left:6px; letter-spacing:0; }
   .qz-acts { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:16px; align-items:center; }
   .qz-acts .qz-next, .qz-acts .qz-opt { margin-top:0; padding:11px 20px; border-radius:99px; font-weight:700; font-size:14px; flex-direction:row; }
+  .ds-live { font-size:10.5px; font-weight:700; color:var(--brand); background:color-mix(in srgb, var(--brand) 14%, transparent); border-radius:99px; padding:1px 7px; vertical-align:2px; margin-left:4px; white-space:nowrap; }
   .ds-song { border:0; background:none; padding:0; font:inherit; color:inherit; cursor:pointer; text-align:left; }
   .ds-song:hover { text-decoration:underline; }
   .sg-card { background:var(--surface); border-radius:14px; padding:14px 16px; margin:4px 0 8px; cursor:pointer; }
@@ -1244,6 +1245,19 @@ window._ytBooted = false;
       root.querySelectorAll('.ds-find[data-q]').forEach(function (b) { b.onclick = function () { navigate('/search?q=' + encodeURIComponent(b.getAttribute('data-q'))); }; });
       root.querySelectorAll('[data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
       root.querySelectorAll('[data-song]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-song'))); }; });
+      liveTags(slug);
+    }
+    var _live = null;
+    function liveTags(slug) {
+      var nk = function (t) { return String(t || '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/[^a-z0-9]+/g, ''); };
+      if (!_live) _live = api('/ye/tour/songs').then(function (d) { var m = {}; (d.songs || []).forEach(function (x) { m[nk(x.song)] = x.plays; }); return m; }).catch(function () { _live = null; return {}; });
+      _live.then(function (m) {
+        if (st.album !== slug) return;
+        root.querySelectorAll('[data-song]').forEach(function (b) {
+          var n = m[nk(b.getAttribute('data-song'))]; if (!n || b.parentNode.querySelector('.ds-live')) return;
+          b.insertAdjacentHTML('afterend', ' <span class="ds-live" title="played live at ' + n + ' shows on the tours in this archive">live · ' + n + '</span>');
+        });
+      });
     }
     var _pv = null, _pvBtn = null;
     function preview(b) {
