@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=6c34e135f504">
-  <script src="/js/status-card.js?v=6c34e135f504"></script>
-  <script src="/js/down.js?v=6c34e135f504"></script>
+  <link rel="stylesheet" href="/css/style.css?v=e9f8784ef22a">
+  <script src="/js/status-card.js?v=e9f8784ef22a"></script>
+  <script src="/js/down.js?v=e9f8784ef22a"></script>
 </head>
 <body>
 
@@ -14,11 +14,11 @@
   <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=6c34e135f504"></script>
-<script src="/js/layout.js?v=6c34e135f504"></script>
-<script src="/js/player.js?v=6c34e135f504"></script>
-<script src="/js/router.js?v=6c34e135f504"></script>
-<script src="/js/playlists.js?v=6c34e135f504"></script>
+<script src="/js/api.js?v=e9f8784ef22a"></script>
+<script src="/js/layout.js?v=e9f8784ef22a"></script>
+<script src="/js/player.js?v=e9f8784ef22a"></script>
+<script src="/js/router.js?v=e9f8784ef22a"></script>
+<script src="/js/playlists.js?v=e9f8784ef22a"></script>
 <script>
   initPlayer();
 
@@ -172,6 +172,7 @@
           (/^https?:\/\//i.test(String(artist.website || '')) ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener noreferrer" style="color:var(--brand);">Website ↗</a></span>' : '') +
         '</div>' +
 
+        '<div id="art-eras" class="art-eras"></div>' +
         '<div id="uploads-empty"></div>' +
         '<div id="comps-section" style="display:none;"><h2 class="wv-section-title">Comps</h2><div id="comps-list"></div></div>' +
         '<div id="edits-section" style="display:none;"><h2 class="wv-section-title">Edits</h2><div id="edits-list"></div></div>' +
@@ -184,6 +185,36 @@
     if (!uploads.length) document.getElementById('uploads-empty').innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">no uploads yet</div></div>';
     if (comps.length) { document.getElementById('comps-section').style.display = ''; renderUploads(comps, 'comps-list'); }
     if (edits.length) { document.getElementById('edits-section').style.display = ''; renderUploads(edits, 'edits-list'); }
+    renderEraChips(comps, edits);
+  }
+
+  // Which eras this editor works in, as filters over their uploads.
+  async function renderEraChips(comps, edits) {
+    var box = document.getElementById('art-eras'); if (!box) return;
+    var names = {};
+    if ((comps.concat(edits)).some(function (u) { return u.era_tag_id && !u.era_tag; })) {
+      try { (await api('/eratags') || []).forEach(function (t) { names[t.id] = t.name; }); } catch (_) {}
+    }
+    if (!document.getElementById('art-eras')) return;
+    var eraOf = function (u) { return (u.era_tag && u.era_tag.name) || names[u.era_tag_id] || ''; };
+    var counts = {};
+    comps.concat(edits).forEach(function (u) { var e = eraOf(u); if (e) counts[e] = (counts[e] || 0) + 1; });
+    var eras = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); });
+    if (eras.length < 2) return;
+    var cur = '';
+    function paint() {
+      box.innerHTML = '<button class="art-era' + (!cur ? ' on' : '') + '" data-e="">all eras</button>' + eras.map(function (e) { return '<button class="art-era' + (cur === e ? ' on' : '') + '" data-e="' + escHtml(e) + '">' + escHtml(e) + ' <span>' + counts[e] + '</span></button>'; }).join('');
+      box.querySelectorAll('[data-e]').forEach(function (b) { b.onclick = function () { cur = b.getAttribute('data-e'); apply(); paint(); }; });
+    }
+    function apply() {
+      var c = cur ? comps.filter(function (u) { return eraOf(u) === cur; }) : comps;
+      var e = cur ? edits.filter(function (u) { return eraOf(u) === cur; }) : edits;
+      document.getElementById('comps-section').style.display = c.length ? '' : 'none';
+      document.getElementById('edits-section').style.display = e.length ? '' : 'none';
+      if (c.length) renderUploads(c, 'comps-list');
+      if (e.length) renderUploads(e, 'edits-list');
+    }
+    paint();
   }
 
   function renderUploads(list, elId) {
