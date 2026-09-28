@@ -1144,10 +1144,11 @@ window._ytBooted = false;
           html += '<div class="yt-row thumb"><div class="yt-cover sm" style="background:' + (window.coverGradient ? coverGradient(c.album || c.title) : 'var(--surface-3)') + ';">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
             '<div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc(c.artist) + (c.album && c.album !== c.title ? ' · ' + esc(c.album) : '') + '</div>' +
             (c.roles.length > 1 ? '<div class="ds-p">produced and featured</div>' : '') + '</div>' +
-            '<div class="ds-r"><span class="yt-sub">' + tlen(c.len) + '</span><a class="ds-find" href="https://musicbrainz.org/recording/' + esc(c.rec) + '" target="_blank" rel="noopener">credits</a></div></div>';
+            '<div class="ds-r"><span class="yt-sub">' + tlen(c.len) + '</span>' + (c.preview ? '<button class="ds-find ds-pv" data-pv="' + esc(c.preview) + '">▶ preview</button>' : '') + (c.apple ? '<a class="ds-find" href="' + esc(c.apple) + '" target="_blank" rel="noopener">apple ↗</a>' : '<a class="ds-find" href="https://musicbrainz.org/recording/' + esc(c.rec) + '" target="_blank" rel="noopener">credits</a>') + '</div></div>';
         });
         if (lastY !== null) html += '</div>';
         document.getElementById('ds-cl').innerHTML = html || '<div class="yt-empty"><b>nothing matches</b>try something else</div>';
+        document.querySelectorAll('#ds-cl [data-pv]').forEach(function (b) { b.onclick = function () { preview(b); }; });
       }
       async function load() {
         var my = ++seq, got;
