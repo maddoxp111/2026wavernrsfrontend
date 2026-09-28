@@ -62,6 +62,7 @@
       loadMoreLikeThis();
       loadAlsoOn();
       loadYeOriginals();
+      loadYeOfficial();
       if (typeof loadRatings === 'function') loadRatings('track', track.id);
     } catch (err) {
       console.error('track render error', err);
@@ -225,6 +226,7 @@
           <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
         </div>
 
+        <div id="ye-official" style="margin-top:44px;"></div>
         <div id="ye-originals" style="margin-top:44px;"></div>
 
         <div id="also-on" style="margin-top:44px;"></div>
@@ -570,6 +572,31 @@
           (r.avail || r.quality ? '<span class="track-row-plays" style="white-space:nowrap;">' + escHtml([r.avail, r.quality].filter(Boolean).join(' · ')) + '</span>' : '') +
         '</div>';
       }).join('') + '</div>';
+  }
+
+  // The released song, with its credits from the discography.
+  async function loadYeOfficial() {
+    var el = document.getElementById('ye-official');
+    if (!el || !track) return;
+    var base = _yeBase(track.title);
+    if (base.length < 2) return;
+    var d;
+    try { d = await api('/ye/disco/song?title=' + encodeURIComponent(base)); } catch (_) { return; }
+    var rows = (d && d.items) || [];
+    if (!rows.length || !document.getElementById('ye-official')) return;
+    el.innerHTML = '<h2 class="section-title" style="margin-top:0;">The released song</h2>' +
+      rows.map(function (r) {
+        var href = '/resources?view=disco&album=' + encodeURIComponent(r.slug);
+        var art = r.cover ? (typeof wvImg === 'function' ? wvImg(r.cover, 120) : r.cover) : '';
+        var sub = [r.album, r.year].filter(Boolean).join(' · ') + (r.feat && r.feat.length ? ' · with ' + r.feat.join(', ') : '');
+        return '<div class="track-row" style="cursor:pointer;align-items:flex-start;" onclick="navigate(\'' + href.replace(/'/g, "\\'") + '\')">' +
+          '<div style="width:56px;height:56px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:' + coverGradient(r.album || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+          '<div class="track-row-info"><div class="track-row-title">' + escHtml(r.title) + '</div>' +
+          '<div class="track-row-artist">' + escHtml(sub) + '</div>' +
+          (r.producers && r.producers.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">prod. ' + escHtml(r.producers.join(', ')) + '</div>' : '') +
+          (r.samples && r.samples.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">samples ' + r.samples.map(function (x) { return escHtml(x.t) + (x.a ? ' by ' + escHtml(x.a) : ''); }).join(' · ') + '</div>' : '') +
+          '</div><span class="track-row-plays" style="white-space:nowrap;">credits ›</span></div>';
+      }).join('');
   }
 
   async function loadAlsoOn() {
