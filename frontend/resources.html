@@ -234,6 +234,17 @@
   .tr-vid video { width:100%; max-height:70vh; background:#000; border-radius:12px; display:block; }
   .tr-vinfo h3 { font-size:22px; margin:4px 0 2px; letter-spacing:-.02em; }
   .tr-set { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:4px; margin-top:6px; }
+  .tr-yt { position:relative; aspect-ratio:16/9; }
+  .tr-yt iframe { position:absolute; inset:0; width:100%; height:100%; border:0; border-radius:12px; background:#000; }
+  .tr-by { font-style:normal; font-size:11px; font-weight:700; color:var(--text-3); margin-left:auto; padding-left:8px; }
+  .tr-comps { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .tr-comp { display:flex; align-items:center; gap:12px; padding:8px; border-radius:12px; background:var(--surface-2); text-decoration:none; color:var(--text); }
+  .tr-comp:hover { background:var(--surface-3, var(--surface-2)); }
+  .tr-comp-art { width:48px; height:48px; border-radius:8px; overflow:hidden; flex:none; position:relative; }
+  .tr-comp-art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .tr-comp b { display:block; font-size:14px; }
+  .tr-comp i { display:block; font-style:normal; font-size:12px; color:var(--text-3); }
+  .tr-comp-go { margin-left:auto; font-size:12px; font-weight:800; color:var(--brand); white-space:nowrap; }
   .tr-song { text-align:left; border:0; background:var(--surface-2); color:var(--text); font:inherit; font-size:13px; padding:7px 10px; border-radius:8px; cursor:pointer; display:flex; gap:10px; }
   .tr-song:hover { background:var(--surface-3); }
   .tr-song span { color:var(--text-3); font-variant-numeric:tabular-nums; min-width:38px; }
@@ -1938,12 +1949,36 @@ window._ytBooted = false;
     }
     function videoModal(x) {
       if (!x) return;
-      var w = modal('<div class="tr-vid"><video controls autoplay playsinline preload="metadata" poster="' + esc(x.image || '') + '" src="' + esc(x.video) + '"></video></div>' +
-        '<div class="tr-vinfo"><h3>' + esc(x.name) + '</h3><div class="yz-sub">' + esc([st.year, x.spec].filter(Boolean).join(' · ')) + '</div>' +
-        (x.setlist && x.setlist.length ? '<div class="yz-k" style="margin-top:14px;">SETLIST</div><div class="tr-set">' + x.setlist.map(function (t, i) { return '<button class="tr-song" data-t="' + toSec(t.time) + '"><span>' + esc(t.time) + '</span>' + esc(t.song) + '</button>'; }).join('') + '</div>' : '') +
-        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
-      var v = w.querySelector('video');
-      w.querySelectorAll('.tr-song').forEach(function (b) { b.onclick = function () { try { v.currentTime = +b.getAttribute('data-t'); v.play(); } catch (_) {} }; });
+      var yt = x.youtube && /^[A-Za-z0-9_-]{6,20}$/.test(x.youtube) ? x.youtube : null;
+      var player = yt ? '<div class="tr-vid tr-yt"><iframe src="https://www.youtube-nocookie.com/embed/' + yt + '?enablejsapi=1&rel=0&playsinline=1" title="' + esc(x.name) + '" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>'
+        : '<div class="tr-vid"><video controls autoplay playsinline preload="metadata" poster="' + esc(x.image || '') + '" src="' + esc(x.video) + '"></video></div>';
+      var sub = [x.date ? new Date(x.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : st.year, x.venue, x.city].filter(Boolean).join(' · ') || [st.year, x.spec].filter(Boolean).join(' · ');
+      var w = modal(player +
+        '<div class="tr-vinfo"><h3>' + esc(x.name) + '</h3><div class="yz-sub">' + esc(sub) + '</div>' +
+        (x.with && x.with.length ? '<div class="yz-sub" style="margin-top:4px;">with ' + esc(x.with.join(', ')) + '</div>' : '') +
+        (x.about ? '<div class="yz-desc" style="margin-top:10px;">' + esc(x.about) + (x.source && /^https:\/\/en\.wikipedia\.org\//.test(x.source) ? ' <a href="' + esc(x.source) + '" target="_blank" rel="noopener" style="color:var(--brand);">wikipedia ↗</a>' : '') + '</div>' : '') +
+        (x.setlist && x.setlist.length ? '<div class="yz-k" style="margin-top:14px;">SETLIST</div><div class="tr-set">' + x.setlist.map(function (t) { return '<button class="tr-song" data-t="' + toSec(t.time) + '"><span>' + esc(t.time) + '</span>' + esc(t.song) + (t.by ? ' <i class="tr-by">' + esc(t.by) + '</i>' : '') + '</button>'; }).join('') + '</div>' : '') +
+        (x.comps && x.comps.length ? '<div class="yz-k" style="margin-top:16px;">ARCHIVED COMPS OF THIS SHOW</div><div class="tr-comps" id="tr-comps"><div class="loading"><div class="spinner"></div></div></div>' : '') +
+        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
+      var v = w.querySelector('video'), f = w.querySelector('iframe');
+      w.querySelectorAll('.tr-song').forEach(function (b) {
+        b.onclick = function () {
+          var t = +b.getAttribute('data-t');
+          if (f) { try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [t, true] }), '*'); f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'); } catch (_) {} f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+          try { v.currentTime = t; v.play(); } catch (_) {}
+        };
+      });
+      if (x.comps && x.comps.length) {
+        Promise.all(x.comps.slice(0, 8).map(function (id) { return api('/albums/' + encodeURIComponent(id)).then(function (d) { return d.album || d; }).catch(function () { return null; }); })).then(function (list) {
+          var box = w.querySelector('#tr-comps'); if (!box) return;
+          list = list.filter(function (a) { return a && a.id && a.title; });
+          box.innerHTML = list.length ? list.map(function (a) {
+            var by = a.is_archive ? (a.archive_artist_name || '') : ((a.artists && a.artists.display_name) || '');
+            return '<a class="tr-comp" href="/album?id=' + encodeURIComponent(a.id) + '"><span class="tr-comp-art" style="background:' + (window.coverGradient ? coverGradient(a.title) : 'var(--surface-3)') + ';">' + (a.cover_url ? '<img src="' + esc(thumb(a.cover_url, 120)) + '" alt="" onerror="this.remove()">' : '') + '</span><span style="min-width:0;"><b>' + esc(a.title) + '</b><i>' + esc(by) + (a.track_count ? ' · ' + a.track_count + ' tracks' : '') + '</i></span><span class="tr-comp-go">play ›</span></a>';
+          }).join('') : '<div class="yz-sub">couldnt load the comps</div>';
+          box.querySelectorAll('a.tr-comp').forEach(function (el) { el.onclick = function (e) { e.preventDefault(); w.querySelector('.yz-x').click(); navigate(el.getAttribute('href')); }; });
+        });
+      }
       return w;
     }
     function merchModal(m) {
