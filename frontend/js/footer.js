@@ -87,6 +87,7 @@
     '.wvf-col a{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:14px;font-weight:500;color:var(--text-2);transition:color .12s;border-radius:6px}' +
     '.wvf-col a:hover{color:var(--text)}' +
     '.wvf-col a .x{opacity:.55}' +
+    '.wvf-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}' +
     '.wvf-dot{width:7px;height:7px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}' +
     '.wvf-bottom{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;margin-top:44px;padding-top:20px;border-top:1px solid var(--hair)}' +
     '.wvf-meta{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0}' +
@@ -131,7 +132,7 @@
     return '<nav class="wvf-col" aria-label="' + esc(c[0]) + '"><h2>' + esc(c[0]) + '</h2><ul>' + c[1].map(function (l) {
       var ext = l[2] === 'ext';
       return '<li><a href="' + esc(l[1]) + '"' + (ext ? ' target="_blank" rel="noopener external"' : '') + (l[2] === 'new' ? ' data-wvf-new' : '') + '>' +
-        esc(l[0]) + (ext ? '<span class="x">' + ICON.ext + '</span>' : '') + (l[2] === 'new' ? '<span class="wvf-dot" hidden aria-label="new updates"></span>' : '') + '</a></li>';
+        esc(l[0]) + (ext ? '<span class="x">' + ICON.ext + '</span>' : '') + (l[2] === 'new' ? '<span class="wvf-dot" hidden><span class="wvf-sr">new updates</span></span>' : '') + '</a></li>';
     }).join('') + '</ul></nav>';
   }
 
