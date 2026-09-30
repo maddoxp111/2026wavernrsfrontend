@@ -306,6 +306,7 @@
     if (!url) return '';
     return '<img src="' + esc(url) + '" data-size="' + size + '" alt="' + esc(alt || '') + '" loading="lazy" decoding="async" onerror="' + IMG_ERR + '">';
   }
+  function cssUrl(u) { return 'url(&quot;' + esc(String(u || '').replace(/["\\\n\r]/g, encodeURIComponent)) + '&quot;)'; }
   function mono(e) { return '<span class="ers-mono" aria-hidden="true">' + esc(e.name) + '</span>'; }
   var ICON = {
     play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
@@ -609,7 +610,7 @@
     var sc = document.getElementById('ers-scroll');
     sc.innerHTML =
       '<div class="ers-hero">' +
-        (e.cover ? '<div class="ers-hero-bg" style="background-image:url(&quot;' + esc(window.wvImg ? window.wvImg(e.cover, 64) : e.cover) + '&quot;)"></div>' : '') +
+        (e.cover ? '<div class="ers-hero-bg" style="background-image:' + cssUrl(window.wvImg ? window.wvImg(e.cover, 64) : e.cover) + '"></div>' : '') +
         '<div class="ers-art" style="background:' + grad(e.name) + ';">' + mono(e) + img(e.cover, 240, e.name + ' cover') + '</div>' +
         '<div class="ers-id">' +
           '<div class="ers-kick"><i></i>era' + (y ? ' · ' + esc(y) : (isOther(e) ? '' : ' · unreleased')) + '</div>' +
@@ -848,7 +849,7 @@
   var qi = document.getElementById('er-q');
   if (qi) {
     var qt = 0;
-    qi.addEventListener('input', function () { clearTimeout(qt); qt = setTimeout(function () { setQuery(qi.value); }, 90); });
+    qi.addEventListener('input', function () { clearTimeout(qt); qt = setTimeout(function () { if (_alive) setQuery(qi.value); }, 90); });
     qi.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && qi.value) { ev.preventDefault(); ev.stopPropagation(); setQuery(''); } });
   }
 
@@ -872,6 +873,7 @@
     }).catch(function () { return false; });
     var soon = new Promise(function (res) { setTimeout(res, 1500); });
     api('/archive/eras').then(function (d) {
+      if (!_alive) return;
       _eras = ((d && d.items) || []).filter(function (e) { return e && e.id; });
       bySize(_eras).forEach(function (e, i) { _sizeRank[e.id] = i + 1; });
       subline();
@@ -891,7 +893,7 @@
       });
       disco.then(function (ok) { if (ok && _alive && !first) { render(); if (_sheet && _sheetId) { var e = eraById(_sheetId); if (e) { var k = _sheet.querySelector('.ers-kick'); var y = yearOf(e); if (k && y) k.innerHTML = '<i></i>era · ' + esc(y); } } } });
     }).catch(function (err) {
-      if (err && err.navAborted) return;
+      if (!_alive || (err && err.navAborted)) return;
       var box = document.getElementById('er-body');
       if (box && window.wvErrorHTML) box.innerHTML = window.wvErrorHTML(err, 'erRetry()');
       else if (box) box.innerHTML = '<div class="er-none">couldnt load the eras<br><button class="wv-pill brand" onclick="erRetry()">Try again</button></div>';

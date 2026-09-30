@@ -414,7 +414,7 @@
     var desc = joinParts([
       n ? num(n) + (n === 1 ? ' comp' : ' comps') + ' in the wavernrs archive' : 'Comps in the wavernrs archive',
       eras.length ? 'mostly ' + eras.join(', ') : '',
-      num(d.edit_count) ? num(d.edit_count) + ' edits' : ''
+      num(d.edit_count) ? num(d.edit_count) + (Number(d.edit_count) === 1 ? ' edit' : ' edits') : ''
     ]);
     var node = {
       '@type': 'Person',

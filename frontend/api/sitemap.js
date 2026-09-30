@@ -109,7 +109,7 @@ async function musicArtists() {
 }
 
 async function playlists() {
-  const d = await getJSON('/playlists/published?sort=top&limit=200');
+  const d = await getJSON('/playlists/published?sort=popular&limit=200');
   const out = [];
   for (const p of (d && Array.isArray(d.items) ? d.items : [])) {
     const id = p && (p.id || (p.playlist && p.playlist.id));

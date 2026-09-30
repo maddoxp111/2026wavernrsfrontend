@@ -59,7 +59,7 @@ async function album(id) {
     title: d.title + ' — ' + who,
     description: d.description || joinParts([
       kind,
-      d.track_count ? d.track_count + ' tracks' : null,
+      d.track_count ? d.track_count + (d.track_count === 1 ? ' track' : ' tracks') : null,
       num(d.play_count) ? num(d.play_count) + ' plays' : null,
       'on wavernrs',
     ]),
@@ -195,8 +195,8 @@ async function archiveArtist(slug) {
     title: d.name + ': ' + (n ? num(n) + (n === 1 ? ' comp' : ' comps') : 'comps') + ' on wavernrs',
     description: joinParts([
       eras.length ? 'mostly ' + eras.join(', ') : null,
-      num(d.edit_count) && d.edit_count > 0 ? num(d.edit_count) + ' edits' : null,
-      num(d.play_count) && d.play_count > 0 ? num(d.play_count) + ' plays' : null,
+      Number(d.edit_count) > 0 ? num(d.edit_count) + (Number(d.edit_count) === 1 ? ' edit' : ' edits') : null,
+      Number(d.play_count) > 0 ? num(d.play_count) + (Number(d.play_count) === 1 ? ' play' : ' plays') : null,
       'in the wavernrs archive',
     ]),
     image: cover || FALLBACK_IMAGE,
@@ -261,18 +261,20 @@ async function radioStation(slug) {
   const d = await getJSON('/radio/stations/' + encodeURIComponent(slug) + '?peek=1');
   const s = d && d.station;
   if (!s || !s.name) return null;
-  const now = s.now && s.now.track;
+  const nowSrc = s.now || d.now;
+  const now = nowSrc && nowSrc.track;
   const cover = s.cover_url || (now && now.cover_url);
   return {
     title: s.name + ' — wavernrs radio',
     description: joinParts([
-      s.is_live && now ? 'on air: ' + now.title + (now.artist ? ' by ' + now.artist : '') : (s.is_live ? 'live now' : null),
+      s.is_live && now ? 'on air: ' + clip(now.title, 90) + (now.artist ? ' by ' + clip(now.artist, 40) : '') : (s.is_live ? 'live now' : null),
       s.owner && s.owner.name ? 'hosted by ' + s.owner.name : null,
       clip(s.description, 160) || 'tune in and listen together',
     ]),
     image: cover || FALLBACK_IMAGE,
     alt: cover ? s.name : null,
     type: 'website',
+    ttl: 120,
   };
 }
 
@@ -389,8 +391,13 @@ module.exports = async (req, res) => {
   } catch (_) {
     meta = null;
   }
+  if (!meta && type === 'ye') {
+    const v = YE_VIEWS[params.get('view')] ? params.get('view') : 'tracker';
+    meta = { title: YE_VIEWS[v][0] + ' — wavernrs', description: YE_VIEWS[v][1], image: FALLBACK_IMAGE, type: 'website' };
+    attempted = true;
+  }
   if (!where) where = SITE + '/';
-  let fresh = !!meta;
+  let fresh = !!meta && !(type === 'ye' && attempted);
   if (!meta && STATIC[type]) {
     meta = { title: STATIC[type][0], description: STATIC[type][1], image: FALLBACK_IMAGE, type: 'website' };
     fresh = !attempted;
@@ -401,7 +408,7 @@ module.exports = async (req, res) => {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', fresh
-    ? 'public, s-maxage=600, stale-while-revalidate=86400'
+    ? 'public, s-maxage=' + (meta.ttl || 600) + ', stale-while-revalidate=86400'
     : 'public, s-maxage=60, stale-while-revalidate=600');
   res.status(200).send(page(meta, where));
 };
