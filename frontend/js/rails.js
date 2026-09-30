@@ -23,6 +23,7 @@
       '.rl-on.rl-l{-webkit-mask-image:linear-gradient(to right,transparent,#000 var(--rl-fade));mask-image:linear-gradient(to right,transparent,#000 var(--rl-fade))}',
       '.rl-on.rl-l.rl-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 var(--rl-fade),#000 calc(100% - var(--rl-fade)),transparent);mask-image:linear-gradient(to right,transparent,#000 var(--rl-fade),#000 calc(100% - var(--rl-fade)),transparent)}',
       '@media (max-width:640px){.rl-on{--rl-fade:28px}}',
+      '.rl-wrap:has(> .wv-era-strip) + .wv-quick-grid{margin-top:26px;padding-top:26px;border-top:1px solid var(--border)}',
       '.rl-wrap:has(> .rl-on:focus-visible)::after{content:"";position:absolute;inset:-4px -2px;border-radius:14px;box-shadow:0 0 0 2px var(--brand);pointer-events:none;z-index:4}',
       '.rl-on > *:focus-visible,.rl-on a:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}',
       '.rl-btn{display:none}',

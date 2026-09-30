@@ -79,6 +79,7 @@
     .up-qi.done { background: color-mix(in srgb, var(--green) 7%, var(--surface-2)); }
     .up-qi .hd { color: var(--text-3); cursor: grab; width: 18px; display: grid; place-items: center; flex-shrink: 0; }
     .up-qi .hd svg { width: 14px; height: 14px; }
+    .up-qi:not([draggable]) .hd { cursor: default; opacity: .35; }
     .up-qi .no { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; color: var(--text-3); background: var(--glass-pill-bg); flex-shrink: 0; font-variant-numeric: tabular-nums; }
     .up-qi.done .no { background: var(--green); color: #06240f; }
     .up-qi.err .no { background: var(--red); color: #fff; }
@@ -503,6 +504,7 @@
   // when the page is left and re-entered in the SPA.
   window._wvUp = window._wvUp || { q: [], cover: null, coverUrl: null, job: null, running: false, form: null, prog: null, seq: 0 };
   var U = window._wvUp;
+  U._left = false;
   var UP_AUDIO_EXT = /\.(flac|wav|mp3|m4a|aiff?|ogg|oga|opus|aac|alac|wma|webm)$/i;
   var UP_MAX_BYTES = 200 * 1024 * 1024;
   var upLibQ = '';
@@ -930,7 +932,7 @@
       U.q.map(function (item, i) {
         var canEdit = !locked && item.st !== 'done';
         var canRemove = !locked && !(jobLocked && item.st === 'done');
-        return '<div class="up-qi ' + item.st + '" data-qid="' + item.id + '"' + (locked ? '' : ' draggable="true"') + '>' +
+        return '<div class="up-qi ' + item.st + '" data-qid="' + item.id + '"' + (locked || jobLocked ? '' : ' draggable="true"') + '>' +
           '<span class="hd" aria-hidden="true">' + UP_IC.grip + '</span>' +
           '<span class="no">' + upRowNo(item, i) + '</span>' +
           '<div class="mid"><input type="text" value="' + escHtml(item.title) + '" aria-label="Title for song ' + (i + 1) + '" placeholder="Track title" data-qin="' + item.id + '"' + (canEdit ? '' : ' disabled') + '>' +
@@ -978,7 +980,7 @@
     });
     el.addEventListener('dragstart', function (e) {
       var row = e.target.closest && e.target.closest('.up-qi');
-      if (!row || U.running) return;
+      if (!row || U.running || (U.job && U.job.albumId)) return;
       if (e.target.tagName === 'INPUT') { e.preventDefault(); return; }
       dragId = row.getAttribute('data-qid');
       e.dataTransfer.effectAllowed = 'move';
@@ -1166,7 +1168,7 @@
   }
   if (!window._wvUpBU) { window._wvUpBU = true; window.addEventListener('beforeunload', upBeforeUnload); }
 
-  function upOnPage() { return !!document.getElementById('up-root'); }
+  function upOnPage() { return !U._left && !!document.getElementById('up-root'); }
 
   async function doUpload() {
     if (U.running) return;
@@ -1245,7 +1247,7 @@
         var album = null;
         try { album = await api('/albums/' + U.job.albumId); } catch (_) {}
         result = { kind: 'comp', id: U.job.albumId, title: (album && album.title) || U.job.title, cover: (album && album.cover_url) || U.job.cover, count: U.q.length, dur: U.q.reduce(function (s, x) { return s + (x.dur || 0); }, 0), status: album && album.release_status };
-        if (album) { uploads = uploads.filter(function (u) { return !(u._type === 'album' && u.id === album.id); }); uploads.unshift(Object.assign({}, album, { _type: 'album' })); }
+        if (album && upOnPage()) { uploads = uploads.filter(function (u) { return !(u._type === 'album' && u.id === album.id); }); uploads.unshift(Object.assign({}, album, { _type: 'album' })); }
       } else {
         var one = U.q[0];
         var f1 = new FormData();
@@ -1269,7 +1271,7 @@
           });
           if (one) { one.st = 'done'; upPatchRow(one); }
           result = { kind: 'edit', id: track.id, title: track.title || effectiveTitle, cover: track.cover_url || null, count: 1, dur: one ? one.dur || 0 : 0 };
-          uploads.unshift(Object.assign({}, track, { _type: 'track' }));
+          if (upOnPage() && Array.isArray(uploads)) uploads.unshift(Object.assign({}, track, { _type: 'track' }));
         } catch (e) {
           if (one) { one.st = 'err'; one.err = e.message || 'failed'; upPatchRow(one); }
           throw e;
@@ -1504,6 +1506,7 @@
     upStopConfetti();
     upSaveForm();
     if (U.done) { if (U.done.localCover) { try { URL.revokeObjectURL(U.done.localCover); } catch (_) {} } U.done = null; }
+    U._left = true;
     if (U.running) upToast('upload keeps going in the background...well tell you when its done');
   });
 

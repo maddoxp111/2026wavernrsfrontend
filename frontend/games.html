@@ -189,7 +189,8 @@
       background:var(--glass-pill-bg); aspect-ratio:1; font-size:clamp(14px,4.5vw,26px);
       user-select:none;
     }
-    .mcell { font-size:clamp(11px,3.4vw,17px); cursor:pointer; }
+    .mcell { font-size:clamp(11px,3.4vw,17px); cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -2px 0 rgba(0,0,0,.14); }
+    .mcell.open { cursor:default; box-shadow:inset 0 0 0 1px var(--border); }
     .g-over2048 { position:absolute; inset:0; display:grid; place-items:center; border-radius:var(--r-md); background:rgba(10,8,18,.62); color:#fff; font-weight:800; font-size:20px; text-align:center; }
     .g-calls { display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
     .g-call {
@@ -517,6 +518,18 @@ function gEsc(s) {
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
   });
 }
+/* Covers are full-size uploads (often several MB); fetch a resized webp from
+   the same image CDN the rest of the site uses, falling back to the original. */
+function gImg(url, px) {
+  var u = String(url || '');
+  if (!/^https:\/\//.test(u)) return u;
+  return 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + px + '&h=' + px + '&fit=cover&output=webp&q=82&il';
+}
+function gImgErr(img) {
+  var raw = img.getAttribute('data-raw');
+  if (raw && img.src !== raw) { img.removeAttribute('data-raw'); img.src = raw; return; }
+  img.remove();
+}
 function gameById(id) { return GAMES.filter(function (g) { return g.id === id; })[0] || null; }
 function icoHtml(g) { return g.icon === 'hilo' ? ICON_HILO : g.icon; }
 function thumbBg(g) { return 'linear-gradient(140deg,' + g.c[0] + ',' + g.c[1] + ')'; }
@@ -693,7 +706,9 @@ function loadHeroFan() {
       var img = new Image();
       img.alt = ''; img.decoding = 'async';
       img.onload = function () { img.classList.add('ok'); };
-      img.src = it.cover;
+      img.onerror = function () { gImgErr(img); };
+      img.setAttribute('data-raw', it.cover);
+      img.src = gImg(it.cover, 320);
       slots[i].appendChild(img);
     });
   });
@@ -1243,10 +1258,10 @@ function mines() {
   function draw() {
     var NUM = ['', '#60a5fa', '#4ade80', '#f87171', '#c084fc', '#fb923c', '#2dd4bf', '#fff', '#9ca3af'];
     host.innerHTML = cells.map(function (c, i) {
-      var bg = c.open ? (c.mine ? '#c0392b' : 'var(--surface-2)') : 'var(--glass-pill-bg)';
+      var bg = c.open ? (c.mine ? '#c0392b' : 'var(--surface)') : 'var(--surface-3)';
       var txt = c.flag && !c.open ? '🚩' : (c.open ? (c.mine ? '💣' : (c.n || '')) : '');
       var col = c.open && !c.mine ? NUM[c.n] : '#fff';
-      return '<div class="cell mcell" data-i="' + i + '" style="background:' + bg + ';color:' + col + ';">' + txt + '</div>';
+      return '<div class="cell mcell' + (c.open ? ' open' : '') + '" data-i="' + i + '" style="background:' + bg + ';color:' + col + ';">' + txt + '</div>';
     }).join('');
     setScore(over ? 'boom...hit restart to try again'
                   : (won ? 'Cleared in ' + secs + 's!' : 'Mines ' + (MINES - cells.filter(function (c) { return c.flag; }).length)));
@@ -2280,7 +2295,8 @@ function hilo() {
   cleanup.push(function () { alive = false; timers.forEach(clearTimeout); });
   function later(fn, ms) { timers.push(setTimeout(function () { if (alive) fn(); }, ms)); }
 
-  var items = null, pair = null, streak = 0, phase = 'loading', seen = [], nextPair = null;
+  var items = null, pair = null, streak = 0, phase = 'loading', seen = [], nextPair = null, revealAt = 0;
+  var HL_PX = (window.devicePixelRatio || 1) > 1.25 ? 640 : 320;
   var OPEN_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 
   function skeleton() {
@@ -2316,7 +2332,7 @@ function hilo() {
     return [items[x], items[y]];
   }
   function preload(p) {
-    p.forEach(function (it) { if (it.cover) { var im = new Image(); im.decoding = 'async'; im.src = it.cover; } });
+    p.forEach(function (it) { if (it.cover) { var im = new Image(); im.decoding = 'async'; im.src = gImg(it.cover, HL_PX); } });
   }
   function initials(t) {
     return gEsc(String(t).replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join('').toUpperCase() || '?');
@@ -2327,7 +2343,7 @@ function hilo() {
       '<a class="hl-art" data-side="' + side + '" ' + (href ? 'href="' + gEsc(href) + '" target="_blank" rel="noopener"' : 'href="#"') +
         ' aria-label="' + gEsc('pick ' + it.title + (it.creator ? ' by ' + it.creator : '')) + '">' +
         '<span class="ph">' + initials(it.title) + '</span>' +
-        (it.cover ? '<img src="' + gEsc(it.cover) + '" alt="" decoding="async" onload="this.classList.add(\'ok\')" onerror="this.remove()">' : '') +
+        (it.cover ? '<img src="' + gEsc(gImg(it.cover, HL_PX)) + '" data-raw="' + gEsc(it.cover) + '" alt="" decoding="async" onload="this.classList.add(\'ok\')" onerror="gImgErr(this)">' : '') +
         '<span class="hl-pickcue">ranks higher</span>' +
         (href ? '<span class="hl-open">open' + OPEN_ICO + '</span>' : '') +
       '</a>' +
@@ -2366,6 +2382,7 @@ function hilo() {
   function choose(side) {
     if (phase !== 'pick') return;
     phase = 'reveal';
+    revealAt = Date.now();
     var mine = pair[side], other = pair[1 - side];
     var right = mine.rank < other.rank;
     var cards = host.querySelectorAll('.hl-card');
@@ -2410,7 +2427,7 @@ function hilo() {
   on(host, 'click', function (e) {
     var a = e.target.closest('.hl-art'); if (!a) return;
     if (phase === 'pick') { e.preventDefault(); choose(+a.getAttribute('data-side')); return; }
-    if (a.getAttribute('href') === '#') e.preventDefault();
+    if (a.getAttribute('href') === '#' || (phase === 'reveal' && Date.now() - revealAt < 700)) e.preventDefault();
   });
   on(document, 'keydown', function (e) {
     if (phase === 'pick') {

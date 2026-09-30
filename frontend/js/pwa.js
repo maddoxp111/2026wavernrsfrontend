@@ -289,6 +289,12 @@
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       // First install claims the page too; only a swap between versions is an update.
       if (!hadController) { hadController = true; return; }
+      // When this page registered the new worker itself, the page already
+      // runs that version: nothing to refresh.
+      var c = navigator.serviceWorker.controller, cv = '', pv = layoutVer();
+      try { cv = (c && new URL(c.scriptURL).searchParams.get('v')) || ''; } catch (_) {}
+      try { pv = decodeURIComponent(pv); } catch (_) {}
+      if (cv && pv && cv === pv) return;
       showUpdateCard();
     });
     window.addEventListener('wv-navigate', onNavigateForUpdate);

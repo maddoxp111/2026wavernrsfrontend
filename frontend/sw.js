@@ -9,7 +9,7 @@
  *   - pages (navigations and the router's Accept: text/html fetches):
  *     network first; the last good copy only if the network is slow (4s) or
  *     down; /offline only when the network actually fails and nothing is cached
- *   - /js and /css with ?v=: cache first (the URL changes whenever the file does)
+ *   - /js and /css with ?v=: cache first, re-checked once in the background
  *   - same-origin images and icons: stale-while-revalidate
  *   - everything else goes straight to the network: API calls, audio/video,
  *     other origins, non-GET, Range requests, /status.json, /sw.js
@@ -127,20 +127,40 @@ self.addEventListener('fetch', function (event) {
   if (/\.(mp3|m4a|mp4|mov|webm|ogg|oga|wav|flac|m3u8|ts)$/i.test(p)) return;
   if (req.cache === 'no-store') return;
 
-  if (isStaticAsset(url)) { event.respondWith(cacheFirst(req)); return; }
+  if (isStaticAsset(url)) { event.respondWith(cacheFirst(event, req)); return; }
   if (isImage(url)) { event.respondWith(staleWhileRevalidate(event, req)); return; }
   if (wantsHtml(req) && !/\.[a-z0-9]+$/i.test(p.replace(/\.html$/, ''))) { event.respondWith(networkFirstPage(event, req, url)); return; }
 });
 
-async function cacheFirst(req) {
+// Versioned assets come from the cache, but each one is re-checked once per
+// worker lifetime in the background, so a file edited without a new ?v stamp
+// still reaches people on their next load instead of being stuck forever.
+var rechecked = {};
+async function cacheFirst(event, req) {
   var cache = await caches.open(STATIC_CACHE);
   var hit = await cache.match(req);
-  if (hit) return hit;
-  var res = await fetch(req);
-  if (res && res.ok && res.type === 'basic' && !res.redirected) {
-    cache.put(req, res.clone()).catch(function () {});
+  function refresh() {
+    return fetch(req).then(function (res) {
+      if (res && res.ok && res.type === 'basic' && !res.redirected) {
+        return cache.put(req, res.clone()).then(function () { return res; }, function () { return res; });
+      }
+      return res;
+    });
   }
-  return res;
+  if (hit) {
+    if (!rechecked[req.url]) { rechecked[req.url] = 1; event.waitUntil(refresh().catch(function () {})); }
+    return hit;
+  }
+  rechecked[req.url] = 1;
+  try {
+    return await refresh();
+  } catch (err) {
+    // Offline with a page cached under an older deploy: its ?v= no longer
+    // matches, so hand back this deploy's copy of the same file.
+    var same = await cache.match(req, { ignoreSearch: true });
+    if (same) return same;
+    throw err;
+  }
 }
 
 async function staleWhileRevalidate(event, req) {

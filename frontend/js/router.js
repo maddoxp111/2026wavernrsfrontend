@@ -208,6 +208,7 @@ window._pageCleanup = [];
       } catch (_) {}
       return p;
     };
+    try { for (var k in orig) { if (Object.prototype.hasOwnProperty.call(orig, k)) wrapped[k] = orig[k]; } } catch (_) {}
     wrapped._wvRouterTracked = true;
     try { window.api = wrapped; } catch (_) {}
   }
@@ -547,7 +548,8 @@ window._pageCleanup = [];
     v.replaceWith(fresh);
     document.querySelectorAll('style[data-wv-page-style]').forEach(function (el) { el.remove(); });
     document.title = 'offline — wavernrs';
-    if (typeof window._wvRestoreTabTitle === 'function') window._wvRestoreTabTitle(document.title);
+    if (typeof window._wvRestoreTabTitle === 'function') { try { window._wvRestoreTabTitle(document.title); } catch (_) {} }
+    if (typeof window._updateNavActive === 'function') { try { window._updateNavActive(); } catch (_) {} }
     var c = content();
     if (c) c.scrollTop = 0;
     _lastPS = location.pathname + location.search;
@@ -566,7 +568,18 @@ window._pageCleanup = [];
   }
 
   // ── navigate ──────────────────────────────────────────────────────────
-  async function navigate(url, opts) {
+  // Any unexpected failure falls back to a real page load, so a link can
+  // never just do nothing.
+  function navigate(url, opts) {
+    return navigateInner(url, opts).catch(function () {
+      try {
+        var t = new URL(url, location.href);
+        if (t.pathname + t.search !== location.pathname + location.search || !curView()) location.assign(t.href);
+      } catch (_) {}
+    });
+  }
+
+  async function navigateInner(url, opts) {
     opts = opts || {};
     var target;
     try { target = new URL(url, location.href); } catch (_) { location.assign(url); return; }

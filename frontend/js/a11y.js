@@ -401,8 +401,8 @@
       for (var i = 0; i < muts.length; i++) {
         var m = muts[i];
         if (!m.addedNodes.length && !m.removedNodes.length) continue;
-        any = true;
         if (m.target === document.body) bodyChange = true;
+        if (!any) for (var j = 0; j < m.addedNodes.length; j++) if (m.addedNodes[j].nodeType === 1) { any = true; break; }
       }
       if (bodyChange) { try { scanBody(); } catch (_) {} }
       if (any) soon();
