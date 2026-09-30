@@ -1359,6 +1359,16 @@
   }
   ensure('playlists.js', 'openAddToPlaylist');
   ensure('ratings.js', 'loadRatings');
+  ensure('ui-kit.js', 'wvUI');
+  ensure('palette.js', 'wvOpenPalette');
+  ensure('quicksearch.js', 'wvQuickSearch');
+  ensure('nowplaying.js', 'wvNowPlaying');
+  ensure('share.js', 'wvShare');
+  ensure('rails.js', 'wvRails');
+  ensure('a11y.js', 'wvA11y');
+  ensure('pwa.js', 'wvPwa');
+  ensure('footer.js', 'wvFooter');
+  ensure('seo.js', 'wvSeo');
 })();
 
 // ── Countdown / pre-launch lockdown ─────────────────────────────────────────
