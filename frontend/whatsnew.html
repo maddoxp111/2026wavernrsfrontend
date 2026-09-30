@@ -143,6 +143,7 @@
     </div>
   </section>
 
+  <div class="wn-main">
   <div class="wn-bar" id="wn-bar" hidden>
     <div class="wn-seg" id="wn-seg" role="group" aria-label="Filter updates"></div>
     <span class="wn-count" id="wn-count" aria-live="polite"></span>
@@ -150,6 +151,7 @@
 
   <div id="wn-feed" aria-busy="true">
     <div class="wn-sk"></div><div class="wn-sk"></div><div class="wn-sk"></div>
+  </div>
   </div>
 
   <div class="wn-foot">
@@ -343,7 +345,8 @@
     if (window.wvFooter && typeof window.wvFooter.markSeen === 'function') window.wvFooter.markSeen(state.all[0].date);
     else { try { localStorage.setItem(SEEN_KEY, state.all[0].date); } catch (_) {} }
     if (location.hash && location.hash.length > 1) {
-      var h = decodeURIComponent(location.hash.slice(1));
+      var h = location.hash.slice(1);
+      try { h = decodeURIComponent(h); } catch (_) {}
       setTimeout(function () { if (alive()) flash(h); }, 150);
     }
   }).catch(function () {

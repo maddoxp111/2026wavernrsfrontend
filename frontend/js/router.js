@@ -477,7 +477,12 @@ window._pageCleanup = [];
     }));
   }
 
+  var _runningScripts = false;
   function runInlineScripts(doc) {
+    _runningScripts = true;
+    try { runInlineScriptsNow(doc); } finally { _runningScripts = false; }
+  }
+  function runInlineScriptsNow(doc) {
     Array.prototype.forEach.call(doc.querySelectorAll('script:not([src])'), function (pageScript) {
       var type = (pageScript.getAttribute('type') || '').trim().toLowerCase();
       if (type && !/^(text|application)\/(javascript|ecmascript)$|^module$/.test(type)) return;
@@ -581,6 +586,15 @@ window._pageCleanup = [];
 
   async function navigateInner(url, opts) {
     opts = opts || {};
+    // A page that navigates away while its own scripts are still starting up
+    // (e.g. /tracker with no slug going to /archive) is a redirect: replace
+    // the entry, or Back would land on it and bounce straight forward again.
+    if (!opts.replace && (_runningScripts || document.readyState === 'loading')) {
+      var o2 = {};
+      for (var ok in opts) if (Object.prototype.hasOwnProperty.call(opts, ok)) o2[ok] = opts[ok];
+      o2.replace = true;
+      opts = o2;
+    }
     var target;
     try { target = new URL(url, location.href); } catch (_) { location.assign(url); return; }
 

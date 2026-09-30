@@ -202,7 +202,13 @@
 
     var sum = container.querySelector('button.wvr-sum');
     if (sum) {
-      sum.addEventListener('click', function (e) { e.stopPropagation(); if (document.getElementById('wvr-pop')) closePop(); else openPop(sum); });
+      sum.addEventListener('click', function (e) {
+        e.stopPropagation();
+        clearTimeout(_hoverT);
+        var open = document.getElementById('wvr-pop');
+        if (open && open._hover) { open._hover = false; return; }
+        if (open) closePop(); else openPop(sum);
+      });
       if (fine) {
         sum.addEventListener('mouseenter', function () { clearTimeout(_hoverT); _hoverT = setTimeout(function () { if (!document.getElementById('wvr-pop')) openPop(sum, true); }, 260); });
         sum.addEventListener('mouseleave', function () { clearTimeout(_hoverT); _hoverT = setTimeout(function () { var p = document.getElementById('wvr-pop'); if (p && p._hover && !p.matches(':hover')) closePop(); }, 220); });
