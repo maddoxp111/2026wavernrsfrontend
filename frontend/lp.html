@@ -303,7 +303,7 @@
     .lp-recap-sub { color:var(--text-2); font-size:13.5px; }
     .lp-recap-acts { display:flex; gap:8px; flex-wrap:wrap; }
     .lp-recap-acts button { min-height:42px; }
-    .lp-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(128px, 1fr)); gap:10px; margin-top:18px; }
+    .lp-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(108px, 1fr)); gap:10px; margin-top:18px; }
     .lp-tile { background:color-mix(in srgb, var(--surface) 70%, transparent); border:1px solid var(--hair); border-radius:14px; padding:14px 14px 12px; min-width:0; }
     .lp-tile b { display:block; font-size:clamp(24px,3vw,30px); font-weight:800; letter-spacing:-.035em; font-variant-numeric:tabular-nums; line-height:1.05; white-space:nowrap; }
     .lp-tile b small { font-size:.55em; color:var(--text-3); font-weight:700; letter-spacing:0; }
@@ -1057,7 +1057,7 @@ initPlayer();
   function paintRecap(r) {
     var box = document.getElementById('lp-tiles'); if (!box) return;
     var tiles = [];
-    if (r.duration_sec) tiles.push({ v: r.duration_sec, f: runtime, l: 'runtime', ic: IC.clock });
+    if (r.duration_sec) tiles.push({ v: r.duration_sec, f: function (n) { return E(runtime(n)).replace(/([a-z]+)/g, '<small>$1</small>'); }, l: 'runtime', ic: IC.clock });
     tiles.push({ v: r.songs_played, f: function (n) { return Math.round(n) + (r.songs_total && r.songs_total !== r.songs_played ? '<small> / ' + r.songs_total + '</small>' : ''); }, l: 'songs played', ic: IC.note, html: true });
     tiles.push({ v: r.messages, f: function (n) { return Math.round(n).toLocaleString() + (r.messages_capped ? '+' : ''); }, l: 'messages', ic: IC.chat });
     if (r.peak_listeners) tiles.push({ v: r.peak_listeners, f: function (n) { return String(Math.round(n)); }, l: 'peak listeners', ic: IC.peak });

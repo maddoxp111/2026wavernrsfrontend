@@ -130,13 +130,7 @@
       .fd-frow .fd-av { width: 44px; height: 44px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .fd-fbtn .l2 { display: none; }
-    @media (hover: hover) {
-      .fd-fbtn.on:not(.pop):hover { border-color: var(--red); color: var(--red); }
-      .fd-fbtn.on:not(.pop):hover .l1, .fd-fbtn.on:not(.pop):hover svg { display: none; }
-      .fd-fbtn.on:not(.pop):hover .l2 { display: inline; }
-    }
-    .fd-fbtn.pop { animation: none; }
+      .fd-fbtn.pop { animation: none; }
       .fd-sk::after { animation: none; }
       .fd-card, .fd-btn, .fd-fbtn { transition: none; }
     }
@@ -451,9 +445,8 @@
   function loadSugs() {
     if (F.sugsLoading) return;
     F.sugsLoading = true;
-    var gen = F.gen;
     api('/stats/artists').then(function (d) {
-      if (gen !== F.gen) return;
+      if (!$('fd-root') || root !== $('fd-root')) return;
       var me = null;
       try { var u = getUser(); me = u && (u.artist_id || (u.artist && u.artist.id)); } catch (_) {}
       F.sugs = ((d && d.items) || []).filter(function (a) { return a && a.id && a.id !== me && (a.uploads || 0) > 0 && a.display_name; })

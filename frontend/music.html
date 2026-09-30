@@ -367,7 +367,8 @@ initPlayer();
     if (gen !== _gen || !document.getElementById('ma-grid')) return;
     if (d.building) { spot.innerHTML = ''; grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">artist pages are still being made from the song credits...check back in a few min</div>'; return; }
     var raw = d.items || [];
-    _offset += raw.filter(function (a) { return !a.primary; }).length;
+    var dbRows = raw.filter(function (a) { return !a.primary; }).length;
+    _offset += PAGE;
     var got = raw;
     if (st.letter) got = raw.filter(function (a) { return String(a.name || '').trim().toLowerCase().charAt(0) === st.letter; });
     var seen = {};
@@ -376,7 +377,7 @@ initPlayer();
     var first = !_items.length;
     _items = _items.concat(got);
     _total = d.starts || !st.letter ? (d.total || _items.length) : null;
-    _hasMore = raw.filter(function (a) { return !a.primary; }).length >= PAGE && (_total == null || _offset < _total);
+    _hasMore = dbRows >= PAGE - 1 && (_total == null || _offset < _total);
     var cnt = document.getElementById('ma-count');
     if (cnt) cnt.textContent = _total != null ? num(_total) + ' artist' + (_total === 1 ? '' : 's') : '';
     if (first) {
@@ -460,7 +461,7 @@ initPlayer();
   window.maPlay = function (idx, shuffle) { playFrom(typeof idx === 'string' ? idx : null, !!shuffle); };
 
   function normTitle(s) {
-    return String(s || '').toLowerCase().replace(/^\s*\d+\s*[.)-]\s*/, '').replace(/\s*[(\[].*$/, '').replace(/\s+(feat|ft|featuring)\b.*$/, '').replace(/[^a-z0-9]/g, '');
+    return String(s || '').toLowerCase().replace(/^\s*\d+\s*[.)-]\s*/, '').replace(/\s*[(\[].*$/, '').replace(/\s+[-\u2013\u2014]\s+.*$/, '').replace(/\s+(feat|ft|featuring)\b.*$/, '').replace(/[^a-z0-9]/g, '');
   }
   function popular(tracks) {
     var seen = {}, out = [];

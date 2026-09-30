@@ -1200,7 +1200,7 @@ function brick() {
 
 /* ── Minesweeper ──────────────────────────────────────────────────────────── */
 function mines() {
-  var N = 10, MINES = 14, cells = [], over = false, won = false, t0 = 0, reported = false;
+  var N = 10, MINES = 14, cells = [], over = false, won = false, t0 = 0, reported = false, secs = 0;
   var host = document.createElement('div');
   host.id = 'gmines';
   host.style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
@@ -1208,7 +1208,7 @@ function mines() {
   document.getElementById('gmount').appendChild(host);
 
   function reset() {
-    cells = []; over = false; won = false; t0 = 0; reported = false;
+    cells = []; over = false; won = false; t0 = 0; reported = false; secs = 0;
     for (var i = 0; i < N*N; i++) cells.push({ mine:false, open:false, flag:false, n:0 });
     var placed = 0;
     while (placed < MINES) {
@@ -1230,7 +1230,7 @@ function mines() {
   // Opening a blank cell cascades to its blank neighbours.
   function openCell(i) {
     var c = cells[i];
-    if (c.open || c.flag || over) return;
+    if (c.open || c.flag || over || won) return;
     if (!t0) t0 = performance.now();
     c.open = true;
     if (c.mine) { over = true; cells.forEach(function (x) { if (x.mine) x.open = true; }); return; }
@@ -1238,7 +1238,7 @@ function mines() {
   }
   function check() {
     won = !over && cells.every(function (c) { return c.mine || c.open; });
-    if (won && !reported) { reported = true; reportScore('mines', Math.max(1, Math.round((performance.now() - t0) / 1000)), false); }
+    if (won && !reported) { reported = true; secs = Math.max(1, Math.round((performance.now() - t0) / 1000)); reportScore('mines', secs, false); }
   }
   function draw() {
     var NUM = ['', '#60a5fa', '#4ade80', '#f87171', '#c084fc', '#fb923c', '#2dd4bf', '#fff', '#9ca3af'];
@@ -1249,7 +1249,7 @@ function mines() {
       return '<div class="cell mcell" data-i="' + i + '" style="background:' + bg + ';color:' + col + ';">' + txt + '</div>';
     }).join('');
     setScore(over ? 'boom...hit restart to try again'
-                  : (won ? 'Cleared in ' + Math.max(1, Math.round((performance.now() - t0) / 1000)) + 's!' : 'Mines ' + (MINES - cells.filter(function (c) { return c.flag; }).length)));
+                  : (won ? 'Cleared in ' + secs + 's!' : 'Mines ' + (MINES - cells.filter(function (c) { return c.flag; }).length)));
   }
   var pressTimer = null, longPressed = false;
   on(host, 'pointerdown', function (e) {
@@ -1259,7 +1259,7 @@ function mines() {
     pressTimer = setTimeout(function () {
       longPressed = true;
       var c = cells[+el.dataset.i];
-      if (!c.open) { c.flag = !c.flag; draw(); }
+      if (!c.open && !over && !won) { c.flag = !c.flag; draw(); }
     }, 400);
   });
   on(host, 'pointerup', function (e) {
@@ -1272,8 +1272,9 @@ function mines() {
     e.preventDefault();
     var el = e.target.closest('.mcell'); if (!el) return;
     var c = cells[+el.dataset.i];
-    if (!c.open) { c.flag = !c.flag; draw(); }
+    if (!c.open && !over && !won) { c.flag = !c.flag; draw(); }
   });
+  cleanup.push(function () { clearTimeout(pressTimer); });
   reset();
   setHint('click to clear a square. right click or hold to put a flag');
 }

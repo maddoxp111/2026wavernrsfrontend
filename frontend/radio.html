@@ -596,6 +596,7 @@ async function rdOpenStation(slug, push) {
   if (!sameOpen) { _lyrics = null; _lyricTrack = null; _now = null; _up = []; _recent = null; _listeners = null; _rdStale = 0; }
   var fs = fsEl(); if (!fs) return;
   var wasOpen = _rdOpen;
+  if (!wasOpen) { var ae0 = document.activeElement; window._rdRetFocus = ae0 && ae0 !== document.body && !fs.contains(ae0) ? ae0 : null; }
   fs.style.display = ''; document.body.style.overflow = 'hidden'; _rdOpen = true;
   if (!wasOpen) { fs.classList.remove('rd-in'); void fs.offsetWidth; fs.classList.add('rd-in'); }
   rdSetLyrics(false);
@@ -662,6 +663,8 @@ function rdHideFs() {
   _rdOpen = false; _rdPushed = false; _slug = null;
   clearInterval(_poll); clearInterval(_tick); _poll = _tick = null;
   document.title = 'wavernrs — radio';
+  var rf = window._rdRetFocus; window._rdRetFocus = null;
+  if (rf && rf.isConnected) try { rf.focus({ preventScroll: true }); } catch (_) {}
 }
 
 function shareStation() {
@@ -924,6 +927,14 @@ function rdKey(e) {
   if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) { if (e.key === 'Escape' && t.blur) { t.blur(); if (fs) try { fs.focus({ preventScroll: true }); } catch (_) {} } return; }
   var pf = document.getElementById('player-fullscreen');
   if (pf && pf.classList.contains('open')) return;
+  if (e.key === 'Tab' && fs) {
+    var foc = Array.prototype.filter.call(fs.querySelectorAll('button:not([disabled]), a[href], input'), function(x) { return x.offsetParent !== null; });
+    if (!foc.length) return;
+    var first = foc[0], last = foc[foc.length - 1], ae = document.activeElement;
+    if (e.shiftKey && (ae === first || ae === fs || !fs.contains(ae))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (ae === last || !fs.contains(ae))) { e.preventDefault(); first.focus(); }
+    return;
+  }
   if (e.key === 'Escape') { e.preventDefault(); closeStation(); }
   else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleRadioLyrics(); }
   else if (e.key === ' ' || e.code === 'Space') { if (tag === 'button' || tag === 'a') return; e.preventDefault(); rdPrimary(); }

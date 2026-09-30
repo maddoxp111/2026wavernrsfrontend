@@ -283,6 +283,12 @@
     .cm-skel-line { display: block; }
     .cm-wrap button:focus-visible, .cm-wrap a:focus-visible, .cm-wrap input:focus-visible, .cm-wrap textarea:focus-visible, .cm-modal button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     .cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @media (pointer: coarse) {
+      .cm-vote-btn, .cm-c-actions .cm-vote-btn { width: 40px; height: 40px; }
+      .cm-act, .cm-c-actions .cm-act { min-height: 40px; }
+      .cm-fmt button { width: 40px; height: 40px; }
+      .cm-tab { min-height: 40px; }
+    }
     @media (prefers-reduced-motion: reduce) {
       .cm-live-dot, .cm-score.bump-up, .cm-score.bump-down, .cm-post.is-fresh, .cm-modal, .cm-modal-back { animation: none !important; }
       .cm-post, .cm-c-bubble, .cm-vote-btn { transition: none !important; }
@@ -1271,6 +1277,7 @@
         if (a) done(a.getAttribute('data-a') === 'yes');
         else if (e.target === back) done(false);
       });
+      back._cmClose = function () { done(false); };
       document.addEventListener('keydown', onKey, true);
       document.body.appendChild(back);
       var yes = back.querySelector('[data-a="yes"]');
@@ -1735,6 +1742,7 @@
   };
   document.addEventListener('keydown', window._wvCommKeys);
   window._pageCleanup.push(function () { document.removeEventListener('keydown', window._wvCommKeys); });
+  window._pageCleanup.push(function () { document.querySelectorAll('.cm-modal-back').forEach(function (el) { if (el._cmClose) el._cmClose(); else el.remove(); }); });
   window._pageCleanup.push(function () { if (currentView === 'list') { var s = scroller(); CM.listScroll = s ? s.scrollTop : 0; } });
 </script>
 </body>

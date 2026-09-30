@@ -860,6 +860,8 @@
     window.doSearch = function (q) { doSearchImpl(q, { remember: true, resetFilter: true }); };
 
     function clearSearch() {
+      clearTimeout(window._searchDebounce);
+      clearTimeout(st.coreTimer);
       st.seq++;
       st.q = ''; st.d = null; st.pending = {}; st.sel = -1; st.filter = 'all'; st.lastQ = '';
       input.value = '';

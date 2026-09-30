@@ -622,8 +622,9 @@
       if (act === 'x') return popup('https://x.com/intent/tweet?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(link()));
       if (act === 'reddit') return popup('https://www.reddit.com/submit?url=' + encodeURIComponent(link()) + '&title=' + encodeURIComponent(shareText()));
       if (act === 'discord') {
-        var md = '**' + o.title.replace(/([*_~`|\\])/g, '\\$1') + '**' + (o.artist ? ' by ' + o.artist.replace(/([*_~`|\\])/g, '\\$1') : '') +
-          (o.line ? '\n> ' + o.line : '') + '\n' + link();
+        var mdEsc = function (s) { return String(s).replace(/([*_~`|\\<>\[\]])/g, '\\$1').replace(/^([#>-])/, '\\$1'); };
+        var md = '**' + mdEsc(o.title) + '**' + (o.artist ? ' by ' + mdEsc(o.artist) : '') +
+          (o.line ? '\n> ' + mdEsc(o.line) : '') + '\n' + link();
         copyText(md, 'copied...paste it in discord');
         return;
       }

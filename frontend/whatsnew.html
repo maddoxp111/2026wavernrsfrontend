@@ -53,7 +53,7 @@
     .wn-list::before { content: ''; position: absolute; left: 5px; top: 22px; bottom: -14px; width: 2px; border-radius: 2px; background: linear-gradient(180deg, var(--hair-strong), var(--hair)); }
     .wn-day:last-child .wn-list::before { bottom: 16px; background: linear-gradient(180deg, var(--hair-strong), transparent); }
 
-    .wn-e { position: relative; border-radius: 16px; border: 1px solid var(--hair); background: var(--surface); padding: 18px 20px 16px; scroll-margin-top: 80px; transition: border-color .2s, transform .2s var(--ease), box-shadow .2s; }
+    .wn-e { position: relative; border-radius: 16px; border: 1px solid var(--hair); background: var(--surface); padding: 18px 20px 16px; scroll-margin-top: 100px; transition: border-color .2s, transform .2s var(--ease), box-shadow .2s; }
     .wn-e::before { content: ''; position: absolute; left: -26px; top: 20px; width: 12px; height: 12px; border-radius: 50%; background: var(--page-bg); border: 2px solid var(--text-3); box-sizing: border-box; }
     .wn-e.tag-new::before { border-color: var(--brand); }
     .wn-e.tag-improved::before { border-color: var(--blue); }
@@ -70,7 +70,8 @@
     .wn-tag.improved { background: color-mix(in srgb, var(--blue) 16%, transparent); color: var(--blue); }
     .wn-tag.fixed { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
     .wn-latest { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; background: linear-gradient(90deg, var(--brand), var(--pink)); color: var(--on-brand); }
-    .wn-unread { font-size: 12px; font-weight: 700; color: var(--brand); }
+    .wn-unread { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--brand); margin-left: 2px; }
+    .wn-unread .d { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
     .wn-t { font-size: 18.5px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; margin: 0; color: var(--text); text-wrap: balance; }
     .wn-b { font-size: 14.5px; line-height: 1.65; color: var(--text-2); margin: 8px 0 0; max-width: 640px; }
     .wn-acts { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
@@ -98,11 +99,14 @@
     .wn-foot b { color: var(--text); }
 
     @media (max-width: 768px) {
-      .wn { padding: 0 16px; }
       .wn-hero { padding: 30px 20px 24px; border-radius: 20px; }
       .wn-h1 { font-size: 38px; }
       .wn-lede { font-size: 15px; }
       .wn-bar { margin: 20px -16px 4px; padding: 8px 16px; }
+      .wn-meta { gap: 6px; }
+      .wn-lg { display: none; }
+      .wn-meta .wn-btn { width: 100%; justify-content: center; margin-bottom: 4px; }
+      .wn-chip { height: 30px; padding: 0 11px; font-size: 12.5px; }
       .wn-count { display: none; }
       .wn-day { grid-template-columns: 1fr; }
       .wn-date { position: static; text-align: left; padding: 6px 0 10px; display: flex; align-items: baseline; gap: 8px; }
@@ -241,7 +245,7 @@
       html += '<article class="wn-e' + (TAGS[tag] ? ' tag-' + tag : '') + (feat ? ' feat' : '') + (unread ? ' unread' : '') + '" id="' + esc(e._id) + '" aria-labelledby="' + esc(e._id) + '-t">' +
         '<div class="wn-top">' + (feat ? '<span class="wn-latest">latest</span>' : '') +
           (TAGS[tag] ? '<span class="wn-tag ' + tag + '">' + TAGS[tag] + '</span>' : '') +
-          (unread ? '<span class="wn-unread">new since your last visit</span>' : '') + '</div>' +
+          (unread ? '<span class="wn-unread"><span class="d" aria-hidden="true"></span>unread</span>' : '') + '</div>' +
         '<h3 class="wn-t" id="' + esc(e._id) + '-t">' + esc(e.title) + '</h3>' +
         (e.body ? '<p class="wn-b">' + esc(e.body) + '</p>' : '') +
         '<div class="wn-acts">' +
@@ -280,7 +284,7 @@
     var latest = state.all[0];
     var chips = '';
     var unread = state.seen ? state.all.filter(function (e) { return e.date > state.seen; }).length : 0;
-    if (unread) chips += '<span class="wn-chip"><span class="d" aria-hidden="true"></span><b>' + unread + '</b> new since your last visit</span>';
+    if (unread) chips += '<span class="wn-chip"><span class="d" aria-hidden="true"></span><b>' + unread + '</b> new<span class="wn-lg"> since your last visit</span></span>';
     if (latest) {
       var mo = latest.date.slice(0, 7);
       var n = state.all.filter(function (e) { return e.date.slice(0, 7) === mo; }).length;
