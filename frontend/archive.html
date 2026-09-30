@@ -104,8 +104,9 @@
     #arc-home { display: flex; flex-direction: column; gap: 0; }
     .ah-hero { position: relative; overflow: hidden; border-radius: 20px; background: var(--surface); border: 1px solid var(--hair); padding: 36px 36px 32px; min-height: 340px; display: flex; align-items: flex-end; isolation: isolate; }
     .ah-wall { position: absolute; z-index: -1; top: -24px; right: -18px; width: 54%; height: calc(100% + 48px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: min-content; gap: 10px; -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 34%); mask-image: linear-gradient(90deg, transparent 0%, #000 34%); pointer-events: none; }
-    .ah-wall i { display: block; aspect-ratio: 1; border-radius: 8px; background: var(--surface-2) center/cover no-repeat; opacity: 0; transition: opacity .5s var(--ease); }
-    .ah-wall i.on { opacity: 1; }
+    .ah-wall i { display: block; aspect-ratio: 1; border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+    .ah-wall img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .5s var(--ease); }
+    .ah-wall img.on { opacity: 1; }
     .ah-wall i:nth-child(4n+2) { transform: translateY(-38px); } .ah-wall i:nth-child(4n+3) { transform: translateY(14px); } .ah-wall i:nth-child(4n) { transform: translateY(-16px); }
     .ah-hero-in { position: relative; max-width: 540px; min-width: 0; }
     .ah-kick { font-size: 11px; font-weight: 800; letter-spacing: .12em; color: var(--text-3); text-transform: uppercase; }
@@ -192,8 +193,8 @@
     .ah-ex { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
     .ah-x { border: 1px solid var(--hair); background: var(--surface); color: var(--text); font: inherit; text-align: left; border-radius: 16px; overflow: hidden; cursor: pointer; padding: 0; display: flex; flex-direction: column; text-decoration: none; transition: border-color .18s var(--ease), background .18s var(--ease); min-width: 0; }
     .ah-x:hover { border-color: var(--hair-strong); background: var(--surface-2); }
-    .ah-x-art { position: relative; aspect-ratio: 16/9; background: var(--surface-2); overflow: hidden; display: grid; }
-    .ah-x-art.q4 { grid-template-columns: repeat(4, 1fr); gap: 2px; }
+    .ah-x-art { position: relative; aspect-ratio: 2/1; background: var(--surface-2); overflow: hidden; display: grid; }
+    .ah-x-art.q4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; }
     .ah-x-art.q4 i { display: block; background: var(--surface-3) center/cover no-repeat; }
     .ah-x-art.avs { display: flex; align-items: center; justify-content: center; }
     .ah-x-art.avs i { width: 58px; height: 58px; border-radius: 50%; background: var(--surface-3) center/cover no-repeat; box-shadow: 0 0 0 3px var(--surface-2); margin-left: -12px; }
@@ -238,7 +239,7 @@
       .ah-x-b { padding: 10px 11px 12px; } .ah-x-b b { font-size: 14px; flex-direction: column; gap: 1px; } .ah-x-b p { font-size: 11.5px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .ah-wall i, .ah-cv, .ah-play, .ah-x { transition: none !important; }
+      .ah-wall img, .ah-cv, .ah-play, .ah-x { transition: none !important; }
       .ah-rc > a:hover .ah-cv { transform: none; }
     }
 
@@ -1341,6 +1342,496 @@ function archiveTrackCardHTML(t) {
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(t.title) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(t.archive_artist_name || 'Unknown') + (t.album_title ? ' · from ' + escHtml(t.album_title) : '') + '</div></div>';
+}
+
+// ── Home: the front page of the archive ─────────────────────────────────────
+// Every section loads on its own and quietly drops out if its request fails,
+// so one slow endpoint never holds up the rest of the page.
+var _arcHome = null;
+var AH_PLAY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>';
+var AH_DICE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/></svg>';
+
+function ahT(t) {
+  var s = String(t || '').replace(/<@[&!]?\d+>?/g, ' ').replace(/\|\|/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  return s || 'Untitled';
+}
+function ahImg(u, w) { return u ? (typeof wvImg === 'function' ? wvImg(u, w) : u) : ''; }
+function ahCv(url, seed, w, extra) {
+  var art = ahImg(url, w);
+  return '<div class="ah-cv" style="background:' + coverGradient(seed || '') + ';">' + (extra || '') +
+    (art ? '<img src="' + escHtml(art) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '</div>';
+}
+function ahNum(n) { return Number(n || 0).toLocaleString(); }
+function ahAgo(ts) {
+  var t = Date.parse(ts || '');
+  if (!t) return '';
+  var m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 60) return (m || 1) + 'm ago';
+  if (m < 1440) return Math.round(m / 60) + 'h ago';
+  if (m < 10080) return Math.round(m / 1440) + 'd ago';
+  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function ahHead(title, sub, more) {
+  var link = '';
+  if (more) {
+    link = '<a class="ah-more" href="' + escHtml(more.href) + '"' +
+      (more.view ? ' data-ah="view" data-v="' + escHtml(more.view) + '"' + (more.sort ? ' data-sort="' + escHtml(more.sort) + '"' : '') : '') +
+      '>' + escHtml(more.label || 'see all') + ' ›</a>';
+  }
+  return '<div class="ah-h"><div><h3>' + escHtml(title) + '</h3>' + (sub ? '<p>' + escHtml(sub) + '</p>' : '') + '</div>' + link + '</div>';
+}
+function ahSkRail(n) {
+  var h = '';
+  for (var i = 0; i < (n || 7); i++) h += '<div class="ah-sk-rc"><div class="wv-skel a"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>';
+  return '<div class="ah-rail" aria-hidden="true">' + h + '</div>';
+}
+function ahSkRows(n) {
+  var h = '';
+  for (var i = 0; i < n; i++) h += '<div class="ah-sk-row"><div class="wv-skel a"></div><div><div class="wv-skel l1" style="width:' + (72 - i * 8) + '%"></div><div class="wv-skel l2"></div></div></div>';
+  return h;
+}
+function ahCard(item, sub, tag) {
+  var id = item.id;
+  return '<div class="ah-rc"><a href="/album?id=' + encodeURIComponent(id) + '" title="' + escHtml(ahT(item.title)) + '">' +
+    ahCv(item.cover_url, item.title, 330, tag ? '<span class="ah-tag">' + escHtml(tag) + '</span>' : '') +
+    '<div class="ah-rc-t">' + escHtml(ahT(item.title)) + '</div>' +
+    '<div class="ah-rc-s">' + escHtml(sub) + '</div></a>' +
+    (item.track_count === 0 ? '' : '<button class="ah-play" data-ah="play" data-id="' + escHtml(id) + '" aria-label="Play ' + escHtml(ahT(item.title)) + '">' + AH_PLAY + '</button>') +
+  '</div>';
+}
+function ahSec(id) { return document.getElementById(id); }
+function ahDrop(id) { var el = ahSec(id); if (el) el.remove(); }
+
+function arcHomeOpen() {
+  var el = document.getElementById('arc-home');
+  if (!el) return;
+  if (_arcHome && _arcHome.el === el) return;
+  var h = _arcHome = { el: el, d: {}, items: {}, picks: {}, pickEra: '' };
+  var wall = '';
+  for (var i = 0; i < 20; i++) wall += '<i></i>';
+  var stat = function (id, label, href, view) {
+    return '<a class="ah-stat" id="ah-st-' + id + '" href="' + href + '"' + (view ? ' data-ah="view" data-v="' + view + '"' : '') + '><b><span class="wv-skel" style="display:block;"></span></b><span>' + label + '</span></a>';
+  };
+  el.innerHTML =
+    '<section class="ah-hero" aria-label="The Yedits archive"><div class="ah-wall" id="ah-wall" aria-hidden="true">' + wall + '</div><div class="ah-hero-in">' +
+      '<div class="ah-kick">comps &amp; edits</div><h2 class="ah-title">The Yedits archive</h2>' +
+      '<p class="ah-lede">comps and edits the wavernrs team saved from discord and reddit. the people who made them arent on the site, but they were too good to lose.</p>' +
+      '<div class="ah-stats" id="ah-stats">' +
+        stat('rel', 'releases saved', '/archive?view=all', 'all') +
+        stat('comps', 'comps', '/archive?view=comps', 'comps') +
+        stat('edits', 'edits', '/archive?view=edits', 'edits') +
+        stat('art', 'creators', '/archive?view=artists', 'artists') +
+        stat('era', 'eras', '/eras', '') +
+        stat('top', 'of the top 150 here', '/archive?view=top', 'top') +
+      '</div>' +
+      '<div class="ah-acts"><button class="wv-btn-play" data-ah="surprise">' + AH_DICE + 'surprise me</button>' +
+        '<form class="ah-q" role="search" id="ah-q-form"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+          '<input type="search" id="ah-q" placeholder="search title or artist..." autocomplete="off" aria-label="Search the archive" enterkeyhint="search"></form>' +
+      '</div>' +
+    '</div></section>' +
+    '<div class="ah-two">' +
+      '<section class="ah-card" id="ah-eotw">' + ahHead('Edit of the Week', 'the weekly vote in the yedits discord', { href: '/awards', label: 'hall of fame' }) +
+        '<div class="ah-feat"><div class="wv-skel" style="aspect-ratio:1;border-radius:12px;"></div><div><div class="wv-skel" style="height:10px;width:40%;"></div><div class="wv-skel" style="height:20px;width:80%;margin:10px 0 8px;"></div><div class="wv-skel" style="height:12px;width:50%;"></div></div></div></section>' +
+      '<section class="ah-card" id="ah-top">' + ahHead('Top 150', 'the community ranking', { href: '/archive?view=top', view: 'top', label: 'full list' }) + ahSkRows(5) + '</section>' +
+    '</div>' +
+    '<section class="ah-sec" id="ah-new">' + ahHead('Just archived', 'the newest saves, as they come in', { href: '/archive?sort=newest', view: 'all', sort: 'newest' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-played">' + ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?view=comps&sort=plays', view: 'comps', sort: 'plays' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-eras">' + ahHead('Browse by era', '', { href: '/eras', label: 'all eras' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-liked">' + ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?view=edits', view: 'edits', sort: 'likes' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-picks" hidden></section>' +
+    '<section class="ah-sec" id="ah-who">' + ahHead('Most played creators', '', { href: '/archive?view=artists', view: 'artists', label: 'every creator' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-explore">' + ahHead('Explore', '') + '<div class="ah-ex" id="ah-ex"></div></section>' +
+    '<div class="ah-claim"><div><b>made one of these?</b> get them put under your name or your account, or report one someone else posted as theirs.</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="ah-ghost" href="/claim">Claim your comps</a><a class="ah-ghost" href="/claim?type=remove">Takedown request</a></div></div>';
+  el.addEventListener('click', function (e) { ahClick(h, e); });
+  var form = document.getElementById('ah-q-form');
+  if (form) form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = ((document.getElementById('ah-q') || {}).value || '').trim();
+    _arcQuery = v;
+    var si = document.getElementById('arc-search');
+    if (si) si.value = v;
+    arcSetView('all');
+    ahScrollTop();
+  });
+  arcHomeExplore();
+  arcHomeLoad(h);
+}
+
+function ahScrollTop() {
+  var sc = arcScroller();
+  if (sc) sc.scrollTop = 0; else window.scrollTo(0, 0);
+}
+
+function ahClick(h, e) {
+  var t = e.target.closest ? e.target.closest('[data-ah]') : null;
+  if (!t || !h.el.contains(t)) return;
+  if (t.tagName === 'A' && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) return;
+  var k = t.getAttribute('data-ah');
+  if (k === 'play') {
+    e.preventDefault(); e.stopPropagation();
+    var id = t.getAttribute('data-id');
+    var it = h.items[id];
+    if (typeof wvToast === 'function' && it) wvToast('playing ' + ahT(it.title));
+    playCompById(id, it ? { album: Object.assign({ is_archive: true }, it), quiet: true } : undefined);
+  } else if (k === 'view') {
+    e.preventDefault();
+    var so = t.getAttribute('data-sort');
+    if (so && ARC_SORTS.indexOf(so) >= 0) { _arcSort = so; var se = document.getElementById('arc-sort'); if (se) se.value = so; }
+    arcSetView(t.getAttribute('data-v'));
+    ahScrollTop();
+  } else if (k === 'era') {
+    e.preventDefault();
+    _arcEra = t.getAttribute('data-id') || '';
+    var sel = document.getElementById('arc-era');
+    if (sel) sel.value = _arcEra;
+    var era = _arcEras.find(function (x) { return x.id === _arcEra; });
+    if (era && era.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(era.cover, era.name);
+    arcSetView('all');
+    arcEraHero();
+    ahScrollTop();
+  } else if (k === 'surprise') {
+    e.preventDefault();
+    arcSurprise();
+  } else if (k === 'playtop') {
+    e.preventDefault();
+    playTop(10);
+  } else if (k === 'pickera') {
+    e.preventDefault();
+    ahPicks(h, t.getAttribute('data-era'));
+  }
+}
+
+function ahStat(id, n, label) {
+  var a = document.getElementById('ah-st-' + id);
+  if (!a) return;
+  if (typeof n !== 'number' || !(n > 0)) { a.remove(); return; }
+  var b = a.querySelector('b');
+  if (label) { var s = a.querySelector('span:last-child'); if (s) s.textContent = label; }
+  b.textContent = '0';
+  arcCountUp(b, n);
+}
+
+function arcHomeLoad(h) {
+  var live = function () { return _arcHome === h && h.el.isConnected; };
+  var get = function (p) { return api(p).catch(function () { return null; }); };
+  var remember = function (list) { (list || []).forEach(function (x) { if (x && x.id) h.items[x.id] = x; }); };
+
+  var S = get('/stats');
+  var C = get('/archive?limit=14&offset=0&sort=plays&kind=comps');
+  var E = get('/archive?limit=14&offset=0&sort=likes&kind=edits');
+  var N = get('/archive/recent?limit=16');
+  var AR = get('/archive/artists?sort=plays&limit=14');
+  var ER = get('/archive/eras');
+  var T = (_arcTopReq || api('/archive/top')).catch(function () { return null; });
+
+  Promise.all([S, C, E]).then(function (r) {
+    if (!live()) return;
+    var tot = r[0] && r[0].totals && r[0].totals.archive_comps;
+    var c = r[1] && r[1].total_known !== false ? r[1] && r[1].total : 0;
+    var e = r[2] && r[2].total_known !== false ? r[2] && r[2].total : 0;
+    ahStat('rel', typeof tot === 'number' && tot > 0 ? tot : (c && e ? c + e : 0));
+    ahStat('comps', c);
+    ahStat('edits', e);
+  });
+
+  C.then(function (d) {
+    if (!live()) return;
+    var items = (d && d.items) || [];
+    h.d.comps = items; remember(items);
+    if (!items.length) return ahDrop('ah-played');
+    var el = ahSec('ah-played');
+    el.innerHTML = ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?view=comps&sort=plays', view: 'comps', sort: 'plays' }) +
+      '<div class="ah-rail">' + items.map(function (x, i) {
+        return ahCard(x, [x.archive_artist_name || 'Unknown', x.track_count > 1 ? x.track_count + ' tracks' : ''].filter(Boolean).join(' · '), '#' + (i + 1));
+      }).join('') + '</div>';
+    arcHomeExplore();
+  });
+
+  E.then(function (d) {
+    if (!live()) return;
+    var items = (d && d.items) || [];
+    h.d.edits = items; remember(items);
+    if (!items.length) return ahDrop('ah-liked');
+    ahSec('ah-liked').innerHTML = ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?view=edits', view: 'edits', sort: 'likes' }) +
+      '<div class="ah-rail">' + items.map(function (x) {
+        return ahCard(x, [x.archive_artist_name || 'Unknown', x.external_likes ? '♥ ' + ahNum(x.external_likes) : ''].filter(Boolean).join(' · '));
+      }).join('') + '</div>';
+    arcHomeExplore();
+  });
+
+  N.then(function (d) {
+    if (!live()) return;
+    var items = ((d && d.items) || []).slice(0, 16);
+    h.d.newest = items; remember(items);
+    if (!items.length) return ahDrop('ah-new');
+    ahSec('ah-new').innerHTML = ahHead('Just archived', 'the newest saves, as they come in', { href: '/archive?sort=newest', view: 'all', sort: 'newest' }) +
+      '<div class="ah-rail">' + items.map(function (x) {
+        return ahCard(x, [x.archive_artist_name || 'Unknown', ahAgo(x.created_at || x.original_date)].filter(Boolean).join(' · '));
+      }).join('') + '</div>';
+  });
+
+  AR.then(function (d) {
+    if (!live()) return;
+    ahStat('art', d && d.total);
+    var list = ((d && d.artists) || []).filter(function (a) { return a && a.slug && !/^deleted[\s-]?user$/i.test(a.name || ''); }).slice(0, 12);
+    h.d.artists = list;
+    if (!list.length) return ahDrop('ah-who');
+    ahSec('ah-who').innerHTML = ahHead('Most played creators', 'the people behind the comps people play most', { href: '/archive?view=artists', view: 'artists', label: 'every creator' }) +
+      '<div class="ah-who">' + list.map(function (a) {
+        var art = ahImg(a.cover_url, 160);
+        return '<a href="/archive-artist?a=' + encodeURIComponent(a.slug) + '"><span class="av" style="background:' + coverGradient(a.name || '') + ';">' +
+          (art ? '<img src="' + escHtml(art) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>' +
+          '<b>' + escHtml(a.name) + '</b><i>' + ahNum(a.comp_count) + ' release' + (a.comp_count === 1 ? '' : 's') + (a.play_count ? ' · ' + ahNum(a.play_count) + ' plays' : '') + '</i></a>';
+      }).join('') + '</div>';
+    arcHomeExplore();
+  });
+
+  ER.then(function (d) {
+    if (!live()) return;
+    var items = ((d && d.items) || []).filter(function (e) { return e && e.id && e.name; });
+    if (items.length > 1) ahStat('era', items.length); else ahStat('era', 0);
+    if (!_arcEras.length && items.length) _arcEras = items;
+    var eras = items.filter(function (e) { return !/^other$/i.test(e.name); }).sort(function (a, b) { return (b.total || 0) - (a.total || 0); });
+    h.d.eras = eras;
+    if (!eras.length) { ahDrop('ah-eras'); ahDrop('ah-picks'); return; }
+    ahSec('ah-eras').innerHTML = ahHead('Browse by era', eras.length + ' eras, biggest first', { href: '/eras', label: 'all eras' }) +
+      '<div class="ah-rail">' + eras.map(function (e) {
+        var bits = [];
+        if (e.comps) bits.push(ahNum(e.comps) + ' comp' + (e.comps === 1 ? '' : 's'));
+        if (e.edits) bits.push(ahNum(e.edits) + ' edit' + (e.edits === 1 ? '' : 's'));
+        return '<div class="ah-rc ah-era"><a href="/archive?era=' + encodeURIComponent(e.id) + '" data-ah="era" data-id="' + escHtml(e.id) + '">' +
+          ahCv(e.cover, e.name, 330, '<span class="ah-era-n">' + escHtml(e.name) + '</span>') +
+          '<div class="ah-rc-s" style="margin-top:8px;">' + escHtml(bits.join(' · ')) + '</div></a></div>';
+      }).join('') + '</div>';
+    ahPicks(h, (eras.filter(function (e) { return e.cover; })[0] || eras[0]).name, 0);
+    arcHomeExplore();
+  });
+
+  T.then(function (d) {
+    if (!live()) return;
+    var items = (d && d.items) || [];
+    if (!_topComps && items.length) _topComps = d;
+    var on = d && typeof d.on_site === 'number' ? d.on_site : items.filter(function (i) { return i.on_site; }).length;
+    ahStat('top', on, items.length ? 'of the top ' + items.length + ' here' : '');
+    h.d.top = items;
+    if (!items.length) return ahDrop('ah-top');
+    ahSec('ah-top').innerHTML = ahHead('Top ' + items.length, 'the yedits ranking, by 100greenmen and mp', { href: '/archive?view=top', view: 'top', label: 'full list' }) +
+      items.slice(0, 5).map(function (i) {
+        var href = i.on_site && i.album_id ? '/album?id=' + encodeURIComponent(i.album_id) : '/archive?q=' + encodeURIComponent(i.listed_as || i.title || '');
+        var art = ahImg(i.cover_url, 96);
+        return '<a class="ah-rank" href="' + escHtml(href) + '"><span class="n">' + i.rank + '</span><span class="c" style="background:' + coverGradient(i.title || '') + ';">' +
+          (art ? '<img src="' + escHtml(art) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>' +
+          '<span style="min-width:0;"><b>' + escHtml(ahT(i.title)) + '</b><i>' + escHtml([i.creator, i.era].filter(Boolean).join(' · ')) + '</i></span></a>';
+      }).join('') +
+      '<div class="ah-rank-ft"><button class="wv-btn-play" style="min-height:40px;padding:0 18px;" data-ah="playtop">' + AH_PLAY.replace(/16/g, '13') + 'play the top 10</button>' +
+      '<a class="ah-ghost" href="/archive?view=top" data-ah="view" data-v="top">see all ' + items.length + '</a></div>';
+    arcHomeExplore();
+  });
+
+  Promise.all([T, C, N]).then(function (r) {
+    if (!live()) return;
+    var urls = [], seen = {};
+    var add = function (u) { if (u && !seen[u]) { seen[u] = 1; urls.push(u); } };
+    var top = ((r[0] && r[0].items) || []).filter(function (i) { return i.cover_url; });
+    var comps = ((r[1] && r[1].items) || []).filter(function (i) { return i.cover_url; });
+    var fresh = ((r[2] && r[2].items) || []).filter(function (i) { return i.cover_url; });
+    for (var i = 0; i < 20 && urls.length < 20; i++) {
+      if (top[i]) add(top[i].cover_url);
+      if (comps[i]) add(comps[i].cover_url);
+      if (fresh[i]) add(fresh[i].cover_url);
+    }
+    var wall = document.getElementById('ah-wall');
+    if (!wall || !urls.length) return;
+    var tiles = wall.children;
+    for (var j = 0; j < tiles.length; j++) {
+      var u = urls[j % urls.length];
+      tiles[j].innerHTML = '<img src="' + escHtml(ahImg(u, 240)) + '" alt="" decoding="async" onload="this.classList.add(\'on\')" onerror="this.remove()">';
+    }
+  });
+
+  ahEotw(h, live);
+}
+
+// The latest Yedits Edit of the Week, or this week's staff picks when there are any.
+function ahParseDesc(desc) {
+  var d = String(desc || ''), out = {};
+  if (!d) return out;
+  var w = d.match(/Edit\s+Of\s+The\s+Week\s*[:\-]?\s*`?\s*(Week\s*\d+|\d+|Finale)?/i);
+  if (w && w[1]) out.w = /finale/i.test(w[1]) ? 'the finale' : 'week ' + parseInt(w[1].match(/\d+/)[0], 10);
+  var v = d.match(/\*{0,2}(\d{1,3})%\*{0,2}\s*of\s*(?:the\s*)?votes/i);
+  if (v && +v[1] > 0 && +v[1] <= 100) out.v = +v[1];
+  var e = d.match(/\*\*Edit\*\*\s*-\s*\[(.+?)\]\(/i) || d.match(/\*\*Edit\*\*\s*-\s*([^\n]+)/i);
+  if (e) out.s = e[1].replace(/[`*]/g, '').replace(/\s{2,}/g, ' ').trim();
+  else {
+    var lines = d.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i].replace(/^\s*(>|-#)\s*/, '').trim();
+      if (!ln || /<@|Edit\s+Of\s+The|Editor|votes|https?:|Restored|^\*\*|^#/i.test(ln)) continue;
+      var m = ln.match(/^(.+?)\s+-\s+(.+)$/) || ln.match(/^([^:]{2,80}):\s+(.+)$/);
+      if (m) { out.o = m[1].replace(/[`*]/g, '').trim(); out.s = m[2].replace(/[`*]/g, '').replace(/\s{2,}/g, ' ').trim(); break; }
+    }
+  }
+  return out;
+}
+function ahEotwTitle(t) {
+  var s = ahT(t);
+  if (/Edit\s+Of\s+The\s+(Week|Life)/i.test(s)) {
+    s = s.replace(/^.*?Edit\s+Of\s+The\s+(Week|Life)\s*[:\-]?\s*/i, '');
+    if (/^`?\s*(Week\s*\d+|\d+|Finale)?\s*`?\s*$/i.test(s)) s = '';
+  }
+  return s.replace(/^[\s<>*`]+|[\s<>*`]+$/g, '');
+}
+function ahEotw(h, live) {
+  var drop = function () { if (live()) ahDrop('ah-eotw'); };
+  Promise.all([
+    api('/awards/current').catch(function () { return null; }),
+    api('/badges').catch(function () { return null; }),
+  ]).then(function (r) {
+    if (!live()) return;
+    var picks = ((r[0] && r[0].picks) || []).filter(function (p) { return p && p.album && p.album.id; });
+    if (picks.length) {
+      var wk = r[0].week ? new Date(r[0].week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+      var lead = picks[0], a = lead.album;
+      var creator = typeof a.creator === 'string' ? a.creator : (a.creator && (a.creator.name || a.creator.display_name)) || a.archive_artist_name || '';
+      h.items[a.id] = a;
+      ahEotwRender(h, {
+        title: 'This week\'s picks', sub: wk ? 'week of ' + wk : 'picked by the wavernrs team',
+        kick: lead.label || 'pick of the week', id: a.id, name: ahT(a.title), cover: a.cover_url, by: creator,
+        meta: lead.note || '', prev: picks.slice(1).map(function (p) { return p.album; })
+      });
+      return;
+    }
+    var b = r[1] || {};
+    var src = (b.yedits_eotw_albums || []).length ? 'yedits' : 'onyx';
+    var ids = (src === 'yedits' ? b.yedits_eotw_albums : b.onyx_week_albums) || [];
+    if (!ids.length) return drop();
+    var chunks = [];
+    for (var i = 0; i < ids.length; i += 40) chunks.push(ids.slice(i, i + 40));
+    Promise.all(chunks.map(function (c) {
+      return api('/albums/batch/by-ids?ids=' + c.map(encodeURIComponent).join(',')).then(function (x) { return (x && x.items) || []; }).catch(function () { return []; });
+    })).then(function (lists) {
+      if (!live()) return;
+      var all = [].concat.apply([], lists).filter(function (a) { return a && a.id; });
+      if (!all.length) return drop();
+      all.sort(function (x, y) { return String(y.original_date || '').localeCompare(String(x.original_date || '')); });
+      var lead = all[0];
+      all.forEach(function (a) { h.items[a.id] = a; });
+      h.d.eotw = all;
+      var when = lead.original_date ? new Date(lead.original_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      var base = {
+        title: src === 'yedits' ? 'Edit of the Week' : 'Onyx Yedit of the Week',
+        sub: src === 'yedits' ? 'the weekly vote in the yedits discord' : 'one yedit a week, hand picked',
+        kick: 'latest winner', id: lead.id, name: ahEotwTitle(lead.title) || ahT(lead.title), cover: lead.cover_url,
+        by: lead.archive_artist_name || '', meta: [when, ahNum(all.length) + ' winners so far'].filter(Boolean).join(' · '),
+        prev: all.slice(1, 9)
+      };
+      ahEotwRender(h, base);
+      arcHomeExplore();
+      // The album title is only "Edit Of The Week: Week 26"; the song itself is in the post.
+      api('/albums/' + encodeURIComponent(lead.id)).then(function (full) {
+        if (!live()) return;
+        var m = ahParseDesc(full && full.description);
+        if (!m.s && !m.w && !m.v) return;
+        if (m.s) base.name = m.s;
+        if (m.o) base.orig = m.o;
+        base.kick = 'latest winner' + (m.w ? ' · ' + m.w : '');
+        base.meta = [when, m.v ? m.v + '% of the vote' : '', ahNum(all.length) + ' winners so far'].filter(Boolean).join(' · ');
+        ahEotwRender(h, base);
+      }).catch(function () {});
+    });
+  });
+}
+function ahEotwRender(h, x) {
+  var el = ahSec('ah-eotw');
+  if (!el) return;
+  var slug = x.by && typeof archiveArtistSlug === 'function' ? archiveArtistSlug(x.by) : '';
+  var art = ahImg(x.cover, 400);
+  el.innerHTML = ahHead(x.title, x.sub, { href: '/awards', label: 'hall of fame' }) +
+    '<div class="ah-feat">' +
+      '<a class="ah-feat-art" href="/album?id=' + encodeURIComponent(x.id) + '" style="background:' + coverGradient(x.name || '') + ';" aria-label="' + escHtml(x.name) + '">' +
+        (art ? '<img src="' + escHtml(art) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</a>' +
+      '<div style="min-width:0;">' +
+        '<div class="ah-lbl">' + escHtml(x.kick) + '</div>' +
+        '<a class="ah-feat-t" href="/album?id=' + encodeURIComponent(x.id) + '">' + escHtml(x.name) + '</a>' +
+        (x.orig || x.by ? '<div class="ah-feat-by">' + (x.orig ? escHtml(x.orig) + (x.by ? ' · ' : '') : '') + (x.by ? 'edit by ' + (slug ? '<a href="/archive-artist?a=' + encodeURIComponent(slug) + '">' + escHtml(x.by) + '</a>' : escHtml(x.by)) : '') + '</div>' : '') +
+        (x.meta ? '<div class="ah-feat-m">' + escHtml(x.meta) + '</div>' : '') +
+        '<div class="ah-feat-btns"><button class="wv-btn-play" data-ah="play" data-id="' + escHtml(x.id) + '">' + AH_PLAY.replace(/16/g, '13') + 'play it</button>' +
+          '<a class="ah-ghost" href="/awards">every winner</a></div>' +
+      '</div>' +
+    '</div>' +
+    (x.prev && x.prev.length ? '<div class="ah-prev"><span class="ah-lbl">before that</span>' + x.prev.map(function (a) {
+      var u = ahImg(a.cover_url, 96), t = ahEotwTitle(a.title) || ahT(a.title);
+      return '<a href="/album?id=' + encodeURIComponent(a.id) + '" title="' + escHtml(t + (a.archive_artist_name ? ' · ' + a.archive_artist_name : '')) + '" aria-label="' + escHtml(t) + '" style="background:' + coverGradient(a.title || a.id) + ';">' +
+        (u ? '<img src="' + escHtml(u) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</a>';
+    }).join('') + '</div>' : '');
+}
+
+// Tracker picks: the comps the trackers star, one era at a time.
+function ahPicks(h, eraName, tries) {
+  if (!eraName || _arcHome !== h) return;
+  h.pickEra = eraName;
+  var el = ahSec('ah-picks');
+  if (!el) return;
+  var eras = (h.d.eras || []).filter(function (e) { return e.cover; }).slice(0, 8);
+  var chips = '<div class="ah-chips" role="group" aria-label="Pick an era">' + eras.map(function (e) {
+    return '<button class="ah-chip' + (e.name === eraName ? ' on' : '') + '" data-ah="pickera" data-era="' + escHtml(e.name) + '" aria-pressed="' + (e.name === eraName) + '">' + escHtml(e.name) + '</button>';
+  }).join('') + '</div>';
+  var head = ahHead('Tracker picks', 'starred on the yedits trackers', { href: '/archive?view=trackers', view: 'trackers', label: 'trackers' });
+  var shown = !el.hidden;
+  if (shown) el.innerHTML = head + chips + ahSkRail(7);
+  if (!h.picks[eraName]) h.picks[eraName] = api('/trackers/picks?era=' + encodeURIComponent(eraName)).then(function (d) { return (d && d.items) || []; }).catch(function () { delete h.picks[eraName]; return null; });
+  h.picks[eraName].then(function (items) {
+    if (_arcHome !== h || h.pickEra !== eraName || !el.isConnected) return;
+    var ok = (items || []).filter(function (x) { return x && x.album && x.album.id; });
+    if (ok.length < 2) {
+      if (!shown) {
+        var next = eras.filter(function (e) { return e.name !== eraName; })[tries || 0];
+        if ((tries || 0) < 2 && next) ahPicks(h, next.name, (tries || 0) + 1); else el.remove();
+        return;
+      }
+      el.innerHTML = head + chips + '<div style="font-size:13px;color:var(--text-3);padding:18px 0;">nothing starred for this era yet</div>';
+      return;
+    }
+    el.hidden = false;
+    ok.forEach(function (x) { h.items[x.album.id] = x.album; });
+    el.innerHTML = head + chips + '<div class="ah-rail">' + ok.map(function (x) {
+      var a = x.album;
+      var who = x.trackers && x.trackers.length > 1 ? 'on ' + x.trackers.length + ' trackers' : (x.trackers || [])[0] || '';
+      return ahCard({ id: a.id, title: x.n || a.title, cover_url: a.cover_url, track_count: a.track_count }, [x.c, who].filter(Boolean).join(' · '), x.stars > 1 ? '★'.repeat(Math.min(3, x.stars)) : '');
+    }).join('') + '</div>';
+  });
+}
+
+// One card per part of the archive, drawn from whatever has loaded so far.
+function arcHomeExplore() {
+  var h = _arcHome;
+  var el = document.getElementById('ah-ex');
+  if (!h || !el) return;
+  var d = h.d;
+  var q8 = function (list) {
+    var l = (list || []).filter(Boolean).slice(0, 8);
+    if (l.length < 8) return '';
+    return '<div class="ah-x-art q4">' + l.map(function (u) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(u, 160)) + '&quot;)"></i>'; }).join('') + '</div>';
+  };
+  var cov = function (list, k) { return (list || []).map(function (x) { return x && x[k || 'cover_url']; }).filter(Boolean); };
+  var ty = function (big, sm) { return '<div class="ah-x-art ty">' + big + (sm ? '<span class="sm">' + escHtml(sm) + '</span>' : '') + '</div>'; };
+  var avs = cov(d.artists).slice(0, 5);
+  var cards = [
+    ['/archive?view=comps', 'comps', 'Comps', 'full albums reimagined, era by era', q8(cov(d.comps)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">LP</span>', 'comps')],
+    ['/archive?view=edits', 'edits', 'Edits', 'single songs reworked, remixed and finished', q8(cov(d.edits)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">1/1</span>', 'edits')],
+    ['/archive?view=artists', 'artists', 'Creators', 'everyone with something saved here', avs.length >= 3 ? '<div class="ah-x-art avs">' + avs.map(function (u) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(u, 120)) + '&quot;)"></i>'; }).join('') + '</div>' : ty('', 'creators')],
+    ['/archive?view=top', 'top', 'Top 150', 'the community ranking of the best comps', q8(cov(d.top)) || ty('<span style="font-size:38px;font-weight:850;letter-spacing:-.05em;">150</span>', 'ranked')],
+    ['/archive?view=trackers', 'trackers', 'Trackers', 'the yedits trackers, matched to the archive', (_trackers && _trackers.length >= 4 ? '<div class="ah-x-art q4" style="grid-template-rows:1fr;">' + _trackers.slice(0, 4).map(function (t) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(t.cover, 200)) + '&quot;)"></i>'; }).join('') + '</div>' : '') || ty('', 'trackers')],
+    ['/awards', '', 'Hall of Fame', 'every edit of the week and onyx pick', q8(cov(d.eotw)) || ty(ARC_TROPHY.replace('width="13" height="13"', 'width="36" height="36"'), 'award winners')],
+    ['/eras', '', 'Eras', 'every era, with its comps and edits', q8(cov(d.eras, 'cover')) || ty('', 'eras')],
+    ['', 'surprise', 'Surprise me', 'spin the archive for a random comp', ty(AH_DICE.replace('width="15" height="15"', 'width="40" height="40"').replace('stroke-width="2.2"', 'stroke-width="1.7"'), 'random pick')],
+  ];
+  el.innerHTML = cards.map(function (c) {
+    var body = c[4] + '<div class="ah-x-b"><b>' + escHtml(c[2]) + '</b><p>' + escHtml(c[3]) + '</p></div>';
+    if (c[1] === 'surprise') return '<button class="ah-x" data-ah="surprise">' + body + '</button>';
+    return '<a class="ah-x" href="' + escHtml(c[0]) + '"' + (c[1] ? ' data-ah="view" data-v="' + c[1] + '"' : '') + '>' + body + '</a>';
+  }).join('');
 }
 
 function escHtml(s) {
