@@ -761,6 +761,7 @@
   window.plsOpenMix = openMix;
 
   function closeMix() {
+    var was = detailMix ? detailMix.key : '';
     detailMix = null;
     if (ticker) { clearInterval(ticker); ticker = null; }
     var slot = document.getElementById('plh-detail-slot');
@@ -769,7 +770,7 @@
     if (main) main.hidden = false;
     syncUrl();
     load();
-    var card = document.querySelector('[data-mix]');
+    var card = was && document.querySelector('.plh-card[data-mix="' + was.replace(/["\\]/g, '') + '"]');
     if (card) try { card.focus({ preventScroll: true }); } catch (_) {}
   }
   window.plsCloseMix = closeMix;
@@ -920,7 +921,6 @@
       else openMix(t.getAttribute('data-mix'));
       return;
     }
-    if (e.key === 'Escape' && detailMix) { closeMix(); return; }
     if (t.closest && t.closest('#plh-hero') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { goSlide(slideIdx + (e.key === 'ArrowRight' ? 1 : -1)); startAuto(); }
   });
   root.addEventListener('input', function (e) {
@@ -933,7 +933,17 @@
   root.addEventListener('focusin', function (e) { if (e.target.closest && e.target.closest('#plh-hero')) slidePaused = true; });
   root.addEventListener('focusout', function (e) { if (e.target.closest && e.target.closest('#plh-hero')) slidePaused = false; });
 
+  function onDocKey(e) {
+    if (e.key !== 'Escape' || !detailMix || !alive() || e.defaultPrevented) return;
+    var m = document.getElementById('atp-modal');
+    if (m && m.classList.contains('open')) return;
+    if (document.querySelector('.modal-overlay.open, [role="dialog"][aria-modal="true"]:not([hidden])')) return;
+    closeMix();
+  }
+  document.addEventListener('keydown', onDocKey);
+
   window._pageCleanup.push(function () {
+    document.removeEventListener('keydown', onDocKey);
     stopAuto();
     if (ticker) { clearInterval(ticker); ticker = null; }
   });

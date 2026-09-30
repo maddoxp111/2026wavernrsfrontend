@@ -201,7 +201,8 @@
 <script>
   initPlayer();
 
-  var playlistId = new URLSearchParams(location.search).get('id');
+  var playlistId = new URLSearchParams(location.search).get('id') || '';
+  var plPid = encodeURIComponent(playlistId);
   if (!playlistId) navigate('/playlists');
 
   var playlist = null;
@@ -257,7 +258,7 @@
   async function loadPlaylist() {
     try {
       var meP = isLoggedIn() ? api('/auth/me').catch(function () { return null; }) : Promise.resolve(null);
-      playlist = await api('/playlists/' + playlistId);
+      playlist = await api('/playlists/' + plPid);
       if (!plStillHere()) return;
       tracks = playlist.tracks || [];
       document.title = playlist.title + ' — wavernrs stream';
@@ -576,7 +577,10 @@
     var list = q.list.slice();
     var idx = q.idx;
     if (!list.length && cur) { list = [cur]; idx = 0; }
-    setPlayerQueue(list.concat(add), idx);
+    var at = list.length;
+    for (var k = Math.max(0, idx + 1); k < list.length; k++) if (list[k] && list[k]._autoplay) { at = k; break; }
+    list.splice.apply(list, [at, 0].concat(add));
+    setPlayerQueue(list, idx, _highlightPlRow);
     plToast('added ' + add.length + ' song' + (add.length === 1 ? '' : 's') + ' to your queue', 'success');
   }
 
@@ -613,7 +617,7 @@
           is_public: false
         })
       });
-      await api('/playlists/' + created.id + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: ids }) });
+      await api('/playlists/' + encodeURIComponent(created.id) + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: ids }) });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
       if (btn) { btn.classList.add('is-done'); btn.innerHTML = PL_IC.check + '<span>Saved</span>'; }
       var href = '/playlist-builder?id=' + encodeURIComponent(created.id);
@@ -630,7 +634,7 @@
   }
 
   function sharePlaylist() {
-    var url = location.origin + '/playlist?id=' + playlistId;
+    var url = location.origin + '/playlist?id=' + plPid;
     if (!playlist.is_public && isOwner) plToast('this playlist is private...make it public if you want other people to open it');
     if (typeof window.wvShare === 'function') {
       try {
@@ -652,7 +656,7 @@
   function exportPlaylist() {
     var lines = [playlist.title || 'Playlist', ''];
     tracks.forEach(function (t, i) { lines.push((i + 1) + '. ' + (t.title || 'Unknown') + ' — ' + (t.artist_name || 'Unknown')); });
-    lines.push('', location.origin + '/playlist?id=' + playlistId);
+    lines.push('', location.origin + '/playlist?id=' + plPid);
     var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -676,7 +680,7 @@
     var b = btns[dir < 0 ? 0 : 1];
     if (b && !b.disabled) b.focus();
     try {
-      await api('/playlists/' + playlistId + '/order', {
+      await api('/playlists/' + plPid + '/order', {
         method: 'PUT',
         body: JSON.stringify({ track_ids: tracks.map(function (t) { return t.id; }) }),
       });
@@ -692,7 +696,7 @@
   function countPlaylistPlay() {
     if (_countedPlay || !playlist || !playlist.is_public) return;
     _countedPlay = true;
-    api('/playlists/' + playlistId + '/play', { method: 'POST' }).catch(function () {});
+    api('/playlists/' + plPid + '/play', { method: 'POST' }).catch(function () {});
   }
 
   function _highlightPlRow(index) {
@@ -726,7 +730,7 @@
     else if (currentIndex > index) currentIndex--;
     renderList();
     try {
-      await api('/playlists/' + playlistId + '/tracks/' + encodeURIComponent(t.id), { method: 'DELETE' });
+      await api('/playlists/' + plPid + '/tracks/' + encodeURIComponent(t.id), { method: 'DELETE' });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
       var st = document.querySelector('.plp-stats');
       if (st) st.outerHTML = statsHtml();
@@ -741,7 +745,7 @@
   async function deletePlaylist() {
     if (!confirm('delete "' + (playlist.title || 'this playlist') + '"? you cant undo this')) return;
     try {
-      await api('/playlists/' + playlistId, { method: 'DELETE' });
+      await api('/playlists/' + plPid, { method: 'DELETE' });
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
       plToast('playlist deleted');
       navigate('/playlists?tab=mine');
@@ -750,7 +754,7 @@
     }
   }
 
-  loadPlaylist();
+  if (playlistId) loadPlaylist();
 </script>
 </body>
 </html>
