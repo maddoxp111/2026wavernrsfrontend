@@ -263,6 +263,9 @@
       if (e.touches.length !== 1 || !fsOpen()) { g = null; return; }
       var t = e.target;
       if (t.closest && t.closest('.pfs-lyrics, .progress-bar, input, textarea, .wv-sheet, #wv-queue-panel')) { g = null; return; }
+      // Content scrolled down inside the player: a downward drag scrolls it back.
+      for (var n = t; n && n !== fs && n.nodeType === 1; n = n.parentNode) { if (n.scrollTop > 0) { g = null; return; } }
+      if (fs.scrollTop > 0) { g = null; return; }
       g = { x0: e.touches[0].clientX, y0: e.touches[0].clientY, t0: Date.now(), axis: null, onCover: !!(t.closest && t.closest('.pfs-cover-wrap')), dx: 0, dy: 0 };
     }, { passive: true });
     fs.addEventListener('touchmove', function (e) {
@@ -356,6 +359,9 @@
       if (!hasTrack || isLive() || !a.duration || !isFinite(a.duration)) return;
       var on = e.target && e.target.closest && e.target.closest('[role="slider"], [role="tab"], [role="listbox"]');
       if (on) return;
+      // Games and quizzes use the number keys, so seeking by number only
+      // happens in the full player or with focus on the player bar.
+      if (!fsOpen() && !(e.target && e.target.closest && e.target.closest('.player-bar, #player-mini'))) return;
       e.preventDefault();
       a.currentTime = a.duration * (parseInt(k, 10) / 10);
     } else if ((k === ',' || k === '.' || k === '<' || k === '>')) {
@@ -368,7 +374,7 @@
     window.wvShortcutsExtra = window.wvShortcutsExtra || [];
     if (window.wvShortcutsExtra.some(function (x) { return x && x._np; })) return;
     [
-      { keys: ['1', '9'], label: 'Jump to 10–90%' },
+      { keys: ['1', '9'], label: 'Jump to 10–90% (full player)' },
       { keys: [',', '.'], label: 'Slower or faster' },
       { keys: ['F'], label: 'Full-screen player' },
       { keys: ['Shift', 'L'], label: 'Lyrics' },
@@ -405,7 +411,9 @@
     return true;
   }
 
-  document.addEventListener('keydown', onKey);
+  // Bubble on window, so a page's own shortcut that already handled the key
+  // (and called preventDefault) wins.
+  window.addEventListener('keydown', onKey);
   registerShortcuts();
   if (!wire()) {
     // player.js builds the player during page start-up; wait for it.

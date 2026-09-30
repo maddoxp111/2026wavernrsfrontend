@@ -557,22 +557,23 @@ function fmtBest(g, v) {
     default:       return v + ' pts';
   }
 }
-var runState = { id:null, last:null, celebrated:false };
+var runState = { id:null, last:null, celebrated:false, hadBest:false };
+function newRun(id) { return { id:id, last:null, celebrated:false, hadBest:id ? getBest(id) !== null : false }; }
 // Called by each game with its current score. Live scores (higher is better)
 // may be reported every frame; a drop means a new run started inside the game.
 function reportScore(id, n, higherIsBetter) {
   if (typeof n !== 'number' || !isFinite(n)) return false;
   var hib = higherIsBetter !== false;
   if (hib && n <= 0) return false;
-  if (runState.id !== id) runState = { id:id, last:null, celebrated:false };
-  if (hib && runState.last !== null && n < runState.last) runState.celebrated = false;
+  if (runState.id !== id) runState = newRun(id);
+  if (hib && runState.last !== null && n < runState.last) { runState.celebrated = false; runState.hadBest = getBest(id) !== null; }
   runState.last = n;
   var b = getBest(id);
   if (b !== null && (hib ? n <= b : n >= b)) return false;
   BEST[id] = n;
   try { localStorage.setItem('wv_g_best_' + id, String(n)); } catch (e) {}
   paintStageBest();
-  if (b !== null && (!hib || !runState.celebrated)) {
+  if (b !== null && runState.hadBest && (!hib || !runState.celebrated)) {
     runState.celebrated = true;
     celebrate(gameById(id), n);
   }
@@ -781,7 +782,7 @@ function playGame(id) {
 function restart() {
   if (!active) return;
   teardown();
-  runState = { id:active, last:null, celebrated:false };
+  runState = newRun(active);
   paintStageBest();
   ({ pool:pool, t2048:t2048, snake:snake, brick:brick, mines:mines,
      grid:gridiron, farm:farm, hill:hill, td:towerd, stack:stacks, climb:climb,

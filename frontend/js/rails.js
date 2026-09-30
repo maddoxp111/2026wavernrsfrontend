@@ -119,8 +119,12 @@
     while (n && hops < 4) {
       var p = n.previousElementSibling;
       while (p) {
-        var h = p.matches && p.matches('.wv-sec-title, h2, h3') ? p : p.querySelector && p.querySelector('.wv-sec-title, h2, h3, [class*="-h"] b, [class*="title"]');
-        var t = h && (h.textContent || '').replace(/\s+/g, ' ').trim();
+        var h = p.matches && p.matches('.wv-sec-title, h2, h3') ? p : p.querySelector && p.querySelector('.wv-sec-title, h2, h3, [class*="-h"] b, [class*="title"], [class$="-t"]');
+        var t = '';
+        if (h) {
+          for (var c = h.firstChild; c; c = c.nextSibling) if (c.nodeType === 3) t += c.nodeValue;
+          t = t.replace(/\s+/g, ' ').trim() || (h.textContent || '').replace(/\s+/g, ' ').trim();
+        }
         if (t) return t.slice(0, 80);
         p = p.previousElementSibling;
       }
