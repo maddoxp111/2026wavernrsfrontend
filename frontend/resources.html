@@ -247,6 +247,28 @@
   .tr-comp-go { margin-left:auto; font-size:12px; font-weight:800; color:var(--brand); white-space:nowrap; }
   .tr-song { text-align:left; border:0; background:var(--surface-2); color:var(--text); font:inherit; font-size:13px; padding:7px 10px; border-radius:8px; cursor:pointer; display:flex; gap:10px; }
   .tr-song:hover { background:var(--surface-3); }
+  .tr-tours { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; margin-bottom:16px; }
+  .tr-tour { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
+  .tr-tour h4 { margin:0 0 4px; font-size:16px; letter-spacing:-.01em; }
+  .tr-tour p { margin:0; font-size:13px; color:var(--text-2); line-height:1.45; }
+  .tr-tour summary { cursor:pointer; font-size:12px; font-weight:800; color:var(--brand); margin-top:10px; list-style:none; }
+  .tr-tour summary::-webkit-details-marker { display:none; }
+  .tr-tour ol { margin:8px 0 0; padding-left:22px; font-size:13px; columns:2; column-gap:22px; }
+  .tr-tour ol li { break-inside:avoid; padding:1px 0; }
+  .tr-tour ol button { border:0; background:none; color:var(--text); font:inherit; padding:0; cursor:pointer; text-align:left; }
+  .tr-tour ol button:hover { color:var(--brand); }
+  .tr-dmonth { font-size:11px; font-weight:800; letter-spacing:.08em; color:var(--text-3); margin:16px 0 4px; text-transform:uppercase; }
+  .tr-dlist { display:flex; flex-direction:column; gap:2px; max-width:820px; }
+  .tr-d { display:grid; grid-template-columns:44px minmax(0,1fr) auto; gap:12px; align-items:center; padding:9px 10px; border-radius:10px; cursor:pointer; border:0; background:none; color:var(--text); font:inherit; text-align:left; width:100%; }
+  .tr-d:hover { background:var(--surface); }
+  .tr-d .dd { font-size:18px; font-weight:800; font-variant-numeric:tabular-nums; text-align:center; line-height:1; }
+  .tr-d .dd i { display:block; font-style:normal; font-size:10px; font-weight:700; color:var(--text-3); margin-top:3px; letter-spacing:.06em; }
+  .tr-d b { display:block; font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tr-d .ds { display:block; font-size:12px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tr-kind { font-size:10.5px; font-weight:800; color:var(--text-3); background:var(--surface-2); border-radius:99px; padding:2px 8px; white-space:nowrap; }
+  .tr-kind.vid { color:#14121c; background:var(--brand); }
+  .tr-kind.soon { color:var(--brand); background:color-mix(in srgb, var(--brand) 14%, transparent); }
+  @media (max-width:640px) { .tr-tour ol { columns:1; } .tr-d { grid-template-columns:38px minmax(0,1fr) auto; gap:10px; padding:8px 6px; } }
   .tr-song span { color:var(--text-3); font-variant-numeric:tabular-nums; min-width:38px; }
   .tr-mbox { background:transparent; width:auto; max-width:100%; padding:0; }
   .tr-media { position:relative; display:flex; flex-direction:column; align-items:center; }
@@ -1666,7 +1688,17 @@ window._ytBooted = false;
           return '<div class="yt-row thumb"><div class="yt-cover sm">' + (c.cover ? '<img src="' + esc(thumb(c.cover, 120)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div><div style="min-width:0;"><div class="yt-t">' + esc(c.title) + '</div><div class="yt-sub">' + esc([c.artist, c.album, c.year].filter(Boolean).join(' · ')) + '</div></div><div class="ds-r"><span class="yt-sub">' + esc(c.roles.join(' + ')) + '</span></div></div>';
         }).join('') + '</div>';
       }
-      if (!rel && !d.tracker.length && !tracks.length && !d.credits.length && !(d.live && d.live.length)) html += '<div class="yt-empty"><b>nothing found for that song</b>try the search</div>';
+      if (d.performed && d.performed.length) {
+        html += '<h3 class="ds-h">performed at</h3><div class="ye-chips">' + d.performed.map(function (x) {
+          return '<button class="ye-chip" data-go="/resources?view=tours&year=' + encodeURIComponent(x.year) + '&sec=dates">' + esc(x.year + ' · ' + String(x.event).toLowerCase()) + ' <span style="opacity:.6;">' + esc(x.kind) + '</span></button>';
+        }).join('') + '</div>';
+      }
+      if (d.toured && d.toured.length) {
+        html += '<h3 class="ds-h">on the setlist of</h3><div class="ye-chips">' + d.toured.map(function (x) {
+          return '<button class="ye-chip" data-go="/resources?view=tours&year=' + encodeURIComponent(x.year) + '&sec=dates">' + esc(x.name.toLowerCase()) + ' <span style="opacity:.6;">' + esc(x.year) + '</span></button>';
+        }).join('') + '</div>';
+      }
+      if (!rel && !d.tracker.length && !tracks.length && !d.credits.length && !(d.live && d.live.length) && !(d.performed && d.performed.length) && !(d.toured && d.toured.length)) html += '<div class="yt-empty"><b>nothing found for that song</b>try the search</div>';
       html += '<a class="yt-l" style="display:inline-block;margin-top:18px;" href="/search?q=' + encodeURIComponent(d.title) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">search everything for ' + esc(d.title) + ' ›</a>';
       root.innerHTML = html;
       document.getElementById('sg-back').onclick = function () { navigate('/resources'); };
@@ -1828,7 +1860,7 @@ window._ytBooted = false;
     var root = document.getElementById('ye-tours');
     var st = { year: P.get('year') || '', sec: P.get('sec') || 'shows', music: 'videos', venue: '', yshow: '', ykind: '', d: null, ymedia: [], ytotal: 0, started: false, pending: P.get('show') ? { id: P.get('show'), time: P.get('at') || '' } : null };
     function secs(d) {
-      return [['shows', 'Shows', d.shows.length], ['music', 'Music', d.videos.length + d.audio.length + d.visualizers.length], ['merch', 'Merch', d.merch.length], ['yedia', 'Yedia', d.yedia_count], ['songs', 'Most played', 'every tour']].filter(function (x) { return typeof x[2] === 'string' || x[2] > 0; });
+      return [['shows', 'Shows', d.shows.length], ['dates', 'Performances', (d.dates || []).length], ['music', 'Music', d.videos.length + d.audio.length + d.visualizers.length], ['merch', 'Merch', d.merch.length], ['yedia', 'Yedia', d.yedia_count], ['songs', 'Most played', 'every tour']].filter(function (x) { return typeof x[2] === 'string' || x[2] > 0; });
     }
     function url() {
       var q = new URLSearchParams(); q.set('view', 'tours'); if (st.year) q.set('year', st.year); if (st.sec !== 'shows') q.set('sec', st.sec);
@@ -1845,7 +1877,7 @@ window._ytBooted = false;
       if (my !== st.lseq) return;
       st.d = got;
       st.year = st.d.year;
-      if (!secs(st.d).some(function (x) { return x[0] === st.sec; })) st.sec = 'shows';
+      if (!secs(st.d).some(function (x) { return x[0] === st.sec; })) st.sec = (secs(st.d)[0] || ['shows'])[0];
       url();
       paint();
       if (st.pending) {
@@ -1874,7 +1906,7 @@ window._ytBooted = false;
       var d = st.d;
       root.innerHTML = '<div class="yt-tabs" id="tr-years">' + d.years.map(function (y) { return '<button class="yt-tab' + (y.year === st.year ? ' on' : '') + '" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div>' +
         '<div class="ye-chips" id="tr-secs">' + secs(d).map(function (x) { return '<button class="ye-chip' + (st.sec === x[0] ? ' on' : '') + '" data-s="' + x[0] + '">' + x[1] + ' · ' + x[2] + '</button>'; }).join('') + '</div>' +
-        '<div id="tr-body"></div><div class="ye-credit">from the <a href="https://yetour.xyz" target="_blank" rel="noopener">YE TOUR ARCHIVE</a> ❤️</div>';
+        '<div id="tr-body"></div><div class="ye-credit">' + (d.shows.length || d.merch.length ? 'shows and media from the <a href="https://yetour.xyz" target="_blank" rel="noopener">YE TOUR ARCHIVE</a> ❤️ · ' : '') + 'dates from wikipedia</div>';
       root.querySelectorAll('[data-y]').forEach(function (b) { b.onclick = function () { st.year = b.getAttribute('data-y'); st.venue = ''; st.yshow = ''; url(); load(); }; });
       root.querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { st.sec = b.getAttribute('data-s'); url(); paint(); }; });
       body();
@@ -1886,6 +1918,7 @@ window._ytBooted = false;
     function body() {
       var d = st.d, el = document.getElementById('tr-body'); if (!el) return;
       if (st.sec === 'songs') { songsSec(el); return; }
+      if (st.sec === 'dates') { datesSec(el); return; }
       if (st.sec === 'shows') {
         el.innerHTML = '<div class="tr-grid">' + d.shows.map(function (x, i) { return vcard(x, [x.spec, x.setlist.length ? x.setlist.length + ' songs' : ''].filter(Boolean).join(' · '), i, 'shows'); }).join('') + '</div>';
       } else if (st.sec === 'music') {
@@ -1935,6 +1968,47 @@ window._ytBooted = false;
       g.querySelectorAll('[data-yi]').forEach(function (c) { c.onclick = function () { mediaModal(+c.getAttribute('data-yi')); }; });
       document.getElementById('tr-ym').innerHTML = st.ymedia.length < st.ytotal ? '<div class="yt-more"><button class="wv-btn-ghost" id="tr-ymb">show more</button></div>' : '';
       var mb = document.getElementById('tr-ymb'); if (mb) mb.onclick = function () { mb.disabled = true; loadYedia(true); };
+    }
+    var MON3 = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    function longDate(dt) { return new Date(dt + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }); }
+    function today() { var n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'); }
+    function dTitle(x) { return x.kind === 'tour' ? (x.venue || x.city || x.tour) : (x.event || x.venue || 'performance'); }
+    function dWhere(x) { return (x.kind === 'tour' ? [x.city, x.country] : [x.venue, x.country]).filter(Boolean).join(', '); }
+    function datesSec(el) {
+      var d = st.d, list = d.dates || [], now = today(), lastM = '';
+      var html = (d.tours || []).length ? '<div class="tr-tours">' + d.tours.map(function (t) {
+        return '<div class="tr-tour"><h4>' + esc(t.name) + '</h4><p>' + esc(t.about) + ' <a href="' + esc(t.source) + '" target="_blank" rel="noopener" style="color:var(--brand);">wikipedia ↗</a></p>' +
+          (t.setlist.length ? '<details><summary>typical setlist · ' + t.setlist.length + ' songs ›</summary><ol>' + t.setlist.map(function (x) { return '<li><button data-hub="' + esc(x) + '">' + esc(x) + '</button></li>'; }).join('') + '</ol></details>' : '') + '</div>';
+      }).join('') + '</div>' : '';
+      html += '<div class="yt-count">' + list.length + ' performance' + (list.length === 1 ? '' : 's') + ' in ' + esc(st.year) + '. tap one for the details</div><div class="tr-dlist">';
+      list.forEach(function (x, i) {
+        var mth = x.date.slice(5, 7);
+        if (mth !== lastM) { lastM = mth; html += '<div class="tr-dmonth">' + new Date(x.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'long' }) + '</div>'; }
+        var badge = x.show ? '<span class="tr-kind vid">▶ video</span>' : x.date > now ? '<span class="tr-kind soon">upcoming</span>' : '<span class="tr-kind">' + esc(x.label) + '</span>';
+        html += '<button class="tr-d" data-di="' + i + '"><span class="dd">' + (+x.date.slice(8, 10)) + '<i>' + MON3[+mth - 1] + '</i></span><span style="min-width:0;"><b>' + esc(dTitle(x)) + '</b><span class="ds">' + esc([x.kind === 'tour' ? x.tour : '', dWhere(x)].filter(Boolean).join(' · ')) + '</span></span>' + badge + '</button>';
+      });
+      el.innerHTML = html + '</div>';
+      el.querySelectorAll('[data-hub]').forEach(function (b) { b.onclick = function () { navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-hub'))); }; });
+      el.querySelectorAll('[data-di]').forEach(function (b) {
+        b.onclick = function () {
+          var x = list[+b.getAttribute('data-di')];
+          var sh = x.show && d.shows.find(function (s) { return String(s.id) === String(x.show); });
+          if (sh) videoModal(sh); else perfModal(x);
+        };
+      });
+    }
+    function perfModal(x) {
+      var t = x.tour_slug && (st.d.tours || []).find(function (v) { return v.slug === x.tour_slug; });
+      var q = ['kanye west', x.kind === 'tour' ? x.tour : x.event, x.kind === 'tour' ? (x.venue || x.city) : '', x.date.slice(0, 4)].filter(Boolean).join(' ');
+      var songs = x.songs && x.songs.length ? x.songs : null;
+      var w = modal('<div class="tr-vinfo"><div class="yz-sec">' + esc(x.label) + (x.date > today() ? ' · upcoming' : '') + '</div><h3>' + esc(x.kind === 'tour' ? x.tour : dTitle(x)) + '</h3>' +
+        '<div class="yz-sub">' + esc([longDate(x.date), x.venue, x.city, x.country].filter(Boolean).join(' · ')) + '</div>' +
+        (t ? '<div class="yz-desc" style="margin-top:10px;">' + esc(t.about) + '</div>' : '') +
+        (songs ? '<div class="yz-k" style="margin-top:14px;">PERFORMED</div><div class="tr-set">' + songs.map(function (s) { return '<button class="tr-song" data-hub="' + esc(s) + '">' + esc(s) + '</button>'; }).join('') + '</div>' : '') +
+        (!songs && t && t.setlist.length ? '<div class="yz-k" style="margin-top:14px;">TYPICAL SETLIST ON THIS TOUR</div><div class="tr-set">' + t.setlist.map(function (s, i) { return '<button class="tr-song" data-hub="' + esc(s) + '"><span>' + (i + 1) + '</span>' + esc(s) + '</button>'; }).join('') + '</div><div class="tr-note">the setlist from the tour as a whole. the songs at this exact show may have been a little different</div>' : '') +
+        '<div class="tr-note">no video of this one in the archive yet</div>' +
+        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.source && /^https:\/\/en\.wikipedia\.org\//.test(x.source) ? '<a class="yt-l" href="' + esc(x.source) + '" target="_blank" rel="noopener">wikipedia ↗</a>' : '') + '<a class="yt-l" href="https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '" target="_blank" rel="noopener">look for it on youtube ↗</a></div></div>');
+      w.querySelectorAll('[data-hub]').forEach(function (b) { b.onclick = function () { w.querySelector('.yz-x').click(); navigate('/resources?view=song&t=' + encodeURIComponent(b.getAttribute('data-hub'))); }; });
     }
     function modal(html) {
       var wrap = document.createElement('div'); wrap.className = 'yz-modal'; wrap.innerHTML = '<div class="yz-box tr-box">' + html + '<button class="yz-x" title="close">✕</button></div>';
