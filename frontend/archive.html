@@ -678,15 +678,18 @@ function arcSurprise() {
     else if (act === 'again') arcRlSpin();
     else if (act === 'artist') { e.preventDefault(); var href = t.getAttribute('href'); arcCloseRoulette(true); navigate(href); }
   });
-  wrap.addEventListener('keydown', function (e) {
+  _arcRl.onKey = function (e) {
     if (e.key === 'Escape') { e.preventDefault(); arcCloseRoulette(); return; }
     if (e.key !== 'Tab') return;
     var f = [].slice.call(wrap.querySelectorAll('button, a[href]')).filter(function (x) { return !x.disabled && x.offsetParent; });
     if (!f.length) return;
     var first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    var inside = wrap.contains(document.activeElement);
+    if (!inside) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  });
+  };
+  document.addEventListener('keydown', _arcRl.onKey, true);
   requestAnimationFrame(function () { wrap.classList.add('in'); var x = wrap.querySelector('.arc-rl-x'); if (x) x.focus(); });
   arcRlSpin();
 }
@@ -695,6 +698,7 @@ function arcCloseRoulette(instant) {
   var rl = _arcRl;
   if (!rl) return;
   _arcRl = null;
+  if (rl.onKey) document.removeEventListener('keydown', rl.onKey, true);
   rl.gen++;
   rl.timers.forEach(clearTimeout);
   var el = rl.el;
@@ -721,6 +725,7 @@ async function arcRlSpin() {
   var h = el.querySelector('#arc-rl-h');
   if (h) h.textContent = 'spinning the archive...';
   var again = el.querySelector('[data-rl="again"]');
+  if (res && res.contains(document.activeElement)) { var cx = el.querySelector('.arc-rl-x'); if (cx) cx.focus(); }
   if (again) again.disabled = true;
   if (!reel.children.length) {
     var sk = '';

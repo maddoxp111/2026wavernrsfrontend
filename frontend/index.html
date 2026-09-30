@@ -393,7 +393,13 @@ function homeData(key) {
   if (_hProm[key]) return _hProm[key];
   var gen = window._homeGen;
   _hState[key] = 'loading';
-  var p = Promise.resolve().then(HOME_SRC[key]).then(function (d) {
+  // Coming back to home within a couple of minutes redraws from memory
+  // instead of waiting on the network again.
+  var mem = window._hmMem = window._hmMem || {};
+  var memOk = key !== 'presence' && key !== 'badges';
+  var hit = memOk && mem[key] && Date.now() - mem[key].at < 120000 ? mem[key] : null;
+  var p = (hit ? Promise.resolve(hit.d) : Promise.resolve().then(HOME_SRC[key])).then(function (d) {
+    if (!hit && memOk && d != null) mem[key] = { at: Date.now(), d: d };
     if (gen !== window._homeGen) return d;
     _hData[key] = d; _hState[key] = 'ok';
     _hApply(key, d);

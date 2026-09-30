@@ -213,7 +213,7 @@ async function apiUpload(path, formData, method = 'POST') {
   const token = getToken();
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const siteAccess = localStorage.getItem('wv_site_access');
+  const siteAccess = _siteAccessToken();
   if (siteAccess) headers['X-Site-Access'] = siteAccess;
 
   const res = await fetch(`${API_BASE}${path}`, {

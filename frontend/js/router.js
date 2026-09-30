@@ -518,6 +518,13 @@ window._pageCleanup = [];
     }
     var s = document.getElementById('wv-suggest');
     if (s && !s.classList.contains('wvqs')) s.remove();
+    // Account menu + notifications panel (layout.js exposes a closer), and the
+    // theme picker: none of them should survive into the next page.
+    if (typeof window._wvCloseShellOverlays === 'function') {
+      try { window._wvCloseShellOverlays(); } catch (_) {}
+    }
+    var tp = document.getElementById('wv-theme-picker');
+    if (tp) tp.remove();
   }
 
   function offlineCardHTML() {
@@ -597,6 +604,10 @@ window._pageCleanup = [];
     _navActive = gen;
     var viaKeyboard = now() - _lastKeyAt < 1000;
 
+    // Remember where the page we're leaving was scrolled to now, before its
+    // teardown or the swap can shrink it and clamp scrollTop.
+    if (!fromPopstate) rememberScroll();
+
     emit('wv-navigate-start', { url: target.href, path: path, popstate: fromPopstate });
     closeOverlays();
 
@@ -642,7 +653,12 @@ window._pageCleanup = [];
           showOfflineView(gen);
           emit('wv-navigate', { url: location.href, path: location.pathname, popstate: true, offline: true });
         } else if (typeof window.wvToast === 'function') {
-          window.wvToast('you\'re offline rn, try again once you\'re back online', 'error');
+          // pwa.js already shows an "offline" toast when the connection drops;
+          // only add ours when that one isn't on screen.
+          var ts = document.getElementById('wv-toasts');
+          if (!(ts && /offline/i.test(ts.textContent || ''))) {
+            window.wvToast('you\'re offline rn, that page will open once you\'re back online', 'error');
+          }
         }
         return;
       }
@@ -678,9 +694,9 @@ window._pageCleanup = [];
 
       // History first, so location.search is right when the page script reads it.
       if (!fromPopstate) {
-        rememberScroll();
         var k = newEntryKey();
         var nextUrl = target.pathname + target.search + target.hash;
+        if (opts.replace && _curKey) _scrollMap.delete(_curKey);
         if (opts.replace) _origReplace.call(history, withKey(history.state, _curKey || k), title, nextUrl);
         else { _origPush.call(history, { wvKey: k }, title, nextUrl); _curKey = k; }
       } else if (!_curKey) {

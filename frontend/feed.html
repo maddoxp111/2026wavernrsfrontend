@@ -7,10 +7,148 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .fd-wrap { max-width: 1040px; margin: 0 auto; padding-bottom: 56px; min-width: 0; }
+    .fd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .fd-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+    .fd-h1 { margin: 4px 0 4px; font-size: clamp(30px, 5vw, 44px); font-weight: 900; letter-spacing: -0.045em; line-height: 1.02; color: var(--text); }
+    .fd-sub { font-size: 14px; color: var(--text-2); margin: 0; }
+    .fd-btn { height: 44px; padding: 0 20px; border-radius: var(--r-pill); border: 0; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--text); text-decoration: none; transition: transform 100ms var(--ease), filter 140ms var(--ease); white-space: nowrap; }
+    .fd-btn:hover { filter: brightness(1.1); }
+    .fd-btn:active { transform: scale(0.97); }
+    .fd-btn.pri { background: var(--brand); color: var(--on-brand); }
+    .fd-btn.sm { height: 36px; padding: 0 14px; font-size: 13px; }
+    .fd-btn[disabled] { opacity: 0.55; cursor: default; }
+    .fd-seg { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: var(--r-pill); padding: 4px; margin-bottom: 20px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .fd-seg::-webkit-scrollbar { display: none; }
+    .fd-seg button { min-height: 38px; padding: 0 16px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-2); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+    .fd-seg button:hover { color: var(--text); }
+    .fd-seg button.on { background: var(--text); color: var(--page-bg-base); }
+    .fd-seg .n { font-size: 12px; opacity: 0.65; font-variant-numeric: tabular-nums; }
+    .fd-btn:focus-visible, .fd-seg button:focus-visible, .fd-ico:focus-visible, .fd-card:focus-visible, .fd-fbtn:focus-visible, .fd-open:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .fd-day { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 0 8px; margin-top: 8px; background: var(--page-bg-base); font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-2); }
+    .fd-day::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
+    .fd-day .c { font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-3); }
+    .fd-newdiv { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; color: var(--brand); font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .fd-newdiv::before, .fd-newdiv::after { content: ''; flex: 1; height: 2px; border-radius: 2px; background: var(--brand); opacity: 0.55; }
+    .fd-list { display: flex; flex-direction: column; gap: 10px; }
+    .fd-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 18px; padding: 12px; border-radius: 12px; background: var(--surface); cursor: pointer; position: relative; transition: background 140ms var(--ease), transform 140ms var(--ease); }
+    .fd-card:hover { background: var(--surface-2); }
+    .fd-card.fresh::before { content: ''; position: absolute; left: -1px; top: 18px; bottom: 18px; width: 3px; border-radius: 3px; background: var(--brand); }
+    .fd-cov { position: relative; width: 112px; height: 112px; border-radius: var(--r-art); overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+    .fd-cov img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .fd-cov.stack::before, .fd-cov.stack::after { content: ''; position: absolute; }
+    .fd-body { min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 2px 0; }
+    .fd-by { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; color: var(--text-2); }
+    .fd-av { width: 24px; height: 24px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; position: relative; }
+    .fd-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .fd-by a { color: var(--text); font-weight: 700; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fd-by a:hover { text-decoration: underline; }
+    .fd-by .t { color: var(--text-3); white-space: nowrap; }
+    .fd-title { font-size: 19px; font-weight: 800; letter-spacing: -0.025em; color: var(--text); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .fd-kind { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); }
+    .fd-tag { font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 7px; border-radius: var(--r-pill); background: var(--surface-3); color: var(--text); }
+    .fd-tag.comp { background: var(--brand-bg); color: var(--brand); }
+    .fd-tag.new { background: var(--brand); color: var(--on-brand); }
+    .fd-acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .fd-ico { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background 120ms, color 120ms, transform 100ms; }
+    .fd-ico:hover { background: var(--surface-3); color: var(--text); }
+    .fd-ico:active { transform: scale(0.92); }
+    .fd-play { height: 36px; padding: 0 16px 0 12px; border-radius: var(--r-pill); border: 0; background: var(--brand); color: var(--on-brand); font: inherit; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .fd-play:hover { filter: brightness(1.08); }
+    .fd-open { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--text-2); text-decoration: none; padding: 8px 10px; border-radius: var(--r-pill); }
+    .fd-open:hover { color: var(--text); background: var(--surface-3); }
+    .fd-more { display: flex; justify-content: center; margin: 22px 0 6px; }
+    .fd-end { text-align: center; color: var(--text-3); font-size: 13px; margin: 26px 0 4px; }
+
+    .fd-sec { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 30px 0 14px; }
+    .fd-sec h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+    .fd-sec span { font-size: 12.5px; color: var(--text-3); }
+    .fd-sugs { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 14px; }
+    .fd-sug { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface); padding: 0 0 14px; text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+    .fd-sug-bg { width: 100%; height: 78px; position: relative; overflow: hidden; }
+    .fd-sug-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.1); opacity: 0.85; }
+    .fd-sug-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 20%, var(--surface) 100%); }
+    .fd-sug .fd-av { width: 72px; height: 72px; font-size: 26px; margin-top: -40px; border: 3px solid var(--surface); z-index: 1; box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+    .fd-sug-n { margin-top: 10px; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); text-decoration: none; max-width: calc(100% - 24px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fd-sug-n:hover { text-decoration: underline; }
+    .fd-sug-m { font-size: 12.5px; color: var(--text-3); margin: 3px 0 12px; }
+    .fd-fbtn { min-width: 108px; height: 38px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background 160ms var(--ease), color 160ms var(--ease), border-color 160ms var(--ease), transform 120ms; }
+    .fd-fbtn:hover { border-color: var(--text); }
+    .fd-fbtn.pri { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+    .fd-fbtn.on { background: transparent; color: var(--text); border-color: var(--hair-strong); }
+    .fd-fbtn.on svg { color: var(--green); }
+    .fd-fbtn .l2 { display: none; }
+    @media (hover: hover) {
+      .fd-fbtn.on:not(.pop):hover { border-color: var(--red); color: var(--red); }
+      .fd-fbtn.on:not(.pop):hover .l1, .fd-fbtn.on:not(.pop):hover svg { display: none; }
+      .fd-fbtn.on:not(.pop):hover .l2 { display: inline; }
+    }
+    .fd-fbtn.pop { animation: fd-pop 360ms var(--ease); }
+    @keyframes fd-pop { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+    .fd-fbtn[aria-busy="true"] { opacity: 0.6; pointer-events: none; }
+
+    .fd-follows { display: flex; flex-direction: column; gap: 4px; }
+    .fd-frow { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 12px; border-radius: 10px; transition: background 120ms; }
+    .fd-frow:hover { background: var(--surface-2); }
+    .fd-frow .fd-av { width: 52px; height: 52px; font-size: 20px; }
+    .fd-fname { font-size: 15px; font-weight: 700; color: var(--text); text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fd-fname:hover { text-decoration: underline; }
+    .fd-fmeta { font-size: 12.5px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fd-fmeta .hot { color: var(--brand); font-weight: 700; }
+
+    .fd-empty { text-align: center; padding: 44px 20px 40px; border-radius: 14px; background: var(--surface); }
+    .fd-empty .ic { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px; display: grid; place-items: center; background: var(--brand-bg); color: var(--brand); }
+    .fd-empty h3 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+    .fd-empty p { margin: 6px auto 0; font-size: 14px; color: var(--text-3); max-width: 400px; }
+    .fd-empty .fd-btn { margin-top: 18px; }
+
+    .fd-sk { background: var(--surface-2); border-radius: var(--r-sm); position: relative; overflow: hidden; }
+    .fd-sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--hair), transparent); animation: wv-skel 1.4s infinite; }
+
+    .fd-rail-head { display: flex; align-items: center; gap: 12px; margin: 26px 0 12px; text-decoration: none; color: inherit; }
+    .fd-rail-head .fd-av { width: 40px; height: 40px; font-size: 16px; }
+    .fd-rail-head b { display: block; font-size: 17px; letter-spacing: -0.02em; color: var(--text); }
+    .fd-rail-head span { font-size: 12px; color: var(--text-3); }
+    .fd-rail-head:hover b { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .fd-head { align-items: stretch; }
+      .fd-head .fd-btn { width: 100%; justify-content: center; }
+      .fd-seg { width: 100%; box-sizing: border-box; }
+      .fd-seg button { flex: 1; padding: 0 10px; justify-content: center; }
+      .fd-card { grid-template-columns: 84px minmax(0, 1fr); gap: 12px; padding: 10px; }
+      .fd-cov { width: 84px; height: 84px; }
+      .fd-title { font-size: 16px; }
+      .fd-acts { gap: 2px; }
+      .fd-open { display: none; }
+      .fd-sugs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .fd-sug .fd-av { width: 60px; height: 60px; }
+      .fd-fbtn { min-width: 96px; }
+      .fd-frow { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; padding: 8px 6px; }
+      .fd-frow .fd-av { width: 44px; height: 44px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fd-fbtn .l2 { display: none; }
+    @media (hover: hover) {
+      .fd-fbtn.on:not(.pop):hover { border-color: var(--red); color: var(--red); }
+      .fd-fbtn.on:not(.pop):hover .l1, .fd-fbtn.on:not(.pop):hover svg { display: none; }
+      .fd-fbtn.on:not(.pop):hover .l2 { display: inline; }
+    }
+    .fd-fbtn.pop { animation: none; }
+      .fd-sk::after { animation: none; }
+      .fd-card, .fd-btn, .fd-fbtn { transition: none; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
-  <div class="loading"><div class="spinner"></div></div>
+  <div class="fd-wrap" id="fd-root">
+    <div class="fd-head" id="fd-head"></div>
+    <div class="fd-seg" id="fd-seg" role="tablist" aria-label="Following views"></div>
+    <div id="fd-body"></div>
+  </div>
 </div>
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
@@ -18,133 +156,513 @@
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script src="/js/playlists.js?v=6288d60cd337"></script>
 <script>
-var _feedItems = [];
-var _feedHasMore = false;
-var _feedPage = 1;
-initPlayer();
+(function () {
+  initPlayer();
+  window._pageCleanup = window._pageCleanup || [];
 
-async function initFeed() {
-  if (!isLoggedIn()) { navigate('/login'); return; }
-  var view = document.getElementById('view');
-  view.innerHTML =
-    '<div style="display:flex;flex-direction:column;gap:32px;padding-bottom:40px;">' +
-    '<h1 class="wv-page-title">Following</h1>' +
-    '<div id="feed-sections"><div class="loading"><div class="spinner"></div></div></div>' +
-    '</div>';
-  loadFeed();
-}
+  var PAGE = 40;
+  var F = {
+    items: [],
+    hasMore: false,
+    nextBefore: null,
+    offset: 0,
+    loading: false,
+    loadingMore: false,
+    err: null,
+    follows: null,
+    followsLive: false,
+    followingCount: null,
+    sugs: null,
+    followed: {},
+    tab: 'latest',
+    seenPrev: null,
+    gen: 0
+  };
 
-async function loadFeed() {
-  var sectionsEl = document.getElementById('feed-sections');
-  if (!sectionsEl) return;
-  sectionsEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-  try {
-    // Fetch enough items to get a good cross-section of all followed artists.
-    var data = await api('/feed?limit=100');
-    var items = data.items || [];
-    _feedItems = items;
+  var ICON = {
+    play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.8v14.4a1 1 0 0 0 1.5.86l12-7.2a1 1 0 0 0 0-1.72l-12-7.2A1 1 0 0 0 7 4.8Z"/></svg>',
+    queue: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h14M3 11h14M3 16h7"/><path d="M14 14.5v6l5-3z" fill="currentColor"/></svg>',
+    addpl: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    spark: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2Z"/></svg>',
+    users: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.6c2.6.2 4.5 1.9 5 5.4"/></svg>',
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    wave: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0"/></svg>'
+  };
 
-    // Background from the first item with cover art.
-    if (typeof window.setPageBgImage === 'function') {
-      var first = items.find(function(i) { return i.cover_url; });
-      window.setPageBgImage(first ? first.cover_url : '');
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function $(id) { return document.getElementById(id); }
+  function ls(k, v) {
+    try { if (arguments.length > 1) { localStorage.setItem(k, v); return v; } return localStorage.getItem(k); } catch (_) { return null; }
+  }
+  function toast(m, k, ms, o) { if (typeof wvToast === 'function') wvToast(m, k, ms, o); }
+  function grad(s) { return typeof coverGradient === 'function' ? coverGradient(s || '') : 'var(--surface-3)'; }
+  function num(n) { n = +n || 0; if (typeof fmtNum === 'function') { try { return fmtNum(n); } catch (_) {} } return String(n); }
+  function ago(d) { if (!d) return ''; try { return timeAgo(d); } catch (_) { return ''; } }
+  function img(u) { return u ? '<img src="' + esc(u) + '" alt="" loading="lazy" decoding="async" onerror="this.style.opacity=0">' : ''; }
+  function avatar(name, url, cls) {
+    return '<span class="fd-av' + (cls ? ' ' + cls : '') + '" style="background:' + grad(name || '?') + '" aria-hidden="true">' +
+      esc(String(name || '?').charAt(0).toUpperCase()) + img(url) + '</span>';
+  }
+  function t(d) { var x = new Date(d).getTime(); return isNaN(x) ? 0 : x; }
+
+  function artistOf(it) { return it.artists || {}; }
+  function isComp(it) { return it._type === 'album'; }
+  function keep(it) {
+    if (!it || !it.id) return false;
+    if (it._type === 'track' && it.album_id) return false;
+    return true;
+  }
+  function trackObj(it) {
+    var a = artistOf(it);
+    return { id: it.id, title: it.title, ia_url: it.ia_url, cover_url: it.cover_url || null, artist_name: a.display_name || '', artist_id: a.id || it.artist_id || null };
+  }
+
+  // ── Head + tabs ──────────────────────────────────────────────────────
+  function renderHead() {
+    var playable = F.items.filter(function (i) { return !isComp(i) && i.ia_url; }).length;
+    var comps = F.items.filter(isComp).length;
+    $('fd-head').innerHTML =
+      '<div style="min-width:0"><div class="fd-eyebrow">your people</div><h1 class="fd-h1">Following</h1>' +
+      '<p class="fd-sub">new edits and comps from the creators you follow</p></div>' +
+      ((playable || comps) ? '<button type="button" class="fd-btn pri" data-act="playlatest">' + ICON.play + 'Play latest drops</button>' : '');
+  }
+  function followCount() {
+    if (F.follows) return F.follows.length;
+    if (typeof F.followingCount === 'number') return F.followingCount;
+    return null;
+  }
+  function renderSeg() {
+    var n = followCount();
+    var tabs = [['latest', 'Latest'], ['artists', 'By artist'], ['following', 'Following']];
+    $('fd-seg').innerHTML = tabs.map(function (x) {
+      var on = F.tab === x[0];
+      return '<button type="button" role="tab" aria-selected="' + on + '" class="' + (on ? 'on' : '') + '" data-act="tab" data-tab="' + x[0] + '">' + x[1] +
+        (x[0] === 'following' && n !== null ? '<span class="n">' + n + '</span>' : '') + '</button>';
+    }).join('');
+  }
+
+  // ── Skeletons ────────────────────────────────────────────────────────
+  function skelCards(n) {
+    var out = '<div class="fd-day"><span class="fd-sk" style="width:70px;height:12px"></span></div><div class="fd-list">';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="fd-card" style="cursor:default"><div class="fd-cov fd-sk" style="box-shadow:none"></div><div class="fd-body">' +
+        '<div><div class="fd-sk" style="height:12px;width:30%;margin-bottom:12px"></div><div class="fd-sk" style="height:18px;width:' + (45 + i * 11 % 30) + '%"></div></div>' +
+        '<div class="fd-sk" style="height:34px;width:190px;border-radius:999px"></div></div></div>';
     }
+    return out + '</div>';
+  }
 
+  // ── Latest timeline ──────────────────────────────────────────────────
+  function bucket(d) {
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var x = t(d);
+    if (x >= start) return 'Today';
+    if (x >= start - 86400000) return 'Yesterday';
+    if (x >= start - 6 * 86400000) return 'This week';
+    if (x >= start - 29 * 86400000) return 'This month';
+    return 'Earlier';
+  }
+  function cardHTML(it) {
+    var a = artistOf(it);
+    var comp = isComp(it);
+    var href = comp ? '/album?id=' + encodeURIComponent(it.id) : '/track?id=' + encodeURIComponent(it.id);
+    var aHref = a.id ? '/artist?id=' + encodeURIComponent(a.id) : '';
+    var fresh = F.seenPrev && t(it.created_at) > F.seenPrev;
+    var n = typeof it.track_count === 'number' ? it.track_count : null;
+    var kind = comp ? '<span class="fd-tag comp">new comp</span>' + (n ? '<span>' + n + (n === 1 ? ' song' : ' songs') + '</span>' : '')
+                    : '<span class="fd-tag">new edit</span>' + (it.play_count ? '<span>' + num(it.play_count) + ' plays</span>' : '');
+    var canPlay = comp || !!it.ia_url;
+    return '<article class="fd-card' + (fresh ? ' fresh' : '') + '" data-act="open" data-href="' + esc(href) + '" tabindex="0" aria-label="' + esc((comp ? 'comp ' : 'edit ') + (it.title || '') + ' by ' + (a.display_name || '')) + '">' +
+      '<div class="fd-cov" style="background:' + grad(it.title) + '">' + img(it.cover_url) + '</div>' +
+      '<div class="fd-body"><div>' +
+        '<div class="fd-by">' + avatar(a.display_name, a.profile_image_url) +
+          (aHref ? '<a href="' + esc(aHref) + '" data-nav="' + esc(aHref) + '"' + (a.user_id ? ' data-wv-uid="' + esc(a.user_id) + '"' : '') + '>' + esc(a.display_name || 'Unknown') + '</a>' : '<b>' + esc(a.display_name || 'Unknown') + '</b>') +
+          '<span class="t">· ' + esc(ago(it.created_at)) + '</span>' + (fresh ? '<span class="fd-tag new">new</span>' : '') + '</div>' +
+        '<div class="fd-title" style="margin-top:6px">' + esc(it.title || 'Untitled') + '</div>' +
+        '<div class="fd-kind" style="margin-top:6px">' + kind + '</div>' +
+      '</div>' +
+      '<div class="fd-acts">' +
+        (canPlay ? '<button type="button" class="fd-play" data-act="play" data-id="' + esc(it.id) + '">' + ICON.play + 'Play</button>' : '') +
+        (canPlay ? '<button type="button" class="fd-ico" data-act="queue" data-id="' + esc(it.id) + '" aria-label="Add to queue" title="Add to queue">' + ICON.queue + '</button>' : '') +
+        (!comp ? '<button type="button" class="fd-ico" data-act="addpl" data-id="' + esc(it.id) + '" aria-label="Add to a playlist" title="Add to a playlist">' + ICON.addpl + '</button>' : '') +
+        '<a class="fd-open" href="' + esc(href) + '" data-nav="' + esc(href) + '">Open</a>' +
+      '</div></div></article>';
+  }
+
+  function renderLatest() {
+    var body = $('fd-body');
+    if (F.loading) { body.innerHTML = skelCards(5); return; }
+    if (F.err) { body.innerHTML = emptyBox(ICON.wave, 'couldnt load your feed', F.err, '<button type="button" class="fd-btn" data-act="retry">Try again</button>'); return; }
+    var items = F.items;
+    var out = '';
     if (!items.length) {
-      sectionsEl.innerHTML =
-        '<div class="wv-empty" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:48px 0;">' +
-        '<div style="font-size:48px;">&#x1F465;</div>' +
-        '<div style="font-size:16px;font-weight:600;color:var(--text);">follow some artists and their new stuff shows up here</div>' +
-        '<button class="wv-pill brand" onclick="navigate(\'/discover\')">Discover artists</button>' +
-        '</div>';
+      var n = followCount();
+      out += n ? emptyBox(ICON.wave, 'quiet for now', 'the creators you follow havent dropped anything yet. follow a few more to fill this up', '')
+               : emptyBox(ICON.users, 'follow creators to fill your feed', 'every new edit and comp from people you follow lands here, newest first', '');
+      out += sugsHTML(true);
+      body.innerHTML = out;
       return;
     }
-
-    // Group by artist, preserving chronological order within each group.
-    var groupMap = {};
-    var groupOrder = [];
-    items.forEach(function(item) {
-      var aid = item.artist_id;
-      if (!groupMap[aid]) {
-        groupMap[aid] = { artist: item.artists || {}, items: [] };
-        groupOrder.push(aid);
+    var lastBucket = null;
+    var newShown = false;
+    var anyFresh = F.seenPrev && items.some(function (i) { return t(i.created_at) > F.seenPrev; });
+    var anyOld = F.seenPrev && items.some(function (i) { return t(i.created_at) <= F.seenPrev; });
+    var open = false;
+    items.forEach(function (it) {
+      if (anyFresh && anyOld && !newShown && t(it.created_at) <= F.seenPrev) {
+        if (open) { out += '</div>'; open = false; }
+        out += '<div class="fd-newdiv" role="separator">you’re all caught up · older below</div>';
+        newShown = true;
+        lastBucket = null;
       }
-      groupMap[aid].items.push(item);
+      var b = bucket(it.created_at);
+      if (b !== lastBucket) {
+        if (open) out += '</div>';
+        out += '<div class="fd-day">' + b + '</div><div class="fd-list">';
+        open = true;
+        lastBucket = b;
+      }
+      out += cardHTML(it);
     });
-
-    // Render one section per artist.
-    sectionsEl.innerHTML = groupOrder.map(function(aid) {
-      return renderArtistSection(groupMap[aid].artist, groupMap[aid].items);
-    }).join('');
-  } catch (err) {
-    sectionsEl.innerHTML = '<div class="wv-empty">couldnt load your feed... ' + escHtml(err.message) + '</div>';
+    if (open) out += '</div>';
+    if (anyFresh) {
+      var freshN = items.filter(function (i) { return t(i.created_at) > F.seenPrev; }).length;
+      out = '<div class="fd-newdiv" role="separator" style="margin-top:0">' + freshN + ' new since your last visit</div>' + out;
+    }
+    if (F.hasMore) out += '<div class="fd-more"><button type="button" class="fd-btn" data-act="more"' + (F.loadingMore ? ' disabled' : '') + '>' + (F.loadingMore ? 'Loading…' : 'Load more') + '</button></div>';
+    else if (items.length > 6) out += '<div class="fd-end">thats everything from the people you follow</div>';
+    var fc = followCount();
+    if (fc !== null && fc < 3) out += sugsHTML(false);
+    body.innerHTML = out;
+    decorate();
   }
-}
 
-function renderArtistSection(artist, items) {
-  var artistId = artist.id || '';
-  var name = escHtml(artist.display_name || 'Unknown');
-  var pfpBg = coverGradient(artist.display_name || '');
-  var pfpInner = artist.profile_image_url
-    ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display=\'none\'">'
-    : '<span style="font-size:18px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
-  var pfpHtml =
-    '<div style="width:40px;height:40px;border-radius:50%;background:' + pfpBg + ';overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.25);">' +
-    pfpInner + '</div>';
+  function emptyBox(icon, title, desc, cta) {
+    return '<div class="fd-empty"><div class="ic">' + icon + '</div><h3>' + esc(title) + '</h3><p>' + esc(desc) + '</p>' + (cta || '') + '</div>';
+  }
 
-  var header =
-    '<div class="wv-sec-head" style="justify-content:flex-start;gap:12px;cursor:pointer;" onclick="navigate(\'/artist?id=' + artistId + '\')">' +
-    pfpHtml +
-    '<div>' +
-      '<div style="font-size:17px;font-weight:700;letter-spacing:-0.02em;color:var(--text);">' + name + '</div>' +
-      '<div style="font-size:12px;color:var(--text-3);">' + items.length + ' release' + (items.length === 1 ? '' : 's') + '</div>' +
-    '</div>' +
-    '</div>';
+  // ── By artist ────────────────────────────────────────────────────────
+  function renderArtists() {
+    var body = $('fd-body');
+    if (F.loading) { body.innerHTML = skelCards(3); return; }
+    if (!F.items.length) { F.tab = 'latest'; renderSeg(); renderLatest(); return; }
+    var map = {}, order = [];
+    F.items.forEach(function (it) {
+      var a = artistOf(it);
+      var k = a.id || it.artist_id || 'x';
+      if (!map[k]) { map[k] = { a: a, items: [] }; order.push(k); }
+      map[k].items.push(it);
+    });
+    body.innerHTML = order.map(function (k) {
+      var g = map[k];
+      var href = g.a.id ? '/artist?id=' + encodeURIComponent(g.a.id) : '#';
+      return '<section><a class="fd-rail-head" href="' + esc(href) + '" data-nav="' + esc(href) + '">' + avatar(g.a.display_name, g.a.profile_image_url) +
+        '<div><b>' + esc(g.a.display_name || 'Unknown') + '</b><span>' + g.items.length + ' recent release' + (g.items.length === 1 ? '' : 's') + ' · latest ' + esc(ago(g.items[0].created_at)) + '</span></div></a>' +
+        '<div class="wv-rail">' + g.items.slice(0, 12).map(railCard).join('') + '</div></section>';
+    }).join('');
+  }
+  function railCard(it) {
+    var comp = isComp(it);
+    var href = comp ? '/album?id=' + encodeURIComponent(it.id) : '/track?id=' + encodeURIComponent(it.id);
+    var canPlay = comp || it.ia_url;
+    return '<div class="wv-comp-card" data-act="open" data-href="' + esc(href) + '">' +
+      '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + grad(it.title) + '">' +
+        (it.cover_url ? '<img src="' + esc(it.cover_url) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0">' : '') +
+        (canPlay ? '<button type="button" class="wv-cover-play-btn" data-act="play" data-id="' + esc(it.id) + '" aria-label="Play ' + esc(it.title || '') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>' : '') +
+      '</div></div>' +
+      '<div class="wv-comp-card-title">' + esc(it.title || 'Untitled') + '</div>' +
+      '<div class="wv-comp-card-artist">' + (comp ? 'Comp' + (typeof it.track_count === 'number' ? ' · ' + it.track_count + ' songs' : '') : 'Edit') + ' · ' + esc(ago(it.created_at)) + '</div></div>';
+  }
 
-  var cards = items.slice(0, 10).map(feedCardHTML).join('');
-  var scrollRow =
-    '<div class="wv-rail">' + cards + '</div>';
+  // ── Following list ───────────────────────────────────────────────────
+  function derivedFollows() {
+    var seen = {}, out = [];
+    F.items.forEach(function (it) {
+      var a = artistOf(it);
+      if (!a.id || seen[a.id]) return;
+      seen[a.id] = 1;
+      var rel = F.items.filter(function (x) { return artistOf(x).id === a.id; });
+      out.push({ artist_id: a.id, display_name: a.display_name, profile_image_url: a.profile_image_url, latest_release_at: rel[0] ? rel[0].created_at : null, release_count: null });
+    });
+    return out;
+  }
+  function renderFollowing() {
+    var body = $('fd-body');
+    var list = F.follows || (F.loading ? null : derivedFollows());
+    if (!list) { body.innerHTML = '<div class="fd-follows">' + [0, 1, 2, 3].map(function () { return '<div class="fd-frow"><span class="fd-av fd-sk"></span><div><div class="fd-sk" style="height:14px;width:40%;margin-bottom:8px"></div><div class="fd-sk" style="height:11px;width:60%"></div></div><span class="fd-sk" style="width:100px;height:38px;border-radius:999px"></span></div>'; }).join('') + '</div>'; return; }
+    var out = '';
+    if (!list.length) {
+      out += emptyBox(ICON.users, 'you dont follow anyone yet', 'follow creators and their new drops show up in your feed the moment they post', '');
+    } else {
+      if (!F.followsLive) out += '<p class="fd-sub" style="margin:0 0 10px;font-size:12.5px;color:var(--text-3)">showing creators with recent releases</p>';
+      var week = Date.now() - 7 * 86400000;
+      out += '<div class="fd-follows">' + list.map(function (f) {
+        var href = '/artist?id=' + encodeURIComponent(f.artist_id);
+        var on = F.followed[f.artist_id] !== false;
+        var meta = [];
+        if (f.latest_release_at) meta.push((t(f.latest_release_at) > week ? '<span class="hot">dropped ' + esc(ago(f.latest_release_at)) + '</span>' : 'last drop ' + esc(ago(f.latest_release_at))));
+        else meta.push('no releases yet');
+        if (typeof f.release_count === 'number' && f.release_count) meta.push(f.release_count + ' release' + (f.release_count === 1 ? '' : 's'));
+        if (f.followed_at) meta.push('followed ' + esc(ago(f.followed_at)));
+        return '<div class="fd-frow">' + avatar(f.display_name, f.profile_image_url) +
+          '<div style="min-width:0"><a class="fd-fname" href="' + esc(href) + '" data-nav="' + esc(href) + '">' + esc(f.display_name || 'Unknown') + '</a><div class="fd-fmeta">' + meta.join(' · ') + '</div></div>' +
+          followBtn(f.artist_id, on, f.display_name) + '</div>';
+      }).join('') + '</div>';
+    }
+    out += sugsHTML(false);
+    body.innerHTML = out;
+  }
+  function followBtn(id, on, name) {
+    return '<button type="button" class="fd-fbtn' + (on ? ' on' : ' pri') + '" data-act="follow" data-id="' + esc(id) + '" aria-pressed="' + on + '" aria-label="' + (on ? 'Unfollow ' : 'Follow ') + esc(name || '') + '">' +
+      (on ? ICON.check + '<span class="l1">Following</span><span class="l2">Unfollow</span>' : ICON.plus + 'Follow') + '</button>';
+  }
 
-  return '<div style="display:flex;flex-direction:column;">' + header + scrollRow + '</div>';
-}
+  // ── Suggestions ──────────────────────────────────────────────────────
+  function followingSet() {
+    var s = {};
+    (F.follows || derivedFollows()).forEach(function (f) { s[f.artist_id] = 1; });
+    return s;
+  }
+  function sugsHTML(big) {
+    if (!F.sugs) { loadSugs(); return '<div id="fd-sugs-slot"></div>'; }
+    var mine = followingSet();
+    var list = F.sugs.filter(function (a) { return !mine[a.id] || F.followed[a.id] !== undefined; }).slice(0, big ? 8 : 6);
+    if (!list.length) return '';
+    return '<div id="fd-sugs-slot"><div class="fd-sec"><h2>Creators to follow</h2><span>popular on wavernrs</span></div><div class="fd-sugs">' + list.map(function (a) {
+      var href = '/artist?id=' + encodeURIComponent(a.id);
+      var on = F.followed[a.id] === true;
+      var meta = [];
+      if (a.followers) meta.push(num(a.followers) + ' follower' + (a.followers === 1 ? '' : 's'));
+      if (a.plays) meta.push(num(a.plays) + ' plays');
+      else if (a.uploads) meta.push(a.uploads + ' uploads');
+      return '<div class="fd-sug"><div class="fd-sug-bg" style="background:' + grad(a.display_name) + '">' + img(a.cover) + '</div>' +
+        avatar(a.display_name, a.profile_image_url) +
+        '<a class="fd-sug-n" href="' + esc(href) + '" data-nav="' + esc(href) + '">' + esc(a.display_name || 'Unknown') + '</a>' +
+        '<div class="fd-sug-m">' + esc(meta.join(' · ') || 'new creator') + '</div>' +
+        followBtn(a.id, on, a.display_name) + '</div>';
+    }).join('') + '</div></div>';
+  }
+  function loadSugs() {
+    if (F.sugsLoading) return;
+    F.sugsLoading = true;
+    var gen = F.gen;
+    api('/stats/artists').then(function (d) {
+      if (gen !== F.gen) return;
+      var me = null;
+      try { var u = getUser(); me = u && (u.artist_id || (u.artist && u.artist.id)); } catch (_) {}
+      F.sugs = ((d && d.items) || []).filter(function (a) { return a && a.id && a.id !== me && (a.uploads || 0) > 0 && a.display_name; })
+        .sort(function (x, y) { return ((y.followers || 0) - (x.followers || 0)) || ((y.plays || 0) - (x.plays || 0)); })
+        .slice(0, 24);
+      rerender();
+    }).catch(function () { F.sugs = []; });
+  }
 
-function feedCardHTML(item) {
-  var isAlbum = item._type === 'album';
-  var bg = coverGradient(item.title || '');
-  var action = isAlbum
-    ? "navigate('/album?id=" + item.id + "')"
-    : "navigate('/track?id=" + item.id + "')";
-  var coverImg = item.cover_url
-    ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
-    : '';
-  var compBadge = isAlbum
-    ? ''
-    : '';
-  var playBtn = !isAlbum
-    ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();playFeedItem(\'' + item.id + '\')">' +
-        '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-      '</button>'
-    : '';
-  return '<div class="wv-comp-card" onclick="' + action + '">' +
-    '<div class="wv-comp-card-cover">' +
-      '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-        '' +
-        compBadge + coverImg + playBtn +
-      '</div>' +
-    '</div>' +
-    '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
-    '<div class="wv-comp-card-artist">' + (isAlbum ? 'Comp' : 'Edit') + '</div>' +
-  '</div>';
-}
+  function toggleFollow(btn, id) {
+    if (btn.getAttribute('aria-busy') === 'true') return;
+    var wasOn = btn.classList.contains('on');
+    btn.setAttribute('aria-busy', 'true');
+    api('/artists/' + encodeURIComponent(id) + '/follow', { method: 'POST' }).then(function (r) {
+      var on = r && typeof r.following === 'boolean' ? r.following : !wasOn;
+      F.followed[id] = on;
+      if (F.follows) {
+        var inList = F.follows.some(function (f) { return f.artist_id === id; });
+        if (on && !inList) {
+          var s = (F.sugs || []).filter(function (a) { return a.id === id; })[0];
+          if (s) F.follows.unshift({ artist_id: id, display_name: s.display_name, profile_image_url: s.profile_image_url, latest_release_at: s.latest || null, release_count: s.uploads || null, followed_at: new Date().toISOString() });
+        }
+      }
+      if (typeof F.followingCount === 'number') F.followingCount += on === wasOn ? 0 : (on ? 1 : -1);
+      var name = btn.getAttribute('aria-label').replace(/^(Unfollow|Follow) /, '');
+      btn.outerHTML = followBtn(id, on, name);
+      var nb = document.querySelector('.fd-fbtn[data-id="' + CSS.escape(id) + '"]');
+      if (nb) { nb.classList.add('pop'); nb.focus({ preventScroll: true }); nb.addEventListener('mouseleave', function () { nb.classList.remove('pop'); }, { once: true }); }
+      renderSeg();
+      if (on) toast('following ' + name + ' · their drops will show up here');
+      else toast('unfollowed ' + name, '', 6000, { title: 'unfollowed ' + name, action: 'Undo', onClick: function () { var b = document.querySelector('.fd-fbtn[data-id="' + CSS.escape(id) + '"]'); if (b) toggleFollow(b, id); else api('/artists/' + encodeURIComponent(id) + '/follow', { method: 'POST' }).then(function () { F.followed[id] = true; }).catch(function () {}); } });
+      F.dirty = true;
+    }).catch(function (e) {
+      btn.removeAttribute('aria-busy');
+      toast((e && e.status === 400 && e.message) ? e.message : 'couldnt update that follow...try again', 'error');
+    });
+  }
 
-function playFeedItem(id) {
-  var item = _feedItems.find(function(i) { return i.id === id; });
-  if (!item) return;
-  if (item._type === 'album') { navigate('/album?id=' + id); return; }
-  playTrack({ id: item.id, title: item.title, artist_name: item.artists ? item.artists.display_name : '', ia_url: item.ia_url, cover_url: item.cover_url });
-}
+  // ── Playback ─────────────────────────────────────────────────────────
+  function find(id) { return F.items.filter(function (i) { return i.id === id; })[0]; }
+  function playItem(id) {
+    var it = find(id);
+    if (!it) return;
+    if (isComp(it)) { if (typeof playCompById === 'function') playCompById(it.id, { album: it }); return; }
+    if (!it.ia_url) return;
+    var list = F.items.filter(function (i) { return !isComp(i) && i.ia_url; }).map(trackObj);
+    var idx = 0;
+    for (var k = 0; k < list.length; k++) if (list[k].id === id) { idx = k; break; }
+    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') { setPlayerQueue(list, idx); playQueueIndex(idx); }
+    else playTrack(list[idx]);
+  }
+  function queueItem(id) {
+    var it = find(id);
+    if (!it) return;
+    if (isComp(it)) { if (typeof addAlbumToQueue === 'function') addAlbumToQueue(it.id); return; }
+    if (typeof addToQueue === 'function') addToQueue(trackObj(it));
+  }
+  function playLatest() {
+    var list = F.items.filter(function (i) { return !isComp(i) && i.ia_url; }).slice(0, 30).map(trackObj);
+    if (!list.length) {
+      var c = F.items.filter(isComp)[0];
+      if (c && typeof playCompById === 'function') playCompById(c.id, { album: c });
+      return;
+    }
+    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') { setPlayerQueue(list, 0); playQueueIndex(0); }
+    else playTrack(list[0]);
+    toast('playing ' + list.length + ' latest drop' + (list.length === 1 ? '' : 's'));
+  }
 
-initFeed();
+  // ── Wiring ───────────────────────────────────────────────────────────
+  function rerender() {
+    renderHead();
+    renderSeg();
+    if (F.tab === 'artists') renderArtists();
+    else if (F.tab === 'following') renderFollowing();
+    else renderLatest();
+    decorate();
+  }
+  function decorate() {
+    try { if (typeof window.wvDecorateUsers === 'function') window.wvDecorateUsers($('fd-body')); } catch (_) {}
+  }
+  function setTab(tab) {
+    F.tab = tab;
+    ls('wv_feed_tab', tab);
+    if (tab === 'following') loadFollows();
+    if (F.dirty && tab !== 'following') { F.dirty = false; load(true); return; }
+    rerender();
+  }
+
+  function onClick(e) {
+    var el = e.target.closest('[data-act], [data-nav]');
+    var root = $('fd-root');
+    if (!el || !root || !root.contains(el)) return;
+    var act = el.getAttribute('data-act');
+    if (!act) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof navigate === 'function') navigate(el.getAttribute('data-nav'));
+      return;
+    }
+    var id = el.getAttribute('data-id');
+    if (act !== 'open') e.stopPropagation();
+    switch (act) {
+      case 'tab': setTab(el.getAttribute('data-tab')); break;
+      case 'play': playItem(id); break;
+      case 'queue': queueItem(id); break;
+      case 'addpl': { var it = find(id); if (it && typeof window.openAddToPlaylist === 'function') window.openAddToPlaylist(trackObj(it)); break; }
+      case 'follow': toggleFollow(el, id); break;
+      case 'playlatest': playLatest(); break;
+      case 'more': loadMore(); break;
+      case 'retry': load(false); break;
+      case 'open': { var h = el.getAttribute('data-href'); if (h && typeof navigate === 'function') navigate(h); break; }
+    }
+  }
+  function onKey(e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('fd-card')) { e.preventDefault(); e.target.click(); }
+  }
+
+  // ── Data ─────────────────────────────────────────────────────────────
+  function feedUrl(more) {
+    var q = '/feed?limit=' + PAGE;
+    if (more) {
+      if (F.nextBefore) q += '&before=' + encodeURIComponent(F.nextBefore);
+      else q += '&offset=' + F.offset;
+    }
+    return q;
+  }
+  function absorb(d, more) {
+    var raw = (d && d.items) || [];
+    var fresh = raw.filter(keep);
+    if (more) {
+      var have = {};
+      F.items.forEach(function (i) { have[i._type + i.id] = 1; });
+      fresh = fresh.filter(function (i) { return !have[i._type + i.id]; });
+      F.items = F.items.concat(fresh);
+    } else F.items = fresh;
+    F.offset += raw.length;
+    F.hasMore = !!(d && d.has_more);
+    F.nextBefore = (d && d.next_before) || null;
+    if (d && typeof d.following_count === 'number') F.followingCount = d.following_count;
+  }
+  function load(silent) {
+    F.gen++;
+    var gen = F.gen;
+    F.loading = !silent;
+    F.err = null;
+    F.offset = 0;
+    F.nextBefore = null;
+    rerender();
+    api(feedUrl(false)).then(function (d) {
+      if (gen !== F.gen || !$('fd-root')) return;
+      F.loading = false;
+      absorb(d, false);
+      if (typeof window.setPageBgImage === 'function') {
+        var first = F.items.filter(function (i) { return i.cover_url; })[0];
+        window.setPageBgImage(first ? first.cover_url : '');
+      }
+      ls('wv_feed_seen_at', new Date().toISOString());
+      rerender();
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      if (gen !== F.gen) return;
+      F.loading = false;
+      F.err = (err && err.message) || 'try again in a sec';
+      rerender();
+    });
+    loadFollows(true);
+  }
+  function loadMore() {
+    if (F.loadingMore || !F.hasMore) return;
+    F.loadingMore = true;
+    var gen = F.gen;
+    rerender();
+    api(feedUrl(true)).then(function (d) {
+      if (gen !== F.gen) return;
+      F.loadingMore = false;
+      absorb(d, true);
+      rerender();
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      F.loadingMore = false;
+      rerender();
+      toast('couldnt load more...try again', 'error');
+    });
+  }
+  function loadFollows(force) {
+    if (F.followsLoading || (F.follows && !force)) return;
+    F.followsLoading = true;
+    var gen = F.gen;
+    api('/feed/following').then(function (d) {
+      F.followsLoading = false;
+      if (gen !== F.gen) return;
+      if (d && Array.isArray(d.items)) { F.follows = d.items; F.followsLive = true; F.followingCount = d.items.length; rerender(); }
+    }).catch(function () { F.followsLoading = false; });
+  }
+
+  // ── Boot ─────────────────────────────────────────────────────────────
+  if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login?next=' + encodeURIComponent('/feed')); return; }
+  var prev = t(ls('wv_feed_seen_at') || '');
+  F.seenPrev = prev || null;
+  var want = ls('wv_feed_tab');
+  F.tab = want === 'artists' || want === 'following' ? want : 'latest';
+  var root = $('fd-root');
+  root.addEventListener('click', onClick);
+  root.addEventListener('keydown', onKey);
+  window._pageCleanup.push(function () { F.gen++; });
+  load(false);
+})();
 </script>
 </body>
 </html>

@@ -3,7 +3,21 @@
 // normal single-page app is untouched.
 const API = process.env.WAVERNRS_API || 'https://2026wavernrs-production.up.railway.app/api';
 const SITE = 'https://www.wavernrs.com';
-const FALLBACK_IMAGE = SITE + '/logo@2x.png';
+const FALLBACK_IMAGE = SITE + '/og-default.png';
+const TAGLINE = 'Where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and catch every leak as it lands.';
+
+function bigImage(url) {
+  if (!url || url === FALLBACK_IMAGE) return FALLBACK_IMAGE;
+  const u = String(url);
+  if (!/^https?:\/\//i.test(u)) return FALLBACK_IMAGE;
+  if (/^https?:\/\/wsrv\.nl\//i.test(u)) return u;
+  return 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=1200&h=630&fit=contain&cbg=121212&output=jpg&q=85';
+}
+
+function clip(s, n) {
+  const t = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t;
+}
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -171,60 +185,223 @@ async function ye(params) {
   return { title: YE_VIEWS[view][0] + ' — wavernrs', description: YE_VIEWS[view][1], image: FALLBACK_IMAGE, type: 'website' };
 }
 
-const LOADERS = { album, track, artist, playlist, lp };
+async function archiveArtist(slug) {
+  const d = await getJSON('/archive/artists/' + encodeURIComponent(slug) + '?limit=8');
+  if (!d || !d.name) return null;
+  const n = Number(d.comp_count) || 0;
+  const eras = (d.top_eras || []).map(e => e && e.name).filter(n2 => n2 && !/^other$/i.test(n2)).slice(0, 3);
+  const cover = (d.comps || []).map(c => c && c.cover_url).find(Boolean);
+  return {
+    title: d.name + ': ' + (n ? num(n) + (n === 1 ? ' comp' : ' comps') : 'comps') + ' on wavernrs',
+    description: joinParts([
+      eras.length ? 'mostly ' + eras.join(', ') : null,
+      num(d.edit_count) && d.edit_count > 0 ? num(d.edit_count) + ' edits' : null,
+      num(d.play_count) && d.play_count > 0 ? num(d.play_count) + ' plays' : null,
+      'in the wavernrs archive',
+    ]),
+    image: cover || FALLBACK_IMAGE,
+    alt: cover ? 'Cover art from ' + d.name : null,
+    type: 'profile',
+  };
+}
+
+async function trackerMeta(slug) {
+  if (!slug) return null;
+  if (slug === 'all') return { title: STATIC.tracker[0], description: STATIC.tracker[1], image: FALLBACK_IMAGE, type: 'website' };
+  const d = await getJSON('/trackers');
+  const list = (d && d.trackers) || [];
+  const t = list.find(x => x && x.slug === slug);
+  if (!t) return null;
+  const counts = joinParts([
+    num(t.comps) && t.comps > 0 ? num(t.comps) + ' comps' : null,
+    num(t.edits) && t.edits > 0 ? num(t.edits) + ' edits' : null,
+    t.entries && t.have ? num(t.have) + ' of ' + num(t.entries) + ' playable here' : null,
+  ]);
+  return {
+    title: t.name + ' — tracker',
+    description: clip([t.blurb, counts].filter(Boolean).join(' '), 300),
+    image: t.cover || FALLBACK_IMAGE,
+    alt: t.cover ? t.name + ' cover' : null,
+    type: 'website',
+  };
+}
+
+async function musicArtist(key) {
+  const d = await getJSON('/music-artists/' + encodeURIComponent(key));
+  const a = d && d.artist;
+  if (!a || !a.name) return null;
+  const edits = Number(a.tracks) || 0;
+  const comps = Number(a.comps) || 0;
+  return {
+    title: a.name + ' on wavernrs',
+    description: edits
+      ? 'featured on ' + num(edits) + (edits === 1 ? ' edit' : ' edits') + (comps ? ' across ' + num(comps) + (comps === 1 ? ' comp' : ' comps') : '') + ' on wavernrs'
+      : 'every comp and edit featuring ' + a.name + ' on wavernrs',
+    image: a.photo || FALLBACK_IMAGE,
+    alt: a.photo ? a.name : null,
+    type: 'profile',
+  };
+}
+
+async function communityPost(id) {
+  const d = await getJSON('/community/posts/' + encodeURIComponent(id));
+  const p = d && (d.post || d);
+  if (!p || !p.title) return null;
+  const body = clip(p.body, 220);
+  return {
+    title: p.title,
+    description: joinParts([p.username ? 'posted by @' + p.username : null, body || 'on the wavernrs community board']),
+    image: p.profile_image_url || FALLBACK_IMAGE,
+    alt: p.username ? '@' + p.username : null,
+    type: 'article',
+  };
+}
+
+async function radioStation(slug) {
+  const d = await getJSON('/radio/stations/' + encodeURIComponent(slug) + '?peek=1');
+  const s = d && d.station;
+  if (!s || !s.name) return null;
+  const now = s.now && s.now.track;
+  const cover = s.cover_url || (now && now.cover_url);
+  return {
+    title: s.name + ' — wavernrs radio',
+    description: joinParts([
+      s.is_live && now ? 'on air: ' + now.title + (now.artist ? ' by ' + now.artist : '') : (s.is_live ? 'live now' : null),
+      s.owner && s.owner.name ? 'hosted by ' + s.owner.name : null,
+      clip(s.description, 160) || 'tune in and listen together',
+    ]),
+    image: cover || FALLBACK_IMAGE,
+    alt: cover ? s.name : null,
+    type: 'website',
+  };
+}
+
+const STATIC = {
+  home: ['wavernrs — Ye comps, edits & the Ye archive', TAGLINE],
+  charts: ['Charts — the most played comps and edits right now', 'what the wavernrs community is playing today, this week and all time'],
+  browse: ['Browse — new and trending comps', 'fresh uploads, trending comps and every era, all in one place'],
+  archive: ['The archive — every Ye comp ever made', 'dig through tens of thousands of archived Ye comps and edits by era, artist and date'],
+  'archive-artist': ['Archive yeditors — wavernrs', 'every yeditor in the wavernrs archive and the comps they made'],
+  radio: ['Radio — listen together on wavernrs', 'live community stations playing Ye comps and edits around the clock'],
+  community: ['Community — wavernrs', 'posts, requests and finds from the wavernrs community'],
+  tracker: ['Trackers — every comp and edit, era by era', 'the community trackers, matched to what you can play on wavernrs'],
+  eras: ['Eras — every Ye era on wavernrs', 'comps and edits sorted era by era, from The College Dropout to Bully'],
+  music: ['Featured artists — wavernrs', 'every artist featured on Ye comps and edits, and where they show up'],
+  artists: ['Artists — the editors behind the comps', 'the yeditors and comp makers on wavernrs'],
+  stats: ['Stats — wavernrs by the numbers', 'plays, uploads and eras across the whole site'],
+  search: ['Search wavernrs', 'search comps, edits, artists, playlists and the Ye archive'],
+  playlists: ['Playlists — wavernrs', 'community playlists of Ye comps and edits'],
+  about: ['About wavernrs', 'what wavernrs is, who runs it and how it works'],
+  awards: ['Hall of Fame — wavernrs', 'every Edit of the Week winner and honored yedit on wavernrs, in one place'],
+  wrapped: ['Recap — your year on wavernrs', 'your most played comps, edits and eras on wavernrs'],
+  whatsnew: ["What's new on wavernrs", 'every new feature and fix, as it ships'],
+  lp: ['Listening parties — wavernrs', 'press play together: live listening parties for new comps and edits'],
+};
+const PATHS = { home: '/', index: '/' };
+const PARAMS = {
+  album: ['id'], track: ['id'], artist: ['id'], playlist: ['id'], lp: ['id'],
+  'archive-artist': ['a'], tracker: ['t'], music: ['a'], community: ['post'], radio: ['s'], search: ['q'],
+};
+
+const LOADERS = {
+  album: p => p.get('id') && album(p.get('id')),
+  track: p => p.get('id') && track(p.get('id')),
+  artist: p => p.get('id') && artist(p.get('id')),
+  playlist: p => p.get('id') && playlist(p.get('id')),
+  lp: p => p.get('id') && lp(p.get('id')),
+  'archive-artist': p => p.get('a') && archiveArtist(p.get('a')),
+  tracker: p => p.get('t') && trackerMeta(p.get('t')),
+  music: p => p.get('a') && musicArtist(p.get('a')),
+  community: p => p.get('post') && communityPost(p.get('post')),
+  radio: p => p.get('s') && radioStation(p.get('s')),
+  search: p => {
+    const q = clip(p.get('q'), 80);
+    return q ? { title: 'results for “' + q + '” — wavernrs', description: 'comps, edits, artists and Ye archive results for “' + q + '” on wavernrs', image: FALLBACK_IMAGE, type: 'website' } : null;
+  },
+};
 
 function page(meta, url) {
+  const image = bigImage(meta.image);
+  const alt = meta.alt || (image === FALLBACK_IMAGE ? 'wavernrs: Ye comps, edits & the Ye archive' : meta.title);
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>${esc(meta.title)}</title>
 <meta name="description" content="${esc(meta.description)}">
-<meta name="theme-color" content="#0d0d15">
+<meta name="theme-color" content="#a78bfa">
 <link rel="canonical" href="${esc(url)}">
+<link rel="icon" href="${SITE}/icons/favicon-32.png">
 <meta property="og:site_name" content="wavernrs">
+<meta property="og:locale" content="en_US">
 <meta property="og:type" content="${esc(meta.type)}">
 <meta property="og:title" content="${esc(meta.title)}">
 <meta property="og:description" content="${esc(meta.description)}">
-<meta property="og:image" content="${esc(meta.image)}">
+<meta property="og:image" content="${esc(image)}">
+<meta property="og:image:secure_url" content="${esc(image)}">
+<meta property="og:image:type" content="${image === FALLBACK_IMAGE ? 'image/png' : 'image/jpeg'}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${esc(alt)}">
 <meta property="og:url" content="${esc(url)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(meta.title)}">
 <meta name="twitter:description" content="${esc(meta.description)}">
-<meta name="twitter:image" content="${esc(meta.image)}">
+<meta name="twitter:image" content="${esc(image)}">
+<meta name="twitter:image:alt" content="${esc(alt)}">
 </head>
-<body><p><a href="${esc(url)}">${esc(meta.title)}</a></p></body>
+<body><h1><a href="${esc(url)}">${esc(meta.title)}</a></h1><p>${esc(meta.description)}</p></body>
 </html>`;
+}
+
+function canonicalFor(type, params) {
+  const path = PATHS[type] || ('/' + type);
+  const keep = new URLSearchParams();
+  for (const k of PARAMS[type] || []) {
+    const v = params.get(k);
+    if (v) keep.set(k, v.slice(0, 200));
+  }
+  const qs = keep.toString();
+  return SITE + path + (qs ? '?' + qs : '');
 }
 
 module.exports = async (req, res) => {
   const url = new URL(req.url, SITE);
-  const type = url.searchParams.get('type') || 'album';
-  const id = url.searchParams.get('id') || '';
-  const canonical = SITE + '/' + type + (id ? '?id=' + encodeURIComponent(id) : '');
+  const params = url.searchParams;
+  let type = String(params.get('type') || 'album').toLowerCase();
+  if (type === 'index') type = 'home';
+  if (!/^[a-z-]{1,24}$/.test(type)) type = 'home';
 
   let meta = null;
-  let where = canonical;
+  let where;
+  let attempted = false;
   try {
     if (type === 'ye') {
       const keep = new URLSearchParams();
-      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era', 'tweet', 'item', 't']) if (url.searchParams.get(k)) keep.set(k, url.searchParams.get(k));
+      for (const k of ['view', 'album', 'sub', 'year', 'filter', 'q', 'tab', 'era', 'tweet', 'item', 't']) if (params.get(k)) keep.set(k, params.get(k));
       where = SITE + '/resources' + (keep.toString() ? '?' + keep.toString() : '');
-      meta = await ye(url.searchParams);
-    } else if (id && LOADERS[type]) meta = await LOADERS[type](id);
+      meta = await ye(params);
+    } else {
+      where = canonicalFor(type, params);
+      attempted = !!(PARAMS[type] || []).find(k => params.get(k));
+      if (LOADERS[type]) meta = (await LOADERS[type](params)) || null;
+    }
   } catch (_) {
     meta = null;
   }
+  if (!where) where = SITE + '/';
+  let fresh = !!meta;
+  if (!meta && STATIC[type]) {
+    meta = { title: STATIC[type][0], description: STATIC[type][1], image: FALLBACK_IMAGE, type: 'website' };
+    fresh = !attempted;
+  }
   if (!meta) {
-    meta = {
-      title: 'wavernrs',
-      description: 'Ye comps and edits...listen to them, look through them and keep track of them.',
-      image: FALLBACK_IMAGE,
-      type: 'website',
-    };
+    meta = { title: STATIC.home[0], description: TAGLINE, image: FALLBACK_IMAGE, type: 'website' };
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', fresh
+    ? 'public, s-maxage=600, stale-while-revalidate=86400'
+    : 'public, s-maxage=60, stale-while-revalidate=600');
   res.status(200).send(page(meta, where));
 };

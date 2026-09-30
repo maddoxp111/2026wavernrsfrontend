@@ -107,5 +107,171 @@
       .catch(function () { return _get('/status.json?t=' + Date.now()); });
   }
 
-  window.wvStatus = { render: render, styleOnce: styleOnce, load: load, states: STATES };
+  function _timed(path, ms) {
+    var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, ms || 12000) : null;
+    return fetch(API + path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+      .then(function (r) {
+        var ms2 = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+        if (!r.ok) return { ok: false, ms: ms2, code: r.status, data: null };
+        return r.json().then(function (j) { return { ok: true, ms: ms2, code: r.status, data: j }; });
+      })
+      .catch(function (e) {
+        var ms2 = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+        return { ok: false, ms: ms2, code: 0, data: null, error: (e && e.name === 'AbortError') ? 'timed out' : 'unreachable' };
+      })
+      .then(function (x) { if (timer) clearTimeout(timer); return x; });
+  }
+
+  function _pings(n) {
+    var out = [];
+    var i = 0;
+    function next() {
+      if (i++ >= n) return Promise.resolve(out);
+      return _timed('/site/lock-status', 8000).then(function (r) { out.push(r); return next(); });
+    }
+    return next();
+  }
+
+  function probe() {
+    var paths = {
+      health: '/health', discord: '/verify/server', ye: '/ye/status', trackers: '/trackers/auto-refresh',
+      music: '/music-artists/status', pillows: '/resources/pillows-status', lp: '/lp/live-count', site: '/site/status'
+    };
+    var keys = Object.keys(paths);
+    return Promise.all([_pings(3)].concat(keys.map(function (k) { return _timed(paths[k]); }))).then(function (res) {
+      var out = { at: Date.now(), pings: res[0] };
+      keys.forEach(function (k, i) { out[k] = res[i + 1]; });
+      var good = res[0].filter(function (p) { return p.ok; }).map(function (p) { return p.ms; }).sort(function (a, b) { return a - b; });
+      out.latency = good.length ? Math.round(good[Math.floor(good.length / 2)]) : null;
+      out.pingFails = res[0].length - good.length;
+      if (!out.site.ok) {
+        return _get('/status.json?t=' + Date.now()).then(function (j) { out.site = { ok: true, ms: 0, data: j, fallback: true }; return out; }, function () { return out; });
+      }
+      return out;
+    });
+  }
+
+  function ago(iso, now) {
+    var t = typeof iso === 'number' ? iso : Date.parse(iso);
+    if (!isFinite(t)) return '';
+    var s = Math.max(0, Math.round(((now || Date.now()) - t) / 1000));
+    if (s < 45) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + 'm ago';
+    if (s < 86400) return Math.round(s / 3600) + 'h ago';
+    var d = Math.round(s / 86400);
+    return d < 45 ? d + 'd ago' : Math.round(d / 30) + 'mo ago';
+  }
+
+  function _age(iso, now) {
+    var t = Date.parse(iso);
+    return isFinite(t) ? ((now || Date.now()) - t) / 3600000 : null;
+  }
+
+  function _n(x) { return Number(x || 0).toLocaleString('en-US'); }
+
+  function components(p) {
+    var now = p.at || Date.now();
+    var h = p.health.ok ? (p.health.data || {}) : null;
+    var apiDown = !p.health.ok && p.pingFails >= 3;
+    var list = [];
+    function add(key, name, state, detail, ms) { list.push({ key: key, name: name, state: state, detail: detail, ms: ms == null || state === 'down' || state === 'unknown' ? null : Math.round(ms) }); }
+    function missing(r) { return apiDown ? 'down' : 'unknown'; }
+
+    if (p.latency == null) add('api', 'API', 'down', 'not answering', null);
+    else add('api', 'API', p.pingFails ? 'warn' : p.latency > 2500 ? 'warn' : 'ok',
+      (p.latency > 2500 ? 'slow · ' : '') + p.latency + ' ms median of ' + (3 - p.pingFails) + ' pings', p.latency);
+
+    if (!h) add('db', 'Database', missing(), 'health check ' + (p.health.error || 'failed'), p.health.ms);
+    else {
+      var pg = h.postgrest || {};
+      var st = h.database === 'down' ? 'down' : (h.database_busy || pg.live === false || (pg.restarts_last_10m || 0) > 1) ? 'warn' : 'ok';
+      var det = h.database === 'down' ? 'not answering' : h.database_busy ? 'busy, queries are queued' :
+        pg.live === false ? 'reconnecting' : (pg.restarts_last_10m ? pg.restarts_last_10m + ' reconnect' + (pg.restarts_last_10m > 1 ? 's' : '') + ' in 10m' : 'connected');
+      if (st === 'ok' && pg.since && _age(pg.since, now) < 1) det = 'connected · recovered ' + ago(pg.since, now);
+      add('db', 'Database', st, det, p.health.ms);
+    }
+
+    if (!h) add('archive', 'Archive index', missing(), 'unavailable', null);
+    else if (!h.archive_index) add('archive', 'Archive index', 'unknown', 'not reported', null);
+    else add('archive', 'Archive index', h.archive_index.ready ? 'ok' : 'warn',
+      h.archive_index.ready ? _n(h.archive_index.albums) + ' comps indexed' : 'warming up', null);
+
+    if (!h || !h.backup) add('backup', 'Backups', missing(), 'unavailable', null);
+    else {
+      var b = h.backup;
+      var bs = !b.ready ? 'unknown' : b.fresh === false ? 'warn' : 'ok';
+      add('backup', 'Backups', bs, b.newest_age_h != null ? 'newest is ' + (b.newest_age_h < 1 ? 'under an hour' : b.newest_age_h + 'h') + ' old' + (b.fresh === false ? ', overdue' : '') : 'not ready yet', null);
+    }
+
+    if (!p.discord.ok) add('discord', 'Discord bot', missing(), 'unavailable', p.discord.ms);
+    else {
+      var dd = p.discord.data || {};
+      add('discord', 'Discord bot', dd.bot_ready ? 'ok' : 'warn', dd.bot_ready ? 'online · ' + _n(dd.members) + ' members' : 'offline, verification is paused', p.discord.ms);
+    }
+
+    if (!p.pillows.ok) add('leaks', 'Leak audio host', missing(), 'unavailable', p.pillows.ms);
+    else add('leaks', 'Leak audio host', p.pillows.data && p.pillows.data.up ? 'ok' : 'warn',
+      p.pillows.data && p.pillows.data.up ? 'reachable' : 'unreachable, some leaks will not play', p.pillows.ms);
+
+    if (!p.ye.ok) add('ye', 'Ye data', missing(), 'unavailable', p.ye.ms);
+    else {
+      var y = p.ye.data || {};
+      var errs = ['tweets', 'yeezy', 'tour', 'disco'].filter(function (k) { return y[k + '_error']; });
+      var tAge = _age(y.tweets_at, now);
+      var ys = errs.length ? 'warn' : (tAge != null && tAge > 24) ? 'warn' : 'ok';
+      var yd = y.running ? 'syncing now' : errs.length ? errs.join(', ') + ' sync failed' : (tAge != null ? 'tweets synced ' + ago(y.tweets_at, now) : 'idle');
+      add('ye', 'Ye data', ys, yd, p.ye.ms);
+    }
+
+    if (!p.trackers.ok) add('trackers', 'Trackers', missing(), 'unavailable', p.trackers.ms);
+    else {
+      var tr = p.trackers.data || {};
+      var parts = [];
+      var worst = 'ok';
+      ['uyt', 'green'].forEach(function (k) {
+        var x = tr[k];
+        if (!x || !x.at) return;
+        parts.push((k === 'uyt' ? 'UYT' : 'green') + ' ' + ago(x.at, now));
+        if (k === 'uyt' && _age(x.at, now) > 24) worst = 'warn';
+      });
+      add('trackers', 'Trackers', parts.length ? worst : 'unknown', parts.length ? 'synced ' + parts.join(' · ') : 'no sync yet', p.trackers.ms);
+    }
+    return list;
+  }
+
+  function incident(p) {
+    var d = p.site && p.site.ok ? (p.site.data || {}) : null;
+    if (!d) return null;
+    var ups = Array.isArray(d.updates) ? d.updates.slice() : [];
+    ups.sort(function (a, b) { return (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0); });
+    var newest = ups.length ? Date.parse(ups[0].at) : NaN;
+    var open = !!d.locked || (d.state && d.state !== 'operational' && isFinite(newest) && (p.at || Date.now()) - newest < 72 * 3600000);
+    if (!ups.length && !d.locked && (!d.state || d.state === 'operational')) return null;
+    return { doc: d, updates: ups, active: open, newest: isFinite(newest) ? newest : null };
+  }
+
+  function overall(list, inc) {
+    var core = list.filter(function (c) { return c.key === 'api' || c.key === 'db'; });
+    var lvl = 0;
+    if (core.some(function (c) { return c.state === 'down'; })) lvl = 2;
+    else if (list.some(function (c) { return c.state === 'warn' || c.state === 'down'; })) lvl = 1;
+    var maint = false;
+    if (inc && inc.active) {
+      var s = inc.doc.state;
+      if (inc.doc.locked || s === 'disruption') lvl = 2;
+      else if (s === 'degraded') lvl = Math.max(lvl, 1);
+      else if (s === 'maintenance') maint = true;
+    }
+    if (lvl === 2) return { level: 'outage', label: 'Service outage' };
+    if (maint) return { level: 'maintenance', label: 'Scheduled maintenance' };
+    if (lvl === 1) return { level: 'degraded', label: 'Some systems degraded' };
+    return { level: 'operational', label: 'All systems operational' };
+  }
+
+  window.wvStatus = {
+    render: render, styleOnce: styleOnce, load: load, states: STATES,
+    probe: probe, components: components, incident: incident, overall: overall, ago: ago, esc: esc
+  };
 })();

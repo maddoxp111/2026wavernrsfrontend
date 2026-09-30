@@ -3,40 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
   <title>Not found — wavernrs</title>
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .nf { max-width: 900px; margin: 0 auto; }
+    .nf a { color: inherit; text-decoration: none; }
+    .nf-hero { display: grid; grid-template-columns: 260px 1fr; gap: 40px; align-items: center; padding: 36px 8px 8px; }
+    .nf-deck { position: relative; width: 240px; height: 240px; margin: 0 auto; }
+    .nf-plat { position: absolute; inset: 0; border-radius: 22px; background: linear-gradient(145deg, var(--surface-2), var(--surface)); border: 1px solid var(--hair); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+    .theme-light .nf-plat { box-shadow: 0 20px 50px rgba(20,20,40,.12); }
+    .nf-rec { position: absolute; left: 18px; top: 18px; width: 186px; height: 186px; border-radius: 50%;
+      background:
+        radial-gradient(circle, var(--brand) 0 15%, color-mix(in srgb, var(--brand) 70%, #000) 15.5% 16.5%, transparent 17%),
+        repeating-radial-gradient(circle, #151515 0 2px, #222 2.5px 3.5px),
+        #111;
+      box-shadow: 0 0 0 3px #0b0b0b, 0 10px 26px rgba(0,0,0,.45);
+      animation: nf-spin 1.8s linear infinite, nf-skip 5.4s steps(1) infinite; }
+    .nf-rec::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 20deg, transparent 0 12%, rgba(255,255,255,.13) 16%, transparent 22% 58%, rgba(255,255,255,.09) 63%, transparent 70%); }
+    .nf-rec::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--surface); }
+    .nf-arm { position: absolute; right: 16px; top: 16px; width: 80px; height: 150px; transform-origin: 62px 18px; animation: nf-arm 5.4s var(--ease) infinite; }
+    .nf-arm .base { position: absolute; right: 6px; top: 6px; width: 26px; height: 26px; border-radius: 50%; background: var(--surface-3); border: 2px solid var(--hair-strong); }
+    .nf-arm .bar { position: absolute; right: 16px; top: 18px; width: 5px; height: 116px; border-radius: 4px; background: linear-gradient(var(--text-3), var(--text-2)); transform: rotate(18deg); transform-origin: top center; }
+    .nf-arm .head { position: absolute; left: 12px; top: 118px; width: 16px; height: 24px; border-radius: 4px; background: var(--text-2); transform: rotate(18deg); }
+    @keyframes nf-spin { to { transform: rotate(360deg); } }
+    @keyframes nf-skip { 0%, 100% { translate: 0 0; } 44% { translate: 0 -3px; } 46% { translate: 0 1px; } 48% { translate: 0 0; } }
+    @keyframes nf-arm { 0%, 40% { transform: rotate(0); } 44% { transform: rotate(-7deg); } 48% { transform: rotate(2deg); } 54%, 100% { transform: rotate(0); } }
+    .nf-code { font-size: 96px; font-weight: 900; letter-spacing: -.06em; line-height: .9; background: linear-gradient(135deg, var(--brand), var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; animation: nf-glitch 5.4s steps(1) infinite; }
+    @keyframes nf-glitch { 0%, 100% { transform: none; } 44% { transform: translateX(-3px) skewX(-4deg); } 46% { transform: translateX(3px); } 48% { transform: none; } }
+    .nf-title { font-size: 28px; font-weight: 800; letter-spacing: -.03em; margin: 14px 0 0; color: var(--text); line-height: 1.15; }
+    .nf-sub { font-size: 15px; color: var(--text-2); margin-top: 10px; line-height: 1.6; word-break: break-word; }
+    .nf-sub code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-2); border: 1px solid var(--hair); padding: 2px 7px; border-radius: 6px; color: var(--text); }
+    .nf-search { display: flex; gap: 8px; margin-top: 22px; position: relative; }
+    .nf-search svg.lead { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    .nf-search input { flex: 1; min-width: 0; height: 48px; padding: 0 16px 0 44px; font-size: 15px; border-radius: 999px; }
+    .nf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; font-size: 14px; font-weight: 700; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; font-family: inherit; white-space: nowrap; transition: background .15s, transform .15s var(--ease), filter .15s; }
+    .nf-btn:hover { background: var(--surface-hover); }
+    .nf-btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .nf-btn.primary:hover { filter: brightness(1.08); background: var(--brand); }
+    .nf-btn:active { transform: scale(.97); }
+    .nf-btn[disabled] { opacity: .6; cursor: default; }
+    .nf-btn:focus-visible, .nf-card:focus-visible, .nf-tile:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+    .nf-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .nf-sec { margin-top: 44px; }
+    .nf-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--text-3); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+    .nf-h q { text-transform: none; letter-spacing: 0; font-weight: 700; color: var(--text); font-size: 14px; }
+    .nf-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .nf-card { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 14px; background: var(--surface); border: 1px solid var(--hair); min-width: 0; transition: background .15s, border-color .15s, transform .2s var(--ease); }
+    .nf-card:hover { background: var(--surface-hover); border-color: var(--hair-strong); transform: translateY(-2px); }
+    .nf-art { width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: #fff; }
+    .nf-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .nf-meta { min-width: 0; }
+    .nf-t { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .nf-s { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px; }
+    .nf-k { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text); background: var(--brand-bg); border-radius: 99px; padding: 1px 6px; margin-right: 5px; vertical-align: 1px; }
+    .theme-light .nf-k { color: var(--brand-2); }
+    .nf-skel .nf-art, .nf-skel .l { background: var(--surface-2); animation: nf-sk 1.3s ease-in-out infinite; }
+    .nf-skel .l { height: 12px; border-radius: 6px; }
+    @keyframes nf-sk { 50% { opacity: .45; } }
+    .nf-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+    .nf-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 96px; border-radius: 14px; background: var(--surface); border: 1px solid var(--hair); font-size: 13px; font-weight: 700; color: var(--text); transition: background .15s, transform .2s var(--ease); }
+    .nf-tile:hover { background: var(--surface-hover); transform: translateY(-2px); }
+    .nf-tile span { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: var(--brand-bg); color: var(--brand); }
+    @media (max-width: 820px) {
+      .nf-hero { grid-template-columns: 1fr; gap: 24px; text-align: center; padding-top: 20px; }
+      .nf-row { justify-content: center; }
+      .nf-cards { grid-template-columns: 1fr 1fr; }
+      .nf-tiles { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .nf-deck { width: 200px; height: 200px; }
+      .nf-rec { width: 150px; height: 150px; left: 16px; top: 16px; }
+      .nf-arm { transform: scale(.82); transform-origin: 62px 18px; right: 8px; }
+      .nf-code { font-size: 76px; }
+      .nf-title { font-size: 24px; }
+      .nf-cards { grid-template-columns: 1fr; gap: 8px; }
+      .nf-card:nth-child(n+5) { display: none; }
+      .nf-search .nf-btn { padding: 0 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .nf-rec, .nf-arm, .nf-code, .nf-skel .nf-art, .nf-skel .l { animation: none; }
+      .nf-card, .nf-tile, .nf-btn { transition: none; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
-  <style>
-    .nf-wrap { max-width:560px; margin:40px auto 0; text-align:center; }
-    .nf-code { font-size:72px; font-weight:800; letter-spacing:-.04em; line-height:1; background:linear-gradient(135deg,var(--brand),#8b7bd8); -webkit-background-clip:text; background-clip:text; color:transparent; }
-    .nf-title { font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:10px; }
-    .nf-sub { font-size:14px; color:var(--text-2); margin-top:8px; line-height:1.6; }
-    .nf-search { display:flex; gap:8px; margin:24px 0 18px; }
-    .nf-search input { flex:1; padding:11px 14px; font-size:14px; }
-    .nf-links { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
-    @media (max-width:520px) { .nf-code { font-size:56px; } }
-  </style>
-  <div class="nf-wrap">
-    <div class="nf-code">404</div>
-    <div class="nf-title">couldnt find that page</div>
-    <div class="nf-sub" id="nf-sub">the link might be old...or the comp got taken out of the archive</div>
-    <div class="nf-search">
-      <input id="nf-q" class="wv-input" placeholder="search comps, edits, artists..." onkeydown="if(event.key==='Enter')nfGo()">
-      <button class="wv-pill brand" onclick="nfGo()">Search</button>
+<div class="nf">
+  <div class="nf-hero">
+    <div class="nf-deck" aria-hidden="true">
+      <div class="nf-plat"></div>
+      <div class="nf-rec"></div>
+      <div class="nf-arm"><div class="base"></div><div class="bar"></div><div class="head"></div></div>
     </div>
-    <div class="nf-links">
-      <a class="wv-pill" href="/">Home</a>
-      <a class="wv-pill" href="/archive">Archive</a>
-      <a class="wv-pill" href="/charts">Charts</a>
-      <a class="wv-pill" href="/radio">Radio</a>
-      <a class="wv-pill" href="/community">Community</a>
+    <div>
+      <div class="nf-code" aria-hidden="true">404</div>
+      <h1 class="nf-title">this page skipped</h1>
+      <div class="nf-sub" id="nf-sub">the link might be old...or the comp got taken out of the archive</div>
+      <form class="nf-search" role="search" onsubmit="nfGo();return false;">
+        <svg class="lead" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="nf-q" class="wv-input" placeholder="search comps, edits, artists..." aria-label="Search wavernrs" autocomplete="off">
+        <button class="nf-btn primary" type="submit">Search</button>
+      </form>
+      <div class="nf-row">
+        <a class="nf-btn" href="/">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/></svg>
+          Go home
+        </a>
+        <button class="nf-btn" type="button" id="nf-rand">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+          Surprise me
+        </button>
+      </div>
     </div>
   </div>
+
+  <div class="nf-sec" id="nf-sug" hidden>
+    <h2 class="nf-h" id="nf-sug-h">did you mean</h2>
+    <div class="nf-cards" id="nf-cards"></div>
+  </div>
+
+  <div class="nf-sec">
+    <h2 class="nf-h">or jump back in</h2>
+    <div class="nf-tiles" id="nf-tiles"></div>
+  </div>
+</div>
 </div>
 
 <script src="/js/api.js?v=6288d60cd337"></script>
@@ -49,12 +143,121 @@
     if (q.trim()) navigate('/search?q=' + encodeURIComponent(q.trim()));
   };
   (function () {
-    var p = location.pathname.replace(/^\//, '');
-    var sub = document.getElementById('nf-sub');
-    if (p && sub) sub.textContent = '"' + p.slice(0, 60) + '" doesnt exist...the link might be old or the comp got taken out of the archive';
-    var i = document.getElementById('nf-q');
-    var guess = decodeURIComponent(p.replace(/\.html$/, '').replace(/[-_\/]+/g, ' ')).trim();
-    if (i && guess && guess.length < 40) i.value = guess;
+    var root = document.querySelector('#view .nf');
+    if (!root) return;
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) % 360; }
+    function $(id) { return document.getElementById(id); }
+    function img(u) { return (typeof thumb === 'function') ? thumb(u, 120) : u; }
+
+    var raw = location.pathname.replace(/^\/+/, '');
+    var p = raw;
+    try { p = decodeURIComponent(raw); } catch (_) {}
+    var sub = $('nf-sub');
+    if (p && sub) sub.innerHTML = 'nothing lives at <code>/' + esc(p.slice(0, 60)) + (p.length > 60 ? '…' : '') + '</code>. the link might be old, or the comp got taken out of the archive.';
+
+    // Best guess at what they were after: the last readable bit of the path.
+    var parts = p.replace(/\.html?$/i, '').split('/').filter(Boolean);
+    var guess = '';
+    for (var i = parts.length - 1; i >= 0 && !guess; i--) {
+      var w = parts[i].replace(/[-_+.]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (/^[0-9a-f]{8}-?[0-9a-f]{4}/i.test(parts[i]) || /^\d+$/.test(w) || w.length < 3) continue;
+      guess = w;
+    }
+    if (guess.length > 40) guess = guess.slice(0, 40).replace(/\s\S*$/, '');
+    var input = $('nf-q');
+    if (input && guess) input.value = guess;
+
+    // ── did you mean ────────────────────────────────────────────────────
+    var sec = $('nf-sug'), cards = $('nf-cards');
+    function card(o) {
+      var h = hue(o.title), L = esc(String(o.title || '?').trim().charAt(0).toUpperCase());
+      return '<a class="nf-card" href="' + esc(o.href) + '"><span class="nf-art" style="background:linear-gradient(135deg,hsl(' + h + ',55%,45%),hsl(' + ((h + 50) % 360) + ',60%,28%))">' +
+        (o.art ? '<img src="' + esc(img(o.art)) + '" alt="" loading="lazy" data-l="' + L + '" onerror="this.replaceWith(document.createTextNode(this.dataset.l))">' : L) + '</span>' +
+        '<span class="nf-meta"><span class="nf-t" style="display:block">' + esc(o.title) + '</span><span class="nf-s" style="display:block"><span class="nf-k">' + esc(o.kind) + '</span>' + esc(o.sub || '') + '</span></span></a>';
+    }
+    function skel(n) {
+      var s = '';
+      for (var i = 0; i < n; i++) s += '<div class="nf-card nf-skel" aria-hidden="true"><span class="nf-art"></span><span class="nf-meta" style="flex:1"><span class="l" style="display:block;width:70%"></span><span class="l" style="display:block;width:45%;margin-top:8px"></span></span></div>';
+      return s;
+    }
+    function show(list, heading) {
+      if (!root.isConnected) return;
+      if (!list.length) { sec.hidden = true; return; }
+      $('nf-sug-h').innerHTML = heading;
+      cards.innerHTML = list.slice(0, 6).map(card).join('');
+      sec.hidden = false;
+    }
+    function randomFallback() {
+      if (typeof api !== 'function') { sec.hidden = true; return; }
+      return api('/archive/random?n=6').then(function (d) {
+        var items = (d && d.items) || [];
+        show(items.map(function (a) {
+          return { title: a.title, art: a.cover_url, href: '/album?id=' + encodeURIComponent(a.id), kind: 'comp', sub: a.archive_artist_name || (a.track_count ? a.track_count + ' songs' : '') };
+        }), 'try one of these');
+      }).catch(function () { sec.hidden = true; });
+    }
+    if (typeof api === 'function') {
+      sec.hidden = false;
+      cards.innerHTML = skel(6);
+      if (guess) $('nf-sug-h').innerHTML = 'did you mean <q>' + esc(guess) + '</q>';
+      else $('nf-sug-h').textContent = 'loading picks';
+      var lookup = function (g, retried) {
+        var q = encodeURIComponent(g);
+        Promise.all([
+          api('/search?q=' + q).catch(function () { return null; }),
+          api('/ye/search?q=' + q).catch(function () { return null; })
+        ]).then(function (r) {
+          var s = r[0] || {}, y = r[1] || {}, out = [], seen = {};
+          function add(o, key) { if (!o.title || seen[key]) return; seen[key] = 1; out.push(o); }
+          (s.albums || []).slice(0, 3).forEach(function (a) { add({ title: a.title, art: a.cover_url, href: '/album?id=' + encodeURIComponent(a.id), kind: 'comp', sub: (a.artists && a.artists.display_name) || '' }, 'a' + a.id); });
+          (s.archived || []).slice(0, 3).forEach(function (a) { add({ title: a.title, art: a.cover_url, href: '/album?id=' + encodeURIComponent(a.id), kind: 'archive', sub: a.archive_artist_name || '' }, 'a' + a.id); });
+          (y.songs || []).slice(0, 2).forEach(function (t) { add({ title: t.title, art: t.cover, href: '/resources?view=song&t=' + encodeURIComponent(t.title), kind: 'ye song', sub: [t.album, t.year].filter(Boolean).join(' · ') }, 'y' + t.title); });
+          (s.tracks || []).slice(0, 3).forEach(function (t) { add({ title: t.title, art: t.cover_url || (t.albums && t.albums.cover_url), href: '/track?id=' + encodeURIComponent(t.id), kind: 'edit', sub: (t.artists && t.artists.display_name) || (t.albums && t.albums.title) || '' }, 't' + t.title); });
+          if (out.length) show(out, 'did you mean <q>' + esc(g) + '</q>');
+          else if (!retried && g.indexOf(' ') > 0) lookup(g.replace(/\s+\S+$/, ''), true);
+          else randomFallback();
+        });
+      };
+      if (guess) {
+        lookup(guess, false);
+      } else {
+        randomFallback();
+      }
+    }
+
+    // ── surprise me ─────────────────────────────────────────────────────
+    var rb = $('nf-rand');
+    if (rb) rb.onclick = function () {
+      if (typeof api !== 'function') return;
+      rb.disabled = true;
+      api('/archive/random?n=1').then(function (d) {
+        var a = d && d.items && d.items[0];
+        if (!a) throw new Error('none');
+        if (typeof window.playCompById === 'function') {
+          return window.playCompById(a.id, { album: a }).then(function (ok) {
+            if (ok !== false && typeof navigate === 'function') navigate('/album?id=' + encodeURIComponent(a.id));
+          });
+        }
+        if (typeof navigate === 'function') navigate('/album?id=' + encodeURIComponent(a.id));
+      }).catch(function () {
+        if (typeof wvToast === 'function') wvToast('couldnt pick one right now, try again', 'error');
+      }).then(function () { if (rb.isConnected) rb.disabled = false; });
+    };
+
+    // ── quick links ─────────────────────────────────────────────────────
+    var I = {
+      home: '<path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/>',
+      archive: '<path d="M3 4h18v4H3z"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+      chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+      radio: '<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/>',
+      folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+      people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/>'
+    };
+    var T = [['Home', '/', 'home'], ['Archive', '/archive', 'archive'], ['Charts', '/charts', 'chart'], ['Radio', '/radio', 'radio'], ['Ye archive', '/resources', 'folder'], ['Community', '/community', 'people']];
+    $('nf-tiles').innerHTML = T.map(function (t) {
+      return '<a class="nf-tile" href="' + t[1] + '"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + I[t[2]] + '</svg></span>' + t[0] + '</a>';
+    }).join('');
   })();
   if (typeof initPlayer === 'function') initPlayer();
 </script>

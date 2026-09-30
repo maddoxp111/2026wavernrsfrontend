@@ -7,13 +7,136 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    /* ── comp page: skeleton ─────────────────────────────── */
+    .alb-sk { padding: 28px 0; }
+    .alb-sk-hero { display: flex; gap: 24px; align-items: flex-end; padding: 4px 0 20px; }
+    .alb-sk-b, .alb-sk-art { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
+    .alb-sk-art { width: 176px; height: 176px; flex-shrink: 0; border-radius: var(--r-md, 6px); }
+    .alb-sk-b::after, .alb-sk-art::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 7%, transparent), transparent); animation: albSk 1.3s ease-in-out infinite; }
+    @keyframes albSk { to { transform: translateX(100%); } }
+    .alb-sk-body { flex: 1; min-width: 0; display: grid; gap: 10px; padding-bottom: 4px; }
+    .alb-sk-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; }
+    @media (max-width: 640px) { .alb-sk-hero { flex-direction: column; align-items: center; } .alb-sk-art { width: min(72vw, 260px); height: min(72vw, 260px); } .alb-sk-body { width: 100%; justify-items: center; } }
+
+    /* ── tracklist rows ──────────────────────────────────── */
+    #tracklist .track-row { position: relative; outline: none; }
+    #tracklist .track-row:focus-visible { box-shadow: inset 0 0 0 2px var(--brand); }
+    #tracklist .track-row.alb-flash { animation: albFlash 1.6s ease-out; }
+    @keyframes albFlash { 0%, 30% { background: var(--brand-bg); } 100% { background: transparent; } }
+    .alb-num { position: relative; width: 24px; height: 20px; display: grid; place-items: center end; font-variant-numeric: tabular-nums; }
+    .alb-num > * { grid-area: 1 / 1; }
+    .alb-num .alb-pl { width: 14px; height: 14px; color: var(--text); opacity: 0; justify-self: end; }
+    .alb-eq { display: none; align-items: flex-end; gap: 2px; height: 14px; justify-self: end; }
+    .alb-eq i { display: block; width: 3px; height: 100%; border-radius: 1px; background: var(--brand); transform-origin: bottom; animation: albEq 1s ease-in-out infinite; }
+    .alb-eq i:nth-child(2) { animation-duration: .8s; animation-delay: -.35s; }
+    .alb-eq i:nth-child(3) { animation-duration: 1.15s; animation-delay: -.6s; }
+    @keyframes albEq { 0%, 100% { transform: scaleY(.3); } 30% { transform: scaleY(1); } 60% { transform: scaleY(.55); } }
+    .track-row.playing .alb-eq { display: flex; }
+    .track-row.playing .alb-n { visibility: hidden; }
+    .track-row.playing.is-paused .alb-eq i { animation-play-state: paused; }
+    @media (hover: hover) {
+      #tracklist .track-row:not(.is-locked):hover .alb-n,
+      #tracklist .track-row:not(.is-locked):hover .alb-eq { visibility: hidden; }
+      #tracklist .track-row:not(.is-locked):hover .alb-pl { opacity: 1; }
+      #tracklist .track-row.playing:not(.is-paused):hover .alb-pl { opacity: 0; }
+      #tracklist .track-row.playing:not(.is-paused):hover .alb-pz { opacity: 1; }
+    }
+    .alb-num .alb-pz { width: 14px; height: 14px; color: var(--text); opacity: 0; justify-self: end; }
+    #tracklist .track-row:focus-visible .alb-n { visibility: hidden; }
+    #tracklist .track-row:focus-visible .alb-pl { opacity: 1; }
+    #tracklist .track-row .alb-cv .alb-eq-cv { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; align-items: center; justify-content: center; gap: 2px; background: rgba(0,0,0,.5); z-index: 1; }
+    .alb-cv .alb-eq-cv i { height: 14px; background: #fff; }
+    .track-row.playing .track-row-title { color: var(--brand); }
+    .alb-dur { font-size: 12.5px; color: var(--text-3); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 34px; text-align: right; }
+    .alb-dur:empty { visibility: hidden; }
+    .alb-ib { width: 36px; height: 36px; flex-shrink: 0; display: inline-grid; place-items: center; border: 0; border-radius: 50%; background: none; color: var(--text-3); cursor: pointer; font: inherit; padding: 0; transition: background .12s, color .12s, opacity .12s; }
+    .alb-ib:hover { background: var(--glass-pill-bg); color: var(--text); }
+    .alb-ib:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; color: var(--text); }
+    .alb-ib svg { width: 18px; height: 18px; }
+    .alb-open { font-size: 12px; color: var(--text-3); padding: 4px 8px; white-space: nowrap; text-decoration: none; border-radius: 6px; }
+    .alb-open:hover { color: var(--text); }
+    @media (hover: hover) and (min-width: 769px) {
+      #tracklist .track-row .alb-save, #tracklist .track-row .alb-more, #tracklist .track-row .alb-open { opacity: 0; }
+      #tracklist .track-row:hover .alb-save, #tracklist .track-row:hover .alb-more, #tracklist .track-row:hover .alb-open,
+      #tracklist .track-row:focus-within .alb-save, #tracklist .track-row:focus-within .alb-more, #tracklist .track-row:focus-within .alb-open,
+      #tracklist .track-row .alb-more[aria-expanded="true"] { opacity: 1; }
+    }
+    @media (max-width: 768px) {
+      .alb-save, .alb-open { display: none !important; }
+      #tracklist .track-row.playing .alb-cv .alb-eq-cv { display: flex; }
+      #tracklist .alb-num { display: none; }
+      #tracklist .track-row { gap: 10px; padding-right: 0; }
+      .alb-ib.alb-more { width: 40px; height: 44px; margin-left: -4px; }
+      #tracklist .track-row-plays { display: none; }
+    }
+
+    /* ── hero runtime + deep link ─────────────────────────── */
+    .alb-rt { white-space: nowrap; }
+    .wv-btn-play .alb-pi { width: 12px; height: 12px; }
+    #alb-play { min-width: 104px; justify-content: center; }
+    #like-btn.wv-icon-btn { width: auto; min-width: 36px; height: 36px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ── sticky compact header ────────────────────────────── */
+    .alb-stk-wrap { position: sticky; top: 0; height: 0; z-index: 40; }
+    .alb-stk { position: absolute; left: -12px; right: -12px; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 0 0 16px 16px;
+      background: color-mix(in srgb, var(--page-bg, var(--bg)) 78%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px);
+      border: 1px solid var(--hair); border-top: 0; box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      transform: translateY(-110%); opacity: 0; pointer-events: none; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
+    .alb-stk.show { transform: none; opacity: 1; pointer-events: auto; }
+    .alb-stk-play { width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--brand); color: #14121c; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; transition: transform .12s, filter .12s; }
+    .theme-light .alb-stk-play { color: #fff; }
+    .alb-stk-play:hover { filter: brightness(1.1); transform: scale(1.04); }
+    .alb-stk-play:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+    .alb-stk-play svg { width: 16px; height: 16px; }
+    .alb-stk-cv { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+    .alb-stk-cv img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .alb-stk-tx { min-width: 0; flex: 1; cursor: pointer; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; }
+    .alb-stk-t { font-size: 15px; font-weight: 750; letter-spacing: -.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alb-stk-s { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .alb-stk-s .on { color: var(--brand); font-weight: 600; }
+    @media (max-width: 768px) { .alb-stk { left: -16px; right: -16px; border-radius: 0 0 14px 14px; border-left: 0; border-right: 0; padding: 8px 16px; } }
+
+    /* ── row menu ─────────────────────────────────────────── */
+    .alb-menu-ov { position: fixed; inset: 0; z-index: 9400; background: rgba(0,0,0,.45); opacity: 0; transition: opacity .18s ease; }
+    .alb-menu-ov.in { opacity: 1; }
+    .alb-menu { position: fixed; z-index: 9401; min-width: 232px; max-width: calc(100vw - 24px); padding: 6px; border-radius: 14px; background: var(--elevated, var(--surface)); color: var(--text);
+      border: 1px solid var(--hair-strong, var(--border)); box-shadow: 0 18px 50px rgba(0,0,0,.38), 0 2px 8px rgba(0,0,0,.2);
+      opacity: 0; transform: scale(.97); transform-origin: top right; transition: opacity .14s ease, transform .16s cubic-bezier(.2,.9,.3,1.2); }
+    .alb-menu.in { opacity: 1; transform: none; }
+    .alb-menu-hd { display: none; }
+    .alb-menu button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; font-size: 14px; font-weight: 550; text-align: left; cursor: pointer; }
+    .alb-menu button svg { width: 18px; height: 18px; color: var(--text-2); flex-shrink: 0; }
+    .alb-menu button:hover, .alb-menu button:focus-visible { background: var(--surface-hover, var(--surface-2)); outline: none; }
+    .alb-menu hr { border: 0; border-top: 1px solid var(--hair); margin: 5px 6px; }
+    @media (max-width: 768px) {
+      .alb-menu { left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom)); max-width: none; min-width: 0; padding: 8px; border-radius: 20px; transform: translateY(24px); transform-origin: bottom center; }
+      .alb-menu.in { transform: none; }
+      .alb-menu-hd { display: flex; align-items: center; gap: 12px; padding: 6px 8px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--hair); }
+      .alb-menu-hd .cv { width: 48px; height: 48px; border-radius: 9px; overflow: hidden; position: relative; flex-shrink: 0; }
+      .alb-menu-hd .cv img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .alb-menu-hd .t { font-weight: 750; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .alb-menu-hd .s { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .alb-menu button { min-height: 48px; font-size: 15px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .alb-eq i, .alb-sk-b::after, .alb-sk-art::after, #tracklist .track-row.alb-flash { animation: none !important; }
+      .alb-eq i { transform: scaleY(.6); }
+      .alb-stk, .alb-menu, .alb-menu-ov { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
 <div class="container" style="max-width:1100px;">
   <div id="album-container">
-    <div class="loading"><div class="spinner"></div></div>
+    <div class="alb-sk" aria-busy="true" aria-label="loading comp">
+      <div class="alb-sk-hero"><div class="alb-sk-art"></div><div class="alb-sk-body"><div class="alb-sk-b" style="width:90px;height:10px;"></div><div class="alb-sk-b" style="width:min(420px,80%);height:30px;"></div><div class="alb-sk-b" style="width:160px;height:13px;"></div><div class="alb-sk-b" style="width:220px;height:11px;"></div><div style="display:flex;gap:9px;margin-top:6px;"><div class="alb-sk-b" style="width:92px;height:38px;border-radius:99px;"></div><div class="alb-sk-b" style="width:104px;height:38px;border-radius:99px;"></div></div></div></div>
+      <div class="alb-sk-b" style="width:110px;height:18px;margin:14px 0 10px;"></div>
+      <div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:46%;height:12px;"></div><div class="alb-sk-b" style="width:22%;height:10px;"></div></div></div><div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:58%;height:12px;"></div><div class="alb-sk-b" style="width:30%;height:10px;"></div></div></div><div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:38%;height:12px;"></div><div class="alb-sk-b" style="width:18%;height:10px;"></div></div></div><div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:52%;height:12px;"></div><div class="alb-sk-b" style="width:26%;height:10px;"></div></div></div><div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:44%;height:12px;"></div><div class="alb-sk-b" style="width:20%;height:10px;"></div></div></div><div class="alb-sk-row"><div class="alb-sk-b" style="width:40px;height:40px;flex-shrink:0;"></div><div style="flex:1;display:grid;gap:7px;"><div class="alb-sk-b" style="width:60%;height:12px;"></div><div class="alb-sk-b" style="width:28%;height:10px;"></div></div></div>
+    </div>
   </div>
 </div>
 </div><!-- /view -->
@@ -68,6 +191,7 @@
       document.title = `${album.title} — wavernrs stream`;
       await renderAlbum();
       if (new URLSearchParams(location.search).get('play') === '1' && albumTracks.length) { try { playAll(); } catch (_) {} }
+      else { try { albumDeepLink(); } catch (_) {} }
     loadAlbumComments();
       loadMoreLikeThis();
       loadVsOfficial();
@@ -154,6 +278,11 @@
       <div style="padding:28px 0;">
         ${freshBanner}
         <div id="staff-bar" class="wv-staff-bar" style="display:none;"></div>
+        ${_playable ? `<div class="alb-stk-wrap"><div class="alb-stk" id="alb-stk" aria-hidden="true">
+          <button type="button" class="alb-stk-play" id="alb-stk-play" onclick="albumHeroPlay()" aria-label="Play ${escHtml(album.title || 'comp')}" tabindex="-1"></button>
+          <div class="alb-stk-cv" style="background:${coverBg};">${album.cover_url ? `<img src="${escHtml(typeof wvImg === 'function' ? wvImg(album.cover_url, 96) : album.cover_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
+          <button type="button" class="alb-stk-tx" onclick="albumScrollTop()" tabindex="-1"><div class="alb-stk-t">${escHtml(album.title || '')}</div><div class="alb-stk-s" id="alb-stk-s">${escHtml(album.is_archive ? (album.archive_artist_name || 'Unknown') : (artist.display_name || ''))}</div></button>
+        </div></div>` : ''}
         <div class="wv-hero">
           <div class="wv-hero-art" style="background:${coverBg};">
             ${coverInner}
@@ -174,14 +303,14 @@
             </div>
             <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
                 ? '<a href="/eras" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
-                : escHtml(eraName)) + ' · ' : ''}${albumTracks.length ? albumTracks.length + ' edit' + (albumTracks.length !== 1 ? 's' : '') : 'Upcoming'}${_isUpcoming ? ' · Out ' + escHtml(_outLabel) : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
+                : escHtml(eraName)) + ' · ' : ''}${albumTracks.length ? albumTracks.length + ' edit' + (albumTracks.length !== 1 ? 's' : '') : 'Upcoming'}<span class="alb-rt" id="alb-runtime"></span>${_isUpcoming ? ' · Out ' + escHtml(_outLabel) : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
             ${album.description ? `<div class="wv-hero-desc">${escHtml(typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(album.description) : album.description)}</div>` : ''}
             ${_isDraft && _isOwner ? '<div class="wv-release-note draft">this is a draft...only you and staff can see it. release it when its ready</div>' : ''}
             ${_isUpcoming ? '<div class="wv-release-note">Out ' + escHtml(_outLabel) + ' <span id="wv-countdown" data-at="' + _releaseAt.getTime() + '"></span>' + (_isOwner ? ' · you can already play it since its yours' : '') + '</div>' : ''}
             <div class="wv-hero-actions">
               ${_playable ? '' : (albumTracks.length ? '<span class="wv-upcoming-note">the songs unlock on release day</span>' : '<span class="wv-upcoming-note">not out yet...the edits show up here once it drops</span>')}
-              <button class="wv-btn-play" onclick="playAll()"${_playable ? '' : ' style="display:none"'}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play
+              <button class="wv-btn-play" id="alb-play" onclick="albumHeroPlay()"${_playable ? '' : ' style="display:none"'}>
+                <svg class="alb-pi" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg><span>Play</span>
               </button>
               <button class="wv-btn-ghost" onclick="shuffleAll()"${_playable ? '' : ' style="display:none"'}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>Shuffle
@@ -240,17 +369,18 @@
               }).replace(/"/g, '&quot;');
               const sideHead = _sides.filter(function (sd) { return sd.start === i; }).map(function (sd) { return '<div class="wv-side-head">' + escHtml(sd.name) + '</div>'; }).join('');
               return sideHead + `
-                <div class="track-row${_lockedForMe ? ' is-locked' : ''}" id="trow-${i}" onclick="${_lockedForMe ? 'albumLockedTap()' : 'playAtIndex(' + i + ')'}">
-                  <div class="track-row-num">${i + 1}</div>
-                  <div style="${tdCoverStyle}">${tdCoverImg}</div>
+                <div class="track-row${_lockedForMe ? ' is-locked' : ''}" id="trow-${i}" data-i="${i}" data-tid="${escHtml(td.id || '')}" tabindex="0" onclick="${_lockedForMe ? 'albumLockedTap()' : 'albumRowClick(' + i + ', event)'}">
+                  <div class="track-row-num alb-num"><span class="alb-n">${i + 1}</span><span class="alb-eq" aria-hidden="true"><i></i><i></i><i></i></span><svg class="alb-pl" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg><svg class="alb-pz" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.5 4.5h3.6v15H6.5zM13.9 4.5h3.6v15h-3.6z"/></svg></div>
+                  <div class="alb-cv" style="${tdCoverStyle}">${tdCoverImg}<span class="alb-eq alb-eq-cv" aria-hidden="true"><i></i><i></i><i></i></span></div>
                   <div class="track-row-info">
                     <div class="track-row-title">${escHtml(cr ? cr.title : (td.title || 'Unknown'))}</div>
                     <div class="track-row-artist">${cr ? wvCreditLinks(cr.credit) : escHtml(album.is_archive ? (album.archive_artist_name || 'Unknown') : (td.artists?.display_name || artist.display_name || 'Unknown'))}</div>
                   </div>
                   ${_lockedForMe ? '<span class="track-row-plays">🔒</span>' : `<span class="track-row-plays">${fmtNum(td.play_count)} plays</span>`}
-                  <button onclick="event.stopPropagation();openAddToPlaylist(${tdObjAttr})"
-                    style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:18px;color:var(--text-3);flex-shrink:0;line-height:1;" title="save to a playlist">＋</button>
-                  <a href="/track?id=${td.id}" onclick="event.stopPropagation()" style="font-size:12px;color:var(--text-3);padding:4px 8px;white-space:nowrap;">Open</a>
+                  <span class="alb-dur" id="adur-${i}"></span>
+                  <button type="button" class="alb-ib alb-save" onclick="event.stopPropagation();openAddToPlaylist(${tdObjAttr})" title="save to a playlist" aria-label="save ${escHtml(cr ? cr.title : (td.title || 'track'))} to a playlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                  ${_lockedForMe ? '' : `<button type="button" class="alb-ib alb-more" onclick="event.stopPropagation();albumRowMenu(${i}, this)" aria-haspopup="menu" aria-expanded="false" title="more" aria-label="more options for ${escHtml(cr ? cr.title : (td.title || 'track'))}"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>`}
+                  <a class="alb-open" href="/track?id=${escHtml(td.id)}" onclick="event.stopPropagation()" tabindex="-1">Open</a>
                 </div>`;
             }).join('')}
         </div>
@@ -287,6 +417,7 @@
     if (typeof wireIACoverRetry === 'function') {
       document.querySelectorAll('#album-container img').forEach(wireIACoverRetry);
     }
+    try { albumEnhance(); } catch (e) { console.error('album enhance', e); }
   }
 
   var albumLiked = false;
@@ -759,6 +890,11 @@
   };
 
   function copyLink() {
+    if (album && typeof window.wvShare === 'function') {
+      var who = album.is_archive ? (album.archive_artist_name || '') : ((album.artists && album.artists.display_name) || '');
+      window.wvShare({ kind: 'album', id: album.id, title: album.title || '', artist: who, cover: album.cover_url || '' });
+      return;
+    }
     var url = window.location.href;
     var title = album ? album.title : 'wavernrs';
     if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
@@ -804,11 +940,9 @@
     });
   }
 
-  function _highlightAlbumRow(index) {
-    document.querySelectorAll('#tracklist .track-row').forEach((row, i) => {
-      row.classList.toggle('playing', i === index);
-    });
-  }
+  // Row highlight follows the playing track's id (not its queue index), so it
+  // survives queue reorders and never lights up rows on a different comp.
+  function _highlightAlbumRow() { albumSyncNow(); }
 
   function shuffleAll() {
     if (!albumTracks.length) return;
@@ -820,7 +954,7 @@
     var q = _buildAlbumQueue();
     var shuffled = order.map(function(i) { return q[i]; }).filter(Boolean);
     if (!shuffled.length) return;
-    setPlayerQueue(shuffled, 0, function(idx) { _highlightAlbumRow(order[idx]); });
+    setPlayerQueue(shuffled, 0, _highlightAlbumRow);
     playQueueIndex(0);
   }
 
@@ -832,7 +966,7 @@
     // controls) work even after navigating away from this page.
     setPlayerQueue(_buildAlbumQueue(), index, _highlightAlbumRow);
     playQueueIndex(index);
-    _highlightAlbumRow(index);
+    _highlightAlbumRow();
   }
 
   // How the comp lines up with the released album for its era.
@@ -1671,6 +1805,374 @@
           'title="its in ' + escHtml(x.tn) + ' · ' + escHtml(x.era) + '">' + (x.s ? '⭐ ' : '') + '📋 ' + escHtml(short) + ' · ' + escHtml(x.era) + '</a>';
       }).join('');
     } catch (e) { box.innerHTML = ''; }
+  }
+
+  // ── Now playing, sticky header, row menu, runtimes, deep links ─────────────
+  var _albLpAt = 0;
+  var _albProbeGen = 0;
+  var _AI = {
+    play: '<path d="M7.5 4.9 19 12 7.5 19.1Z"/>',
+    pause: '<path d="M6.5 4.5h3.6v15H6.5zM13.9 4.5h3.6v15h-3.6z"/>'
+  };
+
+  function albumIsCurrent() {
+    try { return !!(album && currentTrack && currentTrack._album_id && String(currentTrack._album_id) === String(album.id)); } catch (_) { return false; }
+  }
+  function _albPlaying() { try { return !!(audio && !audio.paused); } catch (_) { return false; } }
+
+  function albumSyncNow() {
+    var list = document.getElementById('tracklist');
+    if (!list || !album) return;
+    var cur = albumIsCurrent();
+    var tid = cur ? String(currentTrack.id) : '';
+    var playing = _albPlaying();
+    var curTitle = '';
+    list.querySelectorAll('.track-row[data-tid]').forEach(function (row) {
+      var on = !!tid && row.getAttribute('data-tid') === tid;
+      row.classList.toggle('playing', on);
+      row.classList.toggle('is-paused', on && !playing);
+      if (on) { row.setAttribute('aria-current', 'true'); curTitle = (row.querySelector('.track-row-title') || {}).textContent || ''; }
+      else row.removeAttribute('aria-current');
+    });
+    var state = cur ? (playing ? 'pause' : 'resume') : 'play';
+    var hb = document.getElementById('alb-play');
+    if (hb && hb.getAttribute('data-st') !== state) {
+      hb.setAttribute('data-st', state);
+      hb.innerHTML = '<svg class="alb-pi" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + (state === 'pause' ? _AI.pause : _AI.play) + '</svg><span>' + (state === 'pause' ? 'Pause' : state === 'resume' ? 'Resume' : 'Play') + '</span>';
+    }
+    var sb = document.getElementById('alb-stk-play');
+    if (sb && sb.getAttribute('data-st') !== state) {
+      sb.setAttribute('data-st', state);
+      sb.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' + (state === 'pause' ? _AI.pause : _AI.play) + '</svg>';
+      sb.setAttribute('aria-label', state === 'pause' ? 'Pause' : (state === 'resume' ? 'Resume ' : 'Play ') + (album.title || 'comp'));
+    }
+    var ss = document.getElementById('alb-stk-s');
+    if (ss) {
+      var who = album.is_archive ? (album.archive_artist_name || 'Unknown') : ((album.artists && album.artists.display_name) || '');
+      ss.innerHTML = cur && curTitle ? '<span class="on">' + (playing ? 'now playing' : 'paused') + '</span> · ' + escHtml(curTitle) : escHtml(who);
+    }
+  }
+
+  function albumHeroPlay() {
+    if (albumIsCurrent() && typeof togglePlay === 'function') { togglePlay(); return; }
+    playAll();
+  }
+
+  function albumRowClick(i, e) {
+    if (Date.now() - _albLpAt < 700) return;
+    if (e && e.target && e.target.closest && e.target.closest('a, button')) return;
+    var row = document.getElementById('trow-' + i);
+    if (row && row.classList.contains('playing') && albumIsCurrent() && typeof togglePlay === 'function') { togglePlay(); return; }
+    playAtIndex(i);
+  }
+
+  function albumScrollTop() {
+    var sc = document.getElementById('wv-content');
+    var smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (sc) sc.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' }); else window.scrollTo(0, 0);
+  }
+
+  // ── durations (cached per track id in wv_dur) ──
+  function _albDurRead() { try { return JSON.parse(localStorage.getItem('wv_dur') || '{}') || {}; } catch (_) { return {}; } }
+  function _albDurSave(id, secs) {
+    if (!id || !isFinite(secs) || secs <= 0 || secs > 6 * 3600) return;
+    var m = _albDurRead();
+    if (m[id] === Math.round(secs)) return;
+    delete m[id];
+    m[id] = Math.round(secs);
+    var keys = Object.keys(m);
+    if (keys.length > 2000) keys.slice(0, keys.length - 2000).forEach(function (k) { delete m[k]; });
+    try { localStorage.setItem('wv_dur', JSON.stringify(m)); } catch (_) {}
+  }
+  function _albFmt(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function albumPaintDurations() {
+    if (!album) return;
+    var m = _albDurRead(), total = 0, known = 0;
+    albumTracks.forEach(function (t, i) {
+      var td = t.tracks || t, d = m[td.id];
+      var el = document.getElementById('adur-' + i);
+      if (d) { known++; total += d; if (el && !el.textContent) el.textContent = _albFmt(d); }
+    });
+    var rt = document.getElementById('alb-runtime');
+    if (!rt) return;
+    if (albumTracks.length && known === albumTracks.length) {
+      var mins = Math.max(1, Math.round(total / 60));
+      rt.textContent = ' · ' + (mins >= 60 ? Math.floor(mins / 60) + ' hr' + (mins % 60 ? ' ' + (mins % 60) + ' min' : '') : mins + ' min');
+      rt.title = 'total runtime ' + _albFmt(total);
+    } else rt.textContent = '';
+  }
+  function _albProbeOne(url) {
+    return new Promise(function (resolve) {
+      var a = new Audio(), done = false;
+      var fin = function (v) { if (done) return; done = true; clearTimeout(to); a.onloadedmetadata = a.onerror = null; try { a.removeAttribute('src'); a.load(); } catch (_) {} resolve(v); };
+      var to = setTimeout(function () { fin(null); }, 20000);
+      a.preload = 'metadata';
+      a.muted = true;
+      a.onloadedmetadata = function () { fin(isFinite(a.duration) ? a.duration : null); };
+      a.onerror = function () { fin(null); };
+      a.src = url;
+    });
+  }
+  function albumProbeDurations() {
+    if (!album || window._albumLocked || albumTracks.length > 40) return;
+    var gen = ++_albProbeGen;
+    var m = _albDurRead();
+    var todo = albumTracks.map(function (t) { return t.tracks || t; }).filter(function (td) { return td && td.id && td.ia_url && !m[td.id]; });
+    if (!todo.length) return;
+    var worker = async function () {
+      while (todo.length && gen === _albProbeGen) {
+        var td = todo.shift();
+        var d = await _albProbeOne(td.ia_url);
+        if (gen !== _albProbeGen) return;
+        if (d) { _albDurSave(td.id, d); albumPaintDurations(); }
+      }
+    };
+    worker(); worker();
+  }
+
+  // ── row menu (⋯, right click, long press) ──
+  function _albTrackObj(i) {
+    var q = _buildAlbumQueue()[i];
+    return q || null;
+  }
+  function albumCloseMenu() {
+    var m = document.getElementById('alb-menu');
+    if (m && m._off) m._off();
+    if (m) m.remove();
+    var ov = document.getElementById('alb-menu-ov'); if (ov) ov.remove();
+    document.querySelectorAll('#tracklist .alb-more[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }
+  function _albTrackUrl(id) { return location.origin + '/track?id=' + encodeURIComponent(id); }
+  function _albCopy(text, msg) {
+    var ok = function () { if (typeof wvToast === 'function') wvToast(msg || 'link copied'); };
+    var bad = function () { if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error'); };
+    try { navigator.clipboard.writeText(text).then(ok, bad); } catch (_) { bad(); }
+  }
+  function albumRowMenu(i, anchor, x, y) {
+    var t = _albTrackObj(i);
+    if (!t) return;
+    var wasOpen = document.getElementById('alb-menu');
+    if (wasOpen && wasOpen.getAttribute('data-i') === String(i) && anchor && anchor.getAttribute('aria-expanded') === 'true') { albumCloseMenu(); return; }
+    albumCloseMenu();
+    var row = document.getElementById('trow-' + i);
+    var mobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    var ic = function (p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; };
+    var items = [
+      ['next', 'Play next', ic('<path d="M4 6h10M4 12h10M4 18h6"/><path d="m16 15 5 3-5 3z" fill="currentColor"/>')],
+      ['queue', 'Add to queue', ic('<path d="M4 6h16M4 12h16M4 18h9"/><path d="M18 15v6M15 18h6"/>')],
+      ['playlist', 'Add to playlist', ic('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>')],
+      '-',
+      ['track', 'Go to track', ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>')],
+      ['copy', 'Copy link', ic('<path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1"/><path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/>')],
+      ['share', 'Share', ic('<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>')]
+    ];
+    var cover = t.cover_url || album.cover_url || '';
+    var m = document.createElement('div');
+    m.id = 'alb-menu';
+    m.className = 'alb-menu';
+    m.setAttribute('role', 'menu');
+    m.setAttribute('data-i', String(i));
+    m.setAttribute('aria-label', 'options for ' + (t.title || 'track'));
+    m.innerHTML = '<div class="alb-menu-hd"><div class="cv" style="background:' + (typeof coverGradient === 'function' ? coverGradient(t.title || '') : 'var(--surface-2)') + ';">' +
+        (cover ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(cover, 120) : cover) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
+        '<div style="min-width:0;"><div class="t">' + escHtml(t.title || '') + '</div><div class="s">' + escHtml(t.artist_name || '') + '</div></div></div>' +
+      items.map(function (it) { return it === '-' ? '<hr>' : '<button type="button" role="menuitem" data-a="' + it[0] + '">' + it[2] + '<span>' + it[1] + '</span></button>'; }).join('');
+    if (mobile) {
+      var ov = document.createElement('div');
+      ov.id = 'alb-menu-ov'; ov.className = 'alb-menu-ov';
+      ov.addEventListener('click', albumCloseMenu);
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('in'); });
+    }
+    document.body.appendChild(m);
+    if (!mobile) {
+      var w = m.offsetWidth, h = m.offsetHeight, left, top;
+      if (anchor) { var r = anchor.getBoundingClientRect(); left = r.right - w; top = r.bottom + 6; if (top + h > innerHeight - 10) { top = r.top - h - 6; m.style.transformOrigin = 'bottom right'; } }
+      else { left = x; top = y; m.style.transformOrigin = 'top left'; if (top + h > innerHeight - 10) top = Math.max(10, y - h); if (left + w > innerWidth - 10) left = x - w; }
+      m.style.left = Math.max(10, Math.min(left, innerWidth - w - 10)) + 'px';
+      m.style.top = Math.max(10, top) + 'px';
+    }
+    var more = row && row.querySelector('.alb-more');
+    if (more) more.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(function () { m.classList.add('in'); });
+    var btns = Array.prototype.slice.call(m.querySelectorAll('button[role="menuitem"]'));
+    setTimeout(function () { if (btns[0]) btns[0].focus({ preventScroll: true }); }, 0);
+    var returnTo = anchor || row;
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-a]'); if (!b) return;
+      var a = b.getAttribute('data-a');
+      albumCloseMenu();
+      if (a === 'next' && typeof playNextInQueue === 'function') playNextInQueue(t);
+      else if (a === 'queue' && typeof addToQueue === 'function') addToQueue(t);
+      else if (a === 'playlist' && typeof openAddToPlaylist === 'function') openAddToPlaylist({ id: t.id, title: t.title || '', cover_url: t.cover_url || '', ia_url: t.ia_url || '', artist_name: t.artist_name || '' });
+      else if (a === 'track') navigate('/track?id=' + encodeURIComponent(t.id));
+      else if (a === 'copy') _albCopy(_albTrackUrl(t.id));
+      else if (a === 'share') {
+        if (typeof window.wvShare === 'function') window.wvShare({ kind: 'track', id: t.id, title: t.title || '', artist: t.artist_name || '', cover: t.cover_url || '' });
+        else if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) navigator.share({ title: t.title || 'wavernrs', url: _albTrackUrl(t.id) }).catch(function () {});
+        else _albCopy(_albTrackUrl(t.id));
+      }
+    });
+    m.addEventListener('keydown', function (e) {
+      var k = btns.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); btns[(k + 1) % btns.length].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(k - 1 + btns.length) % btns.length].focus(); }
+      else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
+      else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
+      else if (e.key === 'Tab') { albumCloseMenu(); }
+    });
+    var onKey = function (e) { if (e.key === 'Escape') { e.stopPropagation(); albumCloseMenu(); try { returnTo && returnTo.focus({ preventScroll: true }); } catch (_) {} } };
+    var onDown = function (e) { if (!m.contains(e.target) && !(anchor && anchor.contains(e.target))) albumCloseMenu(); };
+    var onScroll = function (e) { if (!mobile && !m.contains(e.target)) albumCloseMenu(); };
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(function () { document.addEventListener('pointerdown', onDown, true); }, 0);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', albumCloseMenu);
+    m._off = function () {
+      document.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', albumCloseMenu);
+    };
+  }
+
+  // ── deep link: ?track=5&t=90 (or t=1:30) ──
+  function _albParseT(v) {
+    if (v == null || v === '') return 0;
+    v = String(v).trim();
+    if (/^\d+(\.\d+)?$/.test(v)) return Math.floor(Number(v));
+    var p = v.split(':').map(Number);
+    if (p.some(isNaN)) { var mm = v.match(/(?:(\d+)m)?(\d+)s?$/); return mm ? (Number(mm[1] || 0) * 60 + Number(mm[2])) : 0; }
+    return p.reduce(function (a, b) { return a * 60 + b; }, 0);
+  }
+  function albumSeekWhenReady(id, secs) {
+    if (!secs || !audio) return;
+    var tries = 0;
+    var go = function () {
+      if (!currentTrack || String(currentTrack.id) !== String(id)) return;
+      if (audio.readyState >= 1) {
+        if (!isFinite(audio.duration) || secs < audio.duration) { try { audio.currentTime = secs; } catch (_) {} }
+        return;
+      }
+      if (++tries < 60) setTimeout(go, 250);
+    };
+    setTimeout(go, 0);
+  }
+  function albumDeepLink() {
+    var qs = new URLSearchParams(location.search);
+    var n = parseInt(qs.get('track'), 10);
+    if (!n || n < 1 || n > albumTracks.length || window._albumLocked) return;
+    var i = n - 1, td = albumTracks[i].tracks || albumTracks[i];
+    if (!td || !td.ia_url) return;
+    var secs = _albParseT(qs.get('t'));
+    var cr = _credits[td.id];
+    var name = cr ? cr.title : (td.title || '');
+    var row = document.getElementById('trow-' + i);
+    if (row) {
+      setTimeout(function () {
+        try { row.scrollIntoView({ block: 'center', behavior: (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth' }); } catch (_) {}
+        row.classList.remove('alb-flash'); void row.offsetWidth; row.classList.add('alb-flash');
+      }, 250);
+    }
+    var label = 'Play track ' + n + (secs ? ' from ' + _albFmt(secs) : '');
+    if (typeof wvToast === 'function') {
+      wvToast(label, '', 12000, {
+        icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="color:var(--brand);flex-shrink:0;"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
+        title: label, body: name, action: 'play',
+        onClick: function () { playAtIndex(i); albumSeekWhenReady(td.id, secs); }
+      });
+    }
+  }
+
+  // ── wiring (idempotent; re-run whenever renderAlbum rebuilds the page) ──
+  function albumEnhance() {
+    if (typeof window._albEnhOff === 'function') { try { window._albEnhOff(); } catch (_) {} }
+    var offs = [];
+    var on = function (tgt, ev, fn, opt) { if (!tgt) return; tgt.addEventListener(ev, fn, opt); offs.push(function () { tgt.removeEventListener(ev, fn, opt); }); };
+
+    if (typeof audio !== 'undefined' && audio) {
+      ['play', 'playing', 'pause', 'loadstart', 'ended', 'emptied'].forEach(function (ev) { on(audio, ev, albumSyncNow); });
+      on(audio, 'loadedmetadata', function () {
+        try {
+          if (currentTrack && currentTrack.id && isFinite(audio.duration) && !currentTrack._radio) {
+            var inComp = albumTracks.some(function (t) { return String((t.tracks || t).id) === String(currentTrack.id); });
+            _albDurSave(currentTrack.id, audio.duration);
+            if (inComp) albumPaintDurations();
+          }
+        } catch (_) {}
+      });
+    }
+    if (typeof window.setQueueOnChange === 'function' && albumIsCurrent()) { try { window.setQueueOnChange(_highlightAlbumRow); } catch (_) {} }
+
+    var sc = document.getElementById('wv-content');
+    var stk = document.getElementById('alb-stk');
+    var trig = document.querySelector('#album-container .wv-hero-actions');
+    if (stk && trig && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (ents) {
+        var e = ents[ents.length - 1];
+        var rootTop = e.rootBounds ? e.rootBounds.top : 0;
+        var show = !e.isIntersecting && e.boundingClientRect.bottom <= rootTop + 4;
+        stk.classList.toggle('show', show);
+        stk.setAttribute('aria-hidden', show ? 'false' : 'true');
+        stk.querySelectorAll('button').forEach(function (b) { b.tabIndex = show ? 0 : -1; });
+      }, { root: sc && getComputedStyle(sc).overflowY !== 'visible' ? sc : null, threshold: 0 });
+      io.observe(trig);
+      offs.push(function () { io.disconnect(); });
+    }
+
+    var list = document.getElementById('tracklist');
+    if (list) {
+      on(list, 'keydown', function (e) {
+        var row = e.target.closest && e.target.closest('.track-row[data-i]');
+        if (!row || e.target !== row) return;
+        var i = parseInt(row.getAttribute('data-i'), 10);
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); }
+        else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) { e.preventDefault(); albumRowMenu(i, row.querySelector('.alb-more')); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          var rows = Array.prototype.slice.call(list.querySelectorAll('.track-row[data-i]'));
+          var nx = rows[rows.indexOf(row) + (e.key === 'ArrowDown' ? 1 : -1)];
+          if (nx) { e.preventDefault(); nx.focus(); }
+        }
+      });
+      on(list, 'contextmenu', function (e) {
+        var row = e.target.closest('.track-row[data-i]');
+        if (!row || row.classList.contains('is-locked') || e.target.closest('a')) return;
+        e.preventDefault();
+        if (Date.now() - _albLpAt < 900 && document.getElementById('alb-menu')) return;
+        albumRowMenu(parseInt(row.getAttribute('data-i'), 10), null, e.clientX, e.clientY);
+      });
+      var lpT = null, lpX = 0, lpY = 0;
+      on(list, 'touchstart', function (e) {
+        var row = e.target.closest('.track-row[data-i]');
+        if (!row || row.classList.contains('is-locked') || e.target.closest('button, a') || e.touches.length !== 1) return;
+        lpX = e.touches[0].clientX; lpY = e.touches[0].clientY;
+        clearTimeout(lpT);
+        lpT = setTimeout(function () {
+          _albLpAt = Date.now();
+          try { if (navigator.vibrate) navigator.vibrate(8); } catch (_) {}
+          albumRowMenu(parseInt(row.getAttribute('data-i'), 10), null, lpX, lpY);
+        }, 480);
+      }, { passive: true });
+      on(list, 'touchmove', function (e) { if (lpT && e.touches[0] && (Math.abs(e.touches[0].clientX - lpX) > 10 || Math.abs(e.touches[0].clientY - lpY) > 10)) { clearTimeout(lpT); lpT = null; } }, { passive: true });
+      on(list, 'touchend', function () { clearTimeout(lpT); lpT = null; }, { passive: true });
+      on(list, 'touchcancel', function () { clearTimeout(lpT); lpT = null; }, { passive: true });
+      offs.push(function () { clearTimeout(lpT); });
+
+      albumPaintDurations();
+      if ('IntersectionObserver' in window && albumTracks.length <= 40) {
+        var pio = new IntersectionObserver(function (ents) {
+          if (ents.some(function (x) { return x.isIntersecting; })) { pio.disconnect(); setTimeout(albumProbeDurations, 400); }
+        }, { root: sc && getComputedStyle(sc).overflowY !== 'visible' ? sc : null, rootMargin: '200px' });
+        pio.observe(list);
+        offs.push(function () { pio.disconnect(); });
+      }
+    }
+    offs.push(function () { _albProbeGen++; albumCloseMenu(); });
+
+    window._albEnhOff = function () { offs.forEach(function (f) { try { f(); } catch (_) {} }); offs = []; window._albEnhOff = null; };
+    if (!window._pageCleanup) window._pageCleanup = [];
+    window._pageCleanup.push(function () { if (typeof window._albEnhOff === 'function') window._albEnhOff(); });
+    albumSyncNow();
   }
 
   if (!_missingId) loadAlbum();

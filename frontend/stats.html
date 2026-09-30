@@ -39,7 +39,7 @@
     .st-spark .dot { position: absolute; right: -4px; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px var(--surface); }
 
     .st-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 18px 18px 16px; min-width: 0; }
-    .st-card + .st-card, .st-grid2 + .st-card, .st-card + .st-grid2, .st-grid2 + .st-grid2 { margin-top: 14px; }
+    .st-card + .st-card, .st-grid2 + .st-card, .st-card + .st-grid2, .st-grid2 + .st-grid2, .st-grid1 + .st-card, .st-card + .st-grid1 { margin-top: 14px; }
     .st-grid2 > .st-card { margin-top: 0; }
     .st-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
     .st-ch { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -161,6 +161,7 @@
     .st-ed .wh { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
     .st-new { display: inline-block; margin-top: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text, var(--brand)); }
 
+    #st-ye > .st-card { margin-top: 14px; }
     .st-ye { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
     .st-yt { background: var(--surface-2); border-radius: 12px; padding: 14px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px; min-width: 0; transition: background 140ms var(--ease); }
     .st-yt:hover { background: var(--surface-3); }
@@ -567,7 +568,7 @@ function stYe(y) {
   if (y.yeezy) tiles.push({ ic: ST_ICONS.shirt, v: y.yeezy, k: 'Yeezy pieces', d: 'the full catalog', href: '/resources' });
   if (y.disco) tiles.push({ ic: ST_ICONS.album, v: y.disco, k: 'Albums', d: stNum(y.disco_songs || 0) + ' songs with credits', href: '/resources' });
   if (y.credits) tiles.push({ ic: ST_ICONS.people, v: y.credits, k: 'Songs with others', d: 'produced or featured', href: '/resources' });
-  if (y.tour_shows) tiles.push({ ic: ST_ICONS.mic, v: y.tour_shows, k: 'Tour shows', d: 'across ' + stNum(y.tour_years || 0) + ' tours', href: '/resources' });
+  if (y.tour_shows) tiles.push({ ic: ST_ICONS.mic, v: y.tour_shows, k: 'Tour shows', d: y.tour_years ? 'across ' + stNum(y.tour_years) + ' years' : 'every show we have', href: '/resources' });
   if (!tiles.length) return;
   var synced = y.tweets_at ? 'tweets synced ' + stAgo(y.tweets_at) : '';
   box.innerHTML = '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/resources">The Ye archive</a></h2><p>everything we track outside the edits' + (synced ? ' · ' + stEsc(synced) : '') + '</p></div><a class="more" href="/resources">Open</a></div>' +
@@ -638,7 +639,7 @@ function stRender(d) {
   var ta = (d.top_artists || []).filter(function (a) { return a && a.id; });
   var tl = Array.isArray(d.top_liked_tracks) ? d.top_liked_tracks.filter(function (x) { return x && x.id; }) : [];
   if (ta.length || tl.length) {
-    html += '<div class="st-grid2">';
+    html += '<div class="' + (ta.length && tl.length ? 'st-grid2' : 'st-grid1') + '">';
     if (ta.length) {
       var amax = Math.max.apply(null, ta.map(function (a) { return a.plays || 0; }).concat([1]));
       html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/artists">Top editors</a></h2><p>by plays on their edits and comps</p></div><a class="more" href="/artists">All editors</a></div><div class="st-list">' +

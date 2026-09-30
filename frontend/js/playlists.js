@@ -7,14 +7,37 @@
   var CACHE_TTL = 60000; // 60 seconds
 
   // ── Inject modal once ──────────────────────────────────────────────────────
+  function _injectStyle() {
+    if (document.getElementById('atp-style')) return;
+    var st = document.createElement('style');
+    st.id = 'atp-style';
+    st.textContent =
+      '#atp-list .playlist-modal-item{justify-content:flex-start;gap:12px;padding:8px 12px 8px 8px;margin-bottom:0;text-align:left;min-height:56px}' +
+      '#atp-list .playlist-modal-item:focus-visible{outline:2px solid var(--brand);outline-offset:2px}' +
+      '.atp-thumb{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:6px;overflow:hidden;background:var(--surface-2)}' +
+      '.atp-thumb .wv-plc{border-radius:6px}' +
+      '.atp-thumb .wv-plc-empty svg{width:45%;height:45%}' +
+      '.atp-meta{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px}' +
+      '.atp-meta b{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.atp-meta span{font-size:12px;color:var(--text-2)}' +
+      '.atp-lock{display:inline-block;vertical-align:-1px;margin-left:4px;opacity:.75}';
+    document.head.appendChild(st);
+  }
+
+  function _close() {
+    var m = document.getElementById('atp-modal');
+    if (m) m.classList.remove('open');
+  }
+
   function _inject() {
+    _injectStyle();
     if (document.getElementById('atp-modal')) return;
     var el = document.createElement('div');
     el.innerHTML = '<div class="modal-overlay" id="atp-modal">' +
       '<div class="modal playlist-modal" style="max-width:420px;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
           '<div class="modal-title" style="margin:0;">Save to Playlist</div>' +
-          '<button onclick="document.getElementById(\'atp-modal\').classList.remove(\'open\')" ' +
+          '<button aria-label="Close" onclick="document.getElementById(\'atp-modal\').classList.remove(\'open\')" ' +
             'style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-secondary);line-height:1;">&times;</button>' +
         '</div>' +
         '<div id="atp-track-name" style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>' +
@@ -47,6 +70,14 @@
         document.getElementById('atp-modal').classList.remove('open');
       }
     });
+    if (!window._atpKeyBound) {
+      window._atpKeyBound = true;
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        var m = document.getElementById('atp-modal');
+        if (m && m.classList.contains('open')) _close();
+      });
+    }
   }
 
   // ── Open modal ─────────────────────────────────────────────────────────────
@@ -102,13 +133,16 @@
       el.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);text-align:center;">no playlists yet...make one below</p>';
       return;
     }
-    el.innerHTML = playlists.map(function (p) {
-      return '<button class="playlist-modal-item" onclick="_atpAddTo(\'' + p.id + '\')">' +
-        '<span style="font-weight:600;font-size:14px;">' + _esc(p.title) + '</span>' +
-        '<span style="font-size:12px;color:var(--text-secondary);">' +
-          (p.track_count || 0) + ' track' + (p.track_count !== 1 ? 's' : '') +
-          (p.is_public ? '' : ' · 🔒') +
-        '</span>' +
+    var LOCK = '<svg class="atp-lock" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-label="private"><path d="M17 9V7a5 5 0 0 0-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 0 1 6 0v2H9V7z"/></svg>';
+    el.innerHTML = playlists.filter(function (p) { return p && p.id; }).map(function (p) {
+      var n = p.track_count || 0;
+      var cover = typeof window.wvPlaylistCover === 'function'
+        ? window.wvPlaylistCover({ title: p.title, cover_url: p.cover_url, mosaic: p.mosaic })
+        : '';
+      return '<button class="playlist-modal-item" data-pid="' + _esc(p.id) + '" onclick="_atpAddTo(this.getAttribute(\'data-pid\'))">' +
+        '<span class="atp-thumb">' + cover + '</span>' +
+        '<span class="atp-meta"><b>' + _esc(p.title || 'Untitled') + '</b>' +
+        '<span>' + n + ' song' + (n !== 1 ? 's' : '') + (p.is_public ? '' : LOCK) + '</span></span>' +
       '</button>';
     }).join('');
   }
@@ -124,24 +158,26 @@
       method: 'POST',
       body: JSON.stringify({ track_id: _pending.id }),
     }).then(function () {
-      statusEl.textContent = '✓ Added!';
-      statusEl.className = 'playlist-modal-status success';
-      // Update cache count
+      var name = 'your playlist';
       if (_cache) {
         for (var i = 0; i < _cache.length; i++) {
-          if (_cache[i].id === playlistId) {
-            _cache[i] = { track_count: (_cache[i].track_count || 0) + 1 };
+          if (_cache[i] && _cache[i].id === playlistId) {
+            _cache[i].track_count = (_cache[i].track_count || 0) + 1;
+            if (_pending && _pending.cover_url && Array.isArray(_cache[i].mosaic) && _cache[i].mosaic.length < 4 && _cache[i].mosaic.indexOf(_pending.cover_url) < 0) {
+              _cache[i].mosaic.push(_pending.cover_url);
+            }
+            name = _cache[i].title || name;
             break;
           }
         }
       }
-      setTimeout(function () {
-        var modal = document.getElementById('atp-modal');
-        if (modal) modal.classList.remove('open');
-        statusEl.textContent = '';
-      }, 900);
+      statusEl.textContent = '';
+      statusEl.className = '';
+      _close();
+      if (typeof wvToast === 'function') wvToast('added to ' + name, 'success');
+      else { statusEl.textContent = 'Added'; statusEl.className = 'playlist-modal-status success'; }
     }).catch(function (err) {
-      if (err && err.message && err.message.includes('409')) {
+      if (err && (err.status === 409 || /already in/i.test(String(err.message || '')))) {
         statusEl.textContent = 'its already in this playlist';
       } else {
         statusEl.textContent = 'couldnt add it';
@@ -179,7 +215,7 @@
       body: JSON.stringify({ title: title, is_public: isPublic }),
     }).then(function (newPl) {
       // Invalidate cache and add new playlist
-      if (_cache) _cache.unshift({ id: newPl.id, title: newPl.title, is_public: newPl.is_public, track_count: 0 });
+      if (_cache) _cache.unshift({ id: newPl.id, title: newPl.title, is_public: newPl.is_public, track_count: 0, mosaic: [] });
       _cacheTs = Date.now();
       window._atpAddTo(newPl.id);
     }).catch(function (err) {

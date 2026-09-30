@@ -7,39 +7,192 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .plp { --plp-h: 262; --plp-h2: 300; position: relative; }
+    .plp-sk { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
+    .plp-sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--hair-strong), transparent); animation: plp-shine 1.4s ease-in-out infinite; }
+    @keyframes plp-shine { to { transform: translateX(100%); } }
+
+    .plp-top { position: relative; isolation: isolate; }
+    .plp-glow { position: absolute; z-index: -1; inset: -40px -28px -60px; pointer-events: none; transition: opacity .6s ease;
+      background:
+        radial-gradient(52% 70% at 14% 40%, hsla(var(--plp-h), 70%, 54%, .36), transparent 72%),
+        radial-gradient(40% 56% at 64% 8%, hsla(var(--plp-h2), 70%, 52%, .18), transparent 72%); }
+    .theme-light .plp-glow { opacity: .55; }
+    .plp-hero { display: flex; gap: 32px; align-items: flex-end; padding: 36px 0 24px; }
+    .plp-cover { width: 232px; height: 232px; flex-shrink: 0; border-radius: 10px; overflow: hidden; position: relative; background: var(--surface-2);
+      box-shadow: 0 30px 60px -20px hsla(var(--plp-h), 65%, 30%, .75), 0 12px 28px rgba(0,0,0,.34); }
+    .theme-light .plp-cover { box-shadow: 0 28px 54px -22px hsla(var(--plp-h), 60%, 40%, .5), 0 8px 22px rgba(0,0,0,.12); }
+    .plp-cover .wv-plc { border-radius: 0; }
+    .plp-cover-play { position: absolute; right: 12px; bottom: 12px; width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+      background: var(--brand); color: var(--on-brand, #fff); box-shadow: 0 10px 24px rgba(0,0,0,.4); opacity: 0; transform: translateY(8px) scale(.94);
+      transition: opacity .2s ease, transform .25s cubic-bezier(.16,1,.3,1); }
+    .plp-cover-play svg { width: 22px; height: 22px; }
+    .plp-cover:hover .plp-cover-play, .plp-cover-play:focus-visible { opacity: 1; transform: none; }
+    .plp-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; }
+    .plp-eyebrow { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-2); }
+    .plp-eyebrow .plp-lock { display: inline-flex; align-items: center; gap: 5px; text-transform: none; letter-spacing: 0; font-weight: 700; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--glass-pill-bg); color: var(--text-2); }
+    .plp-title { margin: 0; font-size: clamp(30px, 5vw, 64px); font-weight: 900; letter-spacing: -.045em; line-height: 1.02; color: var(--text); text-wrap: balance; overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; padding-bottom: .04em; }
+    .plp-desc { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--text-2); max-width: 680px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .plp-byline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 13.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .plp-owner { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 700; font-size: 14px; text-decoration: none; min-height: 32px; }
+    a.plp-owner:hover span[data-wv-uid] { text-decoration: underline; text-underline-offset: 3px; }
+    .plp-avatar { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,.92); background: var(--surface-2); }
+    .plp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .plp-stats { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 0; }
+    .plp-stats > span + span::before { content: "•"; margin: 0 8px; opacity: .7; }
+    .plp-stats b { color: var(--text-2); font-weight: 700; }
+
+    .plp-sentinel { height: 1px; margin-bottom: -1px; }
+    .plp-bar { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 10px; margin: 0 -28px; padding: 12px 28px; transition: background .2s ease, box-shadow .2s ease; }
+    .plp-bar.is-stuck { background: var(--page-bg); background: color-mix(in srgb, var(--page-bg) 86%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); box-shadow: 0 1px 0 var(--hair), 0 10px 30px -18px rgba(0,0,0,.5); }
+    .plp-play { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 48px; min-width: 112px; padding: 0 24px 0 18px; border-radius: 999px; border: 0; cursor: pointer; flex-shrink: 0;
+      background: var(--brand); color: var(--on-brand, #fff); font: inherit; font-size: 15px; font-weight: 800; letter-spacing: -.01em;
+      box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--brand) 80%, transparent); transition: transform .18s cubic-bezier(.16,1,.3,1), filter .15s ease; }
+    .plp-play:hover { filter: brightness(1.07); transform: scale(1.03); }
+    .plp-play:active { transform: scale(.97); }
+    .plp-play svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .plp-play .ic-pause { display: none; }
+    .plp.is-live .plp-play .ic-play { display: none; }
+    .plp.is-live .plp-play .ic-pause { display: block; }
+    .plp-mini { display: none; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .plp-bar.is-stuck .plp-mini { display: flex; animation: plp-fade .2s ease; }
+    @keyframes plp-fade { from { opacity: 0; } to { opacity: 1; } }
+    .plp-mini-c { position: relative; width: 34px; height: 34px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: var(--surface-2); }
+    .plp-mini-c .wv-plc-empty svg { width: 50%; height: 50%; }
+    .plp-mini span { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em; }
+    .plp-bar.is-stuck .plp-hide-stuck { display: none; }
+    .plp-ib { width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); display: inline-grid; place-items: center; cursor: pointer; padding: 0;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    .plp-ib:hover { background: var(--glass-pill-bg-hover, var(--surface-hover)); border-color: transparent; }
+    .plp-ib:active { transform: scale(.94); }
+    .plp-ib svg { width: 19px; height: 19px; }
+    .plp-ib.is-danger:hover { color: var(--red); }
+    .plp-pill { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text);
+      font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0; white-space: nowrap; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    .plp-pill:hover { background: var(--glass-pill-bg-hover, var(--surface-hover)); border-color: transparent; }
+    .plp-pill:active { transform: scale(.97); }
+    .plp-pill svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .plp-pill.is-done { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 50%, transparent); background: var(--brand-bg); }
+    .plp-pill[disabled] { opacity: .7; cursor: default; }
+    .plp-spacer { flex: 1; }
+    .plp-bar button:focus-visible, .plp-row:focus-visible, .plp-cover-play:focus-visible, .plp-tool:focus-visible, .plp a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .plp-list { margin-top: 8px; }
+    .plp-row, .plp-head { display: grid; grid-template-columns: 36px 44px minmax(0, 1.4fr) minmax(0, 1fr) 96px 64px 112px; align-items: center; gap: 14px; padding: 0 12px; }
+    .plp-head { height: 36px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--hair); margin-bottom: 8px; }
+    .plp-head .r, .plp-row .r { text-align: right; }
+    .plp-row { min-height: 58px; border-radius: 8px; cursor: pointer; position: relative; transition: background .12s ease; }
+    .plp-row:hover { background: var(--surface-hover); }
+    .plp-row.playing { background: var(--brand-bg); }
+    .plp-num { position: relative; width: 36px; height: 36px; display: grid; place-items: center; font-size: 14px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .plp-num .ic { display: none; width: 16px; height: 16px; color: var(--text); }
+    .plp-row:hover .plp-num .n, .plp-row:focus-visible .plp-num .n { display: none; }
+    .plp-row:hover .plp-num .ic, .plp-row:focus-visible .plp-num .ic { display: block; }
+    .plp-eq { display: none; align-items: flex-end; gap: 2px; height: 14px; color: var(--brand); }
+    .plp-eq i { width: 3px; border-radius: 1px; background: currentColor; transform-origin: bottom; animation: plp-eq 1s ease-in-out infinite; }
+    .plp-eq i:nth-child(1) { height: 60%; } .plp-eq i:nth-child(2) { height: 100%; animation-delay: -.35s; } .plp-eq i:nth-child(3) { height: 45%; animation-delay: -.7s; }
+    @keyframes plp-eq { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+    .plp-row.playing .plp-num .n { display: none; }
+    .plp-row.playing .plp-num .plp-eq { display: inline-flex; }
+    .plp-row.playing.paused .plp-eq i { animation-play-state: paused; }
+    .plp-row.playing:hover .plp-num .plp-eq { display: none; }
+    .plp-tc { position: relative; width: 44px; height: 44px; border-radius: 6px; overflow: hidden; background: var(--surface-2); }
+    .plp-tc img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .plp-tc .plp-eq { position: absolute; inset: 0; justify-content: center; align-items: center; background: rgba(0,0,0,.45); height: auto; padding: 0 12px; color: #fff; }
+    .plp-tc .plp-eq i { max-height: 16px; }
+    .plp-ti { min-width: 0; }
+    .plp-tt { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .plp-row.playing .plp-tt { color: var(--brand); }
+    .plp-ta, .plp-alb, .plp-added, .plp-plays { font-size: 13.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .plp-added, .plp-plays { color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .plp-ta a, .plp-alb a { color: inherit; text-decoration: none; }
+    .plp-ta a:hover, .plp-alb a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+    .plp-tools { display: flex; justify-content: flex-end; gap: 2px; }
+    .plp-tool { width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0; transition: opacity .12s ease, background .12s ease, color .12s ease; }
+    .plp-tool svg { width: 17px; height: 17px; }
+    .plp-row:hover .plp-tool, .plp-row:focus-within .plp-tool { opacity: 1; }
+    .plp-tool:hover:not(:disabled) { background: var(--glass-pill-bg-hover, var(--surface-hover)); color: var(--text); }
+    .plp-tool:disabled { opacity: 0 !important; cursor: default; }
+    .plp-tool.is-danger:hover { color: var(--red); }
+
+    .plp-empty { margin: 18px 0 8px; padding: 34px 20px; border: 1px dashed var(--hair-strong); border-radius: 14px; text-align: center; color: var(--text-2); }
+    .plp-empty b { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+    .plp-empty .plp-pill { margin-top: 16px; }
+    .plp-addmore { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); color: var(--text-2); font-size: 14px; }
+    .plp-addmore b { color: var(--text); }
+    .plp-addmore .plp-pill { margin-left: auto; }
+
+    .plp-more { margin-top: 44px; }
+    .plp-more-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .plp-more-head h2 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+    .plp-more-head a { font-size: 13px; font-weight: 700; color: var(--text-2); text-decoration: none; }
+    .plp-more-head a:hover { color: var(--text); text-decoration: underline; }
+    .plp-more .wv-rail { grid-auto-columns: 176px; gap: 4px; }
+    .plp-more .wv-comp-card { padding: 10px; }
+
+    @media (max-width: 1100px) {
+      .plp-row, .plp-head { grid-template-columns: 36px 44px minmax(0, 1fr) 96px 64px 112px; }
+      .plp-alb, .plp-head .h-alb { display: none; }
+    }
+    @media (max-width: 768px) {
+      .plp-glow { inset: -40px -16px -20px; }
+      .plp-hero { flex-direction: column; align-items: flex-start; gap: 18px; padding: 16px 0 8px; }
+      .plp-cover { width: min(64vw, 240px); height: min(64vw, 240px); align-self: center; }
+      .plp-cover-play { display: none; }
+      .plp-title { font-size: clamp(26px, 8vw, 36px); }
+      .plp-bar { margin: 0 -16px; padding: 10px 16px; gap: 8px; }
+      .plp-desk { display: none !important; }
+      .plp-play { min-width: 92px; height: 46px; padding: 0 18px 0 14px; }
+      .plp-ib { width: 40px; height: 40px; }
+      .plp-pill { height: 40px; padding: 0 14px; }
+      .plp-bar .plp-pill.is-owner-edit { width: 40px; padding: 0; justify-content: center; }
+      .plp-bar .plp-pill.is-owner-edit span { display: none; }
+      .plp-bar.is-stuck .plp-play { min-width: 48px; width: 48px; padding: 0; }
+      .plp-bar.is-stuck .plp-play span { display: none; }
+      .plp-pill .lbl-long { display: none; }
+      .plp-head { display: none; }
+      .plp-row { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 4px 4px; min-height: 60px; }
+      .plp-num, .plp-alb, .plp-added, .plp-plays { display: none; }
+      .plp-tc { width: 48px; height: 48px; }
+      .plp-row.playing .plp-tc .plp-eq { display: inline-flex; }
+      .plp-tool { opacity: 1; width: 40px; height: 40px; }
+      .plp-tool.plp-move { display: none; }
+      .plp-addmore { flex-wrap: wrap; }
+      .plp-addmore .plp-pill { margin-left: 0; }
+      .plp-more .wv-rail { grid-auto-columns: 148px; }
+    }
+    @media (min-width: 769px) { .plp-tc .plp-eq { display: none !important; } }
+    @media (prefers-reduced-motion: reduce) {
+      .plp-sk::after, .plp-eq i, .plp-bar.is-stuck .plp-mini { animation: none !important; }
+      .plp-play, .plp-cover-play, .plp-bar, .plp-glow, .plp-pill, .plp-ib, .plp-tool { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
 <div id="playlist-container">
-  <div class="loading"><div class="spinner"></div></div>
-<div class="modal-overlay" id="edit-playlist-modal">
-  <div class="modal" style="max-width:460px;">
-    <div class="modal-title">Edit Playlist</div>
-    <div class="form-group">
-      <label>Title *</label>
-      <input type="text" id="ep-title" placeholder="name your playlist">
+  <div class="plp">
+    <div class="plp-hero">
+      <div class="plp-cover plp-sk"></div>
+      <div class="plp-info">
+        <div class="plp-sk" style="width:120px;height:12px"></div>
+        <div class="plp-sk" style="width:min(420px,80%);height:48px;border-radius:10px"></div>
+        <div class="plp-sk" style="width:240px;height:14px"></div>
+      </div>
     </div>
-    <div class="form-group">
-      <label>Description</label>
-      <textarea id="ep-desc" rows="2" placeholder="optional..."></textarea>
-    </div>
-    <div class="form-group" style="margin-bottom:0;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="ep-public"> Public
-      </label>
-    </div>
-    <div id="ep-alert" style="margin-top:10px;"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="document.getElementById('edit-playlist-modal').classList.remove('open')">Cancel</button>
-      <button class="btn btn-primary" onclick="savePlaylistEdit()">Save</button>
+    <div class="plp-bar"><div class="plp-sk" style="width:112px;height:48px;border-radius:999px"></div><div class="plp-sk" style="width:42px;height:42px;border-radius:50%"></div><div class="plp-sk" style="width:42px;height:42px;border-radius:50%"></div></div>
+    <div class="plp-list">
+      <div class="plp-sk" style="height:52px;margin:8px 0"></div>
+      <div class="plp-sk" style="height:52px;margin:8px 0"></div>
+      <div class="plp-sk" style="height:52px;margin:8px 0"></div>
     </div>
   </div>
 </div>
-</div>
 </div><!-- /view -->
 
-<!-- Edit Playlist Modal -->
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
 <script src="/js/player.js?v=6288d60cd337"></script>
@@ -49,34 +202,73 @@
   initPlayer();
 
   var playlistId = new URLSearchParams(location.search).get('id');
-  if (!playlistId) navigate('/index');
+  if (!playlistId) navigate('/playlists');
 
   var playlist = null;
   var tracks = [];
   var currentIndex = -1;
   var isOwner = false;
+  var plOwnerArtist = null;
+  var plMore = null;
+  var plSeq = (window._plSeq || 0) + 1;
+  window._plSeq = plSeq;
+  if (!window._pageCleanup) window._pageCleanup = [];
+
+  var PL_IC = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.6v14.8a1 1 0 0 0 1.53.85l11.6-7.4a1 1 0 0 0 0-1.7L9.03 3.75A1 1 0 0 0 7.5 4.6Z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4.2" height="15" rx="1.3"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.3"/></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>',
+    queue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13M3 12h13M3 18h8"/><path d="M19 14v6M16 17h6"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
+    up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>',
+    down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    addto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    lock: '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17 9V7a5 5 0 0 0-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 0 1 6 0v2H9V7z"/></svg>'
+  };
 
   function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
+  function plToast(m, k, ms, o) { if (typeof wvToast === 'function') wvToast(m, k, ms, o); }
+  function plNum(n) { n = Number(n) || 0; return n < 10000 ? n.toLocaleString('en-US') : fmtNum(n); }
+  function plDate(s) {
+    var d = new Date(s);
+    if (isNaN(d)) return '';
+    var o = { month: 'short', day: 'numeric' };
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString('en-US', o);
+  }
+  function plAgo(s) {
+    if (!s) return '';
+    var d = new Date(s);
+    if (isNaN(d)) return '';
+    var days = Math.floor((Date.now() - d) / 86400000);
+    if (days < 30 && typeof timeAgo === 'function') return timeAgo(s);
+    return plDate(s);
+  }
+  function plStillHere() { return window._plSeq === plSeq && !!document.getElementById('playlist-container'); }
 
   async function loadPlaylist() {
     try {
+      var meP = isLoggedIn() ? api('/auth/me').catch(function () { return null; }) : Promise.resolve(null);
       playlist = await api('/playlists/' + playlistId);
+      if (!plStillHere()) return;
       tracks = playlist.tracks || [];
       document.title = playlist.title + ' — wavernrs stream';
-      isOwner = isLoggedIn() && playlist.owner && playlist.owner.username &&
-        typeof getToken === 'function'; // refined below after we have user
-      // Determine ownership by comparing user from /auth/me if logged in
-      if (isLoggedIn()) {
-        try {
-          var me = await api('/auth/me');
-          isOwner = me && me.id === playlist.owner.id;
-        } catch (_) { isOwner = false; }
-      }
+      var me = await meP;
+      var owner = playlist.owner || {};
+      isOwner = !!(me && owner.id && me.id === owner.id);
       renderPlaylist();
+      loadOwnerExtras();
     } catch (err) {
-      var priv = /private/i.test(String(err && err.message || '')) || (err && err.status === 403);
+      if (!plStillHere()) return;
+      var priv = (err && err.status === 403) || /private/i.test(String(err && err.message || ''));
       document.getElementById('playlist-container').innerHTML =
         '<div class="empty-state"><div class="empty-title">' +
         (priv ? 'this playlist is private' : 'couldnt find this playlist') + '</div>' +
@@ -85,150 +277,378 @@
           : 'it might have been deleted') + '</div>' +
         (priv && !isLoggedIn()
           ? '<a href="/login?next=' + encodeURIComponent(location.pathname + location.search) + '" class="btn btn-primary" style="margin-top:16px">Log in</a>'
-          : '<a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a>') +
+          : '<a href="/playlists" class="btn btn-primary" style="margin-top:16px" onclick="navigate(\'/playlists\');return false;">Browse playlists</a>') +
         '</div>';
     }
+  }
+
+  function loadOwnerExtras() {
+    var owner = (playlist && playlist.owner) || {};
+    if (!owner.id) return;
+    api('/artists/by-user/' + encodeURIComponent(owner.id)).then(function (a) {
+      if (!plStillHere() || !a || !a.id) return;
+      plOwnerArtist = a;
+      paintOwner();
+    }).catch(function () {});
+    api('/playlists/by-user/' + encodeURIComponent(owner.id)).then(function (d) {
+      return (d && d.items) || [];
+    }).catch(function () {
+      return api('/playlists/published?sort=new&limit=48').then(function (d) {
+        return ((d && d.items) || []).filter(function (p) { return p.owner && p.owner.id === owner.id; });
+      }).catch(function () { return []; });
+    }).then(function (items) {
+      if (!plStillHere()) return;
+      plMore = (items || []).filter(function (p) { return p && p.id && p.id !== playlistId; });
+      paintMore();
+    });
+  }
+
+  function ownerHtml() {
+    var owner = (playlist && playlist.owner) || {};
+    if (!owner.username) return '';
+    var a = plOwnerArtist;
+    var name = owner.username;
+    var av = a && a.profile_image_url
+      ? '<img src="' + escHtml(a.profile_image_url) + '" alt="" width="26" height="26" loading="lazy" onerror="this.remove()">'
+      : escHtml(name.charAt(0).toUpperCase());
+    var avStyle = a && a.profile_image_url ? '' : ' style="background:' + coverGradient(name) + '"';
+    var inner = '<span class="plp-avatar"' + avStyle + '>' + av + '</span><span data-wv-uid="' + escHtml(owner.id || '') + '">' + escHtml(name) + '</span>';
+    if (a && a.id) {
+      var href = '/artist?id=' + encodeURIComponent(a.id);
+      return '<a class="plp-owner" href="' + href + '" onclick="navigate(\'' + href + '\');return false;">' + inner + '</a>';
+    }
+    return '<span class="plp-owner">' + inner + '</span>';
+  }
+
+  function paintOwner() {
+    var el = document.getElementById('plp-owner-slot');
+    if (el) el.innerHTML = ownerHtml();
+  }
+
+  function statsHtml() {
+    var n = tracks.length;
+    var parts = ['<span><b>' + n + '</b> song' + (n === 1 ? '' : 's') + '</span>'];
+    if (playlist.play_count) parts.push('<span><b>' + plNum(playlist.play_count) + '</b> play' + (playlist.play_count === 1 ? '' : 's') + '</span>');
+    if (playlist.published_at) parts.push('<span>published ' + escHtml(plDate(playlist.published_at)) + '</span>');
+    else if (playlist.created_at) parts.push('<span>made ' + escHtml(plDate(playlist.created_at)) + '</span>');
+    var upd = playlist.updated_at;
+    if (upd && (!playlist.published_at || new Date(upd) - new Date(playlist.published_at) > 3600000)) parts.push('<span>updated ' + escHtml(plAgo(upd)) + '</span>');
+    return '<span class="plp-stats">' + parts.join('') + '</span>';
+  }
+
+  function coverHtml() {
+    return typeof window.wvPlaylistCover === 'function'
+      ? window.wvPlaylistCover({ title: playlist.title, cover_url: playlist.cover_url, mosaic: playlist.mosaic })
+      : '';
+  }
+
+  function rowHtml(t, i) {
+    var cover = t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" alt="" loading="lazy" width="44" height="44" onerror="this.style.visibility=\'hidden\'">' : '';
+    var eq = '<span class="plp-eq" aria-hidden="true"><i></i><i></i><i></i></span>';
+    var artist = escHtml(t.artist_name || 'Unknown');
+    if (!t.is_archive && t.artists && t.artists.id && t.artists.display_name === t.artist_name) {
+      var ah = '/artist?id=' + encodeURIComponent(t.artists.id);
+      artist = '<a href="' + ah + '" onclick="event.stopPropagation();navigate(\'' + ah + '\');return false;">' + artist + '</a>';
+    }
+    var album = '';
+    if (t.album_id && t.album_title) {
+      var alh = '/album?id=' + encodeURIComponent(t.album_id);
+      album = '<a href="' + alh + '" onclick="event.stopPropagation();navigate(\'' + alh + '\');return false;">' + escHtml(t.album_title) + '</a>';
+    } else if (t.id) {
+      var th = '/track?id=' + encodeURIComponent(t.id);
+      album = '<a href="' + th + '" onclick="event.stopPropagation();navigate(\'' + th + '\');return false;">Single</a>';
+    }
+    var tools;
+    if (isOwner) {
+      tools = '<button class="plp-tool plp-move" title="Move up" aria-label="Move ' + escHtml(t.title || 'track') + ' up"' + (i === 0 ? ' disabled' : '') + ' onclick="event.stopPropagation();movePlTrack(' + i + ',-1)">' + PL_IC.up + '</button>' +
+        '<button class="plp-tool plp-move" title="Move down" aria-label="Move ' + escHtml(t.title || 'track') + ' down"' + (i === tracks.length - 1 ? ' disabled' : '') + ' onclick="event.stopPropagation();movePlTrack(' + i + ',1)">' + PL_IC.down + '</button>' +
+        '<button class="plp-tool is-danger" title="Remove" aria-label="Remove ' + escHtml(t.title || 'track') + '" onclick="event.stopPropagation();removeTrack(' + i + ')">' + PL_IC.x + '</button>';
+    } else {
+      tools = '<button class="plp-tool" title="Add to queue" aria-label="Add ' + escHtml(t.title || 'track') + ' to queue" onclick="event.stopPropagation();plQueueOne(' + i + ')">' + PL_IC.queue + '</button>' +
+        '<button class="plp-tool" title="Save to a playlist" aria-label="Save ' + escHtml(t.title || 'track') + ' to a playlist" onclick="event.stopPropagation();plSaveOne(' + i + ')">' + PL_IC.addto + '</button>';
+    }
+    return '<div class="plp-row' + (i === currentIndex ? ' playing' : '') + '" role="button" tabindex="0" data-i="' + i + '" aria-label="Play ' + escHtml(t.title || 'track') + ' by ' + escHtml(t.artist_name || 'Unknown') + '">' +
+      '<div class="plp-num"><span class="n">' + (i + 1) + '</span>' + eq + '<span class="ic">' + PL_IC.play + '</span></div>' +
+      '<div class="plp-tc">' + cover + eq + '</div>' +
+      '<div class="plp-ti"><div class="plp-tt">' + escHtml(t.title || 'Unknown') + '</div><div class="plp-ta">' + artist + '</div></div>' +
+      '<div class="plp-alb">' + album + '</div>' +
+      '<div class="plp-added r" title="' + escHtml(t.added_at ? new Date(t.added_at).toLocaleString() : '') + '">' + escHtml(plAgo(t.added_at)) + '</div>' +
+      '<div class="plp-plays r">' + plNum(t.play_count) + '</div>' +
+      '<div class="plp-tools">' + tools + '</div>' +
+    '</div>';
+  }
+
+  function listHtml() {
+    if (!tracks.length) {
+      return '<div class="plp-empty"><b>nothing in here yet</b>' +
+        (isOwner ? 'search songs and comps in the builder and drop them in'
+                 : 'the owner hasnt added any songs yet') +
+        (isOwner ? '<br><button class="plp-pill" onclick="plOpenBuilder()">' + PL_IC.copy + 'Add songs</button>' : '') +
+        '</div>';
+    }
+    return '<div class="plp-head" aria-hidden="true"><span style="text-align:center">#</span><span></span><span>Title</span><span class="h-alb">Album</span><span class="r">Added</span><span class="r">Plays</span><span></span></div>' +
+      tracks.map(rowHtml).join('') +
+      (isOwner ? '<div class="plp-addmore"><span><b>want more in here?</b> search songs and whole comps in the builder</span><button class="plp-pill" onclick="plOpenBuilder()">' + PL_IC.copy + 'Add songs</button></div>' : '');
   }
 
   function renderPlaylist() {
-    var owner = playlist.owner || {};
     var firstCover = playlist.cover_url || (playlist.mosaic && playlist.mosaic[0]) || (tracks.length && tracks[0].cover_url ? tracks[0].cover_url : '');
     if (typeof window.setPageBgImage === 'function') window.setPageBgImage(firstCover);
-    var coverHtml = typeof window.wvPlaylistCover === 'function'
-      ? window.wvPlaylistCover({ title: playlist.title, cover_url: playlist.cover_url, mosaic: playlist.mosaic })
-      : (firstCover ? '<img src="' + escHtml(firstCover) + '" alt="cover" style="width:100%;height:100%;object-fit:cover;">' : '');
 
-    var ownerHtml = owner.username
-      ? 'by <span data-wv-uid="' + escHtml(owner.id || '') + '" style="color:var(--text-secondary);font-weight:500;">' + escHtml(owner.username) + '</span>'
-      : '';
+    var eyebrow = playlist.published_at ? 'Community playlist' : 'Playlist';
+    var badge = playlist.is_public ? '' : '<span class="plp-lock">' + PL_IC.lock + ' Private</span>';
+    if (playlist.is_public && !playlist.published_at && isOwner) badge = '<span class="plp-lock">Link only</span>';
 
-    var privacyBadge = playlist.is_public ? '' :
-      '';
-
-    var actionBtns = '';
-    if (isOwner) {
-      actionBtns = '<button class="wv-btn-ghost" onclick="navigate(\'/playlist-builder?id=' + playlistId + '\')">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Edit in builder' +
-        '</button>' +
-        '<button class="wv-btn-ghost" onclick="deletePlaylist()">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>Delete' +
-        '</button>';
-    }
-
-    var trackListHtml;
-    if (!tracks.length) {
-      trackListHtml = '<div class="empty-state" style="padding:24px;"><div class="empty-desc">nothing in this playlist yet</div></div>';
+    var bar = '<button class="plp-play" onclick="plPlayToggle()" aria-label="Play ' + escHtml(playlist.title) + '"><span class="ic-play" style="display:contents">' + PL_IC.play + '</span><span class="ic-pause" style="display:none">' + PL_IC.pause + '</span><span>Play</span></button>' +
+      '<div class="plp-mini" aria-hidden="true"><div class="plp-mini-c">' + coverHtml() + '</div><span>' + escHtml(playlist.title) + '</span></div>' +
+      '<button class="plp-ib plp-hide-stuck" onclick="shufflePlaylist()" title="Shuffle" aria-label="Shuffle play">' + PL_IC.shuffle + '</button>';
+    if (!isOwner) {
+      bar += '<button class="plp-pill plp-hide-stuck" id="plp-savecopy" onclick="plSaveCopy()" title="Save a copy to your playlists">' + PL_IC.copy + '<span>Save<span class="lbl-long"> a copy</span></span></button>';
     } else {
-      trackListHtml = tracks.map(function(t, i) {
-        var cover = t.cover_url
-          ? '<img src="' + escHtml(t.cover_url) + '" alt="">'
-          : '🎵';
-        var removeBtn = isOwner
-          ? '<span class="wv-pl-tools" onclick="event.stopPropagation()">' +
-              '<button class="wv-icon-btn" title="Move up" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + ' onclick="movePlTrack(' + i + ',-1)">↑</button>' +
-              '<button class="wv-icon-btn" title="Move down" aria-label="Move down"' + (i === tracks.length - 1 ? ' disabled' : '') + ' onclick="movePlTrack(' + i + ',1)">↓</button>' +
-              '<button class="btn btn-danger btn-sm remove-track-btn" title="Remove" aria-label="Remove" onclick="removeTrack(\'' + escHtml(t.id) + '\', ' + i + ')">' +
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
-              '</button>' +
-            '</span>'
-          : '';
-        return '<div class="wv-track-row' + (i === currentIndex ? ' playing' : '') + '" onclick="playAtIndex(' + i + ')">' +
-          '<div class="track-row-num">' + (i + 1) + '</div>' +
-          '<div class="track-row-cover">' + cover + '</div>' +
-          '<div class="track-row-info">' +
-            '<div class="track-row-title">' + escHtml(t.title || 'Unknown') + '</div>' +
-            '<div class="track-row-artist">' + escHtml(t.artist_name || 'Unknown') + '</div>' +
-          '</div>' +
-          '<span class="track-row-plays">' + fmtNum(t.play_count) + ' plays</span>' +
-          removeBtn +
-        '</div>';
-      }).join('');
+      bar += '<button class="plp-pill plp-hide-stuck is-owner-edit" onclick="plOpenBuilder()" aria-label="Edit in builder">' + PL_IC.edit + '<span>Edit<span class="lbl-long"> in builder</span></span></button>';
     }
-
-    var searchSection = isOwner
-      ? '<div style="margin-top:36px;">' +
-          '<h2 class="section-title">Add Tracks</h2>' +
-          '<div style="position:relative;margin-bottom:12px;">' +
-            '<input type="text" id="pl-search-input" placeholder="search edits and comp tracks..." ' +
-              'style="width:100%;padding:10px 14px;background:var(--surface-2);border:1px solid var(--border);' +
-              'border-radius:8px;color:var(--text-primary);font-size:14px;box-sizing:border-box;" ' +
-              'autocomplete="off">' +
-            '<div id="pl-search-spinner" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);">' +
-              '<div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>' +
-            '</div>' +
-          '</div>' +
-          '<div id="pl-search-results"></div>' +
-        '</div>'
-      : '';
+    bar += '<button class="plp-ib plp-hide-stuck" onclick="plQueueAll()" title="Add all to queue" aria-label="Add all to queue">' + PL_IC.queue + '</button>' +
+      '<button class="plp-ib plp-hide-stuck" onclick="sharePlaylist()" title="Share" aria-label="Share">' + PL_IC.share + '</button>' +
+      (tracks.length ? '<button class="plp-ib plp-hide-stuck plp-desk" onclick="exportPlaylist()" title="Download the tracklist as a text file" aria-label="Download tracklist">' + PL_IC.download + '</button>' : '') +
+      (isOwner ? '<button class="plp-ib is-danger plp-hide-stuck" onclick="deletePlaylist()" title="Delete playlist" aria-label="Delete playlist">' + PL_IC.trash + '</button>' : '');
 
     document.getElementById('playlist-container').innerHTML =
-      '<div style="padding:8px 0 0;">' +
-        '<div class="wv-hero">' +
-          '<div class="wv-hero-art" style="background:' + coverGradient(playlist.title || '') + ';">' + coverHtml + '</div>' +
-          '<div class="wv-hero-body">' +
-            '<div class="wv-kind">' + (playlist.published_at ? 'Published playlist' : 'Playlist' + (playlist.is_public ? '' : ' · Private')) + '</div>' +
-            '<div class="wv-hero-title">' + escHtml(playlist.title) + '</div>' +
-            '<div class="wv-hero-sub">' + ownerHtml + '</div>' +
-            (playlist.description ? '<div class="wv-hero-meta" style="max-width:640px;line-height:1.5;">' + escHtml(playlist.description) + '</div>' : '') +
-            '<div class="wv-hero-meta">' + tracks.length + ' song' + (tracks.length !== 1 ? 's' : '') +
-              (playlist.play_count ? ' · ' + fmtNum(playlist.play_count) + ' play' + (playlist.play_count !== 1 ? 's' : '') : '') + '</div>' +
-            '<div class="wv-hero-actions">' +
-              '<button class="wv-btn-play" onclick="playAll()">' +
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play' +
-              '</button>' +
-              '<button class="wv-btn-ghost" onclick="shufflePlaylist()">' +
-                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:4px;"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>Shuffle' +
-              '</button>' +
-              '<button class="wv-btn-ghost" onclick="sharePlaylist()">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="margin-right:4px;"><path d="M7.2 10.9a2.25 2.25 0 1 0 0 2.2m0-2.2 9.6-5.3m-9.6 7.5 9.6 5.3m0 0a2.25 2.25 0 1 0 3.9 2.2 2.25 2.25 0 0 0-3.9-2.2Zm0-12.8a2.25 2.25 0 1 0 3.9-2.2 2.25 2.25 0 0 0-3.9 2.2Z"/></svg>Share' +
-              '</button>' +
-              (tracks.length ? '<button class="wv-btn-ghost" onclick="exportPlaylist()" title="download the tracklist as a text file">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18h14v2H5z"/></svg>Export' +
-              '</button>' : '') +
-              actionBtns +
+      '<div class="plp" id="plp-root">' +
+        '<div class="plp-top">' +
+          '<div class="plp-glow" aria-hidden="true"></div>' +
+          '<div class="plp-hero">' +
+            '<div class="plp-cover">' + coverHtml() +
+              (tracks.length ? '<button class="plp-cover-play" onclick="playAll()" aria-label="Play">' + PL_IC.play + '</button>' : '') +
+            '</div>' +
+            '<div class="plp-info">' +
+              '<div class="plp-eyebrow"><span>' + eyebrow + '</span>' + badge + '</div>' +
+              '<h1 class="plp-title">' + escHtml(playlist.title) + '</h1>' +
+              (playlist.description ? '<p class="plp-desc">' + escHtml(playlist.description) + '</p>' : '') +
+              '<div class="plp-byline"><span id="plp-owner-slot">' + ownerHtml() + '</span>' + statsHtml() + '</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
-        '<div style="margin-top:32px;">' +
-          '<h2 class="section-title">Tracks</h2>' +
-          '<div class="track-list" id="pl-tracklist">' + trackListHtml + '</div>' +
-        '</div>' +
-        searchSection +
+        '<div class="plp-sentinel" id="plp-sentinel"></div>' +
+        '<div class="plp-bar" id="plp-bar">' + bar + '</div>' +
+        '<div class="plp-list" id="pl-tracklist">' + listHtml() + '</div>' +
+        '<div id="plp-more-slot"></div>' +
       '</div>';
 
-    if (isOwner) initSearchSection();
+    extractCoverHues(firstCover, playlist.title || '', function (c) {
+      var root = document.getElementById('plp-root');
+      if (!root || !c) return;
+      root.style.setProperty('--plp-h', c.h1);
+      root.style.setProperty('--plp-h2', c.h2);
+    });
+    paintMore();
+    plBindPage();
+    plSync();
+  }
+
+  function renderList() {
+    var el = document.getElementById('pl-tracklist');
+    if (el) el.innerHTML = listHtml();
+    plSync();
+  }
+
+  function paintMore() {
+    var slot = document.getElementById('plp-more-slot');
+    if (!slot) return;
+    var owner = (playlist && playlist.owner) || {};
+    if (!plMore || !plMore.length || !owner.username) { slot.innerHTML = ''; return; }
+    slot.innerHTML = '<section class="plp-more" aria-label="More playlists by ' + escHtml(owner.username) + '">' +
+      '<div class="plp-more-head"><h2>More by ' + escHtml(owner.username) + '</h2></div>' +
+      '<div class="wv-rail">' + plMore.map(function (p) { return window.wvPlaylistCardHTML(p); }).join('') + '</div>' +
+    '</section>';
+  }
+
+  function plBindPage() {
+    var list = document.getElementById('pl-tracklist');
+    if (list && !list._plBound) {
+      list._plBound = true;
+      list.addEventListener('click', function (e) {
+        if (e.target.closest('a, button')) return;
+        var row = e.target.closest('.plp-row');
+        if (row) playAtIndex(+row.getAttribute('data-i'));
+      });
+      list.addEventListener('keydown', function (e) {
+        var row = e.target.closest('.plp-row');
+        if (!row || e.target !== row) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playAtIndex(+row.getAttribute('data-i')); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          var sib = e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling;
+          if (sib && sib.classList.contains('plp-row')) { e.preventDefault(); sib.focus(); }
+        }
+      });
+    }
+    var sentinel = document.getElementById('plp-sentinel');
+    var bar = document.getElementById('plp-bar');
+    if (window._plIO) { try { window._plIO.disconnect(); } catch (_) {} window._plIO = null; }
+    if (sentinel && bar && typeof IntersectionObserver === 'function') {
+      var root = document.getElementById('wv-content');
+      var io = new IntersectionObserver(function (entries) {
+        var e = entries[0];
+        if (!e) return;
+        var top = e.rootBounds ? e.rootBounds.top : 0;
+        bar.classList.toggle('is-stuck', !e.isIntersecting && e.boundingClientRect.top < top + 1);
+      }, { root: root && root.contains(sentinel) ? root : null, threshold: 0 });
+      io.observe(sentinel);
+      window._plIO = io;
+    }
+    if (!window._plTicker) {
+      window._plTicker = setInterval(plSync, 800);
+      window._pageCleanup.push(function () {
+        clearInterval(window._plTicker); window._plTicker = null;
+        if (window._plIO) { try { window._plIO.disconnect(); } catch (_) {} window._plIO = null; }
+      });
+    }
+  }
+
+  function plCurIndex() {
+    var cur = typeof currentTrack !== 'undefined' ? currentTrack : null;
+    if (!cur || !cur.id) return -1;
+    if (currentIndex >= 0 && tracks[currentIndex] && tracks[currentIndex].id === cur.id) return currentIndex;
+    for (var i = 0; i < tracks.length; i++) if (tracks[i].id === cur.id) return i;
+    return -1;
+  }
+
+  function plSync() {
+    if (!playlist || !document.getElementById('plp-root')) return;
+    var idx = plCurIndex();
+    var paused = typeof audio === 'undefined' || !audio || audio.paused;
+    var rows = document.querySelectorAll('#pl-tracklist .plp-row');
+    for (var i = 0; i < rows.length; i++) {
+      var on = i === idx;
+      rows[i].classList.toggle('playing', on);
+      rows[i].classList.toggle('paused', on && paused);
+    }
+    var root = document.getElementById('plp-root');
+    var live = idx >= 0 && !paused;
+    if (root.classList.contains('is-live') !== live) {
+      root.classList.toggle('is-live', live);
+      var btn = root.querySelector('.plp-play');
+      if (btn) {
+        btn.querySelector('.ic-play').style.display = live ? 'none' : 'contents';
+        btn.querySelector('.ic-pause').style.display = live ? 'contents' : 'none';
+        btn.lastElementChild.textContent = live ? 'Pause' : 'Play';
+      }
+    }
+  }
+
+  function plQueueItem(t) {
+    return {
+      id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null,
+      artist_name: t.artist_name || '', album_id: t.album_id || null,
+      artist_id: (t.artists && t.artists.id) || null,
+      _archive_artist: t.is_archive ? (t.artist_name || null) : null
+    };
+  }
+  function plPlayable() { return tracks.filter(function (t) { return t && t.ia_url; }); }
+
+  function plPlayToggle() {
+    if (plCurIndex() >= 0 && typeof audio !== 'undefined' && audio && audio.src && typeof togglePlay === 'function') { togglePlay(); setTimeout(plSync, 60); return; }
+    playAll();
   }
 
   function playAll() {
-    if (!tracks.length) return;
+    if (!tracks.length) { plToast('nothing in this playlist yet'); return; }
     playAtIndex(0);
   }
 
   function shufflePlaylist() {
-    if (!tracks.length) return;
-    var q = tracks.map(function (t) { return Object.assign({}, t, { artist_name: t.artist_name }); });
+    var q = plPlayable().map(plQueueItem);
+    if (!q.length) { plToast('nothing in this playlist can play yet'); return; }
     for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = q[i]; q[i] = q[j]; q[j] = tmp; }
     countPlaylistPlay();
+    currentIndex = -1;
     setPlayerQueue(q, 0);
     playQueueIndex(0);
-    if (typeof wvToast === 'function') wvToast('shuffling ' + q.length + ' track' + (q.length === 1 ? '' : 's'));
+    plToast('shuffling ' + q.length + ' song' + (q.length === 1 ? '' : 's'));
+    setTimeout(plSync, 120);
+  }
+
+  function plQueueAll() {
+    var add = plPlayable().map(plQueueItem);
+    if (!add.length) { plToast('nothing in this playlist can play yet'); return; }
+    var cur = typeof currentTrack !== 'undefined' ? currentTrack : null;
+    if (!cur && typeof window.getPlayerQueue === 'function' && !window.getPlayerQueue().list.length) { playAll(); return; }
+    var q = typeof window.getPlayerQueue === 'function' ? window.getPlayerQueue() : { list: [], idx: -1 };
+    var list = q.list.slice();
+    var idx = q.idx;
+    if (!list.length && cur) { list = [cur]; idx = 0; }
+    setPlayerQueue(list.concat(add), idx);
+    plToast('added ' + add.length + ' song' + (add.length === 1 ? '' : 's') + ' to your queue', 'success');
+  }
+
+  function plQueueOne(i) {
+    var t = tracks[i];
+    if (t && typeof window.addToQueue === 'function') window.addToQueue(plQueueItem(t));
+  }
+
+  function plSaveOne(i) {
+    var t = tracks[i];
+    if (!t) return;
+    if (!isLoggedIn()) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
+    if (typeof window.openAddToPlaylist === 'function') window.openAddToPlaylist({ id: t.id, title: t.title, cover_url: t.cover_url });
+  }
+
+  function plOpenBuilder() { navigate('/playlist-builder?id=' + encodeURIComponent(playlistId)); }
+
+  var _plSaving = false;
+  async function plSaveCopy() {
+    if (!isLoggedIn()) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
+    if (_plSaving || !playlist) return;
+    var ids = tracks.map(function (t) { return t.id; }).filter(Boolean);
+    if (!ids.length) { plToast('theres nothing to copy yet'); return; }
+    var btn = document.getElementById('plp-savecopy');
+    _plSaving = true;
+    if (btn) { btn.disabled = true; btn.lastElementChild.textContent = 'Saving…'; }
+    try {
+      var who = playlist.owner && playlist.owner.username ? ' by @' + playlist.owner.username : '';
+      var created = await api('/playlists', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: String(playlist.title || 'Playlist').slice(0, 120),
+          description: ('saved from "' + (playlist.title || 'a playlist') + '"' + who + (playlist.description ? ' — ' + playlist.description : '')).slice(0, 1000),
+          is_public: false
+        })
+      });
+      await api('/playlists/' + created.id + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: ids }) });
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      if (btn) { btn.classList.add('is-done'); btn.innerHTML = PL_IC.check + '<span>Saved</span>'; }
+      var href = '/playlist-builder?id=' + encodeURIComponent(created.id);
+      plToast('saved to your playlists', 'success', 5200, {
+        title: 'saved to your playlists', body: 'its private until you publish it', action: 'Open',
+        onClick: function () { navigate(href); }
+      });
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.innerHTML = PL_IC.copy + '<span>Save<span class="lbl-long"> a copy</span></span>'; }
+      plToast((e && e.message) || 'couldnt save a copy...try again', 'error');
+    } finally {
+      _plSaving = false;
+    }
   }
 
   function sharePlaylist() {
     var url = location.origin + '/playlist?id=' + playlistId;
-    if (!playlist.is_public && isOwner && typeof wvToast === 'function') {
-      wvToast('this playlist is private...make it public if you want other people to open it');
+    if (!playlist.is_public && isOwner) plToast('this playlist is private...make it public if you want other people to open it');
+    if (typeof window.wvShare === 'function') {
+      try {
+        window.wvShare({ kind: 'playlist', id: playlistId, url: url, title: playlist.title || 'Playlist',
+          artist: playlist.owner && playlist.owner.username ? '@' + playlist.owner.username : '',
+          cover: playlist.cover_url || (playlist.mosaic && playlist.mosaic[0]) || '' });
+        return;
+      } catch (_) {}
     }
     if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
       navigator.share({ title: playlist.title || 'Playlist', url: url }).catch(function () {});
       return;
     }
-    navigator.clipboard.writeText(url).then(function () {
-      if (typeof wvToast === 'function') wvToast('link copied');
-    }).catch(function () { if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error'); });
+    if (!navigator.clipboard) { plToast(url); return; }
+    navigator.clipboard.writeText(url).then(function () { plToast('link copied'); })
+      .catch(function () { plToast('couldnt copy the link', 'error'); });
   }
 
-  // A playlist you can take somewhere else: a plain, readable tracklist.
   function exportPlaylist() {
     var lines = [playlist.title || 'Playlist', ''];
     tracks.forEach(function (t, i) { lines.push((i + 1) + '. ' + (t.title || 'Unknown') + ' — ' + (t.artist_name || 'Unknown')); });
@@ -240,10 +660,9 @@
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    if (typeof wvToast === 'function') wvToast('tracklist downloaded');
+    plToast('tracklist downloaded');
   }
 
-  // Order is saved as the full list, so a failed save can simply be undone.
   async function movePlTrack(i, dir) {
     var j = i + dir;
     if (j < 0 || j >= tracks.length) return;
@@ -252,24 +671,21 @@
     tracks.splice(j, 0, moved);
     if (currentIndex === i) currentIndex = j;
     else if (currentIndex === j) currentIndex = i;
-    renderPlaylist();
+    renderList();
+    var btns = document.querySelectorAll('#pl-tracklist .plp-row[data-i="' + j + '"] .plp-move');
+    var b = btns[dir < 0 ? 0 : 1];
+    if (b && !b.disabled) b.focus();
     try {
       await api('/playlists/' + playlistId + '/order', {
         method: 'PUT',
         body: JSON.stringify({ track_ids: tracks.map(function (t) { return t.id; }) }),
       });
-      invalidatePlaylistCache();
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
     } catch (e) {
       tracks = before;
-      renderPlaylist();
-      if (typeof wvToast === 'function') wvToast('couldnt save the new order...try again', 'error');
+      renderList();
+      plToast('couldnt save the new order...try again', 'error');
     }
-  }
-
-  function _highlightPlRow(index) {
-    document.querySelectorAll('#pl-tracklist .wv-track-row').forEach(function(row, i) {
-      row.classList.toggle('playing', i === index);
-    });
   }
 
   var _countedPlay = false;
@@ -279,196 +695,60 @@
     api('/playlists/' + playlistId + '/play', { method: 'POST' }).catch(function () {});
   }
 
+  function _highlightPlRow(index) {
+    var t = window.getPlayerQueue ? window.getPlayerQueue().list[index] : null;
+    currentIndex = -1;
+    if (t) for (var i = 0; i < tracks.length; i++) if (tracks[i].id === t.id) { currentIndex = i; break; }
+    plSync();
+  }
+
   function playAtIndex(index) {
-    if (!tracks[index]) return;
+    var t = tracks[index];
+    if (!t) return;
+    if (!t.ia_url) { plToast('that song doesnt have audio yet'); return; }
+    if (index === plCurIndex() && typeof audio !== 'undefined' && audio && audio.src && typeof togglePlay === 'function') { togglePlay(); setTimeout(plSync, 60); return; }
     countPlaylistPlay();
+    var playable = plPlayable();
+    var q = playable.map(plQueueItem);
+    var qi = playable.indexOf(t);
     currentIndex = index;
-    var q = tracks.map(function(t) { return Object.assign({}, t, { artist_name: t.artist_name }); });
-    setPlayerQueue(q, index, _highlightPlRow);
-    playQueueIndex(index);
-    _highlightPlRow(index);
+    setPlayerQueue(q, qi, _highlightPlRow);
+    playQueueIndex(qi);
+    setTimeout(plSync, 60);
   }
 
-  async function removeTrack(trackId, index) {
+  async function removeTrack(index) {
+    var t = tracks[index];
+    if (!t) return;
+    var before = tracks.slice();
+    tracks.splice(index, 1);
+    if (currentIndex === index) currentIndex = -1;
+    else if (currentIndex > index) currentIndex--;
+    renderList();
     try {
-      await api('/playlists/' + playlistId + '/tracks/' + trackId, { method: 'DELETE' });
-      tracks.splice(index, 1);
-      if (currentIndex >= index) currentIndex--;
-      invalidatePlaylistCache();
-      renderPlaylist();
+      await api('/playlists/' + playlistId + '/tracks/' + encodeURIComponent(t.id), { method: 'DELETE' });
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      var st = document.querySelector('.plp-stats');
+      if (st) st.outerHTML = statsHtml();
+      plToast('removed ' + (t.title || 'that song'));
     } catch (err) {
-      alert('couldnt remove that track... ' + (err.message || 'error'));
+      tracks = before;
+      renderList();
+      plToast('couldnt remove that song...' + ((err && err.message) || 'try again'), 'error');
     }
   }
 
-  // Skip/auto-advance is handled by the player's global queue (set in
-  // playAtIndex), so it keeps working from the OS media controls too.
-
-  // ── Edit modal ─────────────────────────────────────────────────────────────
-  function openEditModal() {
-    document.getElementById('ep-title').value = playlist.title || '';
-    document.getElementById('ep-desc').value = playlist.description || '';
-    document.getElementById('ep-public').checked = !!playlist.is_public;
-    document.getElementById('ep-alert').innerHTML = '';
-    document.getElementById('edit-playlist-modal').classList.add('open');
-  }
-
-  async function savePlaylistEdit() {
-    var title = document.getElementById('ep-title').value.trim();
-    if (!title) { document.getElementById('ep-alert').innerHTML = '<span style="color:var(--red);">you need a title</span>'; return; }
-    try {
-      var updated = await api('/playlists/' + playlistId, {
-        method: 'PUT',
-        body: JSON.stringify({
-          title: title,
-          description: document.getElementById('ep-desc').value.trim() || null,
-          is_public: document.getElementById('ep-public').checked,
-        }),
-      });
-      playlist.title = updated.title;
-      playlist.description = updated.description;
-      playlist.is_public = updated.is_public;
-      document.title = playlist.title + ' — wavernrs stream';
-      invalidatePlaylistCache();
-      document.getElementById('edit-playlist-modal').classList.remove('open');
-      renderPlaylist();
-    } catch (err) {
-      document.getElementById('ep-alert').innerHTML = '<span style="color:var(--red);">' + escHtml(err.message || 'couldnt save...try again') + '</span>';
-    }
-  }
-
-  // ── Delete ─────────────────────────────────────────────────────────────────
   async function deletePlaylist() {
-    if (!confirm('delete this playlist? you cant undo this')) return;
+    if (!confirm('delete "' + (playlist.title || 'this playlist') + '"? you cant undo this')) return;
     try {
       await api('/playlists/' + playlistId, { method: 'DELETE' });
-      invalidatePlaylistCache();
-      navigate('/dashboard');
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      plToast('playlist deleted');
+      navigate('/playlists?tab=mine');
     } catch (err) {
-      alert('couldnt delete the playlist... ' + (err.message || 'error'));
+      plToast('couldnt delete the playlist...' + ((err && err.message) || 'try again'), 'error');
     }
   }
-
-  // ── Track search (owner only) ───────────────────────────────────────────────
-  var _searchTimer = null;
-
-  function initSearchSection() {
-    var input = document.getElementById('pl-search-input');
-    if (!input) return;
-    input.addEventListener('input', function () {
-      clearTimeout(_searchTimer);
-      var q = input.value.trim();
-      if (!q) { document.getElementById('pl-search-results').innerHTML = ''; return; }
-      if (q.length < 2) return;
-      _searchTimer = setTimeout(function () { runSearch(q); }, 300);
-    });
-  }
-
-  async function runSearch(q) {
-    var spinner = document.getElementById('pl-search-spinner');
-    var resultsEl = document.getElementById('pl-search-results');
-    if (!resultsEl) return;
-    if (spinner) spinner.style.display = '';
-    resultsEl.innerHTML = '';
-    try {
-      var data = await api('/search?q=' + encodeURIComponent(q));
-      if (spinner) spinner.style.display = 'none';
-      var results = data.tracks || [];
-      if (!results.length) {
-        resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--text-tertiary);">nothing found</div>';
-        return;
-      }
-      var existingIds = {};
-      tracks.forEach(function (t) { existingIds[t.id] = true; });
-      resultsEl.innerHTML = '<div class="track-list" style="margin-top:4px;">' +
-        results.map(function (t) {
-          var artistName = (t.artists && t.artists.display_name) ? t.artists.display_name : 'Unknown';
-          var cover = t.cover_url || (t.albums && t.albums.cover_url) || '';
-          var coverHtml = cover
-            ? '<img src="' + escHtml(cover) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:4px;">'
-            : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--surface-2);border-radius:4px;">🎵</div>';
-          var already = existingIds[t.id];
-          var btn = already
-            ? '<span style="font-size:12px;color:var(--text-tertiary);padding:6px 10px;white-space:nowrap;">In playlist</span>'
-            : '<button class="wv-pill" style="white-space:nowrap;font-size:12px;padding:6px 10px;" ' +
-                'onclick="addSearchTrack(\'' + escHtml(t.id) + '\',\'' + escHtml(t.title) + '\',\'' + escHtml(artistName) + '\',\'' + escHtml(cover) + '\',\'' + escHtml(t.ia_url || '') + '\',this)">' +
-                '+ Add</button>';
-          return '<div class="wv-track-row" style="pointer-events:none;">' +
-            '<div class="track-row-cover" style="pointer-events:none;">' + coverHtml + '</div>' +
-            '<div class="track-row-info" style="flex:1;pointer-events:none;">' +
-              '<div class="track-row-title">' + escHtml(t.title || 'Unknown') + '</div>' +
-              '<div class="track-row-artist">' + escHtml(artistName) + '</div>' +
-            '</div>' +
-            '<div style="flex-shrink:0;pointer-events:auto;">' + btn + '</div>' +
-          '</div>';
-        }).join('') +
-      '</div>';
-    } catch (err) {
-      if (spinner) spinner.style.display = 'none';
-      resultsEl.innerHTML = '<div style="padding:12px 0;font-size:13px;color:var(--red);">search didnt work...try again</div>';
-    }
-  }
-
-  async function addSearchTrack(trackId, title, artistName, coverUrl, iaUrl, btn) {
-    btn.disabled = true;
-    btn.textContent = '…';
-    try {
-      await api('/playlists/' + playlistId + '/tracks', {
-        method: 'POST',
-        body: JSON.stringify({ track_id: trackId }),
-      });
-      // Add to local tracks array so it shows in the list and future searches show "In playlist"
-      tracks.push({ id: trackId, title: title, artist_name: artistName, cover_url: coverUrl, ia_url: iaUrl, play_count: 0 });
-      invalidatePlaylistCache();
-      // Update button to "In playlist" and re-render tracklist
-      var parent = btn.closest('div[style*="flex-shrink"]');
-      if (parent) parent.innerHTML = '<span style="font-size:12px;color:var(--text-tertiary);padding:6px 10px;white-space:nowrap;">In playlist</span>';
-      // Re-render just the tracklist section
-      var tlEl = document.getElementById('pl-tracklist');
-      if (tlEl) {
-        tlEl.innerHTML = tracks.map(function(t, i) {
-          var cover = t.cover_url
-            ? '<img src="' + escHtml(t.cover_url) + '" alt="">'
-            : '🎵';
-          var removeBtn = isOwner
-            ? '<button class="btn btn-danger btn-sm remove-track-btn" onclick="event.stopPropagation();removeTrack(\'' + escHtml(t.id) + '\', ' + i + ')">' +
-              '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
-              '</button>'
-            : '';
-          return '<div class="wv-track-row' + (i === currentIndex ? ' playing' : '') + '" onclick="playAtIndex(' + i + ')">' +
-            '<div class="track-row-num">' + (i + 1) + '</div>' +
-            '<div class="track-row-cover">' + cover + '</div>' +
-            '<div class="track-row-info">' +
-              '<div class="track-row-title">' + escHtml(t.title || 'Unknown') + '</div>' +
-              '<div class="track-row-artist">' + escHtml(t.artist_name || 'Unknown') + '</div>' +
-            '</div>' +
-            '<span class="track-row-plays">' + fmtNum(t.play_count) + ' plays</span>' +
-            removeBtn +
-          '</div>';
-        }).join('');
-      }
-    } catch (err) {
-      btn.disabled = false;
-      if (err && err.message && err.message.includes('409')) {
-        btn.textContent = 'Already added';
-        tracks.push({ id: trackId }); // prevent double-click
-      } else {
-        btn.textContent = 'Failed';
-        setTimeout(function () { btn.textContent = '+ Add'; btn.disabled = false; }, 2000);
-      }
-    }
-  }
-
-  // The router only swaps #view, so the overlay has to travel with the page
-  // and then be lifted out to the body to sit above the app chrome.
-  (function () {
-    var m = document.getElementById('edit-playlist-modal');
-    if (m && m.parentNode !== document.body) document.body.appendChild(m);
-    if (window._pageCleanup) window._pageCleanup.push(function () {
-      var el = document.getElementById('edit-playlist-modal');
-      if (el) el.remove();
-    });
-  })();
 
   loadPlaylist();
 </script>

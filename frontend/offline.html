@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>offline — wavernrs</title>
+  <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
+  <script src="/js/status-card.js?v=6288d60cd337"></script>
+  <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .off-wrap { max-width: 620px; margin: 48px auto 40px; text-align: center; }
+    .off-orb { position: relative; width: 116px; height: 116px; margin: 0 auto 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 40%, var(--brand-bg), transparent 70%); }
+    .off-orb::before, .off-orb::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--brand); opacity: 0; animation: off-ping 2.8s var(--ease) infinite; }
+    .off-orb::after { animation-delay: 1.4s; }
+    .off-orb svg { position: relative; color: var(--brand); }
+    @keyframes off-ping { 0% { transform: scale(.55); opacity: .55; } 100% { transform: scale(1.15); opacity: 0; } }
+    .off-h { font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin: 0; color: var(--text); }
+    .off-p { font-size: 15px; color: var(--text-2); line-height: 1.6; margin: 10px auto 24px; max-width: 420px; }
+    .off-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .off-btn { min-height: 44px; padding: 0 22px; border-radius: var(--r-pill); font-size: 14px; font-weight: 700; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+    .off-btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+    .off-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+    .off-btn[disabled] { opacity: .6; cursor: default; }
+    .off-status { margin-top: 14px; font-size: 12.5px; color: var(--text-3); min-height: 18px; }
+    .off-recent { margin-top: 44px; text-align: left; }
+    .off-recent h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); margin: 0 0 12px; }
+    .off-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .off-item { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; background: var(--surface); border: 1px solid var(--hair); min-width: 0; text-decoration: none; color: var(--text); }
+    .off-item:hover { background: var(--surface-hover); }
+    .off-art { width: 44px; height: 44px; border-radius: var(--r-art); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #fff; }
+    .off-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .off-meta { min-width: 0; }
+    .off-t { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .off-s { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    @media (max-width: 560px) { .off-wrap { margin-top: 28px; } .off-h { font-size: 26px; } .off-list { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { .off-orb::before, .off-orb::after { animation: none; opacity: .25; transform: scale(.9); } }
+  </style>
+</head>
+<body>
+
+<div id="view">
+  <div class="off-wrap" role="main">
+    <div class="off-orb" aria-hidden="true">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><circle cx="12" cy="20" r="1"/></svg>
+    </div>
+    <h1 class="off-h">you're offline</h1>
+    <p class="off-p">wavernrs needs a connection to stream. we'll bring you back automatically the moment you're online again.</p>
+    <div class="off-actions">
+      <button class="off-btn primary" id="off-retry" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        Try again
+      </button>
+    </div>
+    <div class="off-status" id="off-status" aria-live="polite"></div>
+    <div class="off-recent" id="off-recent" hidden>
+      <h2>pick up where you left off</h2>
+      <div class="off-list" id="off-list"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js?v=6288d60cd337"></script>
+<script src="/js/layout.js?v=6288d60cd337"></script>
+<script src="/js/player.js?v=6288d60cd337"></script>
+<script src="/js/router.js?v=6288d60cd337"></script>
+<script>
+(function () {
+  window._pageCleanup = window._pageCleanup || [];
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function hue(s) { var h = 0; s = String(s || ''); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) % 360; }
+  var btn = document.getElementById('off-retry');
+  var status = document.getElementById('off-status');
+  // Offline is shown in place of the page that was asked for, so retrying
+  // means loading this same URL again.
+  function retry() {
+    if (!btn) return;
+    btn.disabled = true;
+    if (status) status.textContent = 'checking your connection…';
+    fetch('/manifest.json?ping=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('bad');
+      if (status) status.textContent = 'back online, loading…';
+      location.reload();
+    }).catch(function () {
+      btn.disabled = false;
+      if (status) status.textContent = 'still offline, check your wifi or data';
+    });
+  }
+  if (btn) btn.onclick = retry;
+  function onOnline() { if (document.getElementById('off-retry')) retry(); }
+  window.addEventListener('online', onOnline);
+  window._pageCleanup.push(function () { window.removeEventListener('online', onOnline); });
+
+  var list = [];
+  try { list = JSON.parse(localStorage.getItem('recently_played') || '[]') || []; } catch (_) { list = []; }
+  list = list.filter(function (x) { return x && x.id && x.title; }).slice(0, 6);
+  var box = document.getElementById('off-list');
+  if (list.length && box) {
+    box.innerHTML = list.map(function (x) {
+      var href = (x._type === 'album' ? '/album?id=' : '/track?id=') + encodeURIComponent(x.id);
+      var h = hue(x.title);
+      var L = String(x.title).trim().charAt(0).toUpperCase();
+      var art = '<div class="off-art" style="background:linear-gradient(135deg,hsl(' + h + ',55%,42%),hsl(' + ((h + 40) % 360) + ',60%,28%))">' +
+        (x.cover_url ? '<img src="' + esc(x.cover_url) + '" alt="" loading="lazy" data-l="' + esc(L) + '" onerror="this.replaceWith(document.createTextNode(this.dataset.l))">' : esc(L)) + '</div>';
+      return '<a class="off-item" href="' + esc(href) + '">' + art +
+        '<div class="off-meta"><div class="off-t">' + esc(x.title) + '</div><div class="off-s">' + esc(x.artist_name || (x._type === 'album' ? 'comp' : 'edit')) + '</div></div></a>';
+    }).join('');
+    document.getElementById('off-recent').hidden = false;
+  }
+  if (typeof initPlayer === 'function') initPlayer();
+})();
+</script>
+</body>
+</html>

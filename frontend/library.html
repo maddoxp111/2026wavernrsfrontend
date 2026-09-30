@@ -7,263 +7,927 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .lib-wrap { max-width: 1180px; margin: 0 auto; padding-bottom: 48px; min-width: 0; }
+    .lib-hero { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: stretch; margin-bottom: 22px; }
+    .lib-me { display: flex; gap: 20px; align-items: center; min-width: 0; }
+    .lib-av { width: 104px; height: 104px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; font-size: 42px; font-weight: 800; color: rgba(255,255,255,0.95); box-shadow: 0 10px 30px rgba(0,0,0,0.28); text-transform: uppercase; letter-spacing: -0.03em; overflow: hidden; }
+    .lib-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-3); }
+    .lib-h1 { margin: 4px 0 2px; font-size: clamp(30px, 5vw, 46px); font-weight: 900; letter-spacing: -0.045em; line-height: 1.02; color: var(--text); }
+    .lib-handle { font-size: 13.5px; color: var(--text-2); }
+    .lib-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .lib-stat { display: inline-flex; align-items: baseline; gap: 5px; padding: 6px 12px; border-radius: var(--r-pill); background: var(--surface-2); font-size: 12.5px; color: var(--text-2); white-space: nowrap; border: 0; font-family: inherit; cursor: pointer; }
+    .lib-stat b { color: var(--text); font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .lib-stat:hover { background: var(--surface-3); }
+    .lib-stat.dev { cursor: default; }
+    .lib-stat.dev:hover { background: var(--surface-2); }
+    .lib-recap { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; padding: 18px 18px 16px; border-radius: 12px; text-decoration: none; color: #fff; background: linear-gradient(135deg, #6d28d9 0%, #a78bfa 45%, #f472b6 100%); min-height: 132px; transition: transform 160ms var(--ease), box-shadow 160ms var(--ease); }
+    .lib-recap:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(109,40,217,0.35); }
+    .lib-recap::after { content: ''; position: absolute; right: -40px; top: -40px; width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.28), rgba(255,255,255,0) 70%); pointer-events: none; }
+    .lib-recap-k { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }
+    .lib-recap-t { font-size: 22px; font-weight: 900; letter-spacing: -0.035em; line-height: 1.1; margin-top: 4px; }
+    .lib-recap-go { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; background: rgba(0,0,0,0.22); padding: 7px 12px; border-radius: var(--r-pill); align-self: flex-start; }
+    .lib-recap svg.bars { position: absolute; right: 16px; bottom: 14px; opacity: 0.9; }
+
+    .lib-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 4px; margin-bottom: 14px; -webkit-overflow-scrolling: touch; }
+    .lib-tabs::-webkit-scrollbar { display: none; }
+    .lib-tab { flex-shrink: 0; min-height: 40px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background 140ms var(--ease); }
+    .lib-tab:hover { background: var(--surface-3); }
+    .lib-tab .n { font-size: 12px; color: var(--text-3); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lib-tab.on { background: var(--text); color: var(--page-bg-base); }
+    .lib-tab.on .n { color: inherit; opacity: 0.6; }
+    .lib-tab:focus-visible, .lib-btn:focus-visible, .lib-ico:focus-visible, .lib-view button:focus-visible, .lib-chip:focus-visible, .lib-row:focus-visible, .lib-stat:focus-visible, .lib-recap:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .lib-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .lib-actions { display: flex; gap: 8px; align-items: center; }
+    .lib-tools { display: flex; gap: 8px; align-items: center; margin-left: auto; min-width: 0; }
+    .lib-search { position: relative; flex: 0 1 240px; width: 240px; min-width: 150px; max-width: 100%; }
+    .lib-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    .lib-search input { width: 100%; height: 40px; box-sizing: border-box; padding: 0 12px 0 36px; border-radius: var(--r-pill); border: 1px solid transparent; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; outline: none; }
+    .lib-search input:focus { border-color: var(--brand); background: var(--surface); }
+    .lib-search input::placeholder { color: var(--text-3); }
+    .lib-sort { flex: 0 0 auto; width: auto; min-width: 0; height: 40px; border-radius: var(--r-pill); border: 0; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; padding: 0 30px 0 14px; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%); background-position: calc(100% - 17px) 18px, calc(100% - 12px) 18px; background-size: 5px 5px; background-repeat: no-repeat; }
+    .lib-sort:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .lib-view { display: inline-flex; background: var(--surface-2); border-radius: var(--r-pill); padding: 3px; }
+    .lib-view button { width: 36px; height: 34px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--text-2); cursor: pointer; display: grid; place-items: center; }
+    .lib-view button.on { background: var(--surface-3); color: var(--text); }
+    .theme-light .lib-view button.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .lib-btn { height: 44px; padding: 0 20px; border-radius: var(--r-pill); border: 0; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2); color: var(--text); transition: transform 100ms var(--ease), filter 140ms var(--ease); text-decoration: none; }
+    .lib-btn:hover { filter: brightness(1.1); }
+    .lib-btn:active { transform: scale(0.97); }
+    .lib-btn.pri { background: var(--brand); color: var(--on-brand); }
+    .lib-btn.round { width: 52px; height: 52px; padding: 0; justify-content: center; }
+
+    .lib-list { display: flex; flex-direction: column; }
+    .lib-lhead, .lib-row { display: grid; grid-template-columns: 34px minmax(0, 1.6fr) minmax(0, 1fr) 96px 132px; gap: 14px; align-items: center; padding: 0 12px; }
+    .lib-lhead { height: 34px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--hair); margin-bottom: 6px; }
+    .lib-row { min-height: 60px; border-radius: var(--r-md); cursor: pointer; position: relative; transition: background 120ms var(--ease); }
+    .lib-row:hover, .lib-row:focus-within { background: var(--surface-2); }
+    .lib-row.is-gone { opacity: 0; transform: translateX(12px); transition: opacity 200ms, transform 200ms; }
+    .lib-num { font-size: 13.5px; color: var(--text-3); text-align: center; font-variant-numeric: tabular-nums; position: relative; height: 20px; display: grid; place-items: center; }
+    .lib-num .pl { display: none; color: var(--text); }
+    .lib-row:hover .lib-num .i, .lib-row:focus-within .lib-num .i { display: none; }
+    .lib-row:hover .lib-num .pl, .lib-row:focus-within .lib-num .pl { display: block; }
+    .lib-row.nop .lib-num .pl { display: none !important; }
+    .lib-row.nop .lib-num .i { display: block !important; }
+    .lib-eq { display: none; gap: 2px; align-items: flex-end; height: 14px; }
+    .lib-eq i { width: 3px; background: var(--brand); border-radius: 1px; animation: lib-eq 900ms ease-in-out infinite; }
+    .lib-eq i:nth-child(2) { animation-delay: -300ms; } .lib-eq i:nth-child(3) { animation-delay: -600ms; }
+    @keyframes lib-eq { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+    .lib-row.is-now .lib-num .i { color: var(--brand); }
+    .lib-live .lib-row.is-now .lib-num .i, .lib-live .lib-row.is-now .lib-num .pl { display: none !important; }
+    .lib-live .lib-row.is-now .lib-eq { display: inline-flex; }
+    .lib-row.is-now .lib-tt { color: var(--brand); }
+    .lib-main { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .lib-art { width: 44px; height: 44px; border-radius: var(--r-sm); flex-shrink: 0; overflow: hidden; position: relative; background: var(--surface-3); }
+    .lib-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .lib-txt { min-width: 0; }
+    .lib-tt { font-size: 14.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lib-st { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .lib-col { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lib-col a, .lib-st a { color: inherit; text-decoration: none; }
+    .lib-col a:hover, .lib-st a:hover { color: var(--text); text-decoration: underline; }
+    .lib-when { font-size: 12.5px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .lib-racts { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+    .lib-ico { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: var(--text-2); cursor: pointer; display: grid; place-items: center; transition: background 120ms var(--ease), color 120ms var(--ease), transform 100ms; flex-shrink: 0; }
+    .lib-ico:hover { background: var(--surface-3); color: var(--text); }
+    .lib-ico:active { transform: scale(0.92); }
+    .lib-ico.heart { color: var(--brand); }
+    .lib-row .lib-ico.hov { opacity: 0; }
+    .lib-row:hover .lib-ico.hov, .lib-row:focus-within .lib-ico.hov { opacity: 1; }
+    .lib-stars { display: inline-flex; gap: 1px; vertical-align: -2px; }
+
+    .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 22px 18px; }
+    .lib-card { min-width: 0; cursor: pointer; position: relative; border-radius: var(--r-lg); padding: 10px; margin: -10px; transition: background 140ms var(--ease); }
+    .lib-card:hover { background: var(--surface-2); }
+    .lib-cover { position: relative; aspect-ratio: 1; border-radius: var(--r-art); overflow: hidden; background: var(--surface-3); box-shadow: 0 6px 18px rgba(0,0,0,0.22); }
+    .lib-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .lib-cplay { position: absolute; right: 8px; bottom: 8px; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 18px rgba(0,0,0,0.35); opacity: 0; transform: translateY(6px); transition: opacity 160ms var(--ease), transform 160ms var(--ease); }
+    .lib-card:hover .lib-cplay, .lib-cplay:focus-visible, .lib-card.is-now .lib-cplay { opacity: 1; transform: none; }
+    .lib-cheart { position: absolute; left: 8px; top: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.55); color: #fff; display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity 160ms; }
+    .lib-card:hover .lib-cheart, .lib-cheart:focus-visible { opacity: 1; }
+    .lib-card .lib-tt { margin-top: 10px; font-size: 14px; }
+    .lib-card.is-now .lib-tt { color: var(--brand); }
+    .lib-badge { position: absolute; left: 8px; bottom: 8px; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: var(--r-pill); background: rgba(0,0,0,0.62); color: #fff; letter-spacing: 0.01em; }
+    .lib-pill { position: absolute; left: 18px; top: 18px; z-index: 2; font-size: 10.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 8px; border-radius: var(--r-pill); background: rgba(0,0,0,0.62); color: #fff; pointer-events: none; display: inline-flex; gap: 4px; align-items: center; }
+    .lib-pill.pub { background: var(--brand); color: var(--on-brand); }
+    .lib-plwrap { position: relative; min-width: 0; }
+    .lib-newpl { text-decoration: none; color: inherit; }
+    .lib-newpl .box { position: absolute; inset: 0; border-radius: inherit; border: 2px dashed var(--hair-strong); display: grid; place-items: center; color: var(--text-2); transition: border-color 140ms, color 140ms; box-sizing: border-box; }
+    .lib-newpl:hover .box { border-color: var(--brand); color: var(--brand); }
+    .lib-newpl .wv-comp-card-cover-inner { background: transparent !important; box-shadow: none !important; }
+
+    .lib-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .lib-chip { min-height: 36px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--hair-strong); background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+    .lib-chip .n { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .lib-chip.on { background: var(--brand-bg); border-color: var(--brand); color: var(--text); }
+    .lib-dist { display: flex; gap: 4px; align-items: flex-end; height: 34px; margin-left: 6px; }
+    .lib-dist i { width: 10px; background: var(--brand); border-radius: 2px 2px 0 0; opacity: 0.75; min-height: 2px; }
+
+    .lib-sec { margin: 4px 0 14px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .lib-sec h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+    .lib-sec span { font-size: 12.5px; color: var(--text-3); }
+    .lib-rail { display: grid; grid-auto-flow: column; grid-auto-columns: 156px; gap: 16px; overflow-x: auto; padding: 10px 10px 14px; margin: -10px -10px 22px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+    .lib-rail .lib-card { scroll-snap-align: start; margin: 0; }
+
+    .lib-empty { text-align: center; padding: 56px 20px 64px; border-radius: 12px; background: var(--surface); }
+    .lib-empty .ic { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px; display: grid; place-items: center; background: var(--brand-bg); color: var(--brand); }
+    .lib-empty h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+    .lib-empty p { margin: 6px auto 0; font-size: 13.5px; color: var(--text-3); max-width: 360px; }
+    .lib-empty .lib-btn { margin-top: 18px; }
+    .lib-nores { padding: 40px 10px; text-align: center; color: var(--text-3); font-size: 14px; }
+
+    .lib-sk { background: var(--surface-2); border-radius: var(--r-sm); position: relative; overflow: hidden; }
+    .lib-sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--hair), transparent); animation: wv-skel 1.4s infinite; }
+
+    @media (max-width: 900px) {
+      .lib-hero { grid-template-columns: 1fr; }
+      .lib-recap { min-height: 0; flex-direction: row; align-items: center; padding: 14px 16px; }
+      .lib-recap-t { font-size: 17px; }
+      .lib-recap svg.bars { display: none; }
+      .lib-lhead, .lib-row { grid-template-columns: 30px minmax(0, 1fr) 86px 124px; }
+      .lib-lhead .c-alb, .lib-row .c-alb { display: none; }
+    }
+    @media (max-width: 640px) {
+      .lib-me { gap: 14px; }
+      .lib-av { width: 68px; height: 68px; font-size: 28px; }
+      .lib-h1 { font-size: 30px; }
+      .lib-stats { gap: 6px; margin-top: 10px; }
+      .lib-stat { padding: 5px 10px; font-size: 12px; }
+      .lib-recap-go { padding: 8px 10px; flex-shrink: 0; }
+      .lib-recap-go .tx { display: none; }
+      .lib-tools { margin-left: 0; width: 100%; flex-wrap: wrap; }
+      .lib-search { flex: 1 1 100%; width: auto; }
+      .lib-search input { font-size: 16px; }
+      .lib-sort { flex: 1 1 auto; font-size: 14px; }
+      .lib-toolbar { gap: 10px; }
+      .lib-lhead { display: none; }
+      .lib-lhead, .lib-row { grid-template-columns: minmax(0, 1fr) auto; padding: 0 6px; gap: 8px; }
+      .lib-row .lib-num, .lib-row .c-when { display: none; }
+      .lib-row .lib-ico.hov { display: none; }
+      .lib-row { min-height: 62px; }
+      .lib-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+      .lib-cplay { opacity: 1; transform: none; width: 40px; height: 40px; }
+      .lib-cheart { opacity: 1; }
+      .lib-rail { grid-auto-columns: 132px; }
+      .lib-dist { display: none; }
+    }
+    @media (hover: none) {
+      .lib-row .lib-ico.hov { opacity: 1; }
+      .lib-cplay, .lib-cheart { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lib-eq i { animation: none; height: 10px; }
+      .lib-recap, .lib-row, .lib-cplay, .lib-btn { transition: none; }
+      .lib-sk::after { animation: none; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
-  <div style="margin-bottom:20px;">
-    <h1 style="margin:0 0 6px;font-size:28px;font-weight:800;letter-spacing:-0.04em;">Your Library</h1>
-    <p style="margin:0;font-size:14px;color:var(--text-2);">all the stuff youve liked and made</p>
+  <div class="lib-wrap" id="lib-root">
+    <header class="lib-hero" id="lib-hero"></header>
+    <div class="lib-tabs" id="lib-tabs" role="tablist" aria-label="Library sections"></div>
+    <div class="lib-toolbar" id="lib-toolbar"></div>
+    <div id="lib-body"></div>
   </div>
-
-  <div id="lib-tabs" class="wv-filters"></div>
-  <div id="lib-body"><div class="loading"><div class="spinner"></div></div></div>
 </div><!-- /view -->
 
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
 <script src="/js/player.js?v=6288d60cd337"></script>
 <script src="/js/router.js?v=6288d60cd337"></script>
+<script src="/js/playlists.js?v=6288d60cd337"></script>
 <script>
+(function () {
   initPlayer();
+  window._pageCleanup = window._pageCleanup || [];
 
-  var _lib = null;          // { tracks, albums, playlists, counts }
-  var _libTab = 'tracks';   // tracks | albums | playlists | recent
-
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function _empty(icon, title, desc, cta) {
-    return '<div class="empty-state" style="text-align:center;padding:52px 20px;">' +
-      '<div class="empty-icon" style="font-size:30px;">' + icon + '</div>' +
-      '<div class="empty-title" style="font-size:16px;font-weight:700;margin-top:8px;">' + escHtml(title) + '</div>' +
-      '<div class="empty-desc" style="font-size:13.5px;color:var(--text-3);margin-top:4px;">' + escHtml(desc) + '</div>' +
-      (cta || '') + '</div>';
-  }
-
-  // Recently played is written by the player into localStorage; surfacing it
-  // here means the library covers "what I've been listening to" too.
-  function _recent() {
-    try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); }
-    catch (e) { return []; }
-  }
-
-  async function loadLibrary() {
-    var body = document.getElementById('lib-body');
-    if (!isLoggedIn()) {
-      renderTabs();
-      body.innerHTML = _empty('🔒', 'log in to see your library',
-        'your liked edits and comps and your playlists go here',
-        '<a href="/login" class="btn btn-primary" style="margin-top:16px;">Log in</a>');
-      return;
-    }
-    try {
-      _lib = await api('/library');
-      if (typeof window.setPageBgImage === 'function') {
-        var art = (_lib.albums || []).find(function(a) { return a.cover_url; })
-               || (_lib.tracks || []).find(function(t) { return t.cover_url; });
-        window.setPageBgImage(art ? art.cover_url : '');
-      }
-      renderTabs();
-      renderLib();
-    } catch (err) {
-      renderTabs();
-      body.innerHTML = _empty('⚠️', 'couldnt load your library', err.message || 'try again in a sec');
-    }
-  }
-
-  function renderTabs() {
-    var c = _lib ? _lib.counts : { tracks: 0, albums: 0, playlists: 0 };
-    var recentCount = _recent().length;
-    var tabs = [
-      ['tracks',    'Liked Edits',  c.tracks],
-      ['albums',    'Liked Comps',  c.albums],
-      ['playlists', 'Playlists',    c.playlists],
-      ['recent',    'Recently Played', recentCount],
-    ];
-    document.getElementById('lib-tabs').innerHTML = tabs.map(function(t) {
-      var active = _libTab === t[0];
-      return '<span class="wv-chip' + (active ? ' acc' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' +
-        escHtml(t[1]) + (t[2] ? ' ' + t[2] : '') + '</span>';
-    }).join('');
-  }
-
-  window.setLibTab = function(tab) {
-    _libTab = tab;
-    renderTabs();
-    renderLib();
+  var S = {
+    lib: null,
+    tab: 'tracks',
+    q: '',
+    sort: {},
+    ratings: null,
+    ratingsErr: false,
+    ratingsLoading: false,
+    star: 0,
+    gen: 0
   };
 
-  function renderLib() {
-    var body = document.getElementById('lib-body');
-    if (!_lib) return;
-    if (_libTab === 'tracks')    return void (body.innerHTML = _renderTracks(_lib.tracks || []));
-    if (_libTab === 'albums')    return void (body.innerHTML = _renderComps(_lib.albums || [], 'liked'));
-    if (_libTab === 'playlists') return void (body.innerHTML = _renderPlaylists(_lib.playlists || []));
-    if (_libTab === 'recent')    return void (body.innerHTML = _renderRecent(_recent()));
-  }
+  var ICON = {
+    play: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.8v14.4a1 1 0 0 0 1.5.86l12-7.2a1 1 0 0 0 0-1.72l-12-7.2A1 1 0 0 0 7 4.8Z"/></svg>',
+    playL: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.8v14.4a1 1 0 0 0 1.5.86l12-7.2a1 1 0 0 0 0-1.72l-12-7.2A1 1 0 0 0 7 4.8Z"/></svg>',
+    shuffle: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
+    queue: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h14M3 11h14M3 16h7"/><path d="M14 14.5v6l5-3z" fill="currentColor"/></svg>',
+    addpl: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    heart: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.7 4.5c2.1 0 3.5 1.1 4.3 2.4.8-1.3 2.2-2.4 4.3-2.4 3.7 0 5.8 3.7 4.3 7.2C19.5 16.4 12 21 12 21Z"/></svg>',
+    heartO: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.7 4.5c2.1 0 3.5 1.1 4.3 2.4.8-1.3 2.2-2.4 4.3-2.4 3.7 0 5.8 3.7 4.3 7.2C19.5 16.4 12 21 12 21Z"/></svg>',
+    note: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="opacity:.55"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6Z"/></svg>',
+    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    list: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
+    grid: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',
+    plus: '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    star: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2 6.4 20.2l1.1-6.3L2.9 9.5l6.3-.9L12 2.8Z"/></svg>',
+    clock: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    lock: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
+    stack: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M6 11h12M8 15h8"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>',
+    arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    globe: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>',
+    lockS: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+  };
 
-  // ── Liked edits ─────────────────────────────────────────────────────────────
-  function _renderTracks(tracks) {
-    if (!tracks.length) {
-      return _empty('♡', 'no liked edits yet', 'hit the heart on any edit and itll show up here');
-    }
-    var playable = tracks.filter(function(t) { return t.ia_url; });
-    var html = '';
-    if (playable.length) {
-      html += '<div style="margin-bottom:14px;"><button class="wv-btn-play" onclick="playLikedAll()">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:5px;"><path d="M8 5v14l11-7z"/></svg>' +
-        'Play all (' + playable.length + ')</button></div>';
-    }
-    html += '<div class="wv-card" style="padding:8px;">';
-    tracks.forEach(function(t, i) {
-      var artist = (t.artists && t.artists.display_name) || 'Unknown';
-      html += '<div class="wv-trow" id="lib-trk-' + i + '"' +
-        (t.ia_url ? ' style="cursor:pointer;" onclick="playLiked(' + i + ')"' : '') + '>' +
-        '<div class="wv-trow-art">' +
-          (t.cover_url
-            ? '<img src="' + escHtml(t.cover_url) + '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" loading="lazy" onerror="this.style.opacity=0">'
-            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13M9 9l12-2M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>') +
-        '</div>' +
-        '<div class="wv-trow-main">' +
-          '<div class="wv-trow-title">' + escHtml(t.title || 'Untitled') + '</div>' +
-          '<div class="wv-trow-sub">' + escHtml(artist) + '</div>' +
-        '</div>' +
-        '<div class="wv-lib-actions" style="display:flex;gap:6px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">' +
-          (t.ia_url ? '<button class="wv-icon-btn" title="Add to queue" aria-label="Add to queue" onclick="libQueue(' + i + ')">' +
-            '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg></button>' : '') +
-          '<button class="wv-icon-btn" title="Add to a playlist" aria-label="Add to a playlist" onclick="libAddToPlaylist(' + i + ')">' +
-            '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm19.5-4.5L23 13l-6.99 7-4.51-4.5L13 14l3.01 3 5.49-5.5z"/></svg></button>' +
-          '<button class="wv-icon-btn" title="unlike" aria-label="Remove from your likes" onclick="libUnlikeTrack(\'' + escHtml(t.id) + '\', this)">♥</button>' +
-          '<a class="btn btn-secondary btn-sm" href="/track?id=' + escHtml(t.id) + '" ' +
-            'onclick="navigate(\'/track?id=' + escHtml(t.id) + '\');return false;" style="text-decoration:none;">Open</a>' +
-        '</div>' +
-      '</div>';
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
-    html += '</div>';
-    return html;
+  }
+  function ls(k, v) {
+    try {
+      if (arguments.length > 1) { localStorage.setItem(k, v); return v; }
+      return localStorage.getItem(k);
+    } catch (_) { return null; }
+  }
+  function toast(msg, kind, ms, opts) { if (typeof wvToast === 'function') wvToast(msg, kind, ms, opts); }
+  function ago(d) { if (!d) return ''; try { return typeof timeAgo === 'function' ? timeAgo(d) : ''; } catch (_) { return ''; } }
+  function num(n) { n = +n || 0; if (typeof fmtNum === 'function') { try { return fmtNum(n); } catch (_) {} } return String(n); }
+  function grad(seed) { return typeof coverGradient === 'function' ? coverGradient(seed || '') : 'var(--surface-3)'; }
+  function img(url) { return url ? '<img src="' + esc(url) + '" alt="" loading="lazy" decoding="async" onerror="this.style.opacity=0">' : ''; }
+  function norm(s) { return String(s || '').toLowerCase(); }
+  function $(id) { return document.getElementById(id); }
+
+  function tally() {
+    try { return JSON.parse(localStorage.getItem('wv_play_tally') || '{}') || {}; } catch (_) { return {}; }
+  }
+  function recent() {
+    try { var r = JSON.parse(localStorage.getItem('recently_played') || '[]'); return Array.isArray(r) ? r.filter(function (x) { return x && x.id; }) : []; } catch (_) { return []; }
+  }
+  function nowIds() {
+    try {
+      var c = JSON.parse(localStorage.getItem('player_current') || 'null');
+      var a = document.querySelector('audio');
+      if (!c) return {};
+      return { t: c.id || null, a: c._album_id || null, on: !!(a && !a.paused) };
+    } catch (_) { return {}; }
   }
 
-  // Acting on something you have liked should not mean leaving the page.
-  window.libQueue = function (i) {
-    var t = (_lib.tracks || [])[i];
-    if (t) addToQueue(_libTrackObj(t));
-  };
+  function trackArtist(t) {
+    if (t.artist_name) return t.artist_name;
+    var al = t.albums || null;
+    if (al && al.archive_artist_name && (t.is_archive || al.is_archive)) return al.archive_artist_name;
+    var n = (t.artists && t.artists.display_name) || '';
+    if (/^wvarchivebot$/i.test(n)) return 'archive';
+    return n || 'Unknown';
+  }
+  function albumArtist(a) {
+    if (a.artist_name) return a.artist_name;
+    if (a.is_archive && a.archive_artist_name) return a.archive_artist_name;
+    var n = (a.artists && a.artists.display_name) || '';
+    if (/^wvarchivebot$/i.test(n)) return 'archive';
+    return n || 'Unknown';
+  }
+  function trackObj(t) {
+    var o = { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || (t.albums && t.albums.cover_url) || null, artist_name: trackArtist(t) };
+    if (t.artists && t.artists.id) o.artist_id = t.artists.id;
+    return o;
+  }
 
-  window.libAddToPlaylist = function (i) {
-    var t = (_lib.tracks || [])[i];
-    if (!t) return;
-    if (typeof openAddToPlaylist === 'function') openAddToPlaylist(_libTrackObj(t));
-    else if (typeof wvToast === 'function') wvToast('playlists arent working rn...try again later', 'error');
+  var TABS = [
+    { k: 'tracks', label: 'Liked edits' },
+    { k: 'albums', label: 'Liked comps' },
+    { k: 'playlists', label: 'Playlists' },
+    { k: 'rated', label: 'Rated' },
+    { k: 'recent', label: 'Recently played' }
+  ];
+  var SORTS = {
+    tracks: [['recent', 'Recently added'], ['title', 'Title'], ['artist', 'Artist'], ['plays', 'Most played']],
+    albums: [['recent', 'Recently added'], ['title', 'Title'], ['artist', 'Creator'], ['plays', 'Most played']],
+    playlists: [['recent', 'Recently made'], ['title', 'Title'], ['size', 'Most songs']],
+    rated: [['recent', 'Recently rated'], ['high', 'Highest rated'], ['low', 'Lowest rated'], ['title', 'Title']],
+    recent: []
   };
+  var VIEW_DEF = { tracks: 'list', albums: 'grid', rated: 'list', playlists: 'grid', recent: 'grid' };
 
-  window.libUnlikeTrack = async function (id, btn) {
-    try {
-      await api('/tracks/' + id + '/like', { method: 'POST' });
-      _lib.tracks = (_lib.tracks || []).filter(function (t) { return t.id !== id; });
-      renderLib();
-      if (typeof wvToast === 'function') wvToast('removed from your likes');
-    } catch (e) {
-      if (typeof wvToast === 'function') wvToast('couldnt update that like...try again', 'error');
+  function hasRatings() { return !!(S.lib && S.lib.counts && typeof S.lib.counts.ratings === 'number'); }
+  function visibleTabs() { return TABS.filter(function (t) { return t.k !== 'rated' || hasRatings(); }); }
+  function viewOf(tab) { var v = ls('wv_lib_view_' + tab); return v === 'grid' || v === 'list' ? v : VIEW_DEF[tab]; }
+  function sortOf(tab) { return S.sort[tab] || ls('wv_lib_sort_' + tab) || 'recent'; }
+
+  function count(tab) {
+    if (tab === 'recent') return recent().length;
+    if (!S.lib) return null;
+    if (tab === 'tracks') return (S.lib.tracks || []).length;
+    if (tab === 'albums') return (S.lib.albums || []).length;
+    if (tab === 'playlists') return (S.lib.playlists || []).length;
+    if (tab === 'rated') return S.ratings ? S.ratings.items.length : (S.lib.counts && S.lib.counts.ratings) || 0;
+    return null;
+  }
+
+  // ── Hero ───────────────────────────────────────────────────────────────
+  function renderHero(loading) {
+    var u = (typeof getUser === 'function' && getUser()) || {};
+    var name = u.username || '';
+    var t = tally(); var plays = 0;
+    Object.keys(t).forEach(function (k) { plays += (t[k] && t[k].n) || 0; });
+    var stats;
+    if (loading) {
+      stats = [70, 84, 76, 96].map(function (w) { return '<span class="lib-sk" style="width:' + w + 'px;height:30px;border-radius:999px;display:inline-block"></span>'; }).join('');
+    } else if (S.lib) {
+      stats = [
+        ['tracks', count('tracks'), count('tracks') === 1 ? 'liked edit' : 'liked edits'],
+        ['albums', count('albums'), count('albums') === 1 ? 'comp' : 'comps'],
+        ['playlists', count('playlists'), count('playlists') === 1 ? 'playlist' : 'playlists']
+      ].map(function (s) {
+        return '<button type="button" class="lib-stat" data-act="tab" data-tab="' + s[0] + '"><b>' + num(s[1]) + '</b>' + esc(s[2]) + '</button>';
+      }).join('') +
+      (plays ? '<span class="lib-stat dev" title="counted on this device only"><b>~' + num(plays) + '</b>plays on this device</span>' : '');
+    } else { stats = ''; }
+    $('lib-hero').innerHTML =
+      '<div class="lib-me">' +
+        '<div class="lib-av" style="background:' + grad(name || 'wavernrs') + '" aria-hidden="true">' + (name ? esc(name.charAt(0)) : '<svg width="44%" height="44%" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c.8-4.6 4.2-7 8.5-7s7.7 2.4 8.5 7z"/></svg>') + '</div>' +
+        '<div style="min-width:0">' +
+          '<div class="lib-eyebrow">your collection</div>' +
+          '<h1 class="lib-h1">Your Library</h1>' +
+          (name ? '<div class="lib-handle">@' + esc(name) + '</div>' : '<div class="lib-handle">all the stuff youve liked, rated and made</div>') +
+          '<div class="lib-stats">' + stats + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<a class="lib-recap" href="/wrapped" data-nav="/wrapped">' +
+        '<div><div class="lib-recap-k">wavernrs</div><div class="lib-recap-t">Your 2026 Recap</div></div>' +
+        '<span class="lib-recap-go"><span class="tx">see your year</span>' + ICON.arrow + '</span>' +
+        '<svg class="bars" width="64" height="40" viewBox="0 0 64 40" aria-hidden="true"><g fill="rgba(255,255,255,0.55)"><rect x="0" y="22" width="8" height="18" rx="2"/><rect x="14" y="10" width="8" height="30" rx="2"/><rect x="28" y="16" width="8" height="24" rx="2"/><rect x="42" y="2" width="8" height="38" rx="2"/><rect x="56" y="26" width="8" height="14" rx="2"/></g></svg>' +
+      '</a>';
+  }
+
+  // ── Tabs + toolbar ─────────────────────────────────────────────────────
+  function renderTabs() {
+    $('lib-tabs').innerHTML = visibleTabs().map(function (t) {
+      var n = count(t.k);
+      var on = S.tab === t.k;
+      return '<button type="button" class="lib-tab' + (on ? ' on' : '') + '" role="tab" aria-selected="' + on + '" data-act="tab" data-tab="' + t.k + '">' +
+        esc(t.label) + (n ? '<span class="n">' + num(n) + '</span>' : '') + '</button>';
+    }).join('');
+    var bar = $('lib-tabs'), cur = bar.querySelector('.lib-tab.on');
+    if (cur && bar.scrollWidth > bar.clientWidth) {
+      var l = cur.offsetLeft - bar.offsetLeft, r = l + cur.offsetWidth;
+      if (r > bar.scrollLeft + bar.clientWidth || l < bar.scrollLeft) bar.scrollLeft = Math.max(0, l - 16);
     }
-  };
+  }
 
-  function _libTrackObj(t) {
-    return {
-      id: t.id,
-      title: t.title,
-      ia_url: t.ia_url,
-      cover_url: t.cover_url,
-      artist_name: (t.artists && t.artists.display_name) || 'Unknown',
+  function renderToolbar() {
+    var tab = S.tab;
+    var left = '';
+    if (tab === 'tracks' && S.lib && playableTracks().length) {
+      left = '<div class="lib-actions">' +
+        '<button type="button" class="lib-btn pri round" data-act="playall" aria-label="Play liked edits" title="Play">' + ICON.playL + '</button>' +
+        '<button type="button" class="lib-btn" data-act="shuffle">' + ICON.shuffle + 'Shuffle</button></div>';
+    } else if (tab === 'playlists') {
+      left = '<div class="lib-actions"><button type="button" class="lib-btn pri" data-act="newpl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New playlist</button></div>';
+    } else if (tab === 'rated' && S.ratings && S.ratings.items.length) {
+      var d = S.ratings.dist || [0, 0, 0, 0, 0];
+      var max = Math.max.apply(null, d.concat([1]));
+      left = '<div class="lib-chips" role="group" aria-label="Filter by stars">' +
+        '<button type="button" class="lib-chip' + (!S.star ? ' on' : '') + '" data-act="star" data-star="0">All<span class="n">' + S.ratings.items.length + '</span></button>' +
+        [5, 4, 3, 2, 1].map(function (s) {
+          return '<button type="button" class="lib-chip' + (S.star === s ? ' on' : '') + '" data-act="star" data-star="' + s + '" aria-label="' + s + ' stars">' + stars(s, 12, true) + '<span class="n">' + (d[s - 1] || 0) + '</span></button>';
+        }).join('') +
+        '<div class="lib-dist" aria-hidden="true" title="your rating spread">' + d.map(function (v) { return '<i style="height:' + Math.max(6, Math.round(v / max * 100)) + '%"></i>'; }).join('') + '</div>' +
+        '</div>';
+    }
+    var sorts = SORTS[tab] || [];
+    var cur = sortOf(tab);
+    var tools = '<div class="lib-tools">' +
+      '<label class="lib-search">' + ICON.search +
+        '<input id="lib-q" type="search" autocomplete="off" spellcheck="false" placeholder="Search ' + esc(tabLabel(tab).toLowerCase()) + '" aria-label="Search ' + esc(tabLabel(tab).toLowerCase()) + '" value="' + esc(S.q) + '"></label>' +
+      (sorts.length ? '<select class="lib-sort" id="lib-sort" aria-label="Sort">' + sorts.map(function (s) {
+        return '<option value="' + s[0] + '"' + (s[0] === cur ? ' selected' : '') + '>' + esc(s[1]) + '</option>';
+      }).join('') + '</select>' : '') +
+      ((tab === 'tracks' || tab === 'albums' || tab === 'rated') ?
+        '<div class="lib-view" role="group" aria-label="Layout">' +
+          '<button type="button" data-act="view" data-view="list" class="' + (viewOf(tab) === 'list' ? 'on' : '') + '" aria-label="List view" aria-pressed="' + (viewOf(tab) === 'list') + '">' + ICON.list + '</button>' +
+          '<button type="button" data-act="view" data-view="grid" class="' + (viewOf(tab) === 'grid' ? 'on' : '') + '" aria-label="Grid view" aria-pressed="' + (viewOf(tab) === 'grid') + '">' + ICON.grid + '</button>' +
+        '</div>' : '') +
+      '</div>';
+    $('lib-toolbar').innerHTML = left + tools;
+    var q = $('lib-q');
+    if (q) q.addEventListener('input', function () { S.q = q.value; renderBody(); });
+    var so = $('lib-sort');
+    if (so) so.addEventListener('change', function () { S.sort[tab] = so.value; ls('wv_lib_sort_' + tab, so.value); renderBody(); });
+  }
+  function tabLabel(k) { for (var i = 0; i < TABS.length; i++) if (TABS[i].k === k) return TABS[i].label; return ''; }
+
+  function stars(n, size, tiny) {
+    size = size || 13;
+    var out = '<span class="lib-stars" aria-label="' + n + ' of 5 stars">';
+    for (var i = 1; i <= (tiny ? n : 5); i++) {
+      out += '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2 6.4 20.2l1.1-6.3L2.9 9.5l6.3-.9L12 2.8Z" fill="' + (i <= n ? 'var(--yellow, #fbbf24)' : 'none') + '" stroke="' + (i <= n ? 'var(--yellow, #fbbf24)' : 'var(--text-4, #555)') + '" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    }
+    return out + '</span>';
+  }
+
+  // ── Body ───────────────────────────────────────────────────────────────
+  function empty(icon, title, desc, cta) {
+    return '<div class="lib-empty"><div class="ic">' + icon + '</div><h3>' + esc(title) + '</h3><p>' + esc(desc) + '</p>' + (cta || '') + '</div>';
+  }
+  function skelRows(n) {
+    var out = '<div class="lib-list">';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="lib-row" style="cursor:default"><div class="lib-num"><span class="lib-sk" style="width:14px;height:12px"></span></div>' +
+        '<div class="lib-main"><div class="lib-art lib-sk"></div><div style="flex:1"><div class="lib-sk" style="height:13px;width:' + (40 + (i * 17) % 40) + '%;margin-bottom:8px"></div><div class="lib-sk" style="height:11px;width:' + (22 + (i * 13) % 20) + '%"></div></div></div>' +
+        '<div class="c-alb"><div class="lib-sk" style="height:11px;width:60%"></div></div><div class="c-when"><div class="lib-sk" style="height:11px;width:50%"></div></div><div></div></div>';
+    }
+    return out + '</div>';
+  }
+  function skelGrid(n) {
+    var out = '<div class="lib-grid">';
+    for (var i = 0; i < n; i++) out += '<div><div class="lib-sk" style="aspect-ratio:1;border-radius:6px"></div><div class="lib-sk" style="height:13px;width:75%;margin-top:12px"></div><div class="lib-sk" style="height:11px;width:50%;margin-top:8px"></div></div>';
+    return out + '</div>';
+  }
+
+  function matches(q, parts) {
+    if (!q) return true;
+    var h = norm(parts.join(' '));
+    return q.split(/\s+/).every(function (w) { return !w || h.indexOf(w) !== -1; });
+  }
+  function sorter(tab, getTitle, getArtist, getWhen) {
+    var s = sortOf(tab);
+    var t = s === 'plays' ? tally() : null;
+    return function (a, b) {
+      if (s === 'title') return norm(getTitle(a)).localeCompare(norm(getTitle(b)));
+      if (s === 'artist') return norm(getArtist(a)).localeCompare(norm(getArtist(b))) || norm(getTitle(a)).localeCompare(norm(getTitle(b)));
+      if (s === 'plays') {
+        var na = (t[a.id] && t[a.id].n) || 0, nb = (t[b.id] && t[b.id].n) || 0;
+        return (nb - na) || ((b.play_count || 0) - (a.play_count || 0));
+      }
+      return String(getWhen(b) || '').localeCompare(String(getWhen(a) || ''));
     };
   }
 
-  // Load the liked edits into the player queue so next/prev walk the whole
-  // list instead of dead-ending after one track, then start at `startIdx`.
-  function _queueLiked(startIdx) {
-    var playable = (_lib.tracks || []).filter(function(t) { return t.ia_url; });
-    if (!playable.length) return;
-    var idx = Math.max(0, Math.min(startIdx || 0, playable.length - 1));
-    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') {
-      setPlayerQueue(playable.map(_libTrackObj), idx);
-      playQueueIndex(idx);
-    } else {
-      playTrack(_libTrackObj(playable[idx]));
-    }
+  function playableTracks() { return ((S.lib && S.lib.tracks) || []).filter(function (t) { return t.ia_url; }); }
+  function currentTracks() {
+    var q = norm(S.q).trim();
+    var list = ((S.lib && S.lib.tracks) || []).filter(function (t) {
+      return matches(q, [t.title, trackArtist(t), t.album_title || (t.albums && t.albums.title) || '']);
+    });
+    return list.slice().sort(sorter('tracks', function (x) { return x.title; }, trackArtist, function (x) { return x.liked_at; }));
   }
 
-  window.playLiked = function(i) {
-    var t = (_lib.tracks || [])[i];
-    if (!t || !t.ia_url) return;
-    // Row index is over all liked tracks; the queue holds only playable ones.
-    var playable = (_lib.tracks || []).filter(function(x) { return x.ia_url; });
-    _queueLiked(playable.findIndex(function(x) { return x.id === t.id; }));
-  };
+  function renderBody() {
+    var body = $('lib-body');
+    if (!body) return;
+    var tab = S.tab;
+    if (!S.lib && tab !== 'recent') { body.innerHTML = tab === 'albums' || tab === 'playlists' ? skelGrid(10) : skelRows(8); return; }
+    var html = '';
+    if (tab === 'tracks') html = renderTracks();
+    else if (tab === 'albums') html = renderComps();
+    else if (tab === 'playlists') html = renderPlaylists();
+    else if (tab === 'rated') html = renderRated();
+    else html = renderRecent();
+    body.innerHTML = html;
+    markNow();
+  }
 
-  window.playLikedAll = function() { _queueLiked(0); };
+  function trackRow(t, i) {
+    var al = t.album_title || (t.albums && t.albums.title) || '';
+    var alId = t.album_id || (t.albums && t.albums.id) || '';
+    var cover = t.cover_url || (t.albums && t.albums.cover_url) || '';
+    var playable = !!t.ia_url;
+    return '<div class="lib-row' + (playable ? '' : ' nop') + '" data-tid="' + esc(t.id) + '" data-act="rowplay" tabindex="0" role="button" aria-label="' + esc((playable ? 'Play ' : 'Open ') + (t.title || 'Untitled')) + '">' +
+      '<div class="lib-num"><span class="i">' + (i + 1) + '</span><span class="pl">' + ICON.play + '</span><span class="lib-eq" aria-hidden="true"><i></i><i></i><i></i></span></div>' +
+      '<div class="lib-main"><div class="lib-art" style="background:' + grad(t.title) + '">' + (cover ? img(cover) : '<span style="position:absolute;inset:0;display:grid;place-items:center;color:#fff">' + ICON.note + '</span>') + '</div>' +
+        '<div class="lib-txt"><div class="lib-tt">' + esc(t.title || 'Untitled') + '</div><div class="lib-st">' + esc(trackArtist(t)) + '</div></div></div>' +
+      '<div class="lib-col c-alb">' + (al ? '<a href="/album?id=' + esc(alId) + '" data-nav="/album?id=' + esc(alId) + '">' + esc(al) + '</a>' : '<span style="color:var(--text-3)">single edit</span>') + '</div>' +
+      '<div class="lib-when c-when">' + esc(ago(t.liked_at)) + '</div>' +
+      '<div class="lib-racts">' +
+        (playable ? '<button type="button" class="lib-ico hov" data-act="queue" data-id="' + esc(t.id) + '" aria-label="Add to queue" title="Add to queue">' + ICON.queue + '</button>' : '') +
+        '<button type="button" class="lib-ico hov" data-act="addpl" data-id="' + esc(t.id) + '" aria-label="Add to a playlist" title="Add to a playlist">' + ICON.addpl + '</button>' +
+        '<button type="button" class="lib-ico heart" data-act="unlike" data-id="' + esc(t.id) + '" aria-label="Remove from liked edits" title="Remove from liked edits">' + ICON.heart + '</button>' +
+      '</div></div>';
+  }
 
-  // ── Liked comps ─────────────────────────────────────────────────────────────
-  function _renderComps(albums) {
-    if (!albums.length) {
-      return _empty('♡', 'no liked comps yet', 'like a comp and itll show up here');
-    }
-    return '<div class="wv-tile-grid">' +
-      albums.map(function(a) {
-        var artist = a.is_archive
-          ? (a.archive_artist_name || 'Unknown')
-          : ((a.artists && a.artists.display_name) || 'Unknown');
-        var bg = coverGradient(a.title || '');
-        return '<div class="wv-comp-card" onclick="navigate(\'/album?id=' + escHtml(a.id) + '\')">' +
-          '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
-            (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
-            '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(a.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + escHtml(a.id) + '\')">' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-            '</button>' +
-          '</div></div>' +
-          '<div class="wv-comp-card-title">' + escHtml(a.title || 'Untitled') + '</div>' +
-          '<div class="wv-comp-card-artist">' + escHtml(artist) + '</div>' +
-        '</div>';
+  function renderTracks() {
+    var all = (S.lib.tracks || []);
+    if (!all.length) return empty(ICON.heartO, 'no liked edits yet', 'hit the heart on any edit and itll land here, ready to play in one tap', '<a class="lib-btn pri" href="/charts" data-nav="/charts">Browse the charts</a>');
+    var list = currentTracks();
+    if (!list.length) return '<div class="lib-nores">nothing matches “' + esc(S.q) + '”</div>';
+    if (viewOf('tracks') === 'grid') {
+      return '<div class="lib-grid">' + list.map(function (t) {
+        var cover = t.cover_url || (t.albums && t.albums.cover_url) || '';
+        return '<div class="lib-card" data-tid="' + esc(t.id) + '" data-act="open" data-href="/track?id=' + esc(t.id) + '">' +
+          '<div class="lib-cover" style="background:' + grad(t.title) + '">' + img(cover) +
+            '<button type="button" class="lib-cheart" data-act="unlike" data-id="' + esc(t.id) + '" aria-label="Remove from liked edits">' + ICON.heart + '</button>' +
+            (t.ia_url ? '<button type="button" class="lib-cplay" data-act="rowplay" data-tid="' + esc(t.id) + '" aria-label="Play ' + esc(t.title || '') + '">' + ICON.playL + '</button>' : '') +
+          '</div><div class="lib-tt">' + esc(t.title || 'Untitled') + '</div><div class="lib-st">' + esc(trackArtist(t)) + ' · ' + esc(ago(t.liked_at)) + '</div></div>';
       }).join('') + '</div>';
+    }
+    return '<div class="lib-list"><div class="lib-lhead"><span style="text-align:center">#</span><span>Title</span><span class="c-alb">Comp</span><span class="c-when">Added</span><span></span></div>' +
+      list.map(trackRow).join('') + '</div>';
   }
 
-  // ── Playlists ───────────────────────────────────────────────────────────────
-  function _renderPlaylists(pls) {
-    if (!pls.length) {
-      return _empty('🎵', 'no playlists yet', 'make one from the menu on any edit',
-        '<a href="/playlists" class="btn btn-primary" style="margin-top:16px;" onclick="navigate(\'/playlists\');return false;">Go to playlists</a>');
+  function renderComps() {
+    var all = S.lib.albums || [];
+    if (!all.length) return empty(ICON.heartO, 'no liked comps yet', 'like a comp and itll show up here with one-tap play', '<a class="lib-btn pri" href="/discover" data-nav="/discover">Find comps</a>');
+    var q = norm(S.q).trim();
+    var list = all.filter(function (a) { return matches(q, [a.title, albumArtist(a)]); })
+      .sort(sorter('albums', function (x) { return x.title; }, albumArtist, function (x) { return x.liked_at; }));
+    if (!list.length) return '<div class="lib-nores">nothing matches “' + esc(S.q) + '”</div>';
+    if (viewOf('albums') === 'list') {
+      return '<div class="lib-list"><div class="lib-lhead"><span style="text-align:center">#</span><span>Comp</span><span class="c-alb">Songs</span><span class="c-when">Added</span><span></span></div>' +
+        list.map(function (a, i) {
+          var n = typeof a.track_count === 'number' ? a.track_count : null;
+          return '<div class="lib-row" data-aid="' + esc(a.id) + '" data-act="open" data-href="/album?id=' + esc(a.id) + '" tabindex="0" role="button" aria-label="Open ' + esc(a.title || 'comp') + '">' +
+            '<div class="lib-num"><span class="i">' + (i + 1) + '</span><span class="pl" data-act="playcomp" data-id="' + esc(a.id) + '">' + ICON.play + '</span><span class="lib-eq" aria-hidden="true"><i></i><i></i><i></i></span></div>' +
+            '<div class="lib-main"><div class="lib-art" style="background:' + grad(a.title) + '">' + img(a.cover_url) + '</div>' +
+              '<div class="lib-txt"><div class="lib-tt">' + esc(a.title || 'Untitled') + '</div><div class="lib-st">' + esc(albumArtist(a)) + (a.is_archive ? ' · archive' : '') + '</div></div></div>' +
+            '<div class="lib-col c-alb">' + (n !== null ? n + (n === 1 ? ' song' : ' songs') : (a.play_count ? num(a.play_count) + ' plays' : '')) + '</div>' +
+            '<div class="lib-when c-when">' + esc(ago(a.liked_at)) + '</div>' +
+            '<div class="lib-racts">' +
+              '<button type="button" class="lib-ico hov" data-act="queuecomp" data-id="' + esc(a.id) + '" aria-label="Add comp to queue" title="Add to queue">' + ICON.queue + '</button>' +
+              '<button type="button" class="lib-ico" data-act="playcomp" data-id="' + esc(a.id) + '" aria-label="Play comp" title="Play comp">' + ICON.play + '</button>' +
+              '<button type="button" class="lib-ico heart" data-act="unlikecomp" data-id="' + esc(a.id) + '" aria-label="Remove from liked comps" title="Remove from liked comps">' + ICON.heart + '</button>' +
+            '</div></div>';
+        }).join('') + '</div>';
     }
-    return '<div class="wv-pl-grid">' + pls.map(function(p) {
-      var cnt = p.track_count || 0;
-      var meta = cnt + ' track' + (cnt !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private');
-      return '<div class="wv-playlist-card" onclick="navigate(\'/playlist?id=' + escHtml(p.id) + '\')">' +
-        '<div class="wv-playlist-cover">🎵</div>' +
-        '<div class="wv-playlist-name">' + escHtml(p.title) + '</div>' +
-        '<div class="wv-playlist-meta">' + escHtml(meta) + '</div>' +
-      '</div>';
+    return '<div class="lib-grid">' + list.map(function (a) {
+      var n = typeof a.track_count === 'number' ? a.track_count : null;
+      return '<div class="lib-card" data-aid="' + esc(a.id) + '" data-act="open" data-href="/album?id=' + esc(a.id) + '">' +
+        '<div class="lib-cover" style="background:' + grad(a.title) + '">' + img(a.cover_url) +
+          '<button type="button" class="lib-cheart" data-act="unlikecomp" data-id="' + esc(a.id) + '" aria-label="Remove from liked comps">' + ICON.heart + '</button>' +
+          '<button type="button" class="lib-cplay" data-act="playcomp" data-id="' + esc(a.id) + '" aria-label="Play ' + esc(a.title || 'comp') + '">' + ICON.playL + '</button>' +
+        '</div><div class="lib-tt">' + esc(a.title || 'Untitled') + '</div><div class="lib-st">' + esc(albumArtist(a)) + (n !== null ? ' · ' + n + (n === 1 ? ' song' : ' songs') : '') + '</div></div>';
     }).join('') + '</div>';
   }
 
-  // ── Recently played ─────────────────────────────────────────────────────────
-  function _renderRecent(items) {
-    if (!items.length) {
-      return _empty('🕘', 'nothing played yet', 'play something and itll show up here');
+  function renderPlaylists() {
+    var u = (typeof getUser === 'function' && getUser()) || {};
+    var q = norm(S.q).trim();
+    var s = sortOf('playlists');
+    var list = (S.lib.playlists || []).filter(function (p) { return matches(q, [p.title, p.description || '']); }).sort(function (a, b) {
+      if (s === 'title') return norm(a.title).localeCompare(norm(b.title));
+      if (s === 'size') return (b.track_count || 0) - (a.track_count || 0);
+      return String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || ''));
+    });
+    if (!(S.lib.playlists || []).length) {
+      return empty(ICON.stack, 'no playlists yet', 'make one, drop in your favorite edits, and publish it for everyone to hear', '<button type="button" class="lib-btn pri" data-act="newpl">Create a playlist</button>');
     }
-    return '<div class="wv-tile-grid">' +
-      items.map(function(it) {
-        var href = it._type === 'album' ? '/album?id=' + it.id : '/track?id=' + it.id;
-        var bg = coverGradient(it.title || '');
-        return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
-          '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;">' +
-            (it.cover_url ? '<img src="' + escHtml(it.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
-          '</div></div>' +
-          '<div class="wv-comp-card-title">' + escHtml(it.title || 'Untitled') + '</div>' +
-          '<div class="wv-comp-card-artist">' + escHtml(it.artist_name || '') + '</div>' +
+    if (!list.length) return '<div class="lib-nores">nothing matches “' + esc(S.q) + '”</div>';
+    var card = typeof window.wvPlaylistCardHTML === 'function';
+    return '<div class="lib-grid">' +
+      (q ? '' : '<a class="wv-comp-card lib-newpl" href="/playlist-builder" data-act="newpl"><div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner"><div class="box">' + ICON.plus + '</div></div></div><div class="wv-comp-card-title">New playlist</div><div class="wv-comp-card-artist">start from scratch</div></a>') +
+      list.map(function (p) {
+        var pill = p.published_at ? '<span class="lib-pill pub">' + ICON.globe + 'Published</span>' : (p.is_public === false ? '<span class="lib-pill">' + ICON.lockS + 'Private</span>' : '');
+        var pl = { id: p.id, title: p.title, track_count: p.track_count || 0, cover_url: p.cover_url || null, mosaic: p.mosaic || [], owner: { id: u.id || '', username: u.username || '' } };
+        var inner = card ? window.wvPlaylistCardHTML(pl) :
+          '<a class="wv-comp-card" href="/playlist?id=' + esc(p.id) + '" data-nav="/playlist?id=' + esc(p.id) + '"><div class="lib-cover" style="background:' + grad(p.title) + '"></div><div class="lib-tt">' + esc(p.title) + '</div></a>';
+        return '<div class="lib-plwrap">' + pill + inner + '</div>';
+      }).join('') + '</div>';
+  }
+
+  function renderRated() {
+    if (!S.ratings) {
+      if (S.ratingsErr) return empty(ICON.star, 'couldnt load your ratings', 'give it another try in a sec', '<button type="button" class="lib-btn" data-act="retryrated">Try again</button>');
+      loadRatings();
+      return skelRows(6);
+    }
+    var all = S.ratings.items;
+    if (!all.length) return empty(ICON.star, 'nothing rated yet', 'rate any edit or comp from its page and your scores collect here', '<a class="lib-btn pri" href="/charts" data-nav="/charts">Find something to rate</a>');
+    var q = norm(S.q).trim();
+    var s = sortOf('rated');
+    var list = all.filter(function (r) { return (!S.star || r.rating === S.star) && matches(q, [r.title, r.creator || '']); }).sort(function (a, b) {
+      if (s === 'high') return (b.rating - a.rating) || String(b.created_at || '').localeCompare(String(a.created_at || ''));
+      if (s === 'low') return (a.rating - b.rating) || String(b.created_at || '').localeCompare(String(a.created_at || ''));
+      if (s === 'title') return norm(a.title).localeCompare(norm(b.title));
+      return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+    });
+    if (!list.length) return '<div class="lib-nores">no ratings match that filter</div>';
+    if (viewOf('rated') === 'grid') {
+      return '<div class="lib-grid">' + list.map(function (r) {
+        var href = (r.entity_type === 'album' ? '/album?id=' : '/track?id=') + r.entity_id;
+        var canPlay = r.entity_type === 'album' || r.ia_url;
+        return '<div class="lib-card" ' + (r.entity_type === 'album' ? 'data-aid' : 'data-tid') + '="' + esc(r.entity_id) + '" data-act="open" data-href="' + esc(href) + '">' +
+          '<div class="lib-cover" style="background:' + grad(r.title) + '">' + img(r.cover_url) +
+            '<span class="lib-badge">' + (r.entity_type === 'album' ? 'comp' : 'edit') + '</span>' +
+            (canPlay ? '<button type="button" class="lib-cplay" data-act="playrated" data-id="' + esc(r.entity_id) + '" aria-label="Play ' + esc(r.title) + '">' + ICON.playL + '</button>' : '') +
+          '</div><div class="lib-tt">' + esc(r.title) + '</div><div class="lib-st" style="display:flex;gap:6px;align-items:center">' + stars(r.rating, 12) + '<span style="overflow:hidden;text-overflow:ellipsis">' + esc(r.creator || '') + '</span></div></div>';
+      }).join('') + '</div>';
+    }
+    return '<div class="lib-list"><div class="lib-lhead"><span style="text-align:center">#</span><span>Title</span><span class="c-alb">Your rating</span><span class="c-when">Rated</span><span></span></div>' +
+      list.map(function (r, i) {
+        var href = (r.entity_type === 'album' ? '/album?id=' : '/track?id=') + r.entity_id;
+        var canPlay = r.entity_type === 'album' || r.ia_url;
+        return '<div class="lib-row' + (canPlay ? '' : ' nop') + '" ' + (r.entity_type === 'album' ? 'data-aid' : 'data-tid') + '="' + esc(r.entity_id) + '" data-act="open" data-href="' + esc(href) + '" tabindex="0" role="button" aria-label="Open ' + esc(r.title) + '">' +
+          '<div class="lib-num"><span class="i">' + (i + 1) + '</span><span class="pl" data-act="playrated" data-id="' + esc(r.entity_id) + '">' + ICON.play + '</span><span class="lib-eq" aria-hidden="true"><i></i><i></i><i></i></span></div>' +
+          '<div class="lib-main"><div class="lib-art" style="background:' + grad(r.title) + '">' + img(r.cover_url) + '</div>' +
+            '<div class="lib-txt"><div class="lib-tt">' + esc(r.title) + '</div><div class="lib-st">' + (r.entity_type === 'album' ? 'comp' : 'edit') + (r.creator ? ' · ' + esc(r.creator) : '') + '</div></div></div>' +
+          '<div class="lib-col c-alb">' + stars(r.rating, 14) + '</div>' +
+          '<div class="lib-when c-when">' + esc(ago(r.created_at)) + '</div>' +
+          '<div class="lib-racts">' + (canPlay ? '<button type="button" class="lib-ico" data-act="playrated" data-id="' + esc(r.entity_id) + '" aria-label="Play ' + esc(r.title) + '">' + ICON.play + '</button>' : '') + '</div>' +
         '</div>';
       }).join('') + '</div>';
   }
 
-  loadLibrary();
+  function renderRecent() {
+    var items = recent();
+    var q = norm(S.q).trim();
+    var top = (typeof window.getPlayTally === 'function' ? window.getPlayTally({ min: 2, limit: 12 }) : []) || [];
+    if (!items.length && !top.length) return empty(ICON.clock, 'nothing played yet', 'play something and itll show up here, along with what you keep coming back to', '<a class="lib-btn pri" href="/charts" data-nav="/charts">Start listening</a>');
+    var card = function (it, badge) {
+      var isAlb = it._type === 'album';
+      var href = (isAlb ? '/album?id=' : '/track?id=') + it.id;
+      return '<div class="lib-card" ' + (isAlb ? 'data-aid' : 'data-tid') + '="' + esc(it.id) + '" data-act="open" data-href="' + esc(href) + '">' +
+        '<div class="lib-cover" style="background:' + grad(it.title) + '">' + img(it.cover_url) +
+          (badge ? '<span class="lib-badge">' + esc(badge) + '</span>' : '') +
+          ((isAlb || it.ia_url) ? '<button type="button" class="lib-cplay" data-act="playrecent" data-id="' + esc(it.id) + '" data-type="' + (isAlb ? 'album' : 'track') + '" aria-label="Play ' + esc(it.title || '') + '">' + ICON.playL + '</button>' : '') +
+        '</div><div class="lib-tt">' + esc(it.title || 'Untitled') + '</div><div class="lib-st">' + esc(it.artist_name || (isAlb ? 'comp' : 'edit')) + '</div></div>';
+    };
+    var out = '';
+    if (top.length && !q) {
+      out += '<div class="lib-sec"><h2>Most played on this device</h2><span>counted in this browser only</span></div>' +
+        '<div class="lib-rail">' + top.map(function (t) { return card(t, t.n + ' plays'); }).join('') + '</div>';
+    }
+    var list = items.filter(function (it) { return matches(q, [it.title, it.artist_name || '']); });
+    if (items.length) {
+      out += '<div class="lib-sec"><h2>Recently played</h2><span>' + items.length + ' on this device</span></div>';
+      out += list.length ? '<div class="lib-grid">' + list.map(function (it) { return card(it); }).join('') + '</div>' : '<div class="lib-nores">nothing matches “' + esc(S.q) + '”</div>';
+    }
+    return out;
+  }
+
+  // ── Now playing highlight ──────────────────────────────────────────────
+  function markNow() {
+    var root = $('lib-body');
+    if (!root) return;
+    var n = nowIds();
+    root.querySelectorAll('.is-now').forEach(function (el) { el.classList.remove('is-now'); });
+    root.classList.toggle('lib-live', !!n.on);
+    if (n.t) root.querySelectorAll('[data-tid="' + CSS.escape(n.t) + '"]').forEach(function (el) { if (!el.classList.contains('lib-cplay')) el.classList.add('is-now'); });
+    if (n.a) root.querySelectorAll('[data-aid="' + CSS.escape(n.a) + '"]').forEach(function (el) { el.classList.add('is-now'); });
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────
+  function findTrack(id) { return ((S.lib && S.lib.tracks) || []).filter(function (t) { return t.id === id; })[0]; }
+  function findAlbum(id) { return ((S.lib && S.lib.albums) || []).filter(function (a) { return a.id === id; })[0]; }
+
+  function playList(list, startId, shuffle) {
+    list = list.filter(function (t) { return t.ia_url; });
+    if (!list.length) { toast('nothing here can play rn', 'error'); return; }
+    var q = list.map(trackObj);
+    var idx = 0;
+    if (shuffle) {
+      for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = q[i]; q[i] = q[j]; q[j] = x; }
+    } else if (startId) {
+      for (var k = 0; k < q.length; k++) if (q[k].id === startId) { idx = k; break; }
+    }
+    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') {
+      setPlayerQueue(q, idx);
+      playQueueIndex(idx);
+    } else if (typeof playTrack === 'function') playTrack(q[idx]);
+    setTimeout(markNow, 60);
+  }
+
+  function unlikeTrack(id) {
+    var list = S.lib.tracks || [];
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) { idx = i; break; }
+    if (idx < 0) return;
+    var t = list[idx];
+    list.splice(idx, 1);
+    refreshAfterChange();
+    api('/tracks/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function (r) {
+      if (r && r.liked === true) {
+        api('/tracks/' + encodeURIComponent(id) + '/like', { method: 'POST' }).catch(function () {});
+      }
+      if (typeof window.refreshSidebarLibrary === 'function') { try { window.refreshSidebarLibrary(); } catch (_) {} }
+      toast('removed from liked edits', '', 6000, {
+        title: 'removed from liked edits', body: t.title || '', action: 'Undo',
+        onClick: function () {
+          api('/tracks/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function () {
+            if (!findTrack(id)) { (S.lib.tracks || []).splice(Math.min(idx, S.lib.tracks.length), 0, t); refreshAfterChange(); }
+            if (typeof window.refreshSidebarLibrary === 'function') { try { window.refreshSidebarLibrary(); } catch (_) {} }
+            toast('back in your liked edits');
+          }).catch(function () { toast('couldnt undo that...try liking it again', 'error'); });
+        }
+      });
+    }).catch(function () {
+      if (!findTrack(id)) { list.splice(Math.min(idx, list.length), 0, t); refreshAfterChange(); }
+      toast('couldnt update that like...try again', 'error');
+    });
+  }
+
+  function unlikeComp(id) {
+    var list = S.lib.albums || [];
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) { idx = i; break; }
+    if (idx < 0) return;
+    var a = list[idx];
+    list.splice(idx, 1);
+    refreshAfterChange();
+    api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function (r) {
+      if (r && r.liked === true) api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).catch(function () {});
+      toast('removed from liked comps', '', 6000, {
+        title: 'removed from liked comps', body: a.title || '', action: 'Undo',
+        onClick: function () {
+          api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function () {
+            if (!findAlbum(id)) { S.lib.albums.splice(Math.min(idx, S.lib.albums.length), 0, a); refreshAfterChange(); }
+            toast('back in your liked comps');
+          }).catch(function () { toast('couldnt undo that...try liking it again', 'error'); });
+        }
+      });
+    }).catch(function () {
+      if (!findAlbum(id)) { list.splice(Math.min(idx, list.length), 0, a); refreshAfterChange(); }
+      toast('couldnt update that like...try again', 'error');
+    });
+  }
+
+  function refreshAfterChange() {
+    if (S.lib && S.lib.counts) {
+      S.lib.counts.tracks = (S.lib.tracks || []).length;
+      S.lib.counts.albums = (S.lib.albums || []).length;
+    }
+    renderHero(false);
+    renderTabs();
+    if (S.tab === 'tracks' && !playableTracks().length) renderToolbar();
+    renderBody();
+  }
+
+  function playRecent(id, type) {
+    if (type === 'album') { if (typeof playCompById === 'function') playCompById(id); return; }
+    var it = recent().filter(function (x) { return x.id === id; })[0];
+    if (!it) { var t = tally()[id]; it = t; }
+    if (it && it.ia_url && typeof playTrack === 'function') playTrack({ id: it.id, title: it.title, ia_url: it.ia_url, cover_url: it.cover_url, artist_name: it.artist_name });
+    else if (typeof navigate === 'function') navigate('/track?id=' + encodeURIComponent(id));
+  }
+
+  function playRated(id) {
+    var r = S.ratings && S.ratings.items.filter(function (x) { return x.entity_id === id; })[0];
+    if (!r) return;
+    if (r.entity_type === 'album') { if (typeof playCompById === 'function') playCompById(id); return; }
+    if (r.ia_url && typeof playTrack === 'function') playTrack({ id: r.entity_id, title: r.title, ia_url: r.ia_url, cover_url: r.cover_url, artist_name: r.creator || '' });
+    setTimeout(markNow, 60);
+  }
+
+  function setTab(tab, push) {
+    if (!visibleTabs().some(function (t) { return t.k === tab; })) tab = 'tracks';
+    if (S.tab !== tab) S.q = '';
+    S.tab = tab;
+    ls('wv_lib_tab', tab);
+    if (push) {
+      try {
+        var u = new URL(location.href);
+        if (tab === 'tracks') u.searchParams.delete('tab'); else u.searchParams.set('tab', tab);
+        history.replaceState(history.state, '', u.pathname + u.search);
+      } catch (_) {}
+    }
+    renderTabs();
+    renderToolbar();
+    renderBody();
+  }
+
+  function onClick(e) {
+    var el = e.target.closest('[data-act], [data-nav]');
+    if (!el || !$('lib-root') || !$('lib-root').contains(el)) return;
+    var act = el.getAttribute('data-act');
+    if (!act && el.hasAttribute('data-nav')) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      if (typeof navigate === 'function') navigate(el.getAttribute('data-nav')); else location.href = el.getAttribute('data-nav');
+      return;
+    }
+    var id = el.getAttribute('data-id');
+    if (el.tagName === 'A' && act) e.preventDefault();
+    if (act !== 'open' && act !== 'rowplay') e.stopPropagation();
+    switch (act) {
+      case 'tab': setTab(el.getAttribute('data-tab'), true); break;
+      case 'view':
+        ls('wv_lib_view_' + S.tab, el.getAttribute('data-view'));
+        renderToolbar(); renderBody(); break;
+      case 'star': S.star = +el.getAttribute('data-star') || 0; renderToolbar(); renderBody(); break;
+      case 'playall': playList(currentTracks(), null, false); break;
+      case 'shuffle': playList(currentTracks(), null, true); break;
+      case 'rowplay': {
+        e.stopPropagation();
+        var tid = el.getAttribute('data-tid');
+        var t = findTrack(tid);
+        if (t && t.ia_url) playList(currentTracks(), tid, false);
+        else if (typeof navigate === 'function') navigate('/track?id=' + encodeURIComponent(tid));
+        break;
+      }
+      case 'queue': { var tq = findTrack(id); if (tq && typeof addToQueue === 'function') addToQueue(trackObj(tq)); break; }
+      case 'addpl': {
+        var ta = findTrack(id);
+        if (ta && typeof window.openAddToPlaylist === 'function') window.openAddToPlaylist(trackObj(ta));
+        else toast('playlists arent working rn...try again later', 'error');
+        break;
+      }
+      case 'unlike': unlikeTrack(id); break;
+      case 'unlikecomp': unlikeComp(id); break;
+      case 'playcomp': { var al = findAlbum(id); if (typeof playCompById === 'function') playCompById(id, al ? { album: al } : undefined); break; }
+      case 'queuecomp': if (typeof addAlbumToQueue === 'function') addAlbumToQueue(id); break;
+      case 'playrated': playRated(id); break;
+      case 'playrecent': playRecent(id, el.getAttribute('data-type')); break;
+      case 'retryrated': S.ratingsErr = false; renderBody(); break;
+      case 'newpl': if (typeof window.wvNewPlaylist === 'function') window.wvNewPlaylist(); else if (typeof navigate === 'function') navigate('/playlist-builder'); break;
+      case 'open': {
+        if (e.target.closest('a[href]') && e.target.closest('a[href]') !== el) return;
+        var href = el.getAttribute('data-href');
+        if (href && typeof navigate === 'function') navigate(href);
+        break;
+      }
+    }
+  }
+  function onKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var el = e.target;
+    if (!el || !el.classList || !el.classList.contains('lib-row')) return;
+    e.preventDefault();
+    el.click();
+  }
+
+  // ── Data ───────────────────────────────────────────────────────────────
+  function loadRatings() {
+    if (S.ratingsLoading || S.ratings) return;
+    S.ratingsLoading = true;
+    var gen = S.gen;
+    api('/library/ratings').then(function (d) {
+      if (gen !== S.gen) return;
+      S.ratingsLoading = false;
+      S.ratings = { items: (d && d.items) || [], dist: (d && d.dist) || [0, 0, 0, 0, 0] };
+      renderTabs();
+      if (S.tab === 'rated') { renderToolbar(); renderBody(); }
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      S.ratingsLoading = false;
+      S.ratingsErr = true;
+      if (S.tab === 'rated') renderBody();
+    });
+  }
+
+  function loggedOut() {
+    renderHero(false);
+    $('lib-hero').querySelector('.lib-stats').innerHTML = '';
+    $('lib-tabs').innerHTML = '';
+    $('lib-toolbar').innerHTML = '';
+    $('lib-body').innerHTML = empty(ICON.lock, 'log in to see your library', 'your liked edits, comps, ratings and playlists live here', '<a class="lib-btn pri" href="/login">Log in</a>');
+  }
+
+  function load() {
+    S.gen++;
+    var gen = S.gen;
+    var want = null;
+    try { want = new URLSearchParams(location.search).get('tab'); } catch (_) {}
+    S.tab = want || ls('wv_lib_tab') || 'tracks';
+    if (!TABS.some(function (t) { return t.k === S.tab; })) S.tab = 'tracks';
+
+    if (typeof isLoggedIn === 'function' && !isLoggedIn()) { loggedOut(); return; }
+    renderHero(true);
+    renderTabs();
+    renderToolbar();
+    renderBody();
+
+    api('/library').then(function (d) {
+      if (gen !== S.gen || !$('lib-root')) return;
+      d = d || {};
+      d.tracks = d.tracks || []; d.albums = d.albums || []; d.playlists = d.playlists || []; d.counts = d.counts || {};
+      S.lib = d;
+      if (typeof window.setPageBgImage === 'function') {
+        var art = d.albums.filter(function (a) { return a.cover_url; })[0] || d.tracks.filter(function (t) { return t.cover_url; })[0];
+        window.setPageBgImage(art ? art.cover_url : '');
+      }
+      if (S.tab === 'rated' && !hasRatings()) S.tab = 'tracks';
+      renderHero(false);
+      renderTabs();
+      renderToolbar();
+      renderBody();
+      if (hasRatings() && S.tab !== 'rated') loadRatings();
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      if (err && err.status === 401) { loggedOut(); return; }
+      renderHero(false);
+      $('lib-body').innerHTML = empty(ICON.stack, 'couldnt load your library', (err && err.message) || 'try again in a sec', '<button type="button" class="lib-btn" data-act="reload">Try again</button>');
+      var b = $('lib-body').querySelector('[data-act="reload"]');
+      if (b) b.addEventListener('click', load);
+    });
+  }
+
+  var root = $('lib-root');
+  root.addEventListener('click', onClick);
+  root.addEventListener('keydown', onKey);
+  var onMedia = function () { setTimeout(markNow, 30); };
+  document.addEventListener('play', onMedia, true);
+  document.addEventListener('pause', onMedia, true);
+  document.addEventListener('ended', onMedia, true);
+  document.addEventListener('loadstart', onMedia, true);
+  window._pageCleanup.push(function () {
+    document.removeEventListener('loadstart', onMedia, true);
+    document.removeEventListener('play', onMedia, true);
+    document.removeEventListener('pause', onMedia, true);
+    document.removeEventListener('ended', onMedia, true);
+    S.gen++;
+  });
+
+  load();
+})();
 </script>
 </body>
 </html>
