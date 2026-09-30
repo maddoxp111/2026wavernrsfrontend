@@ -133,9 +133,9 @@
     .ah-more { color: var(--text-2); font-size: 13px; font-weight: 750; padding: 10px 0; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; min-height: 40px; box-sizing: border-box; }
     .ah-more:hover { color: var(--text); text-decoration: underline; }
     .ah-two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
-    .ah-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 18px; padding: 18px 20px 16px; min-width: 0; }
+    .ah-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 18px; padding: 18px 20px 16px; min-width: 0; display: flex; flex-direction: column; }
     .ah-card .ah-h h3 { font-size: 17px; }
-    .ah-feat { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 20px; align-items: center; }
+    .ah-feat { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 20px; align-items: center; margin-bottom: 16px; }
     .ah-feat-art { position: relative; width: 188px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; display: block; box-shadow: 0 10px 26px rgba(0,0,0,.28); }
     .ah-feat-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .ah-lbl { font-size: 10.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); }
@@ -149,7 +149,7 @@
     .ah-feat-btns .wv-btn-play { min-height: 40px; padding: 0 18px; }
     .ah-ghost { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; box-sizing: border-box; }
     .ah-ghost:hover { border-color: var(--text-3); background: var(--surface-2); }
-    .ah-prev { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hair); align-items: center; }
+    .ah-prev { display: flex; gap: 8px; margin-top: auto; overflow: hidden; padding-top: 14px; border-top: 1px solid var(--hair); align-items: center; }
     .ah-prev .ah-lbl { margin-right: 4px; flex: none; }
     .ah-prev a { flex: none; width: 44px; height: 44px; border-radius: 7px; overflow: hidden; position: relative; display: block; }
     .ah-prev a img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -183,13 +183,15 @@
     .ah-chip:hover { color: var(--text); border-color: var(--hair-strong); }
     .ah-chip.on { background: var(--text); color: var(--page-bg); border-color: var(--text); }
     .ah-stars { color: #e0a82e; letter-spacing: 1px; margin-right: 3px; }
-    .ah-who { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .ah-who { display: grid; grid-auto-flow: column; grid-auto-columns: 128px; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+    .ah-who::-webkit-scrollbar { display: none; }
+    .ah-who a { scroll-snap-align: start; }
     .ah-who a { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 14px 8px 12px; border-radius: 14px; text-decoration: none; color: var(--text); min-width: 0; }
     .ah-who a:hover { background: var(--surface); }
     .ah-who .av { width: 84px; height: 84px; border-radius: 50%; overflow: hidden; position: relative; flex: none; }
     .ah-who .av img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .ah-who b { font-size: 13.5px; font-weight: 750; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ah-who i { font-style: normal; font-size: 11.5px; color: var(--text-3); margin-top: -5px; }
+    .ah-who i { font-style: normal; font-size: 11.5px; color: var(--text-3); margin-top: -6px; line-height: 1.35; white-space: nowrap; }
     .ah-ex { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
     .ah-x { border: 1px solid var(--hair); background: var(--surface); color: var(--text); font: inherit; text-align: left; border-radius: 16px; overflow: hidden; cursor: pointer; padding: 0; display: flex; flex-direction: column; text-decoration: none; transition: border-color .18s var(--ease), background .18s var(--ease); min-width: 0; }
     .ah-x:hover { border-color: var(--hair-strong); background: var(--surface-2); }
@@ -232,8 +234,7 @@
       .ah-feat-art { width: 112px; }
       .ah-feat-t { font-size: 18px; }
       .ah-prev a:nth-of-type(n+5) { display: none; }
-      .ah-who { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 104px; overflow-x: auto; scrollbar-width: none; }
-      .ah-who::-webkit-scrollbar { display: none; }
+      .ah-who { grid-auto-columns: 104px; }
       .ah-who .av { width: 72px; height: 72px; }
       .ah-ex { gap: 10px; }
       .ah-x-b { padding: 10px 11px 12px; } .ah-x-b b { font-size: 14px; flex-direction: column; gap: 1px; } .ah-x-b p { font-size: 11.5px; }
@@ -1582,7 +1583,7 @@ function arcHomeLoad(h) {
         var art = ahImg(a.cover_url, 160);
         return '<a href="/archive-artist?a=' + encodeURIComponent(a.slug) + '"><span class="av" style="background:' + coverGradient(a.name || '') + ';">' +
           (art ? '<img src="' + escHtml(art) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>' +
-          '<b>' + escHtml(a.name) + '</b><i>' + ahNum(a.comp_count) + ' release' + (a.comp_count === 1 ? '' : 's') + (a.play_count ? ' · ' + ahNum(a.play_count) + ' plays' : '') + '</i></a>';
+          '<b>' + escHtml(a.name) + '</b><i>' + (a.play_count ? ahNum(a.play_count) + ' plays<br>' : '') + ahNum(a.comp_count) + ' release' + (a.comp_count === 1 ? '' : 's') + '</i></a>';
       }).join('') + '</div>';
     arcHomeExplore();
   });
@@ -1762,7 +1763,7 @@ function ahEotwRender(h, x) {
     '</div>' +
     (x.prev && x.prev.length ? '<div class="ah-prev"><span class="ah-lbl">before that</span>' + x.prev.map(function (a) {
       var u = ahImg(a.cover_url, 96), t = ahEotwTitle(a.title) || ahT(a.title);
-      return '<a href="/album?id=' + encodeURIComponent(a.id) + '" title="' + escHtml(t + (a.archive_artist_name ? ' · ' + a.archive_artist_name : '')) + '" aria-label="' + escHtml(t) + '" style="background:' + coverGradient(a.title || a.id) + ';">' +
+      return '<a href="/album?id=' + encodeURIComponent(a.id) + '" title="' + escHtml(t + (a.archive_artist_name ? ' · ' + a.archive_artist_name : '')) + '" aria-label="' + escHtml(t) + '" style="background:' + coverGradient(a.id || '') + ';">' +
         (u ? '<img src="' + escHtml(u) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</a>';
     }).join('') + '</div>' : '');
 }
