@@ -24,6 +24,7 @@
   var deferred = null;          // stashed beforeinstallprompt event
   var card = null;              // current bottom card element
   var cardKind = '';
+  var cardFromUser = false;
   var updateReady = false;
   var installed = false;
 
@@ -128,7 +129,7 @@
     document.removeEventListener('keydown', onKey);
   }
   function onKey(e) {
-    if (e.key === 'Escape' && card) { closeCard(cardKind === 'install' || cardKind === 'ios'); }
+    if (e.key === 'Escape' && card) { closeCard((cardKind === 'install' || cardKind === 'ios') && !cardFromUser); }
   }
   function showCard(kind, html, focus) {
     if (card) { if (cardKind === 'update') return null; card.remove(); card = null; }
@@ -139,7 +140,7 @@
     el.setAttribute('aria-label', kind === 'update' ? 'new version of wavernrs' : 'install wavernrs');
     el.innerHTML = html;
     document.body.appendChild(el);
-    card = el; cardKind = kind;
+    card = el; cardKind = kind; cardFromUser = !!focus;
     document.addEventListener('keydown', onKey);
     requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('in'); }); });
     if (focus) { var b = el.querySelector('.wvp-btn.primary'); if (b) setTimeout(function () { try { b.focus({ preventScroll: true }); } catch (_) {} }, 60); }
