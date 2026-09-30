@@ -18,7 +18,7 @@
       ['Community', '/community'], ['Editors', '/artists'], ['Hall of Fame', '/awards'], ['Your recap', '/wrapped'], ['Games', '/games'], ['Discord', DISCORD, 'ext']
     ]],
     ['wavernrs', [
-      ['What’s new', '/whatsnew', 'new'], ['Notifications', '/notifications'], ['Status', '/status'], ['About', '/about'], ['Settings', '/settings']
+      ['What\u2019s new', '/whatsnew', 'new'], ['Notifications', '/notifications'], ['Status', '/status'], ['About', '/about'], ['Settings', '/settings']
     ]]
   ];
 
@@ -89,6 +89,7 @@
     '.wvf-col a .x{opacity:.55}' +
     '.wvf-dot{width:7px;height:7px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}' +
     '.wvf-bottom{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:44px;padding-top:20px;border-top:1px solid var(--hair)}' +
+    '.wvf-meta{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0}' +
     '.wvf-copy{font-size:13px;color:var(--text-3)}' +
     '.wvf-copy b{color:var(--text-2);font-weight:700}' +
     '.wvf-stats{display:flex;gap:8px;flex-wrap:wrap}' +
@@ -100,8 +101,8 @@
     '.wvf-tool{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:40px;height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--hair);background:transparent;color:var(--text-2);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:background .15s,color .15s,border-color .15s}' +
     '.wvf-tool:hover{background:var(--surface-2);color:var(--text);border-color:var(--hair-strong)}' +
     '.wvf-kbd{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:5px;border:1px solid var(--hair-strong);background:var(--surface-2);font-size:11px;font-weight:700;color:var(--text-2);font-family:inherit}' +
-    '.wvf-mark{margin:34px 0 -0.24em;font-size:clamp(64px,15.5vw,210px);font-weight:900;letter-spacing:-.065em;line-height:.8;text-align:center;user-select:none;pointer-events:none;white-space:nowrap;' +
-      'background:linear-gradient(180deg,color-mix(in srgb,var(--text) 9%,transparent) 0%,color-mix(in srgb,var(--text) 0%,transparent) 88%);-webkit-background-clip:text;background-clip:text;color:transparent}' +
+    '.wvf-mark{margin:34px 0 -0.2em;font-size:clamp(64px,15.5vw,210px);font-weight:900;letter-spacing:-.065em;line-height:.8;text-align:center;user-select:none;pointer-events:none;white-space:nowrap;' +
+      'background:linear-gradient(180deg,color-mix(in srgb,var(--text) 10%,transparent) 0%,color-mix(in srgb,var(--text) 3%,transparent) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}' +
     '#wv-footer a:focus-visible,#wv-footer button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}' +
     '@media (max-width:1100px){.wvf-top{grid-template-columns:1fr;gap:36px}.wvf-mission{max-width:520px}.wvf-news{max-width:420px}}' +
     '@media (max-width:768px){' +
@@ -144,15 +145,15 @@
             '<a class="wvf-btn dc" href="' + DISCORD + '" target="_blank" rel="noopener external">' + ICON.discord + 'Join the discord</a>' +
             '<a class="wvf-btn" href="/upload">Upload</a>' +
           '</div>' +
-          '<a class="wvf-news" id="wvf-news" href="/whatsnew" hidden><span class="ic">' + ICON.spark + '</span><span class="tx"><small>What’s new</small><span id="wvf-news-t"></span></span><span class="go">' + ICON.arrow + '</span></a>' +
+          '<a class="wvf-news" id="wvf-news" href="/whatsnew" hidden><span class="ic">' + ICON.spark + '</span><span class="tx"><small>What\u2019s new</small><span id="wvf-news-t"></span></span><span class="go">' + ICON.arrow + '</span></a>' +
         '</div>' +
         '<div class="wvf-cols">' + COLS.map(colHTML).join('') + '</div>' +
       '</div>' +
       '<div class="wvf-bottom">' +
-        '<div class="wvf-copy">© ' + new Date().getFullYear() + ' <b>wavernrs</b> · made by yeditors for yeditors</div>' +
-        '<div class="wvf-stats" id="wvf-stats" aria-live="polite"></div>' +
+        '<div class="wvf-meta"><div class="wvf-copy">\u00a9 ' + new Date().getFullYear() + ' <b>wavernrs</b> \u00b7 made by yeditors for yeditors</div>' +
+        '<div class="wvf-stats" id="wvf-stats" aria-live="polite"></div></div>' +
         '<div class="wvf-tools">' +
-          '<button type="button" class="wvf-tool" data-wvf="search" aria-label="Search everything">' + ICON.search + '<span class="wvf-hide-sm">Search</span><kbd class="wvf-kbd">' + (mac ? '⌘' : 'Ctrl ') + 'K</kbd></button>' +
+          '<button type="button" class="wvf-tool" data-wvf="search" aria-label="Search everything">' + ICON.search + '<span class="wvf-hide-sm">Search</span><kbd class="wvf-kbd">' + (mac ? '\u2318' : 'Ctrl ') + 'K</kbd></button>' +
           '<button type="button" class="wvf-tool" data-wvf="theme" aria-label="Choose a theme">' + ICON.theme + '<span>Theme</span></button>' +
           '<button type="button" class="wvf-tool" data-wvf="top" aria-label="Back to top">' + ICON.up + '</button>' +
         '</div>' +

@@ -349,7 +349,10 @@ initPlayer();
   var E = function (s) { return escHtml(s == null ? '' : String(s)); };
   if (typeof window.setPageWash === 'function') window.setPageWash('radio');
   window._pageCleanup = window._pageCleanup || [];
+  var dead = false;
+  function alive() { return !dead && document.contains(root); }
   window._pageCleanup.push(function () {
+    dead = true;
     timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); timers = [];
     document.removeEventListener('lpState', onLpState);
     document.removeEventListener('lpLeft', onLpLeft);
@@ -573,11 +576,11 @@ initPlayer();
     var d;
     try { d = await api('/lp'); }
     catch (e) {
-      if (e && e.navAborted) return;
+      if ((e && e.navAborted) || !alive()) return;
       if (!silent) { root.innerHTML = listHead(false) + '<div class="wv-empty">' + E(e.message || 'couldnt load listening parties') + '<div style="margin-top:12px;"><button class="wv-pill" type="button" id="lp-retry">Try again</button></div></div>'; var rb = document.getElementById('lp-retry'); if (rb) rb.onclick = function () { listSkeleton(); renderList(false); }; }
       return;
     }
-    if (!document.getElementById('lp-root')) return;
+    if (!alive()) return;
     if (!d.available) { root.innerHTML = '<div class="wv-empty">listening parties are still getting set up...check back in a minute</div>'; return; }
     if (silent && (_pop || document.querySelector('.lp-formwrap'))) return;
     var sig = JSON.stringify(d);
@@ -703,14 +706,14 @@ initPlayer();
     var d;
     try { d = await api('/lp/' + encodeURIComponent(id)); }
     catch (e) {
-      if (e && e.navAborted) return;
+      if ((e && e.navAborted) || !alive()) return;
       if (!S.lp) {
         root.innerHTML = '<div style="margin:4px 0 8px;"><a href="/lp" onclick="navigate(\'/lp\');return false;" style="color:var(--text-3);font-size:13px;">\u2190 All listening parties</a></div><div class="wv-empty">' + E(e.message || 'couldnt load this LP') + '</div>';
         timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); timers = [];
       }
       return;
     }
-    if (!document.getElementById('lp-root')) return;
+    if (!alive()) return;
     S.lp = d.lp; S.items = d.items || []; S.now = d.now; S.curPos = d.cur_position || 0; S.qv = d.queue_version; S.host = !!d.can_control; S.status = d.lp.status;
     S.listeners = d.listeners || S.listeners;
     S.offset = Date.parse(d.server_time) - Date.now();
@@ -1047,7 +1050,7 @@ initPlayer();
       if (!S.msgs.length && !S._chatLoaded) { await new Promise(function (ok) { var n = 0, iv = setInterval(function () { if (S._chatLoaded || ++n > 20) { clearInterval(iv); ok(); } }, 150); }); }
       r = fallbackRecap();
     }
-    if (S.mode !== 'ended') return;
+    if (S.mode !== 'ended' || !alive()) return;
     S.recap = r;
     paintRecap(r);
   }
@@ -1291,6 +1294,7 @@ initPlayer();
   async function control(action, extra) {
     try {
       var r = await api('/lp/' + id + '/control', { method: 'POST', body: JSON.stringify(Object.assign({ action: action }, extra || {})) });
+      if (!alive()) return;
       S.now = r.now; S.status = r.status; S.offset = Date.parse(r.server_time) - Date.now();
       if (r.now) S.curPos = r.now.position;
       renderAll();
@@ -1371,7 +1375,7 @@ initPlayer();
   window.addEventListener('keydown', onKey, true);
 
   function applyState(d) {
-    if (!d || d.error) return;
+    if (!d || d.error || !alive()) return;
     takeReacts(d.reactions);
     S.offset = Date.parse(d.server_time) - Date.now();
     var key = function () { return JSON.stringify([S.status, S.now && S.now.item_id, S.now && S.now.paused, S.now && S.now.started_at, S.now && S.now.duration_sec]); };
@@ -1443,6 +1447,7 @@ initPlayer();
       var incr = !(full || !S.lastChat);
       var r = await fetch(API_BASE + '/lp/' + encodeURIComponent(id) + '/chat' + (incr ? '?after=' + S.lastChat : ''));
       var d = await r.json();
+      if (!alive()) return;
       var ms = d.messages || [];
       S._chatLoaded = true;
       if (!incr) {

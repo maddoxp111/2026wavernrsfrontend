@@ -1122,17 +1122,13 @@
     var P = U.prog;
     if (!P) return;
     var t = performance.now();
-    var dt = (t - P.lastT) / 1000;
-    var db = loaded - P.cur;
-    if (dt > 0.25 && db >= 0) {
-      var inst = db / dt;
-      P.speed = P.speed ? P.speed * 0.7 + inst * 0.3 : inst;
-      P.lastT = t;
-      P.cur = loaded;
-    } else if (db > 0 && !P.speed) {
-      P.cur = loaded;
-    } else if (db > 0) {
-      P.cur = loaded;
+    P.cur = loaded;
+    var sent = P.base + P.cur;
+    if (!P.sT) { P.sT = t; P.sB = sent; }
+    else if (t - P.sT >= 600) {
+      var inst = Math.max(0, sent - P.sB) / ((t - P.sT) / 1000);
+      P.speed = P.speed ? P.speed * 0.6 + inst * 0.4 : inst;
+      P.sT = t; P.sB = sent;
     }
     upRenderProgress();
   }
@@ -1195,7 +1191,7 @@
     var newAlbum = multi && !(U.job && U.job.albumId);
     if ((newAlbum || !multi) && U.cover) total += U.cover.size;
     U.running = true;
-    U.prog = { total: total, base: 0, cur: 0, speed: 0, lastT: performance.now(), label: 'Starting…', indet: !n, finished: false };
+    U.prog = { total: total, base: 0, cur: 0, speed: 0, sT: 0, sB: 0, label: 'Starting…', indet: !n, finished: false };
     renderUploadQueue();
     renderCover();
     upRenderProgress();
@@ -1223,7 +1219,7 @@
           if (item.st === 'done') continue;
           var doneCount = U.q.filter(function (x) { return x.st === 'done'; }).length;
           item.st = 'up'; item.loaded = 0; item.err = '';
-          U.prog.cur = 0; U.prog.lastT = performance.now();
+          U.prog.cur = 0;
           U.prog.label = 'Song ' + (doneCount + 1) + ' of ' + U.q.length + ' · <b>' + escHtml(item.title) + '</b>';
           upPatchRow(item); upRenderProgress();
           var form = new FormData();

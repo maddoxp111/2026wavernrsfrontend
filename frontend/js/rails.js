@@ -296,7 +296,11 @@
   }
 
   var timer = 0;
-  function soon(ms) { clearTimeout(timer); timer = setTimeout(scan, ms == null ? 150 : ms); }
+  function soon(ms) {
+    if (timer && ms == null) return;
+    clearTimeout(timer);
+    timer = setTimeout(function () { timer = 0; scan(); }, ms == null ? 150 : ms);
+  }
 
   function relevant(muts) {
     for (var i = 0; i < muts.length; i++) {

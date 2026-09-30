@@ -366,6 +366,7 @@ function rdEq(idle) { return '<span class="rd-eq' + (idle ? ' idle' : '') + '" a
 function fmtN(n) { n = Number(n || 0); return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'K' : String(n); }
 function rdEsc(s) { return (typeof escHtml === 'function' ? escHtml(s) : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')).replace(/'/g, '&#39;'); }
 function rdImg(u, w) { return u && typeof wvImg === 'function' ? wvImg(u, w) : (u || ''); }
+function rdCssUrl(u) { return 'url(&quot;' + rdEsc(String(u || '').replace(/["\\\n\r]/g, function(c) { return encodeURIComponent(c); })) + '&quot;)'; }
 function rdMmss(s) { s = Math.max(0, Math.floor(s || 0)); var m = Math.floor(s / 60), x = s % 60; return m + ':' + (x < 10 ? '0' : '') + x; }
 function rdAgo(ms) { var s = Math.max(0, ms / 1000); if (s < 50) return 'just now'; var m = Math.round(s / 60); if (m < 60) return m + 'm ago'; var h = Math.round(m / 60); return h < 24 ? h + 'h ago' : Math.round(h / 24) + 'd ago'; }
 function rdCid() { try { if (typeof _lpCid === 'function') return _lpCid(); var c = sessionStorage.getItem('wv_lp_cid'); if (!c) { c = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('wv_lp_cid', c); } return c; } catch (_) { return ''; } }
@@ -460,7 +461,7 @@ function rdHeroHTML(s) {
     : '<div class="rd-hero-now"><div class="rd-hero-artist">nothing playing on this station rn</div></div>';
   var owner = s.owner ? '<span class="rd-by">by ' + (s.owner.artist_id ? '<a href="/artist?id=' + encodeURIComponent(s.owner.artist_id) + '">' + rdEsc(s.owner.name) + '</a>' : rdEsc(s.owner.name)) + ' · ' + RD_IC.heart(12) + fmtN(s.likes) + '</span>' : '<span class="rd-by">' + RD_IC.heart(12) + fmtN(s.likes) + '</span>';
   return '<section class="rd-hero" id="rd-hero" data-slug="' + rdEsc(s.slug) + '" aria-label="Featured station">' +
-    '<div class="rd-hero-bg" style="background-image:' + (art ? 'url(&quot;' + rdEsc(rdImg(art, 320)) + '&quot;)' : 'linear-gradient(135deg,#3b2a6e,#141420)') + '"></div><div class="rd-hero-scrim"></div>' +
+    '<div class="rd-hero-bg" style="background-image:' + (art ? rdCssUrl(rdImg(art, 320)) : 'linear-gradient(135deg,#3b2a6e,#141420)') + '"></div><div class="rd-hero-scrim"></div>' +
     '<div class="rd-hero-in">' +
       '<button class="rd-hero-art" data-act="open" data-slug="' + rdEsc(s.slug) + '" aria-label="Open ' + rdEsc(s.name) + '">' + (art ? rdArt(art, 480) : '<span class="rd-art-ph">' + RD_IC.radio(54) + '</span>') + '</button>' +
       '<div class="rd-hero-body"><div class="rd-hero-top"><div class="rd-chips">' + chips + '</div><h2 class="rd-hero-name">' + rdEsc(s.name) + '</h2>' + (s.description ? '<p class="rd-hero-desc">' + rdEsc(s.description) + '</p>' : '') + '</div>' +
@@ -476,7 +477,7 @@ function rdCardHTML(s) {
   var art = s.cover_url || (t && t.cover_url) || '';
   var onAir = !!(s.is_live && now), n = rdListeners(s.listeners), tuned = rdTuned(s.slug), playing = rdPlaying(s.slug);
   return '<article class="rd-card" role="button" tabindex="0" data-act="open" data-slug="' + rdEsc(s.slug) + '" aria-label="' + rdEsc(s.name) + (onAir ? ', live' : ', off air') + '">' +
-    '<div class="rd-card-art">' + (art ? '<div class="rd-card-bg" style="background-image:url(&quot;' + rdEsc(rdImg(art, 160)) + '&quot;)"></div>' + rdArt(art, 320, 'rd-card-cover') : '<span class="rd-art-ph">' + RD_IC.radio(40) + '</span>') +
+    '<div class="rd-card-art">' + (art ? '<div class="rd-card-bg" style="background-image:' + rdCssUrl(rdImg(art, 160)) + '"></div>' + rdArt(art, 320, 'rd-card-cover') : '<span class="rd-art-ph">' + RD_IC.radio(40) + '</span>') +
       '<div class="rd-card-tl">' + (onAir ? '<span class="rd-badge live"><span class="rd-dot"></span>Live</span>' : '<span class="rd-badge off">Off air</span>') + (tuned ? '<span class="rd-badge">' + (playing ? rdEq(false) + 'On' : 'Paused') + '</span>' : '') + '</div>' +
       (n ? '<div class="rd-card-tr"><span class="rd-badge">' + RD_IC.heads(11) + n + '</span></div>' : '') +
       (onAir ? '<div class="rd-card-prog"><i data-prog="' + rdEsc(s.slug) + '"></i></div><button class="rd-card-play' + (tuned ? ' on' : '') + '" data-act="tune" data-slug="' + rdEsc(s.slug) + '" aria-label="' + (playing ? 'Stop ' : 'Tune in to ') + rdEsc(s.name) + '">' + (playing ? RD_IC.stop(18) : RD_IC.play(20)) + '</button>' : '') +
@@ -688,7 +689,7 @@ function rdSetBg(url) {
   var src = url ? rdImg(url, 640) : '';
   var apply = function() {
     if (tok !== _rdBgTok) return;
-    next.style.backgroundImage = src ? 'url("' + src.replace(/"/g, '%22') + '")' : 'linear-gradient(135deg,#2a1d5e,#0b0b12)';
+    next.style.backgroundImage = src ? 'url("' + src.replace(/["\\\n\r]/g, function(ch) { return encodeURIComponent(ch); }) + '")' : 'linear-gradient(135deg,#2a1d5e,#0b0b12)';
     next.classList.add('on'); layers[_rdBgFront].classList.remove('on'); _rdBgFront = 1 - _rdBgFront;
   };
   if (src) { var im = new Image(); im.onload = apply; im.onerror = apply; im.src = src; } else apply();

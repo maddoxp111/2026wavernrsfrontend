@@ -219,13 +219,13 @@
     if (_inflight[k]) return _inflight[k];
     var p = Promise.all([
       getJSON('/search?q=' + enc(q), 9000),
-      getJSON('/ye/search?q=' + enc(q), 900),
-      getJSON('/archive/artists?q=' + enc(q) + '&limit=3', 900),
+      getJSON('/ye/search?q=' + enc(q), 4000),
+      getJSON('/archive/artists?q=' + enc(q) + '&limit=3', 4000),
     ]).then(function (r) {
       delete _inflight[k];
       if (!r[0] && !r[1] && !r[2]) return { q: q, top: null, groups: [], total: 0, ok: false, error: true };
       var res = build(q, r[0], r[1], r[2]);
-      if (r[0]) cachePut(k, res);
+      if (r[0] && r[1] && r[2]) cachePut(k, res);
       return res;
     }, function () {
       delete _inflight[k];

@@ -893,6 +893,8 @@
     if (keys) keys.remove();
     var picker = document.getElementById('wv-theme-picker');
     if (picker) picker.remove();
+    var qsx = QS();
+    if (qsx && qsx.close) { try { qsx.close(); } catch (_) {} }
     var sug = document.getElementById('wv-suggest');
     if (sug) sug.remove();
 

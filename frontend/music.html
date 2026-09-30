@@ -52,7 +52,16 @@
       color: var(--text-2); font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s, color .15s; }
     .ma-az button:hover { background: var(--glass-pill-bg); color: var(--text); }
     .ma-az button.on { background: var(--text); color: var(--page-bg-base); }
+    #ma-root .ma-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: 18px 14px; margin: 0 -4px; }
+    @media (max-width: 760px) { #ma-root .ma-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 10px; } #ma-root .ma-grid .av span { font-size: 22px; } #ma-root .ma-grid .wv-artist-name { font-size: 12.5px; } }
+    .ma-toolbar .wv-seg button { white-space: nowrap; flex-shrink: 0; }
+    .ma-comp-grid .wv-comp-card-title, .ma-comp-grid .wv-comp-card-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ma-grid .wv-artist-tile { border-radius: 12px; padding: 4px; outline-offset: 4px; }
+    @media (min-width: 900px) {
+      .ma-az { -webkit-mask-image: none; mask-image: none; gap: 2px; }
+      .ma-az button { flex: 1 1 0; min-width: 0; padding: 0; }
+      .ma-az button:first-child { flex: 0 0 auto; padding: 0 12px; margin-right: 4px; }
+    }
     .ma-grid .wv-artist-tile .av span { font-size: 30px; font-weight: 800; color: rgba(255,255,255,.92); }
     .ma-more { display: flex; justify-content: center; margin: 28px 0 8px; }
     .ma-pill-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--hair-strong);
@@ -130,10 +139,9 @@
     .ma-all { margin-top: 18px; }
 
     /* about card */
-    .ma-about { border-radius: var(--ma-radius); background: var(--surface); border: 1px solid var(--hair); overflow: hidden; }
-    .ma-about-img { height: 170px; position: relative; overflow: hidden; }
-    .ma-about-img img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; display: block; }
-    .ma-about-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--surface) 100%); }
+    .ma-about { border-radius: var(--ma-radius); background: var(--surface); border: 1px solid var(--hair); overflow: hidden; position: relative; }
+    .ma-about::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 90px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 14%, transparent), transparent); pointer-events: none; }
+    .ma-about-in { position: relative; }
     .ma-about-in { padding: 18px 20px 20px; }
     .ma-about-in .ma-h2 { margin-bottom: 8px; }
     .ma-bio { font-size: 14.5px; line-height: 1.62; color: var(--text-2); margin: 0 0 14px; }
@@ -158,13 +166,13 @@
     .ma-rel-name { font-size: 13.5px; font-weight: 700; margin-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
     .ma-rel-meta { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
 
-    .ma-comps .wv-comp-card { cursor: pointer; }
+    .ma-comps .wv-comp-card { cursor: pointer; min-width: 0; }
+    .ma-comp-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 22px 16px; }
+    @media (max-width: 1100px) { .ma-comp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 760px) { .ma-comp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 10px; } .ma-comp-grid .wv-comp-card-title { font-size: 12.5px; } .ma-comp-grid .wv-comp-card-artist { font-size: 11px; } }
 
     @media (max-width: 1100px) {
       .ma-cols { grid-template-columns: 1fr; }
-      .ma-about { display: grid; grid-template-columns: 240px 1fr; }
-      .ma-about-img { height: auto; min-height: 100%; }
-      .ma-about-img::after { background: linear-gradient(90deg, transparent 50%, var(--surface) 100%); }
     }
     @media (max-width: 760px) {
       .ma-spot { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-right: -16px; padding-right: 16px; }
@@ -178,13 +186,10 @@
       .ma-photo { width: 168px; height: 168px; }
       .ma-photo span { font-size: 56px; }
       .ma-chips, .ma-actions { justify-content: center; }
-      .ma-about { display: block; }
-      .ma-about-img { height: 140px; }
-      .ma-about-img::after { background: linear-gradient(180deg, transparent 40%, var(--surface) 100%); }
       .ma-row { grid-template-columns: 22px 44px minmax(0, 1fr) 40px; gap: 10px; padding: 6px 2px; }
       .ma-row .ma-plays { display: none; }
       .ma-row .ma-meta .pl { display: inline; }
-      .ma-rel { grid-auto-columns: 112px; gap: 12px; margin-right: -16px; padding-right: 16px; }
+      .ma-rel { grid-auto-columns: 100px; gap: 12px; margin-right: -16px; padding-right: 16px; }
       .ma-rel-item .av span { font-size: 28px; }
     }
     .ma-meta .pl { display: none; }
@@ -515,7 +520,6 @@ initPlayer();
     if (a.comps) facts.push(['On', plural(a.comps, 'release')]);
     facts = facts.slice(0, 4);
     return '<section class="ma-about' + (fade ? ' fade' : '') + '" aria-labelledby="ma-about-h">' +
-      (a.photo ? '<div class="ma-about-img"><img src="' + esc(img(a.photo, 640)) + '" alt="" loading="lazy" onerror="this.parentNode.remove()"></div>' : '') +
       '<div class="ma-about-in"><h2 class="ma-h2" id="ma-about-h">About</h2>' +
       (ab.extract ? '<p class="ma-bio">' + esc(ab.extract) + '</p>' : '') +
       (facts.length ? '<dl class="ma-facts">' + facts.map(function (f) { return '<div class="ma-fact"><dt>' + esc(f[0]) + '</dt><dd title="' + esc(f[1]) + '">' + esc(f[1]) + '</dd></div>'; }).join('') + '</dl>' : '') +
@@ -540,7 +544,7 @@ initPlayer();
     var href = '/album?id=' + encodeURIComponent(c.id);
     return '<a class="wv-comp-card" href="' + esc(href) + '" data-href="' + esc(href) + '" style="text-decoration:none;color:inherit;"><div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + grad(c.title || '') + ';border-radius:14px;">' +
       (c.cover_url ? '<img src="' + esc(img(c.cover_url, 320)) + '" alt="" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">' : '') +
-      '</div></div><div class="wv-comp-card-title">' + esc(c.title || '') + '</div><div class="wv-comp-card-artist">' + esc(c.archive_artist_name || '') + (primary ? '' : ' · ' + esc(plural(c.feature_count || 0, 'song'))) + '</div></a>';
+      '</div></div><div class="wv-comp-card-title">' + esc(c.title || '') + '</div><div class="wv-comp-card-artist">' + esc([c.archive_artist_name || '', primary ? '' : plural(c.feature_count || 0, 'song')].filter(Boolean).join(' · ')) + '</div></a>';
   }
 
   function detailSkeleton() {
@@ -615,7 +619,7 @@ initPlayer();
       '</div>' +
       relatedRow(related) +
       (comps.length ? '<section class="ma-comps" aria-labelledby="ma-comps-h"><h2 class="ma-h2" id="ma-comps-h">' + (a.primary ? 'Most-liked comps' : 'Comps they\'re on') + ' <small>' + esc(num(comps.length)) + '</small></h2>' +
-        '<div class="wv-tile-grid" id="ma-comp-grid">' + comps.slice(0, 12).map(function (c) { return compCard(c, a.primary); }).join('') + '</div>' +
+        '<div class="ma-comp-grid" id="ma-comp-grid">' + comps.slice(0, 12).map(function (c) { return compCard(c, a.primary); }).join('') + '</div>' +
         (comps.length > 12 ? '<div class="ma-more"><button type="button" class="ma-pill-btn" data-act="comps">Show all ' + esc(num(comps.length)) + ' comps</button></div>' : '') +
       '</section>' : '');
     try { if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.id) markNow(currentTrack.id); } catch (_) {}

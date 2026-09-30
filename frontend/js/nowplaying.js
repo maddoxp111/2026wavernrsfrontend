@@ -368,10 +368,7 @@
     window.wvShortcutsExtra = window.wvShortcutsExtra || [];
     if (window.wvShortcutsExtra.some(function (x) { return x && x._np; })) return;
     [
-      { keys: ['K'], label: 'Play or pause' },
-      { keys: ['N'], label: 'Next track' },
-      { keys: ['P'], label: 'Previous track' },
-      { keys: ['0', '9'], label: 'Jump to 0–90%' },
+      { keys: ['1', '9'], label: 'Jump to 10–90%' },
       { keys: [',', '.'], label: 'Slower or faster' },
       { keys: ['F'], label: 'Full-screen player' },
       { keys: ['Shift', 'L'], label: 'Lyrics' },

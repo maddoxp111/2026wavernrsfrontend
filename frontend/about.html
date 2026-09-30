@@ -166,7 +166,10 @@
       .ab-tile.big { min-height: 200px; }
       .ab-tile.big .ab-num { font-size: 54px; }
       .ab-num { font-size: 28px; }
-      .ab-grid2 { grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+      .ab-grid2 { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+      .ab-grid2 .wide, .ab-grid2 > :last-child:nth-child(even) { grid-column: span 2; }
+      .ab-grid2 .ab-tile:not(.wide) .ab-sub { display: none; }
+      .ab-grid2 .ab-tile { min-height: 0; }
       .ab-feats { grid-template-columns: 1fr; gap: 8px; }
       .ab-feat { padding: 14px; }
       .ab-card { padding: 20px; }
@@ -355,7 +358,7 @@
 
   function tile(o) {
     var tag = o.href ? 'a' : 'div';
-    return '<' + tag + ' class="ab-tile ab-reveal' + (o.big ? ' big' : '') + '"' + (o.href ? ' href="' + esc(o.href) + '"' : '') + '>' +
+    return '<' + tag + ' class="ab-tile ab-reveal' + (o.big ? ' big' : '') + (o.wide ? ' wide' : '') + '"' + (o.href ? ' href="' + esc(o.href) + '"' : '') + '>' +
       '<div><span class="ic">' + svg(o.icon, o.big ? 20 : 18, o.fill) + '</span>' + (o.href ? '<span class="go">' + svg('arrow', 18) + '</span>' : '') + '</div>' +
       '<div><div class="ab-num" data-to="' + (+o.n || 0) + '"' + (o.suffix ? ' data-suffix="' + esc(o.suffix) + '"' : '') + '>0' + esc(o.suffix || '') + '</div>' +
       '<div class="ab-lab">' + esc(o.label) + '</div>' + (o.sub ? '<div class="ab-sub">' + esc(o.sub) + '</div>' : '') + (o.bar != null ? '<div class="ab-bar"><i data-w="' + Math.max(0, Math.min(100, o.bar)).toFixed(1) + '%"></i></div>' : '') + '</div></' + tag + '>';
@@ -401,7 +404,7 @@
       if (s.tour_shows) out.push({ n: s.tour_shows, label: 'tour shows', sub: 'with setlists you can jump through', icon: 'pin', href: '/resources?view=tours' });
     }
     var tr = yeTiles.tr;
-    if (tr && tr.entries) out.push({ n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: Math.round(tr.pct) + '% of them play right here on wavernrs', bar: tr.pct, icon: 'tracker', href: '/tracker' });
+    if (tr && tr.entries) out.unshift({ wide: true, n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: Math.round(tr.pct) + '% of them play right here on wavernrs', bar: tr.pct, icon: 'tracker', href: '/tracker' });
     if (yeTiles.eras) out.push({ n: yeTiles.eras, label: 'eras', sub: 'every comp sorted by the era it comes from', icon: 'grid', href: '/eras' });
     if (!out.length) { ye.remove(); return; }
     ye.innerHTML = out.map(tile).join('');

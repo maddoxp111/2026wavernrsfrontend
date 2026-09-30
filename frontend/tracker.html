@@ -407,11 +407,14 @@
   var _q = '', _sq = {}, _sseq = 0, _stm = null;
 
   function hl(text, words) {
-    var s = String(text == null ? '' : text), low = s.toLowerCase(), marks = [];
+    var s = String(text == null ? '' : text), low = '', map = [], marks = [];
+    for (var ci = 0; ci < s.length; ci++) { var ch = s.charAt(ci); if (/['\u2018\u2019`]/.test(ch)) continue; low += ch.toLowerCase(); map.push(ci); }
+    map.push(s.length);
     (words || []).forEach(function (w) {
+      w = w.replace(/['\u2018\u2019`]/g, '');
       if (w.length < 2) return;
       var i = low.indexOf(w);
-      while (i >= 0) { marks.push([i, i + w.length]); i = low.indexOf(w, i + w.length); }
+      while (i >= 0) { marks.push([map[i], map[i + w.length - 1] + 1]); i = low.indexOf(w, i + w.length); }
     });
     if (!marks.length) return esc(s);
     marks.sort(function (a, b) { return a[0] - b[0]; });

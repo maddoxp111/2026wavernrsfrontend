@@ -359,6 +359,32 @@
     return uploads.filter(function (u) { return !u.collab; }).length;
   }
 
+  function stHeroMeta() {
+    var joined = me && me.created_at ? new Date(me.created_at) : null;
+    var followers = artist ? artist._followers : null;
+    var releases = stOwnReleases();
+    return '<span>@' + escHtml((me && me.username) || '') + '</span>' +
+      '<span><b>' + releases + '</b> release' + (releases === 1 ? '' : 's') + '</span>' +
+      '<span><b>' + stNum(stProfilePlays()) + '</b> plays</span>' +
+      (followers != null ? '<span><b>' + stNum(followers) + '</b> follower' + (followers === 1 ? '' : 's') + '</span>' : '') +
+      (joined && !isNaN(joined) ? '<span>joined ' + escHtml(joined.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })) + '</span>' : '');
+  }
+
+  function stAfterUploadsChange() {
+    var meta = document.getElementById('st-hero-meta');
+    if (meta) meta.innerHTML = stHeroMeta();
+    renderUploads();
+    renderMilestones();
+  }
+
+  function stFocusIn(id) {
+    setTimeout(function () {
+      var m = document.getElementById(id);
+      var f = m && m.querySelector('input[type=text], .btn-danger, .btn-primary');
+      if (f) try { f.focus(); } catch (_) {}
+    }, 30);
+  }
+
   function stHasRange(d) {
     return !!(d && Array.isArray(d.plays_by_day) && d.deltas);
   }
@@ -419,13 +445,10 @@
     var box = document.getElementById('dashboard');
     if (!box) return;
     box.removeAttribute('aria-busy');
-    var joined = me && me.created_at ? new Date(me.created_at) : null;
-    var followers = artist._followers;
     var avatar = artist.profile_image_url
       ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(artist.profile_image_url, 160) : artist.profile_image_url) + '" alt="" onerror="this.remove()">'
       : '';
     var initial = escHtml(((artist.display_name || '?')[0] || '?').toUpperCase());
-    var releases = stOwnReleases();
 
     box.innerHTML =
       '<header class="st-hero">' +
@@ -433,13 +456,7 @@
         '<div class="st-hero-main">' +
           '<div class="st-eyebrow">Creator Studio</div>' +
           '<h1 class="st-hero-name">' + escHtml(artist.display_name || 'you') + '</h1>' +
-          '<div class="st-hero-meta">' +
-            '<span>@' + escHtml(me.username || '') + '</span>' +
-            '<span><b>' + releases + '</b> release' + (releases === 1 ? '' : 's') + '</span>' +
-            '<span><b>' + stNum(stProfilePlays()) + '</b> plays</span>' +
-            (followers != null ? '<span><b>' + stNum(followers) + '</b> follower' + (followers === 1 ? '' : 's') + '</span>' : '') +
-            (joined && !isNaN(joined) ? '<span>joined ' + escHtml(joined.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })) + '</span>' : '') +
-          '</div>' +
+          '<div class="st-hero-meta" id="st-hero-meta">' + stHeroMeta() + '</div>' +
         '</div>' +
         '<div class="st-hero-actions">' +
           '<a class="st-btn" href="/artist?id=' + escHtml(artist.id) + '">' + ST_ICON.user + 'View profile</a>' +
@@ -1032,6 +1049,7 @@
     pendingDeleteId = id;
     document.getElementById('delete-modal').classList.add('open');
     document.getElementById('confirm-delete-btn').onclick = doDelete;
+    stFocusIn('delete-modal');
   }
 
   function closeDeleteModal() {
@@ -1045,7 +1063,7 @@
       await api(`/tracks/${pendingDeleteId}`, { method: 'DELETE' });
       uploads = uploads.filter(u => !(u.id === pendingDeleteId && u._type === 'track'));
       closeDeleteModal();
-      renderUploads();
+      stAfterUploadsChange();
     } catch (err) {
       alert(err.message);
     }
@@ -1055,6 +1073,7 @@
     pendingDeleteCompId = id;
     document.getElementById('delete-comp-modal').classList.add('open');
     document.getElementById('confirm-delete-comp-btn').onclick = doDeleteComp;
+    stFocusIn('delete-comp-modal');
   }
 
   function closeDeleteCompModal() {
@@ -1068,7 +1087,7 @@
       await api(`/albums/${pendingDeleteCompId}`, { method: 'DELETE' });
       uploads = uploads.filter(u => !(u.id === pendingDeleteCompId && u._type === 'album'));
       closeDeleteCompModal();
-      renderUploads();
+      stAfterUploadsChange();
     } catch (err) {
       alert(err.message);
     }
@@ -1085,9 +1104,10 @@
     api('/eratags').then(tags => {
       document.getElementById('edit-track-era').innerHTML =
         '<option value="">No era tag</option>' +
-        tags.map(t => `<option value="${t.id}" ${track.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+        (tags || []).map(t => `<option value="${escHtml(t.id)}" ${track.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
     }).catch(() => {});
     document.getElementById('edit-track-modal').classList.add('open');
+    stFocusIn('edit-track-modal');
   }
 
   function closeEditTrackModal() {
@@ -1131,12 +1151,13 @@
     api('/eratags').then(tags => {
       document.getElementById('edit-album-era').innerHTML =
         '<option value="">No era tag</option>' +
-        tags.map(t => `<option value="${t.id}" ${album.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+        (tags || []).map(t => `<option value="${escHtml(t.id)}" ${album.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
     }).catch(() => {});
     // Fetch album tracks for the tracklist reorder UI
     _albumTracks = [];
     document.getElementById('edit-album-tracklist-section').style.display = 'none';
     document.getElementById('edit-album-modal').classList.add('open');
+    stFocusIn('edit-album-modal');
     api(`/albums/${album.id}`).then(function(fullAlbum) {
       var tracks = (fullAlbum.tracks || []).slice().sort(function(a, b) {
         return (a.position || 0) - (b.position || 0);

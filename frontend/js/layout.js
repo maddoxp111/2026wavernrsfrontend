@@ -1246,7 +1246,7 @@
   // Older markup and pages call these by name.
   window._openNotif = function (id, el, href) { _nOpenItem(_nFind(id) || { id: id }, href); };
   window._markNotifRead = function (id) { _nMarkRead(_nFind(id) || { id: id }); };
-  window._markAllNotifsRead = function () { _nMarkAll(); };
+  window._markAllNotifsRead = function () { _nMarkAll().catch(function () { _nPoll(true); }); };
 
   // ── The bell's panel ─────────────────────────────────────────
   var _np = { el: null, scrim: null, filter: 'all' };
@@ -1380,7 +1380,7 @@
       var act = e.target.closest('[data-wvn-act]');
       if (act) {
         var a = act.getAttribute('data-wvn-act');
-        if (a === 'readall') _nMarkAll();
+        if (a === 'readall') _nMarkAll().catch(function () { _nPoll(true); });
         if (a === 'retry') { NS.error = false; _nRenderPanel(); _nRefresh(true); }
         return;
       }

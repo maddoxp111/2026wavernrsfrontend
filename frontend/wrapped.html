@@ -1200,15 +1200,20 @@
   function onKey(e) {
     if (!document.getElementById('wr-story')) return;
     var tg = e.target;
-    if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
+    if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.shiftKey && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) return;
+    if (document.querySelector('.wv-sheet, [aria-modal="true"], #player-fullscreen.open, #wv-queue-panel.open')) return;
+    var st = $('wr-stage');
+    var full = !!(st && st.classList.contains('full'));
+    if (!full && tg && tg.closest && tg.closest('.player-bar, [role="slider"]')) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); next(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); e.stopPropagation(); prev(); }
     else if (e.key === ' ' || e.key === 'k') {
-      if (tg && tg.tagName === 'BUTTON' && e.key === ' ') return;
-      e.preventDefault(); S.paused = !S.paused; paintPause();
+      if (tg && (tg.tagName === 'BUTTON' || tg.tagName === 'A') && e.key === ' ') return;
+      e.preventDefault(); e.stopPropagation(); S.paused = !S.paused; paintPause();
     }
-    else if (e.key === 'Escape') { var st = $('wr-stage'); if (st && st.classList.contains('full')) { e.preventDefault(); setFull(false); } }
+    else if (e.key === 'Escape') { if (full) { e.preventDefault(); e.stopPropagation(); setFull(false); } }
   }
 
   function wire() {
@@ -1268,7 +1273,7 @@
     $('wr-full').innerHTML = I_EXPAND;
     paintPause();
 
-    document.addEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
     var onResize = function () { fitStory(); };
     window.addEventListener('resize', onResize);
     var ro = null;
@@ -1284,7 +1289,7 @@
       if (!S.alive) return;
       S.alive = false;
       cancelAnimationFrame(S.raf);
-      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('resize', onResize);
       if (ro) try { ro.disconnect(); } catch (_) {}
       fitTimers.forEach(clearTimeout);

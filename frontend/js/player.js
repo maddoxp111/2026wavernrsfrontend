@@ -325,7 +325,6 @@ window.stepPlaybackSpeed = function (dir) {
   if (i < 0) { i = 0; while (i < SPEEDS.length - 1 && SPEEDS[i] < cur) i++; if (dir < 0 && SPEEDS[i] >= cur && i > 0) i--; else if (dir > 0 && SPEEDS[i] <= cur && i < SPEEDS.length - 1) i++; }
   else i = Math.max(0, Math.min(SPEEDS.length - 1, i + dir));
   setPlaybackSpeed(SPEEDS[i]);
-  if (typeof wvToast === 'function') wvToast('speed ' + SPEEDS[i] + '×');
 };
 function openSpeedSheet() {
   const vibe = _vibe();
@@ -710,7 +709,7 @@ function _injectQueueCss() {
 .wvq-btn.primary:hover{filter:brightness(1.08);background:var(--brand)}
 .wvq-line{position:absolute;left:12px;right:12px;height:2px;border-radius:2px;background:var(--brand);box-shadow:0 0 0 3px var(--brand-bg,transparent);pointer-events:none;z-index:3;display:none}
 .wvq-line::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
-.wvq-row.dragging{z-index:4;background:var(--surface-2);box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:grabbing;transition:none;opacity:.96}
+.wvq-row.dragging{z-index:4;background:var(--surface-2);box-shadow:0 12px 30px rgba(0,0,0,.35);cursor:grabbing;transition:none}
 .wvq-row.dragging .wvq-handle{cursor:grabbing;opacity:1;color:var(--text)}
 #wv-queue-panel.is-dragging .wvq-row:not(.dragging){pointer-events:none}
 .wvq-row.swiping{transition:none}
@@ -1477,7 +1476,7 @@ function initPlayer() {
   audio.addEventListener('canplay', () => { document.querySelectorAll('.player-buffering').forEach(b => b.classList.remove('player-buffering')); });
   audio.addEventListener('error', () => {
     document.querySelectorAll('.player-buffering').forEach(b => b.classList.remove('player-buffering'));
-    if (!audio.src || audio.src === location.href) return;
+    if (!audio.src || audio.src === location.href || audio.src.indexOf('data:') === 0) return;
     console.error('Audio error:', audio.src);
     _audioFails++;
     const name = (currentTrack && currentTrack.title) || 'That track';

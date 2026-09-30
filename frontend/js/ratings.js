@@ -41,10 +41,10 @@
       '.wvr-s .o path{fill:none;stroke:var(--wvr-off);stroke-width:1.6;stroke-linejoin:round}',
       '.wvr-f{position:absolute;inset:0;overflow:hidden;width:0}',
       '.wvr-f svg path{fill:var(--wvr-on)}',
-      '.wvr.is-avg .wvr-f svg path{fill:color-mix(in srgb,var(--wvr-on) 55%,var(--text-3))}',
+      '.wvr.is-avg .wvr-f svg path{fill:color-mix(in srgb,var(--wvr-on) 42%,var(--text-3))}',
       '.wvr.is-avg .wvr-s .o path{stroke:color-mix(in srgb,var(--wvr-on) 30%,var(--wvr-off))}',
       '.wvr.is-preview .wvr-f svg path{fill:var(--wvr-on)}',
-      '.wvr.is-saving .wvr-stars{opacity:.6;pointer-events:none}',
+      '.wvr.is-saving .wvr-stars{opacity:.85;pointer-events:none}',
       '@media (hover:hover){.wvr-star:hover .wvr-s{transform:scale(1.14)}}',
       '.wvr-s{transition:transform .16s cubic-bezier(.3,1.4,.5,1)}',
       '.wvr-star.pop .wvr-s{animation:wvrPop .46s cubic-bezier(.3,1.5,.5,1) both}',
@@ -144,6 +144,7 @@
     if (!container) return;
     injectCss();
     closePop();
+    var hadFocus = !!(document.activeElement && container.contains(document.activeElement) && document.activeElement.classList.contains('wvr-star'));
     var loggedIn = !!token();
     var current = _data.user_rating || 0;
     var focusIdx = current || 1;
@@ -160,6 +161,7 @@
       '</div>';
     paint();
     wire(container, loggedIn);
+    if (hadFocus) { var f = container.querySelector('.wvr-star[tabindex="0"]'); if (f) { try { f.focus({ preventScroll: true }); } catch (_) {} } }
   }
 
   function wire(container, loggedIn) {

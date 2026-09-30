@@ -180,7 +180,7 @@
       (cm[k] || (cm[k] = { name: nm, n: 0 })).n += Number(e.n) || 0;
     });
     var creators = Object.keys(cm).map(function (k) { return cm[k]; }).sort(function (a, b) { return b.n - a.n; });
-    var first = list.reduce(function (m, e) { return e.last && (!m || e.last < m) ? e.last : m; }, 0);
+    var first = list.reduce(function (m, e) { return e.last && e.last > m ? e.last : m; }, 0);
     return { list: list, total: total, unique: list.length, comps: comps, edits: list.length - comps, top: top, creators: creators, first: first, map: all };
   }
 
@@ -198,7 +198,7 @@
       '<div>' +
         '<div class="hr-kick">your recap &middot; all time on this device</div>' +
         '<div class="hr-big">' + num(S.total) + '</div>' +
-        '<div class="hr-bigsub">' + plural(S.total, 'listen') + (S.first ? ' since ' + MONTHS[new Date(S.first).getMonth()] + ' ' + new Date(S.first).getDate() : '') + '</div>' +
+        '<div class="hr-bigsub">' + plural(S.total, 'listen') + (S.first ? ' &middot; last one ' + esc(ago(S.first)) : '') + '</div>' +
         '<div class="hr-stats">' +
           '<div class="hr-stat"><b>' + num(S.unique) + '</b><span>' + plural(S.unique, 'release') + '</span></div>' +
           '<div class="hr-stat"><b>' + num(S.comps) + '</b><span>' + plural(S.comps, 'comp') + '</span></div>' +
