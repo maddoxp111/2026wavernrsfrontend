@@ -219,7 +219,7 @@
     @media (max-width: 960px) { .ah-two { grid-template-columns: 1fr; } }
     @media (max-width: 640px) {
       .ah-hero { padding: 156px 18px 20px; min-height: 0; border-radius: 16px; }
-      .ah-wall { top: -26px; left: -20px; right: -20px; width: auto; height: 200px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; -webkit-mask-image: linear-gradient(180deg, #000 35%, transparent 100%); mask-image: linear-gradient(180deg, #000 35%, transparent 100%); }
+      .ah-wall { top: -26px; left: -20px; right: -20px; width: auto; height: 196px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 88%); mask-image: linear-gradient(180deg, #000 30%, transparent 88%); }
       .ah-wall i:nth-child(4n+2), .ah-wall i:nth-child(4n+3), .ah-wall i:nth-child(4n) { transform: none; }
       .ah-wall i:nth-child(5n+2), .ah-wall i:nth-child(5n+4) { transform: translateY(-22px); }
       .ah-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 14px; }
@@ -233,6 +233,7 @@
       .ah-feat { grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: start; }
       .ah-feat-art { width: 112px; }
       .ah-feat-t { font-size: 18px; }
+      .ah-feat-btns .ah-ghost { display: none; }
       .ah-prev a:nth-of-type(n+5) { display: none; }
       .ah-who { grid-auto-columns: 104px; }
       .ah-who .av { width: 72px; height: 72px; }
@@ -254,7 +255,7 @@
       .arc-views { gap: 8px; }
       .arc-views .wv-seg, #arc-source { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
       .arc-views .wv-seg::-webkit-scrollbar, #arc-source::-webkit-scrollbar { display: none; }
-      #arc-source button { white-space: nowrap; flex: none; }
+      #arc-source button, .arc-views .wv-seg button { white-space: nowrap; flex: none; }
       #arc-sort, #arc-era { flex: 1 1 40%; min-width: 0; }
       .arc-rl-win { height: 150px; }
       .arc-rl-tile { flex-basis: 122px; height: 122px; }
@@ -524,6 +525,15 @@ async function loadArcEras() {
     if (!sel || !r || !r.items || r.items.length < 2) return;
     _arcEras = r.items;
     arcSetStat('era', r.items.length);
+    // Links written with the era's name (?era=Donda) resolve to its id.
+    if (_arcEra && !r.items.some(function (e) { return e.id === _arcEra; })) {
+      var want = _arcEra.toLowerCase();
+      var named = r.items.find(function (e) { return String(e.name || '').toLowerCase() === want; });
+      if (named) {
+        _arcEra = named.id;
+        if (_arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'home') arcReload();
+      }
+    }
     sel.innerHTML = '<option value="">Every era</option>' +
       r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
     sel.value = _arcEra;
@@ -1449,6 +1459,7 @@ function arcHomeOpen() {
   if (form) form.addEventListener('submit', function (e) {
     e.preventDefault();
     var v = ((document.getElementById('ah-q') || {}).value || '').trim();
+    ahFresh('', '');
     _arcQuery = v;
     var si = document.getElementById('arc-search');
     if (si) si.value = v;
@@ -1477,15 +1488,12 @@ function ahClick(h, e) {
     playCompById(id, it ? { album: Object.assign({ is_archive: true }, it), quiet: true } : undefined);
   } else if (k === 'view') {
     e.preventDefault();
-    var so = t.getAttribute('data-sort');
-    if (so && ARC_SORTS.indexOf(so) >= 0) { _arcSort = so; var se = document.getElementById('arc-sort'); if (se) se.value = so; }
+    ahFresh(t.getAttribute('data-sort'), '');
     arcSetView(t.getAttribute('data-v'));
     ahScrollTop();
   } else if (k === 'era') {
     e.preventDefault();
-    _arcEra = t.getAttribute('data-id') || '';
-    var sel = document.getElementById('arc-era');
-    if (sel) sel.value = _arcEra;
+    ahFresh('', t.getAttribute('data-id') || '');
     var era = _arcEras.find(function (x) { return x.id === _arcEra; });
     if (era && era.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(era.cover, era.name);
     arcSetView('all');
@@ -1503,10 +1511,31 @@ function ahClick(h, e) {
   }
 }
 
+// Links on the home page open a clean listing, not whatever was last searched.
+function ahFresh(sort, era) {
+  _arcSort = sort && ARC_SORTS.indexOf(sort) >= 0 ? sort : 'likes';
+  var se = document.getElementById('arc-sort');
+  if (se) se.value = _arcSort;
+  _arcQuery = '';
+  var si = document.getElementById('arc-search');
+  if (si) si.value = '';
+  _arcSource = '';
+  _arcSourceMark();
+  _arcEra = era || '';
+  var sel = document.getElementById('arc-era');
+  if (sel) sel.value = _arcEra;
+  if (!era) arcEraHero();
+}
+
 function ahStat(id, n, label) {
   var a = document.getElementById('ah-st-' + id);
   if (!a) return;
-  if (typeof n !== 'number' || !(n > 0)) { a.remove(); return; }
+  if (typeof n !== 'number' || !(n > 0)) {
+    var box = a.parentNode;
+    a.remove();
+    if (box && !box.children.length) box.remove();
+    return;
+  }
   var b = a.querySelector('b');
   if (label) { var s = a.querySelector('span:last-child'); if (s) s.textContent = label; }
   b.textContent = '0';
@@ -1818,14 +1847,15 @@ function arcHomeExplore() {
   var cov = function (list, k) { return (list || []).map(function (x) { return x && x[k || 'cover_url']; }).filter(Boolean); };
   var ty = function (big, sm) { return '<div class="ah-x-art ty">' + big + (sm ? '<span class="sm">' + escHtml(sm) + '</span>' : '') + '</div>'; };
   var avs = cov(d.artists).slice(0, 5);
+  var ico = function (path) { return '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>'; };
   var cards = [
     ['/archive?view=comps', 'comps', 'Comps', 'full albums reimagined, era by era', q8(cov(d.comps)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">LP</span>', 'comps')],
     ['/archive?view=edits', 'edits', 'Edits', 'single songs reworked, remixed and finished', q8(cov(d.edits)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">1/1</span>', 'edits')],
-    ['/archive?view=artists', 'artists', 'Creators', 'everyone with something saved here', avs.length >= 3 ? '<div class="ah-x-art avs">' + avs.map(function (u) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(u, 120)) + '&quot;)"></i>'; }).join('') + '</div>' : ty('', 'creators')],
+    ['/archive?view=artists', 'artists', 'Creators', 'everyone with something saved here', avs.length >= 3 ? '<div class="ah-x-art avs">' + avs.map(function (u) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(u, 120)) + '&quot;)"></i>'; }).join('') + '</div>' : ty(ico('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'), 'creators')],
     ['/archive?view=top', 'top', 'Top 150', 'the community ranking of the best comps', q8(cov(d.top)) || ty('<span style="font-size:38px;font-weight:850;letter-spacing:-.05em;">150</span>', 'ranked')],
-    ['/archive?view=trackers', 'trackers', 'Trackers', 'the yedits trackers, matched to the archive', (_trackers && _trackers.length >= 4 ? '<div class="ah-x-art q4" style="grid-template-rows:1fr;">' + _trackers.slice(0, 4).map(function (t) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(t.cover, 200)) + '&quot;)"></i>'; }).join('') + '</div>' : '') || ty('', 'trackers')],
+    ['/archive?view=trackers', 'trackers', 'Trackers', 'the yedits trackers, matched to the archive', (_trackers && _trackers.length >= 4 ? '<div class="ah-x-art q4" style="grid-template-rows:1fr;">' + _trackers.slice(0, 4).map(function (t) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(t.cover, 200)) + '&quot;)"></i>'; }).join('') + '</div>' : '') || ty(ico('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>'), 'trackers')],
     ['/awards', '', 'Hall of Fame', 'every edit of the week and onyx pick', q8(cov(d.eotw)) || ty(ARC_TROPHY.replace('width="13" height="13"', 'width="36" height="36"'), 'award winners')],
-    ['/eras', '', 'Eras', 'every era, with its comps and edits', q8(cov(d.eras, 'cover')) || ty('', 'eras')],
+    ['/eras', '', 'Eras', 'every era, with its comps and edits', q8(cov(d.eras, 'cover')) || ty(ico('<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>'), 'eras')],
     ['', 'surprise', 'Surprise me', 'spin the archive for a random comp', ty(AH_DICE.replace('width="15" height="15"', 'width="40" height="40"').replace('stroke-width="2.2"', 'stroke-width="1.7"'), 'random pick')],
   ];
   el.innerHTML = cards.map(function (c) {
