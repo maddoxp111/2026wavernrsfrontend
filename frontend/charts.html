@@ -7,6 +7,221 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .ch-wrap { container-type: inline-size; container-name: ch; display: flex; flex-direction: column; min-width: 0; }
+    .ch-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .ch-head .wv-page-title { margin: 6px 0 4px; }
+    .ch-sub { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--text-2); }
+    .ch-share {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+      border-radius: var(--r-pill); border: 1px solid var(--hair-strong); background: transparent;
+      color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+      transition: border-color 140ms var(--ease), background 140ms var(--ease), transform 100ms var(--ease);
+    }
+    .ch-share:hover { border-color: var(--text); }
+    .ch-share:active { transform: scale(.97); }
+    .ch-share.is-done { border-color: var(--green); color: var(--green); }
+
+    .ch-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--hair); margin-bottom: 22px; overflow-x: auto; scrollbar-width: none; }
+    .ch-tabs::-webkit-scrollbar { display: none; }
+    .ch-tab {
+      position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px;
+      background: none; border: 0; color: var(--text-3); font: inherit; font-size: 15px; font-weight: 700;
+      letter-spacing: -.01em; cursor: pointer; white-space: nowrap; transition: color 140ms var(--ease);
+    }
+    .ch-tab:hover { color: var(--text-2); }
+    .ch-tab[aria-selected="true"] { color: var(--text); }
+    .ch-tab[aria-selected="true"]::after {
+      content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px;
+      border-radius: 3px 3px 0 0; background: var(--brand);
+    }
+    .ch-tab svg { flex-shrink: 0; }
+    .ch-tab[data-tab="hot"][aria-selected="true"] svg { color: var(--brand); }
+    .ch-tab[hidden] { display: none; }
+
+    .ch-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ch-seg { display: inline-flex; background: var(--glass-pill-bg); border-radius: var(--r-pill); padding: 3px; }
+    .ch-seg button {
+      font: inherit; font-size: 12.5px; font-weight: 700; border: 0; cursor: pointer; min-height: 34px;
+      padding: 0 15px; border-radius: var(--r-pill); background: transparent; color: var(--text-2);
+      transition: background 140ms var(--ease), color 140ms var(--ease);
+    }
+    .ch-seg button[aria-pressed="true"] { background: var(--text); color: var(--page-bg-base); }
+    .ch-sorts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ch-sorts .wv-pill { padding: 0 14px; min-height: 34px; font-size: 12.5px; }
+    .ch-note { font-size: 12px; color: var(--text-3); margin: 2px 0 6px; min-height: 16px; }
+
+    .ch-hero {
+      position: relative; display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 26px; align-items: center;
+      padding: 24px; border-radius: 12px; border: 1px solid var(--hair);
+      background: linear-gradient(125deg, color-mix(in srgb, var(--wv-wash) 78%, var(--surface)) 0%, var(--surface) 72%);
+      overflow: hidden; transition: background 500ms var(--ease);
+    }
+    .ch-hero-art {
+      position: relative; width: 196px; aspect-ratio: 1; border-radius: 8px; overflow: hidden; display: block;
+      box-shadow: 0 18px 40px rgba(0,0,0,.38); flex-shrink: 0;
+    }
+    .theme-light .ch-hero-art { box-shadow: 0 14px 34px rgba(0,0,0,.18); }
+    .ch-hero-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ch-hero-body { min-width: 0; display: flex; flex-direction: column; }
+    .ch-kicker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-2); }
+    .ch-no1 { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px; border-radius: var(--r-pill); background: var(--brand); color: var(--on-brand); letter-spacing: .06em; }
+    .ch-hero-title { margin: 10px 0 6px; font-size: clamp(26px, 3.4vw, 40px); line-height: 1.04; font-weight: 850; letter-spacing: -.035em; text-wrap: balance; overflow-wrap: anywhere; }
+    .ch-hero-title a { color: inherit; text-decoration: none; }
+    .ch-hero-title a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+    .ch-hero-by { font-size: 14px; color: var(--text-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ch-hero-by a { color: var(--text); text-decoration: none; }
+    .ch-hero-by a:hover { text-decoration: underline; }
+    .ch-stats { display: flex; gap: 28px; margin-top: 18px; flex-wrap: wrap; }
+    .ch-stat b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .ch-stat span { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-3); margin-top: 3px; }
+    .ch-stat .up { color: var(--green); }
+    .ch-stat .down { color: var(--red); }
+    .ch-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .ch-hero-actions button { min-height: 42px; }
+    .ch-hero-actions button[disabled] { opacity: .65; cursor: progress; }
+    .ch-graph { grid-column: 1 / -1; min-width: 0; }
+    .ch-graph-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+    .ch-graph svg { display: block; width: 100%; height: 72px; overflow: visible; }
+    .ch-graph-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .ch-legend { display: inline-flex; gap: 12px; align-items: center; }
+    .ch-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: -0px; }
+    .ch-bar-prev { fill: var(--text-3); opacity: .38; }
+    .ch-bar-cur { fill: var(--brand); }
+    .ch-bar-today { fill: var(--brand); opacity: .55; }
+
+    @container ch (min-width: 900px) {
+      .ch-hero { grid-template-columns: 208px minmax(0, 1fr) minmax(220px, 280px); gap: 28px; padding: 26px 28px; }
+      .ch-hero-art { width: 208px; }
+      .ch-graph { grid-column: auto; align-self: end; padding-bottom: 4px; }
+      .ch-graph svg { height: 96px; }
+    }
+
+    .ch-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12.5px; color: var(--text-3); margin: 14px 2px 18px; }
+    .ch-meta b { color: var(--text-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .ch-live { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; color: var(--text-2); }
+    .ch-live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
+
+    .ch-list { display: flex; flex-direction: column; gap: 2px; }
+    .ch-colhead {
+      display: grid; gap: 16px; padding: 0 16px 8px; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--hair); margin-bottom: 4px;
+    }
+    .ch-colhead .r { text-align: right; }
+    .ch-grid-hot { grid-template-columns: 52px minmax(0, 1fr) 132px 96px; }
+    .ch-lw { display: none; text-align: center; font-size: 13px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    @container ch (min-width: 900px) {
+      .ch-grid-hot { grid-template-columns: 52px minmax(0, 1fr) 64px 132px 96px; }
+      .ch-lw { display: block; }
+    }
+    .ch-grid-std { grid-template-columns: 44px minmax(0, 1fr) 150px; }
+    .ch-row { padding: 8px 16px; min-height: 64px; outline-offset: -2px; }
+    .ch-row:focus-visible { outline: 2px solid var(--text); }
+    .ch-rank { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+    .ch-num { font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1; }
+    .ch-grid-std .ch-num { font-size: 15px; font-weight: 700; color: var(--text-2); }
+    .ch-grid-std .ch-row.top .ch-num, .ch-grid-std.top .ch-num { color: var(--text); }
+    .ch-move { display: inline-flex; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ch-move.up { color: var(--green); }
+    .ch-move.down { color: var(--red); }
+    .ch-move.same { color: var(--text-3); }
+    .ch-move.new { padding: 3px 6px; border-radius: var(--r-pill); background: var(--brand-bg); color: var(--brand); letter-spacing: .05em; font-size: 9.5px; }
+    .theme-light .ch-move.new { color: var(--brand-text); }
+    .ch-move svg { width: 8px; height: 8px; }
+    .ch-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .ch-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .ch-cover { width: 48px; height: 48px; border-radius: 6px; position: relative; overflow: hidden; flex-shrink: 0; }
+    .ch-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ch-cover .wv-chart-play { width: 100%; height: 100%; }
+    .ch-text { min-width: 0; }
+    .ch-t { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .ch-s { font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .ch-s a { color: inherit; text-decoration: none; }
+    .ch-s a:hover { color: var(--text); text-decoration: underline; }
+    .ch-tag { display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); border: 1px solid var(--hair-strong); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+    .ch-spark svg { display: block; width: 100%; height: 34px; overflow: visible; }
+    .ch-metric { text-align: right; min-width: 0; font-variant-numeric: tabular-nums; }
+    .ch-metric b { display: block; font-size: 14.5px; font-weight: 750; color: var(--text); letter-spacing: -.01em; white-space: nowrap; }
+    .ch-metric span { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ch-metric b span { display: inline; margin: 0; font-size: inherit; color: inherit; }
+    .ch-metric b .star { color: var(--orange); }
+    .ch-metric b .of { font-size: 11px; color: var(--text-3); font-weight: 600; }
+    .ch-line-prev { fill: none; stroke: var(--text-3); stroke-width: 1.5; opacity: .5; stroke-linejoin: round; stroke-linecap: round; }
+    .ch-line-cur { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .ch-area { fill: var(--brand); opacity: .14; }
+    .ch-dot { fill: var(--brand); }
+
+    .ch-more-wrap { display: flex; justify-content: center; margin-top: 14px; }
+    .ch-more {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 22px; border-radius: var(--r-pill);
+      border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .ch-more:hover { border-color: var(--text); }
+    .ch-more svg { transition: transform 200ms var(--ease); }
+    .ch-more[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+    .ch-skel-hero { display: grid; grid-template-columns: 196px 1fr; gap: 26px; padding: 24px; border-radius: 12px; border: 1px solid var(--hair); background: var(--surface); }
+    .ch-skel-hero .art { width: 196px; aspect-ratio: 1; border-radius: 8px; }
+    .ch-skel-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 90px; gap: 16px; align-items: center; padding: 8px 16px; min-height: 64px; }
+    .ch-skel-row .n { width: 18px; height: 16px; margin: 0 auto; }
+    .ch-skel-row .c { display: flex; gap: 14px; align-items: center; }
+    .ch-skel-row .a { width: 48px; height: 48px; border-radius: 6px; flex-shrink: 0; }
+    .ch-skel-row .l { height: 12px; border-radius: 4px; }
+    .ch-empty { padding: 56px 20px; text-align: center; color: var(--text-3); font-size: 14.5px; }
+    .ch-empty b { display: block; color: var(--text); font-size: 17px; margin-bottom: 6px; }
+
+    .ch-anim .ch-row { animation: ch-in 360ms var(--ease) both; }
+    @keyframes ch-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .ch-anim .ch-row { animation: none; }
+      .ch-hero, .ch-more svg, .ch-tab, .ch-seg button { transition: none; }
+    }
+
+    @media (max-width: 640px) {
+      .ch-head { align-items: center; margin-bottom: 12px; }
+      .ch-sub { font-size: 13.5px; }
+      .ch-share { width: 40px; padding: 0; justify-content: center; }
+      .ch-share .lbl { display: none; }
+      .ch-tabs { margin: 0 -16px 18px; padding: 0 8px; }
+      .ch-tab { font-size: 14px; padding: 0 11px; }
+      .ch-seg button, .ch-sorts .wv-pill { min-height: 40px; }
+      .ch-controls { gap: 10px; }
+      .ch-sorts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; width: calc(100% + 32px); }
+      .ch-sorts::-webkit-scrollbar { display: none; }
+      .ch-sorts { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); padding-right: 36px; }
+    }
+    @container ch (max-width: 600px) {
+      .ch-hero { grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+      .ch-hero-art { width: 112px; }
+      .ch-hero-title { font-size: 24px; margin: 8px 0 4px; }
+      .ch-hero-by { font-size: 13px; }
+      .ch-stats, .ch-hero-actions { grid-column: 1 / -1; }
+      .ch-stats { gap: 0; margin-top: 2px; justify-content: space-between; }
+      .ch-stat b { font-size: 19px; }
+      .ch-hero-actions { margin-top: 0; }
+      .ch-hero-actions button { flex: 1; justify-content: center; padding-left: 12px; padding-right: 12px; }
+      .ch-hero-body { display: contents; }
+      .ch-hero-id { min-width: 0; align-self: center; }
+      .ch-graph svg { height: 64px; }
+      .ch-grid-hot, .ch-grid-std { grid-template-columns: 34px minmax(0, 1fr) 64px; gap: 10px; }
+      .ch-spark, .ch-colhead .sp { display: none; }
+      .ch-row, .ch-colhead { padding-left: 6px; padding-right: 6px; }
+      .ch-main { gap: 11px; }
+      .ch-cover { width: 44px; height: 44px; }
+      .ch-t { font-size: 14px; }
+      .ch-metric b { font-size: 13.5px; }
+      .ch-metric span { font-size: 10.5px; }
+      .ch-skel-hero { grid-template-columns: 112px 1fr; padding: 16px; gap: 16px; }
+      .ch-skel-hero .art { width: 112px; }
+      .ch-skel-row { grid-template-columns: 34px minmax(0, 1fr) 56px; gap: 10px; padding: 8px 6px; }
+    }
+    @container ch (min-width: 440px) and (max-width: 600px) {
+      .ch-hero { grid-template-columns: 144px minmax(0, 1fr); gap: 20px; padding: 20px; }
+      .ch-hero-art, .ch-skel-hero .art { width: 144px; }
+      .ch-hero-title { font-size: 28px; }
+      .ch-hero-actions button { flex: 0 1 auto; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
@@ -18,221 +233,653 @@
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script src="/js/playlists.js?v=6288d60cd337"></script>
 <script>
-var _chartsData = null;
-var _minRatings = 5;
-// Independent state per section.
-var _sortAllTime = 'plays';   // plays | liked | ratings | score
-var _sortWeekly  = 'plays';   // plays | liked
-var _typeAllTime = 'edits';   // edits | comps
-var _typeWeekly  = 'edits';   // edits | comps
+var CH_TABS = ['hot', 'alltime', 'new'];
+var CH_TYPES = ['edits', 'comps', 'archive'];
+var CH_SORTS = { alltime: ['plays', 'liked', 'ratings', 'score'], 'new': ['plays', 'liked'] };
+var CH_SORT_LABELS = { plays: 'Most streams', liked: 'Most liked', ratings: 'Top rated', score: 'Wavernrs score' };
+var CH_TYPE_LABELS = { edits: 'Edits', comps: 'Comps', archive: 'Archive' };
+var CH_PAGE = 20, CH_MAX = 50;
+var _ch = window._ch = {
+  tab: 'hot', hot: null, hotState: 'loading', charts: null, chartsState: 'idle', chartsWait: null,
+  minRatings: 5, type: { alltime: 'edits', 'new': 'edits' }, sort: { alltime: 'plays', 'new': 'plays' },
+  expanded: { hot: false, alltime: false, 'new': false }, queues: { alltime: [], 'new': [] }, lists: {}, animate: true
+};
 initPlayer();
 
-async function initCharts() {
-  var view = document.getElementById('view');
-  var seg =
-    '.wv-seg{background:none;border:none;cursor:pointer;padding:5px 14px;border-radius:999px;' +
-    'font-size:12.5px;font-weight:600;color:var(--text-2);transition:background 0.15s,color 0.15s;}' +
-    '.wv-seg.is-active{background:var(--text);color:var(--page-bg-base);}';
-  view.innerHTML =
-    '<style>' + seg + '</style>' +
-    '<div style="display:flex;flex-direction:column;gap:34px;">' +
-      '<div>' +
-        '<h1 class="wv-page-title">Charts</h1>' +
-        '<div style="font-size:15px;font-weight:600;color:var(--text-2);margin-top:4px;">the top stuff on wavernrs, ranked</div>' +
-      '</div>' +
-
-      // ── All Time ──
-      '<div>' +
-        '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
-          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
-            '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">All Time</h2>' +
-            '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="alltime-types">' +
-              '<button class="wv-seg is-active" onclick="setType(\'alltime\',\'edits\')">Edits</button>' +
-              '<button class="wv-seg" onclick="setType(\'alltime\',\'comps\')">Comps</button>' +
-              '<button class="wv-seg" onclick="setType(\'alltime\',\'archive\')">Archive</button>' +
-            '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="alltime-sorts">' +
-            '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'plays\')">Most Streams</button>' +
-            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'liked\')">Most Liked</button>' +
-            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'ratings\')">Top Rated</button>' +
-            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'alltime\',\'score\')">Wavernrs Score</button>' +
-          '</div>' +
-        '</div>' +
-        '<div id="alltime-body"><div class="loading"><div class="spinner"></div></div></div>' +
-      '</div>' +
-
-      // ── This Week ──
-      '<div>' +
-        '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">' +
-          '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
-            '<h2 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em;">This Week</h2>' +
-            '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;" id="weekly-types">' +
-              '<button class="wv-seg is-active" onclick="setType(\'weekly\',\'edits\')">Edits</button>' +
-              '<button class="wv-seg" onclick="setType(\'weekly\',\'comps\')">Comps</button>' +
-              '<button class="wv-seg" onclick="setType(\'weekly\',\'archive\')">Archive</button>' +
-            '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:6px;flex-wrap:wrap;" id="weekly-sorts">' +
-            '<button class="wv-pill is-active" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'plays\')">Most Streams</button>' +
-            '<button class="wv-pill" style="padding:6px 14px;font-size:12.5px;" onclick="setSort(\'weekly\',\'liked\')">Most Liked</button>' +
-          '</div>' +
-        '</div>' +
-        '<div id="weekly-body"><div class="loading"><div class="spinner"></div></div></div>' +
-      '</div>' +
-    '</div>';
-  loadCharts();
+function chEsc(s) { return typeof escHtml === 'function' ? escHtml(s == null ? '' : String(s)) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function chNum(n) { return (Number(n) || 0).toLocaleString('en-US'); }
+function chIcon(name, size) {
+  var s = size || 16;
+  var p = {
+    flame: '<path d="M12 2.5c.6 3.1-1 5-2.6 6.8C7.9 11 6.5 12.6 6.5 15a5.5 5.5 0 0 0 11 0c0-2.2-1-3.9-2.2-5.2-.2 1.3-.9 2.3-1.9 2.8.4-3.4-.4-7.2-1.4-10.1Z" fill="currentColor"/>',
+    play: '<path d="M7.5 4.9 19 12 7.5 19.1Z" fill="currentColor"/>',
+    list: '<path d="M4 6h11M4 12h11M4 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M17 13.5v7l5-3.5z" fill="currentColor"/>',
+    link: '<path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4L12 18.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
+    check: '<path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+    chev: '<path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+    up: '<path d="M12 5 21 19H3Z" fill="currentColor"/>',
+    down: '<path d="M12 19 3 5h18Z" fill="currentColor"/>',
+    crown: '<path d="m3 8 4.5 4L12 5l4.5 7L21 8l-2 11H5Z" fill="currentColor"/>'
+  }[name] || '';
+  return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
 }
 
-function setType(section, type) {
-  if (section === 'alltime') _typeAllTime = type; else _typeWeekly = type;
-  var container = document.getElementById(section + '-types');
-  if (container) {
-    container.querySelectorAll('.wv-seg').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('onclick').indexOf("'" + type + "'") !== -1);
-    });
+function chReadUrl() {
+  var q = new URLSearchParams(location.search);
+  var tab = (q.get('tab') || '').toLowerCase();
+  if (tab === 'week' || tab === 'weekly') tab = 'new';
+  if (tab === 'all' || tab === 'all-time') tab = 'alltime';
+  _ch.tab = CH_TABS.indexOf(tab) >= 0 ? tab : 'hot';
+  _ch.urlTab = CH_TABS.indexOf(tab) >= 0;
+  if (_ch.tab !== 'hot') {
+    var type = (q.get('type') || '').toLowerCase();
+    var sort = (q.get('sort') || '').toLowerCase();
+    if (sort === 'streams') sort = 'plays';
+    if (sort === 'rated' || sort === 'rating') sort = 'ratings';
+    if (CH_TYPES.indexOf(type) >= 0) _ch.type[_ch.tab] = type;
+    if (CH_SORTS[_ch.tab].indexOf(sort) >= 0) _ch.sort[_ch.tab] = sort;
   }
-  renderSection(section);
 }
 
-function setSort(section, sort) {
-  if (section === 'alltime') _sortAllTime = sort; else _sortWeekly = sort;
-  var container = document.getElementById(section + '-sorts');
-  if (container) {
-    container.querySelectorAll('.wv-pill').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.getAttribute('onclick').indexOf("'" + sort + "'") !== -1);
-    });
+function chUrl() {
+  var q = new URLSearchParams();
+  q.set('tab', _ch.tab);
+  if (_ch.tab !== 'hot') {
+    q.set('type', _ch.type[_ch.tab]);
+    q.set('sort', _ch.sort[_ch.tab]);
   }
-  renderSection(section);
+  return '/charts?' + q.toString();
 }
 
-async function loadCharts() {
+function chWriteUrl() {
   try {
-    _chartsData = await api('/charts');
-    if (typeof _chartsData.min_ratings === 'number') _minRatings = _chartsData.min_ratings;
-    renderSection('alltime');
-    renderSection('weekly');
-  } catch (err) {
-    wvShowError('alltime-body', err, 'loadCharts()');
-    document.getElementById('weekly-body').innerHTML = '';
+    var next = chUrl();
+    if (location.pathname + location.search !== next) history.replaceState(history.state, '', next);
+  } catch (_) {}
+}
+
+function initCharts() {
+  var view = document.getElementById('view');
+  if (!view) return;
+  chReadUrl();
+  view.innerHTML =
+    '<div class="ch-wrap" id="ch-root">' +
+      '<div class="ch-head">' +
+        '<div style="min-width:0;">' +
+          '<h1 class="wv-page-title">Charts</h1>' +
+          '<p class="ch-sub">what wavernrs is actually listening to, ranked</p>' +
+        '</div>' +
+        '<button class="ch-share" id="ch-share" type="button" data-act="share" aria-label="Copy a link to this chart">' + chIcon('link', 16) + '<span class="lbl">Copy link</span></button>' +
+      '</div>' +
+      '<div class="ch-tabs" role="tablist" aria-label="Chart" id="ch-tabs">' +
+        '<button class="ch-tab" role="tab" type="button" id="ch-tab-hot" data-tab="hot" aria-controls="ch-panel">' + chIcon('flame', 16) + 'Hot 50</button>' +
+        '<button class="ch-tab" role="tab" type="button" id="ch-tab-alltime" data-tab="alltime" aria-controls="ch-panel">All time</button>' +
+        '<button class="ch-tab" role="tab" type="button" id="ch-tab-new" data-tab="new" aria-controls="ch-panel">New this week</button>' +
+      '</div>' +
+      '<div id="ch-panel" role="tabpanel"></div>' +
+    '</div>';
+
+  var root = document.getElementById('ch-root');
+  root.addEventListener('click', chOnClick);
+  root.addEventListener('keydown', chOnKey);
+  chSyncTabs();
+  chRender();
+  chLoadHot();
+  if (_ch.tab !== 'hot') chLoadCharts();
+}
+
+function chSyncTabs() {
+  var hotBtn = document.getElementById('ch-tab-hot');
+  if (hotBtn) hotBtn.hidden = _ch.hotState === 'none';
+  document.querySelectorAll('#ch-tabs .ch-tab').forEach(function (b) {
+    var on = b.getAttribute('data-tab') === _ch.tab;
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+  });
+  var panel = document.getElementById('ch-panel');
+  if (panel) panel.setAttribute('aria-labelledby', 'ch-tab-' + _ch.tab);
+}
+
+function chSetTab(tab, focus) {
+  if (CH_TABS.indexOf(tab) < 0) return;
+  if (tab === 'hot' && _ch.hotState === 'none') return;
+  _ch.tab = tab;
+  _ch.animate = true;
+  chSyncTabs();
+  chWriteUrl();
+  if (tab !== 'hot') chLoadCharts();
+  chRender();
+  if (focus) { var b = document.getElementById('ch-tab-' + tab); if (b) b.focus(); }
+}
+
+function chOnKey(e) {
+  var t = e.target;
+  if (t.classList && t.classList.contains('ch-tab') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End')) {
+    var tabs = CH_TABS.filter(function (x) { return !(x === 'hot' && _ch.hotState === 'none'); });
+    var i = tabs.indexOf(_ch.tab);
+    if (e.key === 'ArrowRight') i = (i + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') i = (i - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') i = 0;
+    else i = tabs.length - 1;
+    e.preventDefault();
+    chSetTab(tabs[i], true);
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && t.classList && t.classList.contains('ch-row')) {
+    e.preventDefault();
+    var href = t.getAttribute('data-href');
+    if (href) navigate(href);
   }
 }
 
-// Sort + filter a list per section/sort, returning the top 20.
-function _rankList(list, sort) {
+function chOnClick(e) {
+  var el = e.target.closest('[data-act], .ch-tab, .ch-row, a[data-nav]');
+  if (!el) return;
+  if (el.matches('a[data-nav]')) return;
+  if (el.classList.contains('ch-tab')) { chSetTab(el.getAttribute('data-tab')); return; }
+  var act = el.getAttribute('data-act');
+  if (!act && el.classList.contains('ch-row')) {
+    var href = el.getAttribute('data-href');
+    if (href) navigate(href);
+    return;
+  }
+  if (act === 'share') return chShare(el);
+  if (act === 'type') { _ch.type[_ch.tab] = el.getAttribute('data-v'); _ch.expanded[_ch.tab] = false; _ch.animate = true; chWriteUrl(); return chRender(); }
+  if (act === 'sort') { _ch.sort[_ch.tab] = el.getAttribute('data-v'); _ch.animate = true; chWriteUrl(); return chRender(); }
+  if (act === 'more') {
+    _ch.expanded[_ch.tab] = !_ch.expanded[_ch.tab];
+    _ch.animate = false;
+    chRender();
+    if (!_ch.expanded[_ch.tab]) { var p = document.getElementById('ch-panel'); if (p && p.getBoundingClientRect().top < 0) p.scrollIntoView({ block: 'start' }); }
+    return;
+  }
+  if (act === 'play-hot') return chPlayHot(+el.getAttribute('data-i'));
+  if (act === 'play-chart') return chPlayChart(el);
+  if (act === 'play-comp') return playCompById(el.getAttribute('data-id'));
+  if (act === 'play-edit') return chartPlay(el.getAttribute('data-sec'), el.getAttribute('data-id'));
+  if (act === 'retry-hot') { _ch.hotState = 'loading'; chRender(); return chLoadHot(); }
+  if (act === 'retry-charts') { _ch.chartsState = 'idle'; return chLoadCharts(); }
+}
+
+function chShare(btn) {
+  var url = location.origin + chUrl();
+  var done = function () {
+    if (!btn) return;
+    btn.classList.add('is-done');
+    btn.innerHTML = chIcon('check', 16) + '<span class="lbl">Copied</span>';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function () {
+      btn.classList.remove('is-done');
+      btn.innerHTML = chIcon('link', 16) + '<span class="lbl">Copy link</span>';
+    }, 1800);
+    if (typeof wvToast === 'function') wvToast('link copied');
+  };
+  var fallback = function () {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+    } catch (_) { if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error'); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, fallback);
+  else fallback();
+}
+
+function chLoadHot() {
+  var gen = window._wvNavGen || 0;
+  api('/charts/hot').then(function (d) {
+    if ((window._wvNavGen || 0) !== gen) return;
+    var ok = d && Array.isArray(d.items) && d.items.length >= 3 && !d.sparse;
+    _ch.hot = ok ? d : null;
+    _ch.hotState = ok ? 'ok' : 'none';
+    chAfterHot();
+  }).catch(function (err) {
+    if (err && err.navAborted) return;
+    if ((window._wvNavGen || 0) !== gen) return;
+    _ch.hot = null;
+    _ch.hotState = (err && err.status && err.status < 500) ? 'none' : (_ch.tab === 'hot' && _ch.urlTab ? 'error' : 'none');
+    chAfterHot();
+  });
+}
+
+function chAfterHot() {
+  var redraw = _ch.tab === 'hot';
+  if (_ch.hotState === 'none' && _ch.tab === 'hot') {
+    _ch.tab = 'alltime';
+    _ch.animate = true;
+    chLoadCharts();
+  }
+  chSyncTabs();
+  if (redraw) chRender();
+  if (_ch.hotState === 'ok' && !_ch.charts && _ch.chartsState === 'idle') {
+    var t = setTimeout(function () { chLoadCharts(); }, 1500);
+    window._pageCleanup = window._pageCleanup || [];
+    window._pageCleanup.push(function () { clearTimeout(t); });
+  }
+}
+
+function chLoadCharts() {
+  if (_ch.chartsState === 'loading' || _ch.chartsState === 'ok') return;
+  _ch.chartsState = 'loading';
+  if (_ch.tab !== 'hot') chRender();
+  var gen = window._wvNavGen || 0;
+  api('/charts').then(function (d) {
+    if ((window._wvNavGen || 0) !== gen) return;
+    _ch.charts = d || {};
+    if (typeof _ch.charts.min_ratings === 'number') _ch.minRatings = _ch.charts.min_ratings;
+    _ch.chartsState = 'ok';
+    if (_ch.tab !== 'hot') chRender();
+  }).catch(function (err) {
+    if (err && err.navAborted) return;
+    if ((window._wvNavGen || 0) !== gen) return;
+    _ch.chartsState = 'error';
+    _ch.chartsErr = err;
+    if (_ch.tab !== 'hot') chRender();
+  });
+}
+
+function chRender() {
+  var panel = document.getElementById('ch-panel');
+  if (!panel) return;
+  if (_ch.tab === 'hot') return chRenderHot(panel);
+  return chRenderStd(panel, _ch.tab);
+}
+
+function chSkelRows(n) {
+  var out = '';
+  for (var i = 0; i < n; i++) {
+    out += '<div class="ch-skel-row" aria-hidden="true">' +
+      '<div class="wv-skel n"></div>' +
+      '<div class="c"><div class="wv-skel a"></div><div style="flex:1;min-width:0;"><div class="wv-skel l" style="width:' + (46 + (i * 17) % 38) + '%;"></div><div class="wv-skel l" style="width:' + (22 + (i * 11) % 20) + '%;margin-top:8px;height:10px;"></div></div></div>' +
+      '<div class="wv-skel l" style="width:70%;margin-left:auto;"></div>' +
+    '</div>';
+  }
+  return out;
+}
+
+function chSkelHero() {
+  return '<div class="ch-skel-hero" aria-hidden="true">' +
+    '<div class="wv-skel art"></div>' +
+    '<div style="display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0;">' +
+      '<div class="wv-skel" style="width:120px;height:20px;border-radius:999px;"></div>' +
+      '<div class="wv-skel" style="width:70%;height:32px;"></div>' +
+      '<div class="wv-skel" style="width:40%;height:14px;"></div>' +
+      '<div class="wv-skel" style="width:55%;height:36px;margin-top:8px;"></div>' +
+    '</div>' +
+  '</div>';
+}
+
+function chCreator(a) {
+  if (!a) return { name: 'Unknown', href: '' };
+  if (a.is_archive) {
+    var n = a.archive_artist_name || (a.artists && a.artists.display_name) || 'Unknown';
+    var slug = typeof archiveArtistSlug === 'function' ? archiveArtistSlug(n) : '';
+    return { name: n, href: slug ? '/archive-artist?a=' + encodeURIComponent(slug) : '' };
+  }
+  var ar = a.artists || {};
+  return { name: ar.display_name || 'Unknown', href: ar.id ? '/artist?id=' + encodeURIComponent(ar.id) : '' };
+}
+
+function chCreatorLink(c) {
+  if (!c.href) return chEsc(c.name);
+  return '<a href="' + chEsc(c.href) + '" data-nav="1">' + chEsc(c.name) + '</a>';
+}
+
+function chMoveBadge(it) {
+  if (it.is_new) return '<span class="ch-move new" title="new this week">NEW</span>';
+  var m = parseInt(it.move, 10) || 0;
+  var lw = it.prev_rank ? ' (#' + chNum(it.prev_rank) + ' last week)' : '';
+  if (m > 0) return '<span class="ch-move up" title="up ' + m + lw + '"><span class="ch-sr">up </span>' + chIcon('up', 8) + m + '</span>';
+  if (m < 0) return '<span class="ch-move down" title="down ' + (-m) + lw + '"><span class="ch-sr">down </span>' + chIcon('down', 8) + (-m) + '</span>';
+  return '<span class="ch-move same" title="no change' + lw + '" aria-label="no change">&ndash;</span>';
+}
+
+function chSpark(series, w, h) {
+  var s = (series || []).map(function (v) { return Math.max(0, +v || 0); });
+  var n = s.length;
+  if (n < 2) return '';
+  var max = Math.max.apply(null, s.concat([1]));
+  var pad = 2.5;
+  var pts = s.map(function (v, i) {
+    return [pad + i * (w - 2 * pad) / (n - 1), h - pad - (v / max) * (h - 2 * pad)];
+  });
+  var half = Math.floor(n / 2);
+  var fmt = function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); };
+  var prev = pts.slice(0, half + 1).map(fmt).join(' ');
+  var cur = pts.slice(half).map(fmt).join(' ');
+  var area = 'M' + pts[half][0].toFixed(1) + ',' + (h - pad) + ' L' + pts.slice(half).map(fmt).join(' L') + ' L' + pts[n - 1][0].toFixed(1) + ',' + (h - pad) + ' Z';
+  var last = pts[n - 1];
+  var sum = function (a) { return a.reduce(function (x, y) { return x + y; }, 0); };
+  var label = 'daily plays over 14 days: ' + chNum(sum(s.slice(0, half))) + ' last week, ' + chNum(sum(s.slice(half))) + ' this week';
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" role="img" aria-label="' + label + '">' +
+    '<path class="ch-area" d="' + area + '"/>' +
+    '<polyline class="ch-line-prev" points="' + prev + '" vector-effect="non-scaling-stroke"/>' +
+    '<polyline class="ch-line-cur" points="' + cur + '" vector-effect="non-scaling-stroke"/>' +
+    '<circle class="ch-dot" cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.6"/>' +
+  '</svg>';
+}
+
+function chBars(series, days) {
+  var s = (series || []).map(function (v) { return Math.max(0, +v || 0); });
+  var n = s.length;
+  if (!n) return '';
+  var W = 280, H = 96, gap = 4;
+  var bw = (W - gap * (n - 1)) / n;
+  var max = Math.max.apply(null, s.concat([1]));
+  var half = Math.floor(n / 2);
+  var bars = s.map(function (v, i) {
+    var bh = v > 0 ? Math.max(3, (v / max) * (H - 2)) : 1.5;
+    var x = i * (bw + gap);
+    var cls = i < half ? 'ch-bar-prev' : (i === n - 1 ? 'ch-bar-today' : 'ch-bar-cur');
+    var d = days && days[i] ? chDay(days[i]) : '';
+    return '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + (H - bh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2"><title>' + chEsc(d) + ': ' + chNum(v) + ' plays' + (i === n - 1 ? ' so far' : '') + '</title></rect>';
+  }).join('');
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="daily plays for the last 14 days">' + bars + '</svg>';
+}
+
+function chDay(iso) {
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return '';
+  var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+function chAgo(iso) {
+  var t = Date.parse(iso || '');
+  if (!t) return '';
+  var m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  var h = Math.round(m / 60);
+  return h + (h === 1 ? ' hour' : ' hours') + ' ago';
+}
+
+function chRenderHot(panel) {
+  if (_ch.hotState === 'loading') {
+    panel.innerHTML = chSkelHero() + '<div style="height:28px;"></div><div class="ch-list">' + chSkelRows(8) + '</div>';
+    return;
+  }
+  if (_ch.hotState === 'error') {
+    panel.innerHTML = '<div class="ch-empty"><b>couldnt load the hot 50</b>try again in a sec<div style="margin-top:16px;"><button class="wv-pill brand" data-act="retry-hot" type="button">Try again</button></div></div>';
+    return;
+  }
+  var d = _ch.hot;
+  if (!d || !d.items || !d.items.length) { panel.innerHTML = ''; return; }
+  var items = d.items;
+  var top = items[0];
+  var a = top.album || {};
+  var c = chCreator(a);
+  if (typeof window.setPageBgImage === 'function') window.setPageBgImage(a.cover_url || '', a.title || '');
+
+  var change = '';
+  if (top.plays_prev_7d > 0) {
+    var pct = Math.round(((top.plays_7d - top.plays_prev_7d) / top.plays_prev_7d) * 100);
+    change = '<div class="ch-stat"><b class="' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '') + '">' + (pct > 0 ? '+' : pct < 0 ? '&minus;' : '') + chNum(Math.abs(pct)) + '%</b><span>vs last week</span></div>';
+  } else {
+    change = '<div class="ch-stat"><b>New</b><span>first week charting</span></div>';
+  }
+  var bits = [];
+  var tc = parseInt(a.track_count, 10) || 0;
+  if (tc) bits.push(tc + (tc === 1 ? ' track' : ' tracks'));
+  if (a.is_archive) bits.push('archive');
+  var kickerMove = top.is_new ? '<span>new entry</span>' : (top.move > 0 ? '<span>up from #' + chNum(top.prev_rank) + '</span>' : (+top.prev_rank === 1 ? '<span>holding at the top</span>' : '<span>was #' + chNum(top.prev_rank) + '</span>'));
+  var href = '/album?id=' + encodeURIComponent(a.id || top.album_id);
+
+  var hero =
+    '<section class="ch-hero" aria-label="Number one this week">' +
+      '<a class="ch-hero-art" href="' + chEsc(href) + '" data-nav="1" aria-label="Open ' + chEsc(a.title || '') + '" style="background:' + coverGradient(a.title || '') + ';">' +
+        (a.cover_url ? '<img src="' + chEsc(a.cover_url) + '" alt="" width="208" height="208" onerror="this.style.opacity=0">' : '') +
+      '</a>' +
+      '<div class="ch-hero-body">' +
+        '<div class="ch-hero-id">' +
+          '<div class="ch-kicker"><span class="ch-no1">' + chIcon('crown', 12) + 'No. 1</span>' + kickerMove + '</div>' +
+          '<h2 class="ch-hero-title"><a href="' + chEsc(href) + '" data-nav="1">' + chEsc(a.title || 'Untitled') + '</a></h2>' +
+          '<div class="ch-hero-by">' + chCreatorLink(c) + (bits.length ? ' &middot; ' + chEsc(bits.join(' · ')) : '') + '</div>' +
+        '</div>' +
+        '<div class="ch-stats">' +
+          '<div class="ch-stat"><b>' + chNum(top.plays_7d) + '</b><span>plays this week</span></div>' +
+          '<div class="ch-stat"><b>' + chNum(top.listeners_7d) + '</b><span>listeners</span></div>' +
+          change +
+        '</div>' +
+        '<div class="ch-hero-actions">' +
+          '<button class="wv-btn-play" type="button" data-act="play-hot" data-i="0">' + chIcon('play', 15) + 'Play</button>' +
+          '<button class="wv-btn-ghost" type="button" data-act="play-chart" id="ch-play-chart">' + chIcon('list', 16) + 'Play the chart</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ch-graph">' +
+        '<div class="ch-graph-head"><span>daily plays</span><span class="ch-legend"><span><i style="background:var(--text-3);opacity:.5;"></i>last wk</span><span><i style="background:var(--brand);"></i>this wk</span></span></div>' +
+        chBars(top.series, d.days) +
+        '<div class="ch-graph-foot"><span>' + chEsc(d.days && d.days[0] ? chDay(d.days[0]) : '') + '</span><span>today</span></div>' +
+      '</div>' +
+    '</section>';
+
+  var tot = d.totals || {};
+  var meta = '<div class="ch-meta">' +
+    '<span class="ch-live">live</span>' +
+    '<span>rolling 7 days' + (d.generated_at ? ' &middot; updated ' + chEsc(chAgo(d.generated_at)) : '') + '</span>' +
+    (tot.plays_7d ? '<span><b>' + chNum(tot.plays_7d) + '</b> plays across <b>' + chNum(d.charting || items.length) + '</b> releases this week</span>' : '') +
+  '</div>';
+
+  var rest = items.slice(1);
+  var limit = _ch.expanded.hot ? CH_MAX : CH_PAGE;
+  var shown = rest.slice(0, limit - 1);
+  _ch.lists.hot = items;
+  var rows = shown.map(function (it, k) {
+    var al = it.album || {};
+    var cr = chCreator(al);
+    var rhref = '/album?id=' + encodeURIComponent(al.id || it.album_id);
+    var idx = k + 1;
+    var rank = Math.max(0, parseInt(it.rank, 10) || idx + 1);
+    return '<div class="wv-chart-row ch-row ch-grid-hot" role="link" tabindex="0" data-href="' + chEsc(rhref) + '" aria-label="#' + rank + ' ' + chEsc(al.title || '') + ' by ' + chEsc(cr.name) + '"' + (_ch.animate ? ' style="animation-delay:' + Math.min(k * 22, 400) + 'ms"' : '') + '>' +
+      '<div class="ch-rank"><span class="ch-num">' + rank + '</span>' + chMoveBadge(it) + '</div>' +
+      '<div class="ch-main">' +
+        '<div class="ch-cover wv-chart-cover" style="background:' + coverGradient(al.title || '') + ';">' +
+          (al.cover_url ? '<img src="' + chEsc(al.cover_url) + '" alt="" loading="lazy" width="48" height="48" onerror="this.style.opacity=0">' : '') +
+          '<button class="wv-chart-play" type="button" data-act="play-hot" data-i="' + idx + '" aria-label="Play ' + chEsc(al.title || '') + '">' + chIcon('play', 16) + '</button>' +
+        '</div>' +
+        '<div class="ch-text"><div class="ch-t">' + chEsc(al.title || 'Untitled') + '</div><div class="ch-s">' + chCreatorLink(cr) + (al.is_archive ? '<span class="ch-tag">archive</span>' : '') + '</div></div>' +
+      '</div>' +
+      '<div class="ch-lw" title="last week">' + (it.prev_rank ? '#' + chNum(it.prev_rank) : '&ndash;') + '</div>' +
+      '<div class="ch-spark">' + chSpark(it.series, 132, 34) + '</div>' +
+      '<div class="ch-metric"><b>' + chNum(it.plays_7d) + '</b><span>' + chNum(it.listeners_7d) + ' listeners</span></div>' +
+    '</div>';
+  }).join('');
+
+  var more = rest.length > CH_PAGE - 1
+    ? '<div class="ch-more-wrap"><button class="ch-more" type="button" data-act="more" aria-expanded="' + (_ch.expanded.hot ? 'true' : 'false') + '">' + (_ch.expanded.hot ? 'Show top 20' : 'Show all ' + Math.min(items.length, CH_MAX)) + chIcon('chev', 16) + '</button></div>'
+    : '';
+
+  panel.innerHTML = hero + meta +
+    '<div class="ch-list' + (_ch.animate ? ' ch-anim' : '') + '">' +
+      '<div class="ch-colhead ch-grid-hot" aria-hidden="true"><div style="text-align:center;">#</div><div>Title</div><div class="ch-lw" style="font-size:11px;">Last wk</div><div class="sp">14 days</div><div class="r">Plays</div></div>' +
+      rows +
+    '</div>' + more;
+  _ch.animate = false;
+}
+
+function chPlayHot(i) {
+  var list = _ch.lists.hot || [];
+  var it = list[i];
+  if (!it) return;
+  var al = it.album || {};
+  playCompById(al.id || it.album_id, { album: al });
+}
+
+function chPlayChart(btn) {
+  var list = (_ch.lists.hot || []).slice(0, 15);
+  if (!list.length) return;
+  if (btn) { btn.disabled = true; btn._html = btn.innerHTML; btn.innerHTML = chIcon('list', 16) + 'Loading…'; }
+  var restore = function () { if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = btn._html; } };
+  var gen = window._wvNavGen || 0;
+  var results = new Array(list.length);
+  var next = 0;
+  function worker() {
+    if (next >= list.length || (window._wvNavGen || 0) !== gen) return Promise.resolve();
+    var k = next++;
+    var al = list[k].album || {};
+    var id = al.id || list[k].album_id;
+    return api('/albums/' + encodeURIComponent(id) + '/tracks').then(function (rows) {
+      var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url && !t.locked; });
+      if (!tracks.length) return;
+      tracks.sort(function (x, y) { return (y.play_count || 0) - (x.play_count || 0); });
+      var t = tracks[0];
+      var who = chCreator(al).name;
+      results[k] = {
+        id: t.id, title: t.title, ia_url: t.ia_url,
+        cover_url: t.cover_url || al.cover_url || null,
+        artist_name: who || (t.artists && t.artists.display_name) || '',
+        album_id: id, artist_id: t.artist_id || null,
+        _album_id: id, _album_title: al.title || null, _album_cover: al.cover_url || null,
+        _archive_artist: al.is_archive ? (al.archive_artist_name || null) : null
+      };
+    }, function () {}).then(worker);
+  }
+  var pool = [];
+  for (var w = 0; w < 5; w++) pool.push(worker());
+  Promise.all(pool).then(function () {
+    restore();
+    if ((window._wvNavGen || 0) !== gen) return;
+    var queue = results.filter(Boolean);
+    if (!queue.length) { if (typeof wvToast === 'function') wvToast('nothing on the chart can play right now', 'error'); return; }
+    setPlayerQueue(queue, 0);
+    playQueueIndex(0);
+    if (typeof wvToast === 'function') wvToast('playing the top track from ' + queue.length + ' releases on the chart');
+  });
+}
+
+function chRankList(list, sort) {
   var arr = (list || []).slice();
   if (sort === 'liked') {
-    arr.sort(function(a, b) { return (b.like_count||0) - (a.like_count||0); });
+    arr.sort(function (a, b) { return (b.like_count || 0) - (a.like_count || 0) || (b.play_count || 0) - (a.play_count || 0); });
   } else if (sort === 'ratings') {
-    // Only tracks with at least the minimum number of ratings qualify.
-    arr = arr.filter(function(t) { return (t.rating_count||0) >= _minRatings; });
-    arr.sort(function(a, b) {
-      if ((b.rating_avg||0) !== (a.rating_avg||0)) return (b.rating_avg||0) - (a.rating_avg||0);
-      return (b.rating_count||0) - (a.rating_count||0);
+    arr = arr.filter(function (t) { return (t.rating_count || 0) >= _ch.minRatings; });
+    arr.sort(function (a, b) {
+      var wa = a.rating_weighted != null ? a.rating_weighted : (a.rating_avg || 0);
+      var wb = b.rating_weighted != null ? b.rating_weighted : (b.rating_avg || 0);
+      return (wb - wa) || ((b.rating_avg || 0) - (a.rating_avg || 0)) || ((b.rating_count || 0) - (a.rating_count || 0));
     });
   } else if (sort === 'score') {
-    arr.sort(function(a, b) { return (b.wavernrs_score||0) - (a.wavernrs_score||0); });
+    arr.sort(function (a, b) { return (b.wavernrs_score || 0) - (a.wavernrs_score || 0) || (b.play_count || 0) - (a.play_count || 0); });
   } else {
-    arr.sort(function(a, b) { return (b.play_count||0) - (a.play_count||0); });
+    arr.sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); });
   }
-  return arr.slice(0, 20);
+  return arr.slice(0, CH_MAX);
 }
 
-function _metricCell(t, sort) {
-  if (sort === 'liked') return (t.like_count||0).toLocaleString();
-  if (sort === 'ratings') {
-    return '<span style="color:var(--orange);">★</span> ' + (t.rating_avg!=null ? t.rating_avg : '–') +
-      ' <span style="color:var(--text-3);font-size:12px;">(' + (t.rating_count||0) + ')</span>';
-  }
-  if (sort === 'score') {
-    return '<span style="font-weight:700;color:var(--text);">' + (t.wavernrs_score||0) + '</span>' +
-      '<span style="color:var(--text-3);font-size:11px;"> /100</span>';
-  }
-  return (t.play_count||0).toLocaleString();
+function chMetric(t, sort) {
+  if (sort === 'liked') return '<b>' + chNum(t.like_count) + '</b><span>' + chNum(t.play_count) + ' streams</span>';
+  if (sort === 'ratings') return '<b><span class="star">★</span> ' + (t.rating_avg != null ? Number(t.rating_avg).toFixed(1) : '–') + '</b><span>' + chNum(t.rating_count) + ' ratings</span>';
+  if (sort === 'score') return '<b>' + chNum(t.wavernrs_score) + '<span class="of"> /100</span></b><span>' + chNum(t.play_count) + ' streams</span>';
+  return '<b>' + chNum(t.play_count) + '</b><span>' + (t.like_count ? chNum(t.like_count) + (t.like_count === 1 ? ' like' : ' likes') : '&nbsp;') + '</span>';
 }
 
-function _metricLabel(sort) {
+function chMetricLabel(sort) {
   if (sort === 'liked') return 'Likes';
   if (sort === 'ratings') return 'Rating';
   if (sort === 'score') return 'Score';
   return 'Streams';
 }
 
-var _chartPlayable = [];
+function chNote(tab, sort, list) {
+  if (tab === 'new') return 'released in the last 7 days';
+  if (sort === 'ratings') {
+    var weighted = (list || []).some(function (t) { return t.rating_weighted != null; });
+    return (weighted ? 'weighted average so a couple of 5s cant jump the queue · ' : '') + 'min ' + _ch.minRatings + ' ratings';
+  }
+  if (sort === 'score') return 'blend of rating (50%), streams (30%) and like rate (20%)';
+  return '';
+}
 
-// Play a charted edit and queue the rest of the chart behind it.
-function chartPlay(id) {
-  var idx = _chartPlayable.findIndex(function(t) { return t.id === id; });
+function chRenderStd(panel, tab) {
+  var type = _ch.type[tab], sort = _ch.sort[tab];
+  var universe = (_ch.charts && _ch.charts[type]) || { alltime: [], weekly: [] };
+  var src = (tab === 'alltime' ? universe.alltime : universe.weekly) || [];
+  var controls =
+    '<div class="ch-controls">' +
+      '<div class="ch-seg" role="group" aria-label="Type">' +
+        CH_TYPES.map(function (t) { return '<button type="button" data-act="type" data-v="' + t + '" aria-pressed="' + (t === type ? 'true' : 'false') + '">' + CH_TYPE_LABELS[t] + '</button>'; }).join('') +
+      '</div>' +
+      '<div class="ch-sorts" role="group" aria-label="Sort">' +
+        CH_SORTS[tab].map(function (s) { return '<button type="button" class="wv-pill' + (s === sort ? ' is-active' : '') + '" data-act="sort" data-v="' + s + '" aria-pressed="' + (s === sort ? 'true' : 'false') + '">' + CH_SORT_LABELS[s] + '</button>'; }).join('') +
+      '</div>' +
+    '</div>' +
+    '<div class="ch-note">' + chEsc(chNote(tab, sort, src)) + '</div>';
+
+  if (_ch.chartsState !== 'ok') {
+    if (_ch.chartsState === 'error') {
+      panel.innerHTML = controls + '<div id="ch-std-err"></div>';
+      if (typeof wvShowError === 'function') wvShowError('ch-std-err', _ch.chartsErr, "_ch.chartsState='idle';chLoadCharts()");
+      else document.getElementById('ch-std-err').innerHTML = '<div class="ch-empty">couldnt load the charts</div>';
+      return;
+    }
+    panel.innerHTML = controls + '<div class="ch-list">' + chSkelRows(10) + '</div>';
+    return;
+  }
+
+  var list = chRankList(src, sort);
+  var noun = type === 'comps' ? 'comps' : type === 'archive' ? 'archive comps' : 'edits';
+  var isComp = type !== 'edits';
+  var dest = isComp ? '/album?id=' : '/track?id=';
+
+  if (typeof window.setPageBgImage === 'function') {
+    window.setPageBgImage(list.length && list[0].cover_url ? list[0].cover_url : '', list.length ? list[0].title : '');
+  }
+
+  if (!list.length) {
+    var msg = sort === 'ratings'
+      ? '<b>no ' + noun + ' with ' + _ch.minRatings + '+ ratings yet</b>rate the stuff you love and it lands here'
+      : (tab === 'new' ? '<b>nothing new this week yet</b>fresh ' + noun + ' from the last 7 days show up here' : '<b>no ' + noun + ' yet</b>');
+    panel.innerHTML = controls + '<div class="ch-empty">' + msg + '</div>';
+    return;
+  }
+
+  _ch.queues[tab] = isComp ? [] : list.filter(function (t) { return t.ia_url; });
+  var limit = _ch.expanded[tab] ? CH_MAX : CH_PAGE;
+  var rows = list.slice(0, limit).map(function (t, i) {
+    var artist = (t.archive_artist_name || (t.artists ? t.artists.display_name : '')) || 'Unknown';
+    var cr = isComp
+      ? chCreator({ is_archive: type === 'archive', archive_artist_name: t.archive_artist_name || artist, artists: t.artists })
+      : { name: artist, href: t.artists && t.artists.id ? '/artist?id=' + encodeURIComponent(t.artists.id) : '' };
+    var act = isComp ? 'data-act="play-comp" data-id="' + chEsc(t.id) + '"' : 'data-act="play-edit" data-sec="' + tab + '" data-id="' + chEsc(t.id) + '"';
+    return '<div class="wv-chart-row ch-row ch-grid-std' + (i < 3 ? ' top' : '') + '" role="link" tabindex="0" data-href="' + chEsc(dest + encodeURIComponent(t.id)) + '" aria-label="#' + (i + 1) + ' ' + chEsc(t.title || '') + ' by ' + chEsc(cr.name) + '"' + (_ch.animate ? ' style="animation-delay:' + Math.min(i * 22, 400) + 'ms"' : '') + '>' +
+      '<div class="ch-rank"><span class="ch-num">' + (i + 1) + '</span></div>' +
+      '<div class="ch-main">' +
+        '<div class="ch-cover wv-chart-cover" style="background:' + coverGradient(t.title || '') + ';">' +
+          (t.cover_url ? '<img src="' + chEsc(t.cover_url) + '" alt="" loading="lazy" width="48" height="48" onerror="this.style.opacity=0">' : '') +
+          '<button class="wv-chart-play" type="button" ' + act + ' aria-label="Play ' + chEsc(t.title || '') + '">' + chIcon('play', 16) + '</button>' +
+        '</div>' +
+        '<div class="ch-text"><div class="ch-t">' + chEsc(t.title || 'Untitled') + '</div><div class="ch-s">' + chCreatorLink(cr) + '</div></div>' +
+      '</div>' +
+      '<div class="ch-metric">' + chMetric(t, sort) + '</div>' +
+    '</div>';
+  }).join('');
+
+  var more = list.length > CH_PAGE
+    ? '<div class="ch-more-wrap"><button class="ch-more" type="button" data-act="more" aria-expanded="' + (_ch.expanded[tab] ? 'true' : 'false') + '">' + (_ch.expanded[tab] ? 'Show top 20' : 'Show all ' + list.length) + chIcon('chev', 16) + '</button></div>'
+    : '';
+
+  panel.innerHTML = controls +
+    '<div class="ch-list' + (_ch.animate ? ' ch-anim' : '') + '">' +
+      '<div class="ch-colhead ch-grid-std" aria-hidden="true"><div style="text-align:center;">#</div><div>Title</div><div class="r">' + chMetricLabel(sort) + '</div></div>' +
+      rows +
+    '</div>' + more;
+  _ch.animate = false;
+}
+
+function chartPlay(section, id) {
+  var list = _ch.queues[section] || [];
+  var idx = -1;
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) { idx = i; break; }
   if (idx < 0) { if (typeof wvToast === 'function') wvToast('that one has no audio yet'); return; }
-  var queue = _chartPlayable.map(function(t) {
+  var queue = list.map(function (t) {
     return {
       id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null,
       artist_name: t.archive_artist_name || (t.artists ? t.artists.display_name : '') || '',
-      album_id: t.album_id || null, artist_id: t.artist_id || null,
+      album_id: t.album_id || null, artist_id: t.artist_id || (t.artists && t.artists.id) || null
     };
   });
   setPlayerQueue(queue, idx);
   playQueueIndex(idx);
-}
-
-function renderSection(section) {
-  if (!_chartsData) return;
-  var body = document.getElementById(section + '-body');
-  if (!body) return;
-
-  var sort = section === 'alltime' ? _sortAllTime : _sortWeekly;
-  var type = section === 'alltime' ? _typeAllTime : _typeWeekly;
-  var universe = _chartsData[type] || { alltime: [], weekly: [] };
-  var src  = section === 'alltime' ? universe.alltime : universe.weekly;
-  var list = _rankList(src, sort);
-  var noun = type === 'comps' ? 'comps' : type === 'archive' ? 'archive comps' : 'edits';
-  var destPage = (type === 'comps' || type === 'archive') ? '/album?id=' : '/track?id=';
-
-  // The page background mirrors the #1 all-time release on the selected tab
-  // (edits/comps). The weekly section never drives the background.
-  if (section === 'alltime' && typeof window.setPageBgImage === 'function') {
-    window.setPageBgImage(list.length && list[0].cover_url ? list[0].cover_url : '');
-  }
-
-  if (!list.length) {
-    if (sort === 'ratings') {
-      body.innerHTML = '<div class="wv-empty">no ' + noun + ' with ' + _minRatings + '+ ratings yet</div>';
-    } else {
-      body.innerHTML = '<div class="wv-empty">no ' + noun + ' yet</div>';
-    }
-    return;
-  }
-
-  var header = '<div style="display:grid;grid-template-columns:30px 1fr 150px;gap:16px;padding:10px 16px;font-size:11px;font-weight:500;color:var(--text-3);letter-spacing:0.04em;">' +
-    '<div>#</div><div>Title</div><div style="text-align:right;">' + _metricLabel(sort) + '</div>' +
-    '</div>';
-
-  var isComp = (type === 'comps' || type === 'archive');
-  _chartPlayable = isComp ? [] : list.filter(function(t) { return t.ia_url; });
-
-  var rows = list.map(function(t, i) {
-    var seed = t.title || '', artist = (t.archive_artist_name || (t.artists ? t.artists.display_name : '')) || 'Unknown';
-    var bg = coverGradient(seed);
-    var playCall = isComp ? "playCompById('" + t.id + "')" : "chartPlay('" + t.id + "')";
-    return '<div class="wv-chart-row" style="grid-template-columns:30px 1fr 150px;" onclick="navigate(\'' + destPage + t.id + '\')">' +
-      '<div style="font-size:14px;color:var(--text-3);">' + (i+1) + '</div>' +
-      '<div style="display:flex;align-items:center;gap:14px;min-width:0;">' +
-        '<div class="wv-chart-cover" style="width:44px;height:44px;border-radius:8px;background:' + bg + ';position:relative;overflow:hidden;flex-shrink:0;">' +
-          (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style.opacity=0">' : '') +
-          '<button class="wv-chart-play" title="Play" aria-label="Play ' + escHtml(t.title || '') + '" onclick="event.stopPropagation();' + playCall + '">' +
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' +
-          '</button>' +
-        '</div>' +
-        '<div style="min-width:0;">' +
-          '<div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-0.01em;">' + escHtml(t.title) + '</div>' +
-          '<div style="font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist) + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div style="font-size:13.5px;color:var(--text-2);text-align:right;">' + _metricCell(t, sort) + '</div>' +
-    '</div>';
-  }).join('');
-
-  body.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">' + header + rows + '</div>';
 }
 
 initCharts();

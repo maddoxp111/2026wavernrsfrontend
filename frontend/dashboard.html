@@ -3,20 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — dashboard</title>
+  <title>wavernrs — creator studio</title>
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style id="st-studio-css">
+    .st-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 0 56px; }
+    .st-card { background: var(--surface); border-radius: 14px; padding: 22px; position: relative; }
+    .st-h { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text); }
+    .st-h3 { font-size: 13px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.005em; }
+    .st-sub { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+    .st-muted { color: var(--text-3); }
+
+    .st-hero { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+    .st-hero-av { width: 76px; height: 76px; border-radius: 50%; overflow: hidden; flex: none; position: relative; display: grid; place-items: center; font-size: 30px; font-weight: 800; color: rgba(255,255,255,.92); box-shadow: 0 8px 26px rgba(0,0,0,.28); }
+    .st-hero-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .st-hero-main { flex: 1; min-width: 200px; }
+    .st-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
+    .st-hero-name { font-size: clamp(26px, 4vw, 36px); font-weight: 900; letter-spacing: -0.035em; line-height: 1.05; margin: 3px 0 5px; color: var(--text); overflow-wrap: anywhere; }
+    .st-hero-meta { font-size: 13px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+    .st-hero-meta b { color: var(--text); font-weight: 700; }
+    .st-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .st-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--surface-2); color: var(--text); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background .15s, transform .15s; }
+    .st-btn:hover { background: var(--surface-3); }
+    .st-btn:active { transform: scale(.97); }
+    .st-btn.brand { background: var(--brand); color: var(--on-brand); }
+    .st-btn.brand:hover { filter: brightness(1.06); }
+    .st-btn svg { flex: none; }
+    .st-btn:focus-visible, .st-ib:focus-visible, .st-seg button:focus-visible, .st-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .st-studio-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .st-seg button { min-height: 32px; padding: 6px 14px; }
+    .st-studio.busy .st-kpis, .st-studio.busy .st-panels { opacity: .55; transition: opacity .2s; pointer-events: none; }
+
+    .st-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .st-kpi { background: var(--surface-2); border-radius: 12px; padding: 14px 16px 12px; min-width: 0; display: flex; flex-direction: column; }
+    .st-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .st-kpi-l { font-size: 11.5px; font-weight: 700; color: var(--text-2); letter-spacing: .02em; }
+    .st-kpi-v { font-size: 28px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; margin: 6px 0 4px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .st-kpi-foot { font-size: 11.5px; color: var(--text-3); margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-spark { display: block; width: 100%; height: 34px; color: var(--brand); overflow: visible; }
+    .st-spark-empty { height: 34px; display: flex; align-items: flex-end; }
+    .st-spark-empty i { display: block; width: 100%; border-top: 2px dashed var(--hair-strong); }
+
+    .st-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .st-delta svg { width: 9px; height: 9px; }
+    .st-delta.up { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+    .st-delta.down { color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); }
+    .st-delta.flat { color: var(--text-3); background: var(--surface-3); }
+    .st-delta.new { color: var(--brand); background: var(--brand-bg); }
+
+    .st-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .st-panel { background: var(--surface-2); border-radius: 12px; padding: 16px; min-width: 0; }
+    .st-span2 { grid-column: 1 / -1; }
+    .st-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+    .st-legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); }
+    .st-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .st-legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--brand); }
+    .st-legend i.dash { border-top: 2px dashed var(--text-3); }
+    .st-chart { position: relative; height: 230px; }
+    .st-chart.sm { height: 140px; }
+    .st-note { font-size: 11.5px; color: var(--text-3); margin-top: 10px; }
+    .st-total { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+    .st-top { display: flex; flex-direction: column; gap: 2px; }
+    .st-top-row { display: grid; grid-template-columns: 18px 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 6px; border-radius: 8px; text-decoration: none; color: inherit; }
+    .st-top-row:hover { background: var(--surface-3); }
+    .st-top-n { font-size: 12px; font-weight: 700; color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+    .st-top-art { width: 36px; height: 36px; border-radius: 6px; overflow: hidden; position: relative; flex: none; }
+    .st-top-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .st-top-t { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-bar { display: block; height: 4px; border-radius: 4px; background: var(--surface-3); margin-top: 6px; overflow: hidden; }
+    .st-bar i { display: block; height: 100%; border-radius: 4px; background: var(--brand); }
+    .st-top-v { text-align: right; font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .st-top-v small { display: block; font-size: 11px; font-weight: 600; color: var(--text-3); }
+
+    .st-feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    .st-feed li { display: flex; align-items: center; gap: 11px; padding: 8px 2px; border-bottom: 1px solid var(--hair); min-width: 0; }
+    .st-feed li:last-child { border-bottom: 0; }
+    .st-feed-ic { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--surface-3); color: var(--text-2); }
+    .st-feed-ic.like { color: var(--pink); background: color-mix(in srgb, var(--pink) 15%, transparent); }
+    .st-feed-ic.follow { color: var(--brand); background: var(--brand-bg); }
+    .st-feed-ic.award { color: var(--yellow); background: color-mix(in srgb, var(--yellow) 16%, transparent); }
+    .st-feed-t { flex: 1; min-width: 0; font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-feed-t b { color: var(--text); font-weight: 650; }
+    .st-feed-w { font-size: 11.5px; color: var(--text-3); flex: none; font-variant-numeric: tabular-nums; }
+    .st-empty-sm { font-size: 13px; color: var(--text-3); padding: 18px 4px; text-align: center; line-height: 1.5; }
+
+    .st-row2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+    .st-ms { display: flex; flex-direction: column; gap: 16px; margin-top: 14px; }
+    .st-ms-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+    .st-ms-l { color: var(--text); font-weight: 650; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-ms-l small { color: var(--text-3); font-weight: 500; margin-left: 4px; }
+    .st-ms-v { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .st-ms-v b { color: var(--text); }
+    .st-ms-bar { height: 8px; border-radius: 8px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+    .st-ms-bar i { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--brand-2, var(--brand)), var(--brand)); transform-origin: left; animation: st-grow .9s cubic-bezier(.22,.61,.36,1) both; }
+    .st-ms-foot { font-size: 11.5px; color: var(--text-3); margin-top: 5px; }
+    @keyframes st-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+    .st-awards { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .st-award { display: flex; align-items: center; gap: 10px; padding: 9px 12px 9px 9px; border-radius: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--yellow) 16%, var(--surface-2)), var(--surface-2)); min-width: 0; max-width: 100%; }
+    .st-award-ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--yellow) 22%, transparent); color: var(--yellow); flex: none; }
+    .st-award-t { font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-award-s { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-rating { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--hair); }
+    .st-rating-v { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
+    .st-stars { display: flex; gap: 2px; color: var(--yellow); }
+    .st-stars .off { color: var(--surface-3); }
+
+    .st-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; margin-top: 16px; align-items: start; }
+    .st-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    .st-count { font-size: 13px; font-weight: 600; color: var(--text-3); margin-left: 6px; }
+    .st-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .st-link { background: none; border: 0; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 8px 6px; min-height: 36px; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; }
+    .st-link:hover { color: var(--text); }
+
+    .st-ups { display: flex; flex-direction: column; }
+    .st-up { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; min-width: 0; }
+    .st-up:hover { background: var(--surface-2); }
+    .st-up-cover { width: 48px; height: 48px; border-radius: 6px; overflow: hidden; position: relative; flex: none; display: block; }
+    .st-up-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .st-up-main { flex: 1; min-width: 0; }
+    .st-up-title { display: block; font-size: 14px; font-weight: 650; color: var(--text); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-up-title:hover { text-decoration: underline; }
+    .st-up-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; }
+    .st-up-sub > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+    .st-tag { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--surface-3); color: var(--text-2); flex: none; }
+    .st-tag.warn { background: color-mix(in srgb, var(--yellow) 22%, transparent); color: var(--text); }
+    .st-tag.draft { background: transparent; border: 1px dashed var(--text-3); }
+    .st-up-plays { font-size: 13px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; flex: none; min-width: 52px; text-align: right; }
+    .st-up-acts { display: flex; gap: 2px; flex: none; }
+    .st-ib { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; text-decoration: none; transition: background .15s, color .15s; }
+    .st-ib:hover { background: var(--surface-3); color: var(--text); }
+    .st-ib.danger:hover { color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); }
+
+    .st-pl-cover { width: 48px; height: 48px; border-radius: 6px; overflow: hidden; position: relative; flex: none; }
+
+    .st-side .form-group { margin-bottom: 14px; }
+    .st-side .form-group label { font-size: 12.5px; }
+    .st-side input[type=text], .st-side input[type=url], .st-side textarea { width: 100%; }
+
+    .st-skel { border-radius: 12px; background: var(--surface-2); position: relative; overflow: hidden; }
+    .st-skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 6%, transparent), transparent); animation: st-shine 1.3s infinite; }
+    @keyframes st-shine { to { transform: translateX(100%); } }
+
+    @media (max-width: 1000px) {
+      .st-grid { grid-template-columns: minmax(0, 1fr); }
+      .st-row2 { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 860px) {
+      .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .st-wrap { padding-top: 12px; }
+      .st-panels { grid-template-columns: minmax(0, 1fr); }
+      .st-card { padding: 16px; border-radius: 12px; }
+      .st-hero { gap: 14px; }
+      .st-hero-av { width: 60px; height: 60px; font-size: 24px; }
+      .st-hero-actions { width: 100%; }
+      .st-hero-actions .st-btn { flex: 1 1 auto; padding: 0 12px; }
+      .st-kpi { padding: 12px 12px 10px; }
+      .st-kpi-v { font-size: 24px; }
+      .st-chart { height: 200px; }
+      .st-up { padding: 6px 2px; gap: 10px; }
+      .st-up-plays { display: none; }
+      .st-up-acts .st-open { display: none; }
+      .st-studio-head .wv-seg { width: 100%; display: flex; }
+      .st-studio-head .wv-seg button { flex: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .st-ms-bar i, .st-skel::after { animation: none; }
+      .st-btn, .st-ib { transition: none; }
+    }
+  </style>
 </head>
 <body>
 
 
 <div id="view">
-<div class="container" style="padding-top:32px;padding-bottom:48px;">
-  <div id="alert-container" style="margin-bottom:16px;"></div>
-  <div class="dashboard-grid" id="dashboard">
-    <div class="loading" style="grid-column:1/-1;"><div class="spinner"></div></div>
+<div class="container st-wrap">
+  <div id="alert-container"></div>
+  <div id="dashboard" aria-busy="true">
+    <div class="st-hero"><div class="st-hero-av st-skel" style="border-radius:50%;"></div><div class="st-hero-main"><div class="st-skel" style="height:12px;width:110px;border-radius:6px;"></div><div class="st-skel" style="height:30px;width:220px;margin-top:10px;border-radius:8px;"></div></div></div>
+    <div class="st-card"><div class="st-skel" style="height:20px;width:120px;border-radius:6px;margin-bottom:18px;"></div><div class="st-kpis"><div class="st-skel" style="height:120px;"></div><div class="st-skel" style="height:120px;"></div><div class="st-skel" style="height:120px;"></div><div class="st-skel" style="height:120px;"></div></div><div class="st-skel" style="height:260px;"></div></div>
   </div>
 </div>
 
@@ -122,265 +293,640 @@
 </div>
 </div><!-- #view -->
 
-
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
 <script src="/js/player.js?v=6288d60cd337"></script>
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script src="/js/playlists.js?v=6288d60cd337"></script>
 <script>
-  if (!isLoggedIn()) navigate('/login');
-
   initPlayer();
 
   var me = null;
   var artist = null;
-  var uploads = []; // mixed tracks (_type:'track') and albums (_type:'album'), sorted by created_at desc
+  var uploads = [];
   var eraTags = [];
   var statsData = null;
   var pendingDeleteId = null;
   var pendingDeleteCompId = null;
+  var _stCharts = [];
+  var _stReq = 0;
+  var _upFilter = 'all';
+  var _upSort = 'new';
+  var _stDays = (function () {
+    try { var v = parseInt(localStorage.getItem('wv_studio_days'), 10); return [7, 30, 90].indexOf(v) !== -1 ? v : 30; } catch (_) { return 30; }
+  })();
 
-  // Upload state
-  var selectedFiles = []; // array of File objects
-  var editCoverFile = null;
+  window._pageCleanup = window._pageCleanup || [];
+  window._pageCleanup.push(function () { stDestroyCharts(); });
+
+  var ST_ICON = {
+    up: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5 9 7.5H1z" fill="currentColor"/></svg>',
+    down: '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 8.5 1 2.5h8z" fill="currentColor"/></svg>',
+    heart: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.9 4.5c2.1 0 3.6 1.2 5.1 3 1.5-1.8 3-3 5.1-3 3.9 0 6 3.9 4.5 7.3C19.5 16.4 12 21 12 21Z"/></svg>',
+    follow: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M19 8v6M16 11h6"/></svg>',
+    trophy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
+    share: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
+    user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>',
+    upload: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+    open: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>',
+    edit: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg>',
+    trash: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
+    sort: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>',
+    star: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg>',
+    plus: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  };
+
+  function stShort(n) {
+    n = Number(n) || 0;
+    var f = function (v, u) { var r = v >= 100 ? Math.round(v) : Math.round(v * 10) / 10; return String(r).replace(/\.0$/, '') + u; };
+    if (n >= 1000000) return f(n / 1000000, 'M');
+    if (n >= 1000) return f(n / 1000, 'K');
+    return String(n);
+  }
+
+  function stNum(n) {
+    n = Number(n) || 0;
+    return n < 10000 ? n.toLocaleString('en-US') : fmtNum(n);
+  }
+
+  function stProfilePlays() {
+    var p = 0;
+    uploads.forEach(function (u) { if (!u.collab) p += (u.play_count || 0); });
+    return p;
+  }
+
+  function stOwnReleases() {
+    return uploads.filter(function (u) { return !u.collab; }).length;
+  }
+
+  function stHasRange(d) {
+    return !!(d && Array.isArray(d.plays_by_day) && d.deltas);
+  }
 
   async function loadDashboard() {
     try {
-      [me, eraTags] = await Promise.all([
+      var first = await Promise.all([
         api('/auth/me'),
-        api('/eratags').catch(() => []),
+        api('/eratags').catch(function () { return []; }),
       ]);
+      me = first[0];
+      eraTags = first[1] || [];
       artist = me.artist;
       if (!artist || !artist.id) throw new Error('no artist profile found...try logging out and back in');
-      // Blurred profile image as the page background (like the home hero).
       if (typeof window.setPageBgImage === 'function') {
         window.setPageBgImage(artist.profile_image_url || artist.banner_url || '');
       }
-      const [allTracks, allComps] = await Promise.all([
-        api(`/artists/${artist.id}/tracks`),
-        api(`/albums/by-artist/${artist.id}`).catch(() => []),
+      var reqId = ++_stReq;
+      var rest = await Promise.all([
+        api('/artists/' + artist.id + '/tracks'),
+        api('/albums/by-artist/' + artist.id).catch(function () { return []; }),
+        api('/artists/' + artist.id + '/stats?days=' + _stDays).catch(function () { return null; }),
+        api('/artists/' + artist.id + '/follow').catch(function () { return null; }),
       ]);
-      uploads = [
-        ...allTracks.map(t => ({ ...t, _type: 'track' })),
-        ...allComps.map(a => ({ ...a, _type: 'album' })),
-      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      try { statsData = await api('/artists/' + artist.id + '/stats'); } catch(_) {}
+      uploads = (rest[0] || []).map(function (t) { return Object.assign({}, t, { _type: 'track' }); })
+        .concat((rest[1] || []).map(function (a) { return Object.assign({}, a, { _type: 'album' }); }))
+        .sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+      if (reqId === _stReq) statsData = rest[2];
+      if (rest[3] && statsData && statsData.total_followers == null) statsData.total_followers = rest[3].follower_count;
+      artist._followers = statsData && statsData.total_followers != null ? statsData.total_followers : (rest[3] ? rest[3].follower_count : null);
       render();
-      try { renderStatsCharts(); } catch(_) {}
     } catch (err) {
-      if (err.message.includes('401')) return navigate('/login');
-      showAlert('alert-container', 'couldnt load your dashboard: ' + err.message);
+      var msg = String((err && err.message) || err || '');
+      if (msg.indexOf('401') !== -1) return navigate('/login');
+      var box = document.getElementById('dashboard');
+      if (box) {
+        box.removeAttribute('aria-busy');
+        box.innerHTML = '<div class="st-card" style="text-align:center;padding:48px 20px;">' +
+          '<div class="st-h" style="font-size:18px;">couldnt load your studio</div>' +
+          '<div class="st-sub" style="margin:6px 0 18px;">' + escHtml(msg || 'something went wrong') + '</div>' +
+          '<button class="st-btn brand" onclick="retryDashboard()">Try again</button></div>';
+      }
     }
   }
 
-  function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function retryDashboard() {
+    var box = document.getElementById('dashboard');
+    if (box) box.innerHTML = '<div class="st-card"><div class="st-skel" style="height:320px;"></div></div>';
+    loadDashboard();
   }
 
   function eraTagOptions(selectedId) {
-    return `<option value="">No era tag</option>` +
-      eraTags.map(t => `<option value="${t.id}" ${selectedId == t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
+    return '<option value="">No era tag</option>' +
+      eraTags.map(function (t) { return '<option value="' + escHtml(t.id) + '"' + (selectedId == t.id ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; }).join('');
   }
 
   function render() {
-    const totalPlays = uploads.filter(u => u._type === 'track').reduce((s, t) => s + (t.play_count || 0), 0);
-    const avatarContent = artist.profile_image_url
-      ? `<img src="${escHtml(artist.profile_image_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-      : escHtml(artist.display_name?.[0]?.toUpperCase() || '?');
+    var box = document.getElementById('dashboard');
+    if (!box) return;
+    box.removeAttribute('aria-busy');
+    var joined = me && me.created_at ? new Date(me.created_at) : null;
+    var followers = artist._followers;
+    var avatar = artist.profile_image_url
+      ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(artist.profile_image_url, 160) : artist.profile_image_url) + '" alt="" onerror="this.remove()">'
+      : '';
+    var initial = escHtml(((artist.display_name || '?')[0] || '?').toUpperCase());
+    var releases = stOwnReleases();
 
-    // Stats card — shown at top of main content when stats are available
-    var statsHtml = '';
-    if (statsData) {
-      var d = statsData;
-      statsHtml = `
-  <div class="card" style="padding:24px;margin-bottom:24px;">
-    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:15px;font-weight:700;">Your Stats</div>
-      <div style="font-size:12px;color:var(--text-3);">Last 7 days</div>
-    </div>
+    box.innerHTML =
+      '<header class="st-hero">' +
+        '<div class="st-hero-av" style="background:' + coverGradient(artist.display_name || '') + ';">' + initial + avatar + '</div>' +
+        '<div class="st-hero-main">' +
+          '<div class="st-eyebrow">Creator Studio</div>' +
+          '<h1 class="st-hero-name">' + escHtml(artist.display_name || 'you') + '</h1>' +
+          '<div class="st-hero-meta">' +
+            '<span>@' + escHtml(me.username || '') + '</span>' +
+            '<span><b>' + releases + '</b> release' + (releases === 1 ? '' : 's') + '</span>' +
+            '<span><b>' + stNum(stProfilePlays()) + '</b> plays</span>' +
+            (followers != null ? '<span><b>' + stNum(followers) + '</b> follower' + (followers === 1 ? '' : 's') + '</span>' : '') +
+            (joined && !isNaN(joined) ? '<span>joined ' + escHtml(joined.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })) + '</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="st-hero-actions">' +
+          '<a class="st-btn" href="/artist?id=' + escHtml(artist.id) + '">' + ST_ICON.user + 'View profile</a>' +
+          '<button class="st-btn" onclick="shareStudioStats()" aria-label="Share your stats">' + ST_ICON.share + 'Share stats</button>' +
+          '<a class="st-btn brand" href="/upload">' + ST_ICON.upload + 'Upload</a>' +
+        '</div>' +
+      '</header>' +
 
-    <!-- Stat tiles -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;" class="stats-tiles">
-      <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px 16px;">
-        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🎵 Plays</div>
-        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_plays)}</div>
-      </div>
-      <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px 16px;">
-        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">❤️ Likes</div>
-        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_likes)}</div>
-        ${d.likes_this_week > 0 ? `<div style="font-size:11px;color:var(--green);margin-top:2px;">+${d.likes_this_week} this week</div>` : ''}
-      </div>
-      <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px 16px;">
-        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">👥 Followers</div>
-        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${fmtNum(d.total_followers)}</div>
-        ${d.followers_this_week > 0 ? `<div style="font-size:11px;color:var(--green);margin-top:2px;">+${d.followers_this_week} this week</div>` : ''}
-      </div>
-      <div style="background:var(--surface-2);border-radius:var(--r-md);padding:14px 16px;">
-        <div style="font-size:11px;color:var(--text-3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">📤 Uploads</div>
-        <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;">${uploads.length}</div>
-      </div>
-    </div>
+      '<section class="st-card st-studio" id="st-studio" aria-labelledby="st-title"></section>' +
 
-    <!-- Two bar charts side by side -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">Likes (7 days)</div>
-        <div style="height:120px;"><canvas id="chart-likes"></canvas></div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">New Followers (7 days)</div>
-        <div style="height:120px;"><canvas id="chart-followers"></canvas></div>
-      </div>
-    </div>
+      '<div class="st-row2">' +
+        '<section class="st-card" id="st-milestones" aria-labelledby="st-ms-title"></section>' +
+        '<section class="st-card" id="st-awards" aria-labelledby="st-aw-title"></section>' +
+      '</div>' +
 
-    <!-- Top tracks chart -->
-    ${statsData.top_tracks && statsData.top_tracks.length ? `
-    <div>
-      <div style="font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:10px;">Top Tracks by Plays</div>
-      <div style="height:${Math.max(80, statsData.top_tracks.length * 36)}px;"><canvas id="chart-top-tracks"></canvas></div>
-    </div>` : ''}
-  </div>`;
-    }
+      '<div class="st-grid">' +
+        '<div style="min-width:0;">' +
+          '<section class="st-card" aria-labelledby="st-up-title">' +
+            '<div class="st-sec-head">' +
+              '<h2 class="st-h" id="st-up-title" style="font-size:18px;">Your uploads<span class="st-count" id="st-up-count"></span></h2>' +
+              '<div class="st-tools">' +
+                '<div class="wv-seg" id="st-up-filter" role="group" aria-label="filter uploads">' +
+                  '<button data-f="all" onclick="setUploadFilter(\'all\')">All</button>' +
+                  '<button data-f="album" onclick="setUploadFilter(\'album\')">Comps</button>' +
+                  '<button data-f="track" onclick="setUploadFilter(\'track\')">Edits</button>' +
+                '</div>' +
+                '<button class="st-link" id="st-up-sort" onclick="toggleUploadSort()">' + ST_ICON.sort + '<span></span></button>' +
+              '</div>' +
+            '</div>' +
+            '<div id="my-uploads"></div>' +
+          '</section>' +
 
-    document.getElementById('dashboard').innerHTML = `
-      <!-- Sidebar -->
-      <div class="dashboard-sidebar">
-        <!-- Profile card -->
-        <div class="card" style="padding:20px;text-align:center;margin-bottom:16px;">
-          <div style="width:72px;height:72px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;margin:0 auto 12px;overflow:hidden;">
-            ${avatarContent}
-          </div>
-          <div style="font-weight:700;font-size:16px;">${escHtml(artist.display_name)}</div>
-          <div style="font-size:13px;color:var(--text-secondary);">@${escHtml(me.username)}</div>
-          <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${uploads.length}</strong><br>uploads</div>
-            <div style="font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text);font-size:16px;">${fmtNum(totalPlays)}</strong><br>plays</div>
-          </div>
-          ${artist && artist.id ? `<a href="/artist?id=${artist.id}" class="btn btn-secondary btn-sm" style="margin-top:14px;width:100%;justify-content:center;">View public page</a>` : ''}
-        </div>
+          '<section class="st-card" style="margin-top:16px;" aria-labelledby="st-pl-title">' +
+            '<div class="st-sec-head">' +
+              '<h2 class="st-h" id="st-pl-title" style="font-size:18px;">My playlists</h2>' +
+              '<button class="st-btn" style="min-height:36px;" onclick="toggleNewPlaylistForm()">' + ST_ICON.plus + 'New playlist</button>' +
+            '</div>' +
+            '<div id="new-playlist-form" style="display:none;margin-bottom:14px;">' +
+              '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                '<input type="text" id="new-playlist-title" class="wv-input" placeholder="playlist name" style="flex:1;min-width:160px;" onkeydown="if(event.key===\'Enter\')createDashboardPlaylist()">' +
+                '<button class="st-btn brand" onclick="createDashboardPlaylist()">Create</button>' +
+                '<button class="st-btn" onclick="toggleNewPlaylistForm()">Cancel</button>' +
+              '</div>' +
+            '</div>' +
+            '<div id="my-playlists"><div class="st-skel" style="height:56px;"></div></div>' +
+          '</section>' +
+        '</div>' +
 
-        <!-- Edit profile -->
-        <div class="card" style="padding:20px;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:14px;">Edit Profile</div>
-          <div class="form-group">
-            <label>Display name</label>
-            <input type="text" id="edit-name" value="${escHtml(artist.display_name || '')}" placeholder="your name">
-          </div>
-          <div class="form-group">
-            <label>Bio</label>
-            <textarea id="edit-bio" rows="3" placeholder="say something about yourself…">${escHtml(artist.bio || '')}</textarea>
-          </div>
-          <div class="form-group">
-            <label>Profile picture</label>
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
-              <img id="profile_image_url-preview" src="${escHtml(artist.profile_image_url || '')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--surface);${artist.profile_image_url ? '' : 'display:none;'}">
-              <div>
-                <input type="file" id="profile-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage('profile-img-file', 'profile_image_url')">
-                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('profile-img-file').click()">Upload photo</button>
-                <span id="profile_image_url-status" style="font-size:12px;color:var(--text-secondary);margin-left:8px;"></span>
-              </div>
-            </div>
-            <input type="url" id="edit-avatar" value="${escHtml(artist.profile_image_url || '')}" placeholder="or paste an image link">
-          </div>
-          <div class="form-group">
-            <label>Banner image</label>
-            <div style="margin-bottom:8px;">
-              <input type="file" id="banner-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage('banner-img-file', 'banner_url')">
-              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('banner-img-file').click()">Upload banner</button>
-              <span id="banner_url-status" style="font-size:12px;color:var(--text-secondary);margin-left:8px;"></span>
-            </div>
-            <input type="url" id="edit-banner" value="${escHtml(artist.banner_url || '')}" placeholder="or paste a banner link">
-          </div>
-          <div class="form-group">
-            <label>Location</label>
-            <input type="text" id="edit-location" value="${escHtml(artist.location || '')}" placeholder="City, Country">
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label>Website</label>
-            <input type="url" id="edit-website" value="${escHtml(artist.website || '')}" placeholder="https://...">
-          </div>
-          <div id="profile-alert" style="margin-top:10px;"></div>
-          <button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="saveProfile()">Save changes</button>
-        </div>
-      </div>
+        '<aside class="st-card st-side" aria-labelledby="st-ep-title">' +
+          '<h2 class="st-h" id="st-ep-title" style="font-size:16px;margin-bottom:14px;">Edit profile</h2>' +
+          '<div class="form-group">' +
+            '<label for="edit-name">Display name</label>' +
+            '<input type="text" id="edit-name" value="' + escHtml(artist.display_name || '') + '" placeholder="your name">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="edit-bio">Bio</label>' +
+            '<textarea id="edit-bio" rows="3" placeholder="say something about yourself…">' + escHtml(artist.bio || '') + '</textarea>' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="edit-avatar">Profile picture</label>' +
+            '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">' +
+              '<img id="profile_image_url-preview" src="' + escHtml(artist.profile_image_url || '') + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--surface-2);' + (artist.profile_image_url ? '' : 'display:none;') + '">' +
+              '<div>' +
+                '<input type="file" id="profile-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage(\'profile-img-file\', \'profile_image_url\')">' +
+                '<button class="st-btn" style="min-height:36px;" onclick="document.getElementById(\'profile-img-file\').click()">Upload photo</button>' +
+                '<span id="profile_image_url-status" style="font-size:12px;color:var(--text-2);margin-left:8px;"></span>' +
+              '</div>' +
+            '</div>' +
+            '<input type="url" id="edit-avatar" value="' + escHtml(artist.profile_image_url || '') + '" placeholder="or paste an image link">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="edit-banner">Banner image</label>' +
+            '<div style="margin-bottom:8px;">' +
+              '<input type="file" id="banner-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage(\'banner-img-file\', \'banner_url\')">' +
+              '<button class="st-btn" style="min-height:36px;" onclick="document.getElementById(\'banner-img-file\').click()">Upload banner</button>' +
+              '<span id="banner_url-status" style="font-size:12px;color:var(--text-2);margin-left:8px;"></span>' +
+            '</div>' +
+            '<input type="url" id="edit-banner" value="' + escHtml(artist.banner_url || '') + '" placeholder="or paste a banner link">' +
+          '</div>' +
+          '<div class="form-group">' +
+            '<label for="edit-location">Location</label>' +
+            '<input type="text" id="edit-location" value="' + escHtml(artist.location || '') + '" placeholder="City, Country">' +
+          '</div>' +
+          '<div class="form-group" style="margin-bottom:0;">' +
+            '<label for="edit-website">Website</label>' +
+            '<input type="url" id="edit-website" value="' + escHtml(artist.website || '') + '" placeholder="https://...">' +
+          '</div>' +
+          '<div id="profile-alert" style="margin-top:10px;"></div>' +
+          '<button class="st-btn brand" style="width:100%;margin-top:12px;" onclick="saveProfile()">Save changes</button>' +
+        '</aside>' +
+      '</div>';
 
-      <!-- Main content -->
-      <div>
-        ${statsHtml}
-        <!-- Upload button -->
-        <div class="wv-card" style="padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:15px;font-weight:600;margin-bottom:2px;">Upload Music</div>
-            <div style="font-size:13px;color:var(--text-2);">post an edit or a comp</div>
-          </div>
-          <a href="/upload" class="wv-pill brand" style="padding:10px 20px;text-decoration:none;">Upload</a>
-        </div>
-
-        <!-- Your Uploads -->
-        <div>
-          <div style="font-size:16px;font-weight:600;margin-bottom:16px;">Your Uploads <span style="color:var(--text-secondary);font-weight:400;font-size:14px;">(${uploads.length})</span></div>
-          <div id="my-uploads"></div>
-        </div>
-
-        <!-- My Playlists -->
-        <div style="margin-top:32px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <div style="font-size:16px;font-weight:600;">My Playlists</div>
-            <button class="btn btn-secondary btn-sm" onclick="toggleNewPlaylistForm()">＋ New Playlist</button>
-          </div>
-          <div id="new-playlist-form" style="display:none;margin-bottom:16px;">
-            <div style="display:flex;gap:8px;">
-              <input type="text" id="new-playlist-title" placeholder="Playlist name…" style="flex:1;" onkeydown="if(event.key==='Enter')createDashboardPlaylist()">
-              <button class="btn btn-primary btn-sm" onclick="createDashboardPlaylist()">Create</button>
-              <button class="btn btn-secondary btn-sm" onclick="toggleNewPlaylistForm()">Cancel</button>
-            </div>
-          </div>
-          <div id="my-playlists"></div>
-        </div>
-      </div>`;
-
+    renderStudio();
     renderUploads();
     renderDashboardPlaylists();
   }
 
-  function renderUploads() {
-    const el = document.getElementById('my-uploads');
-    if (!el) return; // guard: element might not exist if render() hasn't run yet
-    if (!uploads.length) {
-      el.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-title">No uploads yet</div><div class="empty-desc">upload something above</div></div>`;
+  function stSeries(list) {
+    return (list || []).map(function (d) { return Number(d.count) || 0; });
+  }
+
+  function stSpark(values, label) {
+    if (!values || values.length < 2) return '<div class="st-spark-empty" aria-hidden="true"><i></i></div>';
+    var max = Math.max.apply(null, values), min = 0;
+    if (max <= 0) return '<div class="st-spark-empty" aria-hidden="true"><i></i></div>';
+    var W = 100, H = 30, n = values.length;
+    var pts = values.map(function (v, i) {
+      var x = (i / (n - 1)) * W;
+      var y = H - 2 - ((v - min) / (max - min || 1)) * (H - 4);
+      return [Math.round(x * 100) / 100, Math.round(y * 100) / 100];
+    });
+    var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0] + ' ' + p[1]; }).join(' ');
+    var area = line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z';
+    return '<svg class="st-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="' + escHtml(label || 'trend') + '">' +
+      '<path d="' + area + '" fill="currentColor" opacity=".13"/>' +
+      '<path d="' + line + '" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>' +
+      '</svg>';
+  }
+
+  function stDelta(cur, prev, days) {
+    cur = Number(cur) || 0; prev = Number(prev) || 0;
+    var tip = 'vs ' + stNum(prev) + ' in the ' + days + ' days before';
+    if (!cur && !prev) return '<span class="st-delta flat" title="' + escHtml(tip) + '">—</span>';
+    if (!prev) return '<span class="st-delta new" title="' + escHtml(tip) + '">new</span>';
+    var pct = Math.round(((cur - prev) / prev) * 100);
+    if (pct === 0) return '<span class="st-delta flat" title="' + escHtml(tip) + '">0%</span>';
+    var up = pct > 0;
+    var shown = Math.abs(pct) >= 1000 ? (up ? '10x+' : '99%') : Math.abs(pct) + '%';
+    return '<span class="st-delta ' + (up ? 'up' : 'down') + '" title="' + escHtml(tip) + '"><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">' + (up ? 'up' : 'down') + '</span>' + (up ? ST_ICON.up : ST_ICON.down) + shown + '</span>';
+  }
+
+  function stKpi(label, value, deltaHtml, spark, foot) {
+    return '<div class="st-kpi">' +
+      '<div class="st-kpi-top"><span class="st-kpi-l">' + escHtml(label) + '</span>' + (deltaHtml || '') + '</div>' +
+      '<div class="st-kpi-v">' + value + '</div>' +
+      spark +
+      '<div class="st-kpi-foot">' + foot + '</div>' +
+    '</div>';
+  }
+
+  function renderStudio() {
+    var el = document.getElementById('st-studio');
+    if (!el) return;
+    el.classList.remove('busy');
+    var d = statsData;
+    if (!d) {
+      el.innerHTML = '<div class="st-studio-head"><div><h2 class="st-h" id="st-title">Studio</h2><div class="st-sub">your stats couldnt load right now</div></div>' +
+        '<button class="st-btn" onclick="setStudioRange(' + _stDays + ')">Try again</button></div>';
+      renderMilestones();
+      renderAwards();
       return;
     }
-    el.innerHTML = `<div class="track-list">` + uploads.map(item => {
-      const cover = item.cover_url ? `<img src="${escHtml(item.cover_url)}" alt="">` : '&#x1F3B5;';
-      const isAlbum = item._type === 'album';
-      const sub = isAlbum
-        ? `Comp · ${timeAgo(item.created_at)}`
-        : `${fmtNum(item.play_count)} plays · ${timeAgo(item.created_at)}`;
-      const openHref = isAlbum ? `/album?id=${item.id}` : `/track?id=${item.id}`;
-      return `
-        <div class="track-row">
-          <div class="track-row-cover">${cover}</div>
-          <div class="track-row-info">
-            <div class="track-row-title">${escHtml(item.title)}</div>
-            <div class="track-row-artist">${sub}</div>
-          </div>
-          <div style="display:flex;gap:8px;margin-left:auto;">
-            <a href="${openHref}" class="btn btn-secondary btn-sm">Open</a>
-            <button class="btn btn-secondary btn-sm" onclick="${isAlbum ? `openEditAlbumModal(${JSON.stringify(item).replace(/"/g,'&quot;')})` : `openEditTrackModal(${JSON.stringify(item).replace(/"/g,'&quot;')})`}">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="${isAlbum ? `confirmDeleteComp('${item.id}')` : `confirmDelete('${item.id}')`}">Delete</button>
-          </div>
-        </div>`;
-    }).join('') + `</div>`;
+    var ranged = stHasRange(d);
+    var days = ranged ? (d.days || _stDays) : 7;
+    var profilePlays = stProfilePlays();
+    var head = '<div class="st-studio-head">' +
+      '<div><h2 class="st-h" id="st-title">Studio</h2>' +
+      '<div class="st-sub">' + (ranged ? 'last ' + days + ' days, compared with the ' + days + ' before' : 'last 7 days') + '</div></div>' +
+      (ranged ? '<div class="wv-seg st-seg" role="group" aria-label="date range">' +
+        [7, 30, 90].map(function (n) { return '<button class="' + (n === days ? 'on' : '') + '" aria-pressed="' + (n === days) + '" onclick="setStudioRange(' + n + ')">' + n + 'd</button>'; }).join('') +
+      '</div>' : '') +
+    '</div>';
 
-    // Wire IA CDN retry on cover images (new uploads appear after 1-3 min propagation)
+    var kpis;
+    if (ranged) {
+      var dl = d.deltas || {};
+      var g = function (k) { return dl[k] || { current: 0, previous: 0 }; };
+      kpis = [
+        stKpi('Plays', stNum(g('plays').current), stDelta(g('plays').current, g('plays').previous, days), stSpark(stSeries(d.plays_by_day), 'plays per day'), stNum(profilePlays || d.total_plays) + ' all time'),
+        stKpi('Listeners', stNum(g('listeners').current), stDelta(g('listeners').current, g('listeners').previous, days), stSpark(stSeries(d.listeners_by_day), 'listeners per day'), 'unique per comp per day'),
+        stKpi('Likes', stNum(g('likes').current), stDelta(g('likes').current, g('likes').previous, days), stSpark(stSeries(d.likes_by_day), 'likes per day'), stNum(d.total_likes) + ' all time'),
+        stKpi('Followers', '+' + stNum(g('followers').current), stDelta(g('followers').current, g('followers').previous, days), stSpark(stSeries(d.followers_by_day), 'new followers per day'), stNum(d.total_followers) + ' total'),
+      ].join('');
+    } else {
+      kpis = [
+        stKpi('Plays', stNum(profilePlays || d.total_plays), '', '<div class="st-spark-empty" aria-hidden="true"><i></i></div>', 'all time'),
+        stKpi('Likes', stNum(d.likes_this_week || 0), '', stSpark(stSeries(d.likes_by_day), 'likes per day'), stNum(d.total_likes) + ' all time'),
+        stKpi('Followers', '+' + stNum(d.followers_this_week || 0), '', stSpark(stSeries(d.followers_by_day), 'new followers per day'), stNum(d.total_followers) + ' total'),
+        stKpi('Uploads', stNum(stOwnReleases()), '', '<div class="st-spark-empty" aria-hidden="true"><i></i></div>', 'comps and edits'),
+      ].join('');
+    }
+
+    var sumOf = function (arr) { return stSeries(arr).reduce(function (s, n) { return s + n; }, 0); };
+    var hasEdits = uploads.some(function (u) { return u._type === 'track' && !u.collab; });
+    var panels = '';
+    if (ranged) {
+      panels += '<div class="st-panel st-span2">' +
+        '<div class="st-panel-head"><h3 class="st-h3">Plays and listeners</h3>' +
+          '<div class="st-legend"><span><i></i>Plays</span><span><i class="dash"></i>Listeners</span></div></div>' +
+        '<div class="st-chart"><canvas id="chart-plays" role="img" aria-label="plays and listeners per day"></canvas></div>' +
+        (hasEdits ? '<div class="st-note">daily numbers come from your comps. standalone edit plays count toward your all time total.</div>' : '') +
+      '</div>';
+    }
+    panels += '<div class="st-panel">' +
+        '<div class="st-panel-head"><h3 class="st-h3">Likes</h3><span class="st-total">' + stNum(sumOf(d.likes_by_day)) + ' in ' + days + 'd</span></div>' +
+        '<div class="st-chart sm"><canvas id="chart-likes" role="img" aria-label="likes per day"></canvas></div>' +
+      '</div>' +
+      '<div class="st-panel">' +
+        '<div class="st-panel-head"><h3 class="st-h3">New followers</h3><span class="st-total">' + stNum(sumOf(d.followers_by_day)) + ' in ' + days + 'd</span></div>' +
+        '<div class="st-chart sm"><canvas id="chart-followers" role="img" aria-label="new followers per day"></canvas></div>' +
+      '</div>';
+
+    panels += '<div class="st-panel">' + stTopHTML(d, ranged, days) + '</div>';
+    panels += '<div class="st-panel">' + stActivityHTML(d) + '</div>';
+
+    el.innerHTML = head + '<div class="st-kpis">' + kpis + '</div><div class="st-panels">' + panels + '</div>';
+    if (typeof wireIACoverRetry === 'function') el.querySelectorAll('img').forEach(wireIACoverRetry);
+    renderMilestones();
+    renderAwards();
+    renderStatsCharts();
+  }
+
+  function stCover(url, seed, px) {
+    var bg = coverGradient(seed || '');
+    var img = url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(url, px || 96) : url) + '" alt="" loading="lazy" onerror="this.remove()">' : '';
+    return '<div class="st-top-art" style="background:' + bg + ';">' + img + '</div>';
+  }
+
+  function stRowsHTML(rows) {
+    var max = Math.max.apply(null, rows.map(function (r) { return r.v || 0; })) || 1;
+    return '<div class="st-top">' + rows.map(function (r, i) {
+      return '<a class="st-top-row" href="' + escHtml(r.href) + '">' +
+        '<span class="st-top-n">' + (i + 1) + '</span>' +
+        stCover(r.cover, r.title) +
+        '<span style="min-width:0;"><span class="st-top-t" style="display:block;">' + escHtml(r.title || 'Untitled') + '</span>' +
+          '<span class="st-bar" aria-hidden="true"><i style="width:' + Math.max(3, Math.round(((r.v || 0) / max) * 100)) + '%;"></i></span></span>' +
+        '<span class="st-top-v">' + stNum(r.v) + '<small>' + escHtml(r.small || '') + '</small></span>' +
+      '</a>';
+    }).join('') + '</div>';
+  }
+
+  function stTrackRows(d, n) {
+    return (d.top_tracks || []).slice(0, n).map(function (t) {
+      var up = (t.album_id && uploads.find(function (u) { return u.id === t.album_id; })) || uploads.find(function (u) { return u.id === t.id; });
+      return { href: '/track?id=' + t.id, title: t.title, cover: up && up.cover_url, v: t.play_count, small: up ? (up._type === 'album' ? up.title : 'edit') : 'plays' };
+    });
+  }
+
+  function stTopHTML(d, ranged, days) {
+    var head = function (t, sub) { return '<div class="st-panel-head"><h3 class="st-h3">' + escHtml(t) + '</h3><span class="st-total">' + escHtml(sub) + '</span></div>'; };
+    var comps = ranged && Array.isArray(d.top_comps) ? d.top_comps.slice(0, 6).map(function (c) {
+      return { href: '/album?id=' + c.id, title: c.title, cover: c.cover_url, v: c.plays, small: stNum(c.listeners) + ' listener' + (c.listeners === 1 ? '' : 's') };
+    }) : null;
+    var tracks = stTrackRows(d, 5);
+    if (!comps) {
+      if (!tracks.length) return head('Top tracks', 'all time') + '<div class="st-empty-sm">no plays yet. share something and itll show up here</div>';
+      return head('Top tracks', 'all time') + stRowsHTML(tracks);
+    }
+    var html = head('Top comps', 'by plays in ' + days + 'd');
+    html += comps.length ? stRowsHTML(comps) : '<div class="st-empty-sm">no comp plays in this range yet</div>';
+    if (comps.length < 4 && tracks.length) {
+      html += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);">' + head('Top tracks', 'all time') + stRowsHTML(tracks.slice(0, Math.max(2, 5 - comps.length))) + '</div>';
+    }
+    return html;
+  }
+
+  function stAgo(iso) {
+    var t = Date.parse(iso);
+    if (!t) return '';
+    var diff = Date.now() - t;
+    if (diff < 60000) return 'just now';
+    var m = Math.floor(diff / 60000);
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    var dd = Math.floor(h / 24);
+    if (dd < 7) return dd + 'd ago';
+    if (dd < 60) return Math.floor(dd / 7) + 'w ago';
+    return new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function stActivityHTML(d) {
+    var head = '<div class="st-panel-head"><h3 class="st-h3">Recent activity</h3></div>';
+    var items = [];
+    (d.recent_likes || []).forEach(function (l) {
+      items.push({ at: l.created_at, kind: 'like', html: '<b>' + escHtml(l.track_title || 'a track') + '</b> got a like' });
+    });
+    (d.recent_follows || []).forEach(function (f) {
+      items.push({ at: f.created_at, kind: 'follow', html: 'someone <b>followed</b> you' });
+    });
+    (d.awards_won || []).forEach(function (w) {
+      items.push({ at: w.week + 'T12:00:00Z', kind: 'award', html: (w.album_title ? '<b>' + escHtml(w.album_title) + '</b> won ' : 'you won ') + escHtml(w.label || 'an award') });
+    });
+    if (!items.length && !Array.isArray(d.recent_likes)) {
+      var lw = d.likes_this_week || 0, fw = d.followers_this_week || 0;
+      if (!lw && !fw) return head + '<div class="st-empty-sm">quiet week. likes and new followers land here</div>';
+      return head + '<ul class="st-feed">' +
+        (lw ? '<li><span class="st-feed-ic like">' + ST_ICON.heart + '</span><span class="st-feed-t"><b>' + lw + '</b> new like' + (lw === 1 ? '' : 's') + ' this week</span></li>' : '') +
+        (fw ? '<li><span class="st-feed-ic follow">' + ST_ICON.follow + '</span><span class="st-feed-t"><b>' + fw + '</b> new follower' + (fw === 1 ? '' : 's') + ' this week</span></li>' : '') +
+      '</ul>';
+    }
+    if (!items.length) return head + '<div class="st-empty-sm">nothing yet. likes, follows and awards land here</div>';
+    items.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+    var icon = { like: ST_ICON.heart, follow: ST_ICON.follow, award: ST_ICON.trophy };
+    return head + '<ul class="st-feed">' + items.slice(0, 7).map(function (it) {
+      return '<li><span class="st-feed-ic ' + it.kind + '">' + icon[it.kind] + '</span><span class="st-feed-t">' + it.html + '</span><span class="st-feed-w">' + escHtml(stAgo(it.at)) + '</span></li>';
+    }).join('') + '</ul>';
+  }
+
+  var ST_PLAY_STEPS = [100, 1000, 10000, 100000, 1000000];
+  var ST_FOLLOW_STEPS = [10, 50, 100, 500, 1000, 5000];
+  var ST_TRACK_STEPS = [100, 1000, 10000, 100000];
+
+  function stMilestone(label, sub, cur, steps) {
+    cur = Number(cur) || 0;
+    var next = null, last = null;
+    for (var i = 0; i < steps.length; i++) { if (cur < steps[i]) { next = steps[i]; break; } last = steps[i]; }
+    var pct = next ? Math.max(2, Math.min(100, (cur / next) * 100)) : 100;
+    var foot = next
+      ? stNum(next - cur) + ' to go' + (last ? ' · passed ' + stShort(last) : '')
+      : 'every milestone hit. legend';
+    return '<div>' +
+      '<div class="st-ms-top"><span class="st-ms-l">' + escHtml(label) + (sub ? '<small>' + escHtml(sub) + '</small>' : '') + '</span>' +
+      '<span class="st-ms-v"><b>' + stNum(cur) + '</b>' + (next ? ' / ' + stShort(next) : '') + '</span></div>' +
+      '<div class="st-ms-bar" role="progressbar" aria-label="' + escHtml(label) + '" aria-valuemin="0" aria-valuemax="' + (next || cur) + '" aria-valuenow="' + cur + '"><i style="width:' + pct.toFixed(1) + '%;"></i></div>' +
+      '<div class="st-ms-foot">' + escHtml(foot) + '</div>' +
+    '</div>';
+  }
+
+  function renderMilestones() {
+    var el = document.getElementById('st-milestones');
+    if (!el) return;
+    var d = statsData || {};
+    var plays = stProfilePlays() || d.total_plays || 0;
+    var followers = d.total_followers != null ? d.total_followers : (artist._followers || 0);
+    var top = d.top_track || (d.top_tracks && d.top_tracks[0]) || null;
+    el.innerHTML = '<h2 class="st-h" id="st-ms-title" style="font-size:16px;">Milestones</h2>' +
+      '<div class="st-sub">the same ones that send you a notification</div>' +
+      '<div class="st-ms">' +
+        stMilestone('Total plays', '', plays, ST_PLAY_STEPS) +
+        stMilestone('Followers', '', followers, ST_FOLLOW_STEPS) +
+        (top ? stMilestone('Top track', top.title || '', top.play_count || 0, ST_TRACK_STEPS) : '') +
+      '</div>';
+  }
+
+  function stStars(avg) {
+    var out = '';
+    for (var i = 1; i <= 5; i++) out += '<span class="' + (avg >= i - 0.25 ? '' : 'off') + '">' + ST_ICON.star + '</span>';
+    return '<span class="st-stars" aria-hidden="true">' + out + '</span>';
+  }
+
+  function renderAwards() {
+    var el = document.getElementById('st-awards');
+    if (!el) return;
+    var d = statsData || {};
+    var list = Array.isArray(d.awards_won) ? d.awards_won : null;
+    var row = el.parentElement;
+    if (!list && !d.rating_count) { el.style.display = 'none'; if (row) row.style.gridTemplateColumns = 'minmax(0, 1fr)'; return; }
+    el.style.display = '';
+    if (row) row.style.gridTemplateColumns = '';
+    var html = '<h2 class="st-h" id="st-aw-title" style="font-size:16px;">Awards</h2>';
+    if (list && list.length) {
+      html += '<div class="st-sub">' + list.length + ' weekly award' + (list.length === 1 ? '' : 's') + ' so far</div><div class="st-awards">' +
+        list.slice(0, 8).map(function (w) {
+          var wk = Date.parse(w.week + 'T12:00:00Z');
+          var when = wk ? 'week of ' + new Date(wk).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          var inner = '<span class="st-award-ic">' + ST_ICON.trophy + '</span><span style="min-width:0;"><span class="st-award-t" style="display:block;">' + escHtml(w.label || 'Award') + '</span>' +
+            '<span class="st-award-s" style="display:block;">' + escHtml((w.album_title ? w.album_title + ' · ' : '') + when) + '</span></span>';
+          return w.album_id ? '<a class="st-award" style="text-decoration:none;" href="/album?id=' + escHtml(w.album_id) + '">' + inner + '</a>' : '<div class="st-award">' + inner + '</div>';
+        }).join('') + '</div>';
+    } else {
+      html += '<div class="st-sub">staff pick an edit, a comp and an editor of the week</div>' +
+        '<div class="st-empty-sm" style="text-align:left;padding:16px 0 4px;">no awards yet. keep uploading, your first trophy shows up here</div>';
+    }
+    if (d.rating_count) {
+      html += '<div class="st-rating"><span class="st-rating-v">' + escHtml(String(d.rating_avg)) + '</span>' +
+        '<span>' + stStars(Number(d.rating_avg) || 0) + '<span class="st-sub" style="display:block;margin-top:2px;">avg rating from ' + stNum(d.rating_count) + ' rating' + (d.rating_count === 1 ? '' : 's') + '</span></span></div>';
+    }
+    el.innerHTML = html;
+  }
+
+  async function setStudioRange(n) {
+    if ([7, 30, 90].indexOf(n) === -1 || !artist) return;
+    _stDays = n;
+    try { localStorage.setItem('wv_studio_days', String(n)); } catch (_) {}
+    var el = document.getElementById('st-studio');
+    if (el) {
+      el.classList.add('busy');
+      el.querySelectorAll('.st-seg button').forEach(function (b) { var on = b.textContent === n + 'd'; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    }
+    var reqId = ++_stReq;
+    try {
+      var d = await api('/artists/' + artist.id + '/stats?days=' + n);
+      if (reqId !== _stReq) return;
+      statsData = d;
+    } catch (_) {
+      if (reqId !== _stReq) return;
+      if (typeof wvToast === 'function') wvToast('couldnt load those stats', 'error');
+    }
+    renderStudio();
+  }
+
+  async function shareStudioStats() {
+    if (!artist) return;
+    var url = 'https://www.wavernrs.com/artist?id=' + encodeURIComponent(artist.id);
+    var d = statsData || {};
+    var followers = d.total_followers != null ? d.total_followers : artist._followers;
+    var parts = [stNum(stProfilePlays() || d.total_plays || 0) + ' plays'];
+    if (followers != null) parts.push(stNum(followers) + ' follower' + (followers === 1 ? '' : 's'));
+    parts.push(stOwnReleases() + ' release' + (stOwnReleases() === 1 ? '' : 's'));
+    var text = (artist.display_name || 'me') + ' on wavernrs · ' + parts.join(' · ');
+    var coarse = false;
+    try { coarse = window.matchMedia('(pointer: coarse)').matches; } catch (_) {}
+    if (coarse && navigator.share) {
+      try { await navigator.share({ title: artist.display_name || 'wavernrs', text: text, url: url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    var full = text + '\n' + url;
+    try {
+      await navigator.clipboard.writeText(full);
+      if (typeof wvToast === 'function') wvToast('copied your stats and profile link');
+    } catch (_) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = full; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        if (typeof wvToast === 'function') wvToast('copied your stats and profile link');
+      } catch (_) { if (typeof wvToast === 'function') wvToast('couldnt copy that', 'error'); }
+    }
+  }
+
+  function setUploadFilter(f) {
+    _upFilter = f;
+    renderUploads();
+  }
+
+  function toggleUploadSort() {
+    _upSort = _upSort === 'new' ? 'plays' : 'new';
+    renderUploads();
+  }
+
+  function renderUploads() {
+    var el = document.getElementById('my-uploads');
+    if (!el) return;
+    document.querySelectorAll('#st-up-filter button').forEach(function (b) { var on = b.getAttribute('data-f') === _upFilter; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    var sortBtn = document.querySelector('#st-up-sort span');
+    if (sortBtn) sortBtn.textContent = _upSort === 'new' ? 'Newest' : 'Most played';
+    var count = document.getElementById('st-up-count');
+    if (count) count.textContent = uploads.length ? String(uploads.length) : '';
+    if (!uploads.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:36px 12px;"><div class="empty-title">no uploads yet</div><div class="empty-desc" style="margin-bottom:16px;">post your first edit or comp and your stats start here</div><a class="st-btn brand" href="/upload">' + ST_ICON.upload + 'Upload</a></div>';
+      return;
+    }
+    var list = uploads.filter(function (u) { return _upFilter === 'all' || u._type === _upFilter; });
+    if (_upSort === 'plays') list = list.slice().sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); });
+    if (!list.length) {
+      el.innerHTML = '<div class="st-empty-sm">no ' + (_upFilter === 'album' ? 'comps' : 'edits') + ' yet</div>';
+      return;
+    }
+    el.innerHTML = '<div class="st-ups">' + list.map(function (item) {
+      var isAlbum = item._type === 'album';
+      var href = (isAlbum ? '/album?id=' : '/track?id=') + encodeURIComponent(item.id);
+      var img = item.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(item.cover_url, 96) : item.cover_url) + '" alt="" loading="lazy">' : '';
+      var tag = isAlbum ? (item.collab ? 'Collab' : 'Comp') : 'Edit';
+      var status = '';
+      if (isAlbum && item.release_status === 'draft') status = '<span class="st-tag draft">Draft</span>';
+      else if (isAlbum && item.release_status === 'upcoming' && item.release_at && new Date(item.release_at) > new Date()) status = '<span class="st-tag warn">Out ' + escHtml(new Date(item.release_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + '</span>';
+      var bits = [];
+      if (isAlbum && item.track_count) bits.push(item.track_count + ' track' + (item.track_count === 1 ? '' : 's'));
+      bits.push(stNum(item.play_count || 0) + ' plays');
+      bits.push(timeAgo(item.created_at));
+      var t = escHtml(item.title || 'Untitled');
+      return '<div class="st-up">' +
+        '<a class="st-up-cover" href="' + href + '" tabindex="-1" aria-hidden="true" style="background:' + coverGradient(item.title || '') + ';">' + img + '</a>' +
+        '<div class="st-up-main"><a class="st-up-title" href="' + href + '">' + t + '</a>' +
+          '<div class="st-up-sub"><span class="st-tag">' + tag + '</span>' + status + '<span>' + escHtml(bits.join(' · ')) + '</span></div></div>' +
+        '<div class="st-up-plays" title="plays">' + stNum(item.play_count || 0) + '</div>' +
+        '<div class="st-up-acts">' +
+          '<a class="st-ib st-open" href="' + href + '" aria-label="Open ' + t + '" title="Open">' + ST_ICON.open + '</a>' +
+          (item.collab ? '' :
+          '<button class="st-ib" onclick="editUpload(\'' + escHtml(item._type) + '\',\'' + escHtml(item.id) + '\')" aria-label="Edit ' + t + '" title="Edit">' + ST_ICON.edit + '</button>' +
+          '<button class="st-ib danger" onclick="' + (isAlbum ? 'confirmDeleteComp' : 'confirmDelete') + '(\'' + escHtml(item.id) + '\')" aria-label="Delete ' + t + '" title="Delete">' + ST_ICON.trash + '</button>') +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+
     if (typeof wireIACoverRetry === 'function') {
       document.querySelectorAll('#my-uploads img').forEach(wireIACoverRetry);
     }
   }
 
-  // ── Dashboard Playlists ──────────────────────────────────────────────────────
-  var _myPlaylists = null; // cached after first fetch
+  function editUpload(type, id) {
+    var item = uploads.find(function (u) { return u.id === id && u._type === type; });
+    if (!item) return;
+    if (type === 'album') openEditAlbumModal(item); else openEditTrackModal(item);
+  }
+
+  var _myPlaylists = null;
 
   async function renderDashboardPlaylists() {
     var el = document.getElementById('my-playlists');
@@ -392,20 +938,27 @@
     } catch (_) {
       _myPlaylists = _myPlaylists || [];
     }
+    el = document.getElementById('my-playlists');
+    if (!el) return;
     if (!_myPlaylists.length) {
-      el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:12px 0;">no playlists yet...make one above</div>';
+      el.innerHTML = '<div class="st-empty-sm" style="text-align:left;padding:8px 0;">no playlists yet...make one above</div>';
       return;
     }
-    el.innerHTML = '<div class="track-list">' + _myPlaylists.map(function(p) {
-      return '<div class="track-row" style="cursor:pointer;" onclick="navigate(\'/playlist?id=' + p.id + '\')">' +
-        '<div class="track-row-cover" style="font-size:20px;display:flex;align-items:center;justify-content:center;">🎶</div>' +
-        '<div class="track-row-info">' +
-          '<div class="track-row-title">' + escHtml(p.title) + '</div>' +
-          '<div class="track-row-artist">' + (p.track_count || 0) + ' track' + ((p.track_count || 0) !== 1 ? 's' : '') + (p.is_public ? '' : ' · 🔒 Private') + '</div>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;margin-left:auto;">' +
-          '<a href="/playlist?id=' + p.id + '" class="btn btn-secondary btn-sm" onclick="event.stopPropagation()">Open</a>' +
-          '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteDashboardPlaylist(\'' + p.id + '\')">Delete</button>' +
+    var cover = function (p) {
+      if (typeof window.wvPlaylistCover === 'function') return window.wvPlaylistCover(p);
+      return '<div style="position:absolute;inset:0;background:' + coverGradient(p.title || '') + ';"></div>';
+    };
+    el.innerHTML = '<div class="st-ups">' + _myPlaylists.map(function (p) {
+      var href = '/playlist?id=' + encodeURIComponent(p.id);
+      var n = p.track_count || 0;
+      var t = escHtml(p.title || 'Untitled');
+      return '<div class="st-up">' +
+        '<a class="st-pl-cover" href="' + href + '" tabindex="-1" aria-hidden="true">' + cover(p) + '</a>' +
+        '<div class="st-up-main"><a class="st-up-title" href="' + href + '">' + t + '</a>' +
+          '<div class="st-up-sub"><span>' + n + ' track' + (n === 1 ? '' : 's') + (p.is_public ? '' : ' · private') + '</span></div></div>' +
+        '<div class="st-up-acts">' +
+          '<a class="st-ib st-open" href="' + href + '" aria-label="Open ' + t + '" title="Open">' + ST_ICON.open + '</a>' +
+          '<button class="st-ib danger" onclick="deleteDashboardPlaylist(\'' + escHtml(p.id) + '\')" aria-label="Delete ' + t + '" title="Delete">' + ST_ICON.trash + '</button>' +
         '</div>' +
       '</div>';
     }).join('') + '</div>';
@@ -418,7 +971,7 @@
     form.style.display = visible ? 'none' : '';
     if (!visible) {
       var inp = document.getElementById('new-playlist-title');
-      if (inp) setTimeout(function() { inp.focus(); }, 50);
+      if (inp) setTimeout(function () { inp.focus(); }, 50);
     }
   }
 
@@ -441,213 +994,12 @@
     if (!confirm('delete this playlist? you cant undo this')) return;
     try {
       await api('/playlists/' + id, { method: 'DELETE' });
-      if (_myPlaylists) _myPlaylists = _myPlaylists.filter(function(p) { return p.id !== id; });
+      if (_myPlaylists) _myPlaylists = _myPlaylists.filter(function (p) { return p.id !== id; });
       if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
       renderDashboardPlaylists();
     } catch (err) {
       alert('couldnt delete the playlist: ' + err.message);
     }
-  }
-  // ────────────────────────────────────────────────────────────────────────────
-
-  function cleanTitle(filename) {
-    return filename.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').trim();
-  }
-
-  function onFileSelect(e) {
-    var newItems = Array.from(e.target.files).map(function(f) { return { file: f, title: cleanTitle(f.name) }; });
-    selectedFiles = selectedFiles.concat(newItems);
-    renderUploadQueue();
-    e.target.value = '';
-  }
-
-  function onDrop(e) {
-    e.preventDefault();
-    document.getElementById('upload-zone').classList.remove('drag-over');
-    var newItems = Array.from(e.dataTransfer.files)
-      .filter(function(f) { return f.type.startsWith('audio/'); })
-      .map(function(f) { return { file: f, title: cleanTitle(f.name) }; });
-    selectedFiles = selectedFiles.concat(newItems);
-    renderUploadQueue();
-  }
-
-  function renderUploadQueue() {
-    var el = document.getElementById('upload-queue');
-    var txt = document.getElementById('upload-zone-text');
-    if (!selectedFiles.length) {
-      el.innerHTML = '';
-      txt.textContent = 'drop audio files here or click to add them';
-      return;
-    }
-    txt.textContent = selectedFiles.length === 1
-      ? '1 song added...add more or press Upload'
-      : selectedFiles.length + ' songs added';
-    el.innerHTML = selectedFiles.map(function(item, i) {
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface-2);border-radius:var(--r-md);margin-bottom:6px;" draggable="true" id="qi-' + i + '"' +
-        ' ondragstart="qDragStart(event,' + i + ')"' +
-        ' ondragover="qDragOver(event,' + i + ')"' +
-        ' ondrop="qDragDrop(event,' + i + ')"' +
-        ' ondragend="qDragEnd()">' +
-        '<span style="cursor:grab;color:var(--text-3);">⠿</span>' +
-        '<span style="min-width:20px;font-size:12px;color:var(--text-3);">' + (i+1) + '</span>' +
-        '<input type="text" value="' + escHtml(item.title) + '"' +
-          ' oninput="selectedFiles[' + i + '].title=this.value"' +
-          ' style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--hair-strong);color:var(--text);font-size:13px;padding:2px 0;outline:none;" placeholder="Track title">' +
-        '<span style="font-size:11px;color:var(--text-3);">' + (item.file.size/1024/1024).toFixed(1) + 'MB</span>' +
-        '<button onclick="selectedFiles.splice(' + i + ',1);renderUploadQueue()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;line-height:1;">×</button>' +
-      '</div>';
-    }).join('');
-  }
-
-  var _qDragSrc = null;
-  function qDragStart(e, i) {
-    _qDragSrc = i;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(function() { var el = document.getElementById('qi-'+i); if (el) el.style.opacity = '0.4'; }, 0);
-  }
-  function qDragOver(e, i) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.borderTop = ''; });
-    if (i !== _qDragSrc) { var el = document.getElementById('qi-'+i); if (el) el.style.borderTop = '2px solid var(--purple)'; }
-  }
-  function qDragDrop(e, i) {
-    e.stopPropagation();
-    if (_qDragSrc === null || _qDragSrc === i) return;
-    var moved = selectedFiles.splice(_qDragSrc, 1)[0];
-    selectedFiles.splice(i, 0, moved);
-    renderUploadQueue();
-  }
-  function qDragEnd() {
-    _qDragSrc = null;
-    document.querySelectorAll('[id^="qi-"]').forEach(function(el) { el.style.opacity = ''; el.style.borderTop = ''; });
-  }
-
-  async function doUpload() {
-    const title = document.getElementById('upload-title').value.trim();
-    const era_tag_id = document.getElementById('upload-era-tag').value;
-    const description = document.getElementById('upload-desc').value.trim();
-    const drive_url = document.getElementById('drive-url').value.trim();
-
-    if (!selectedFiles.length && !drive_url) return showAlert('upload-alert', 'add at least one audio file or paste a drive link');
-    if (!title && selectedFiles.length !== 1) return showAlert('upload-alert', 'you need a title if its more than one song');
-    // For single-file uploads, fall back to the queue item's title
-    var effectiveTitle = title || (selectedFiles[0] && selectedFiles[0].title) || '';
-
-    const btn = document.getElementById('upload-btn');
-    const progress = document.getElementById('upload-progress');
-    const bar = document.getElementById('upload-bar');
-    const statusEl = document.getElementById('upload-status');
-    btn.disabled = true;
-    btn.textContent = 'Uploading…';
-    progress.style.display = '';
-    clearAlert('upload-alert');
-
-    try {
-      if (selectedFiles.length > 1) {
-        // Step 1: create the album shell (with cover)
-        statusEl.textContent = 'Creating comp…';
-        bar.style.width = '8%';
-        var albumForm = new FormData();
-        albumForm.append('title', effectiveTitle);
-        if (era_tag_id) albumForm.append('era_tag_id', era_tag_id);
-        if (description) albumForm.append('description', description);
-        if (editCoverFile) albumForm.append('cover_file', editCoverFile);
-        var album = await apiUpload('/albums', albumForm);
-
-        // Step 2: upload each track WITH album_id so it links immediately
-        var linkErrors = [];
-        for (var i = 0; i < selectedFiles.length; i++) {
-          var item = selectedFiles[i];
-          statusEl.textContent = 'Uploading ' + (i+1) + '/' + selectedFiles.length + ': ' + item.title + '…';
-          bar.style.width = Math.round(8 + ((i + 1) / selectedFiles.length) * 82) + '%';
-          var form = new FormData();
-          form.append('file', item.file);
-          form.append('title', item.title);
-          form.append('album_id', album.id);
-          form.append('track_position', String(i));
-          if (era_tag_id) form.append('era_tag_id', era_tag_id);
-          var t = await apiUpload('/tracks', form);
-          if (t._link_error) {
-            linkErrors.push('Track ' + (i+1) + ' (' + item.title + '): ' + t._link_error);
-          }
-        }
-
-        if (linkErrors.length > 0) {
-          throw new Error('some tracks didnt get added to the comp:\n' + linkErrors.join('\n'));
-        }
-
-        // Re-fetch album with its full tracklist
-        album = await api('/albums/' + album.id);
-        uploads.unshift({ ...album, _type: 'album' });
-      } else {
-        // Single file or drive link: create a track
-        var form = new FormData();
-        if (selectedFiles[0]) form.append('file', selectedFiles[0].file);
-        if (drive_url) form.append('drive_url', drive_url);
-        form.append('title', effectiveTitle);
-        if (era_tag_id) form.append('era_tag_id', era_tag_id);
-        if (description) form.append('description', description);
-        if (editCoverFile) form.append('cover_file', editCoverFile);
-        bar.style.width = '60%';
-        statusEl.textContent = 'uploading to Internet Archive…';
-        var track = await apiUpload('/tracks', form);
-        uploads.unshift({ ...track, _type: 'track' });
-      }
-
-      bar.style.width = '100%';
-      // Reset form
-      selectedFiles = [];
-      editCoverFile = null;
-      document.getElementById('upload-title').value = '';
-      document.getElementById('upload-era-tag').value = '';
-      document.getElementById('upload-desc').value = '';
-      document.getElementById('drive-url').value = '';
-      document.getElementById('cover-input').value = '';
-      document.getElementById('file-input').value = '';
-      document.getElementById('cover-zone-text').textContent = 'drop an image or click to pick one';
-      renderUploadQueue();
-      renderUploads();
-      showAlert('upload-alert', '&#x2713; uploaded!! the cover can take a min or 2 to show up', 'success');
-    } catch (err) {
-      showAlert('upload-alert', err.message || 'Upload failed');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Upload';
-      setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0%'; }, 3000);
-    }
-  }
-
-  // Cover image handlers
-  function onCoverDragOver(e) {
-    e.preventDefault();
-    document.getElementById('cover-zone').classList.add('drag-over');
-  }
-  function onCoverDragLeave() {
-    document.getElementById('cover-zone').classList.remove('drag-over');
-  }
-  function onCoverDrop(e) {
-    e.preventDefault();
-    document.getElementById('cover-zone').classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) setCoverFile(file);
-  }
-  function onCoverSelect(e) {
-    const file = e.target.files[0];
-    if (file) setCoverFile(file);
-  }
-  function setCoverFile(file) {
-    editCoverFile = file;
-    document.getElementById('cover-zone-text').textContent = `&#x2713; ${file.name}`;
-  }
-
-  // Audio drag handlers
-  function onDragOver(e) {
-    e.preventDefault();
-    document.getElementById('upload-zone').classList.add('drag-over');
-  }
-  function onDragLeave() {
-    document.getElementById('upload-zone').classList.remove('drag-over');
   }
 
   async function saveProfile() {
@@ -662,11 +1014,15 @@
     };
     if (!updates.display_name) return showAlert('profile-alert', 'you need a display name');
     try {
+      var keepFollowers = artist._followers;
       artist = await api(`/artists/${artist.id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
-      showAlert('profile-alert', '&#x2713; profile saved', 'success');
+      artist._followers = keepFollowers;
+      var nameEl = document.querySelector('.st-hero-name');
+      if (nameEl) nameEl.textContent = artist.display_name || '';
+      showAlert('profile-alert', '✓ profile saved', 'success');
     } catch (err) {
       showAlert('profile-alert', err.message);
     }
@@ -756,7 +1112,7 @@
       uploads = uploads.map(u => (u.id === editingTrackId && u._type === 'track') ? { ...u, ...updated, _type: 'track' } : u);
       closeEditTrackModal();
       renderUploads();
-      showAlert('alert-container', '&#x2713; Edit updated', 'success');
+      showAlert('alert-container', '✓ edit updated', 'success');
     } catch (err) {
       showAlert('edit-track-alert', err.message);
     }
@@ -887,7 +1243,7 @@
       document.getElementById('edit-album-modal').classList.remove('open');
       editingAlbumId = null;
       renderUploads();
-      showAlert('alert-container', '&#x2713; Comp updated', 'success');
+      showAlert('alert-container', '✓ comp updated', 'success');
     } catch (err) {
       showAlert('edit-album-alert', err.message);
     }
@@ -905,7 +1261,7 @@
       const result = await apiUpload('/upload/image', form);
       const urlEl = document.getElementById(urlFieldId);
       if (urlEl) urlEl.value = result.url;
-      if (statusEl) statusEl.textContent = '&#x2713; Uploaded';
+      if (statusEl) statusEl.textContent = '✓ uploaded';
     } catch (err) {
       if (statusEl) statusEl.textContent = 'Upload failed';
     }
@@ -949,89 +1305,183 @@
     }
   }
 
-  function renderStatsCharts() {
-    if (!statsData) return;
 
-    // Chart.js may not be loaded when arriving via SPA navigation (the <script src> in <head>
-    // is not re-executed by the SPA router). Dynamically load it and retry if missing.
-    if (typeof Chart === 'undefined') {
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
-      s.onload = function() { renderStatsCharts(); };
-      document.head.appendChild(s);
-      return;
-    }
-
-    var isDark = document.getElementById('wv-root')?.classList.contains('theme-dark');
-    var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
-    var labelColor = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
-    var brandColor = (getComputedStyle(document.body).getPropertyValue('--brand') || '#a78bfa').trim();
-    var brand2Color = '#06b6d4'; // teal for followers
-
-    var chartDefaults = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { backgroundColor: isDark ? '#1e1e2e' : '#fff', titleColor: isDark ? '#fff' : '#000', bodyColor: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', borderWidth: 1 },
-      },
-      scales: {
-        x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } } },
-        y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11 } }, beginAtZero: true, precision: 0 },
-      },
-    };
-
-    // Likes chart
-    var likesCtx = document.getElementById('chart-likes');
-    if (likesCtx && statsData.likes_by_day) {
-      new Chart(likesCtx, {
-        type: 'bar',
-        data: {
-          labels: statsData.likes_by_day.map(d => {
-            var dt = new Date(d.date + 'T12:00:00');
-            return dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-          }),
-          datasets: [{ data: statsData.likes_by_day.map(d => d.count), backgroundColor: brandColor, borderRadius: 6, borderSkipped: false }],
-        },
-        options: chartDefaults,
-      });
-    }
-
-    // Followers chart
-    var followersCtx = document.getElementById('chart-followers');
-    if (followersCtx && statsData.followers_by_day) {
-      new Chart(followersCtx, {
-        type: 'bar',
-        data: {
-          labels: statsData.followers_by_day.map(d => {
-            var dt = new Date(d.date + 'T12:00:00');
-            return dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-          }),
-          datasets: [{ data: statsData.followers_by_day.map(d => d.count), backgroundColor: brand2Color + 'cc', borderRadius: 6, borderSkipped: false }],
-        },
-        options: chartDefaults,
-      });
-    }
-
-    // Top tracks horizontal bar chart
-    var topCtx = document.getElementById('chart-top-tracks');
-    if (topCtx && statsData.top_tracks && statsData.top_tracks.length) {
-      var topOptions = JSON.parse(JSON.stringify(chartDefaults));
-      topOptions.indexAxis = 'y';
-      topOptions.scales.x.ticks.font = { size: 11 };
-      topOptions.scales.y.ticks.font = { size: 11 };
-      new Chart(topCtx, {
-        type: 'bar',
-        data: {
-          labels: statsData.top_tracks.map(t => t.title.length > 22 ? t.title.slice(0, 22) + '…' : t.title),
-          datasets: [{ data: statsData.top_tracks.map(t => t.play_count), backgroundColor: brandColor, borderRadius: 6, borderSkipped: false }],
-        },
-        options: topOptions,
-      });
-    }
+  function stDestroyCharts() {
+    _stCharts.forEach(function (c) { try { c.destroy(); } catch (_) {} });
+    _stCharts = [];
   }
 
-  loadDashboard();
+  function stVar(name, fallback) {
+    var host = document.getElementById('view') || document.body;
+    var v = '';
+    try { v = getComputedStyle(host).getPropertyValue(name).trim(); } catch (_) {}
+    return v || fallback;
+  }
+
+  function stAlpha(color, a) {
+    var c = String(color || '').trim();
+    var m = c.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (m) {
+      var h = m[1].length === 3 ? m[1].split('').map(function (x) { return x + x; }).join('') : m[1];
+      return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+    }
+    var r = c.match(/^rgba?\(([^)]+)\)$/i);
+    if (r) { var p = r[1].split(',').map(function (x) { return x.trim(); }); return 'rgba(' + p[0] + ',' + p[1] + ',' + p[2] + ',' + a + ')'; }
+    return c;
+  }
+
+  function stDayLabel(key, days) {
+    var dt = new Date(key + 'T12:00:00Z');
+    if (isNaN(dt)) return key;
+    return days <= 7 ? dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  function stLoadChartJs(cb) {
+    if (typeof Chart !== 'undefined') return cb();
+    if (window._stChartLoading) { window._stChartLoading.push(cb); return; }
+    window._stChartLoading = [cb];
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    s.onload = function () { var q = window._stChartLoading || []; window._stChartLoading = null; q.forEach(function (f) { try { f(); } catch (_) {} }); };
+    s.onerror = function () { window._stChartLoading = null; };
+    document.head.appendChild(s);
+  }
+
+  function renderStatsCharts() {
+    if (!statsData) return;
+    stLoadChartJs(stDrawCharts);
+  }
+
+  function stDrawCharts() {
+    if (typeof Chart === 'undefined' || !statsData || !document.getElementById('st-studio')) return;
+    stDestroyCharts();
+    var d = statsData;
+    var days = stHasRange(d) ? (d.days || _stDays) : 7;
+    var brand = stVar('--brand', '#a78bfa');
+    var text = stVar('--text', '#ffffff');
+    var text2 = stVar('--text-2', '#b3b3b3');
+    var text3 = stVar('--text-3', '#7a7a7a');
+    var hair = stVar('--hair', 'rgba(255,255,255,0.08)');
+    var tipBg = stVar('--elevated', stVar('--surface-3', '#282828'));
+    var reduce = false;
+    try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+    var narrow = window.innerWidth < 700;
+
+    var base = function (maxTicks) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: reduce ? false : { duration: 500 },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: tipBg, titleColor: text, bodyColor: text2, borderColor: hair, borderWidth: 1,
+            padding: 10, cornerRadius: 8, displayColors: true, boxWidth: 8, boxHeight: 8, usePointStyle: true,
+            titleFont: { weight: '700' },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { color: text3, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: maxTicks } },
+          y: { beginAtZero: true, grid: { color: hair, drawTicks: false }, border: { display: false }, ticks: { color: text3, font: { size: 11 }, precision: 0, padding: 8, maxTicksLimit: 5 } },
+        },
+      };
+    };
+
+    var playsEl = document.getElementById('chart-plays');
+    if (playsEl && Array.isArray(d.plays_by_day)) {
+      var labels = d.plays_by_day.map(function (x) { return stDayLabel(x.date, days); });
+      var opts = base(narrow ? 5 : (days <= 7 ? 7 : 8));
+      opts.plugins.tooltip.callbacks = { title: function (items) { var k = d.plays_by_day[items[0].dataIndex]; return k ? new Date(k.date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : ''; } };
+      _stCharts.push(new Chart(playsEl, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Plays', data: stSeries(d.plays_by_day), borderColor: brand, borderWidth: 2, tension: 0.35, pointRadius: days <= 7 ? 3 : 0, pointHoverRadius: 5,
+              pointBackgroundColor: brand, pointBorderColor: brand, fill: 'origin',
+              backgroundColor: function (ctx) {
+                var c = ctx.chart, area = c.chartArea;
+                if (!area) return stAlpha(brand, 0.12);
+                var g = c.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+                g.addColorStop(0, stAlpha(brand, 0.32));
+                g.addColorStop(1, stAlpha(brand, 0));
+                return g;
+              },
+            },
+            {
+              label: 'Listeners', data: stSeries(d.listeners_by_day), borderColor: text3, borderWidth: 2, borderDash: [5, 4], tension: 0.35, pointRadius: 0, pointHoverRadius: 4,
+              pointBackgroundColor: text3, pointBorderColor: text3, fill: false,
+            },
+          ],
+        },
+        options: opts,
+      }));
+    }
+
+    var bar = function (el, series, label) {
+      if (!el || !Array.isArray(series)) return;
+      var o = base(narrow ? 4 : (days <= 7 ? 7 : 6));
+      o.plugins.tooltip.displayColors = false;
+      o.plugins.tooltip.callbacks = {
+        title: function (items) { var k = series[items[0].dataIndex]; return k ? new Date(k.date + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }) : ''; },
+        label: function (item) { return item.raw + ' ' + label + (item.raw === 1 ? '' : 's'); },
+      };
+      _stCharts.push(new Chart(el, {
+        type: 'bar',
+        data: {
+          labels: series.map(function (x) { return stDayLabel(x.date, days); }),
+          datasets: [{ data: stSeries(series), backgroundColor: brand, hoverBackgroundColor: stAlpha(brand, 0.8), borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 22, categoryPercentage: days > 30 ? 0.9 : 0.7, barPercentage: 0.9 }],
+        },
+        options: o,
+      }));
+    };
+    bar(document.getElementById('chart-likes'), d.likes_by_day, 'like');
+    bar(document.getElementById('chart-followers'), d.followers_by_day, 'new follower');
+  }
+
+  (function () {
+    if (window._stThemeObs) { try { window._stThemeObs.disconnect(); } catch (_) {} }
+    var last = document.body.className;
+    var obs = new MutationObserver(function () {
+      if (document.body.className === last) return;
+      last = document.body.className;
+      if (document.getElementById('st-studio') && statsData) setTimeout(stDrawCharts, 60);
+    });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    window._stThemeObs = obs;
+    var onKey = function (e) {
+      if (e.key !== 'Escape') return;
+      var open = document.querySelector('#view .modal-overlay.open');
+      if (!open) return;
+      if (open.id === 'delete-modal') closeDeleteModal();
+      else if (open.id === 'delete-comp-modal') closeDeleteCompModal();
+      else if (open.id === 'edit-track-modal') closeEditTrackModal();
+      else if (open.id === 'edit-album-modal') { open.classList.remove('open'); editingAlbumId = null; }
+    };
+    document.addEventListener('keydown', onKey);
+    var resizeT = null, lastW = window.innerWidth;
+    var onResize = function () {
+      clearTimeout(resizeT);
+      resizeT = setTimeout(function () {
+        var w = window.innerWidth;
+        if ((w < 700) !== (lastW < 700) && statsData) stDrawCharts();
+        lastW = w;
+      }, 200);
+    };
+    window.addEventListener('resize', onResize);
+    window._pageCleanup.push(function () {
+      try { obs.disconnect(); } catch (_) {}
+      if (window._stThemeObs === obs) window._stThemeObs = null;
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
+      clearTimeout(resizeT);
+    });
+  })();
+
+  if (isLoggedIn()) loadDashboard();
+  else navigate('/login');
 </script>
 </body>
 </html>

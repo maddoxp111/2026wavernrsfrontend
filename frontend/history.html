@@ -3,89 +3,559 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs — history</title>
+  <title>wavernrs — your recap</title>
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .hr-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 4px 0 16px; }
+    .hr-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); display: flex; align-items: center; gap: 6px; }
+    .hr-head h1 { margin: 4px 0 0; }
+    .hr-head .hr-acts { display: flex; gap: 8px; }
+    .hr-hero { position: relative; border-radius: 18px; overflow: hidden; color: #fff; padding: 26px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 32px; align-items: center; isolation: isolate;
+      --c1: hsl(262 60% 40%); --c2: hsl(222 60% 30%); --c3: hsl(262 40% 14%); --c4: hsl(250 45% 7%);
+      background: radial-gradient(90% 90% at 0% 0%, var(--c1), transparent 65%), radial-gradient(80% 80% at 100% 100%, var(--c2), transparent 60%), linear-gradient(160deg, var(--c3), var(--c4));
+      box-shadow: 0 20px 50px -24px rgba(0,0,0,.6); }
+    .hr-kick { font-size: 11.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+    .hr-big { font-size: 76px; font-weight: 900; letter-spacing: -.055em; line-height: .9; margin: 10px 0 4px; font-variant-numeric: tabular-nums; }
+    .hr-bigsub { font-size: 16px; font-weight: 700; opacity: .9; }
+    .hr-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .hr-stat { background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); border-radius: 12px; padding: 9px 13px; min-width: 86px; }
+    .hr-stat b { display: block; font-size: 20px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .hr-stat span { font-size: 11.5px; font-weight: 600; opacity: .75; }
+    .hr-creators { margin-top: 18px; }
+    .hr-creators .hr-kick { margin-bottom: 8px; }
+    .hr-cr { display: flex; flex-wrap: wrap; gap: 6px; }
+    .hr-cr span { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 5px; border-radius: 999px; background: rgba(255,255,255,.14); font-size: 13px; font-weight: 700; max-width: 100%; }
+    .hr-cr i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 10.5px; font-weight: 900; background: rgba(0,0,0,.28); flex-shrink: 0; }
+    .hr-cr em { font-style: normal; opacity: .65; font-weight: 600; }
+    .hr-hero-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+    .hr-hbtn { min-height: 42px; border-radius: 999px; border: 0; font: inherit; font-size: 14px; font-weight: 800; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: transform .12s, background .15s; text-decoration: none; }
+    .hr-hbtn:active { transform: scale(.97); }
+    .hr-hbtn.w { background: #fff; color: #111; }
+    .hr-hbtn.g { background: rgba(255,255,255,.16); color: #fff; }
+    .hr-hbtn.g:hover { background: rgba(255,255,255,.26); }
+    .hr-hbtn:focus-visible, .hr-x:focus-visible, .hr-play:focus-visible, .hr-card:focus-visible, .hr-mbtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .hr-mosaic { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; align-content: center; }
+    .hr-mosaic .big { grid-column: span 2; grid-row: span 2; border-radius: 12px; }
+    .hr-tile { aspect-ratio: 1; position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 12px 28px -12px rgba(0,0,0,.7); cursor: pointer; background: rgba(255,255,255,.08); min-height: 0; }
+    .hr-tile > img, .hr-tile > .gr { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hr-tile .rk { position: absolute; left: 6px; top: 6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: rgba(0,0,0,.6); color: #fff; font-size: 11.5px; font-weight: 900; display: grid; place-items: center; }
+    .hr-tile.big .rk { min-width: 28px; height: 28px; font-size: 14px; left: 10px; top: 10px; }
+    .hr-tile:hover > img { transform: scale(1.04); }
+    .hr-tile > img { transition: transform .3s; }
+    .hr-sec { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 30px 0 12px; flex-wrap: wrap; }
+    .hr-sec h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .hr-sec .sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+    .hr-rail { display: grid; grid-auto-flow: column; grid-auto-columns: 150px; gap: 14px; overflow-x: auto; padding: 2px 2px 10px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+    .hr-card { scroll-snap-align: start; cursor: pointer; min-width: 0; border-radius: 10px; }
+    .hr-card .cv { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface-2); box-shadow: 0 8px 20px -12px rgba(0,0,0,.5); }
+    .hr-card .cv img, .hr-card .cv .gr { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hr-card .cnt { position: absolute; right: 7px; bottom: 7px; padding: 3px 8px; border-radius: 99px; background: rgba(0,0,0,.66); color: #fff; font-size: 11.5px; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+    .hr-card .t { font-size: 13.5px; font-weight: 700; color: var(--text); margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hr-card .s { font-size: 12px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hr-filter { position: relative; width: min(280px, 100%); }
+    .hr-filter svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    .hr-filter input { width: 100%; padding-left: 36px; min-height: 40px; box-sizing: border-box; }
+    .hr-group { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); margin: 18px 0 6px; display: flex; align-items: center; gap: 8px; }
+    .hr-group span { font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-3); opacity: .8; }
+    .hr-row { display: flex; align-items: center; gap: 12px; padding: 8px 8px; border-radius: 10px; cursor: pointer; min-height: 56px; }
+    .hr-row:hover { background: var(--surface-2); }
+    .hr-row .art { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; position: relative; flex-shrink: 0; background: var(--surface-2); }
+    .hr-row .art img, .hr-row .art .gr { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hr-row .mn { flex: 1; min-width: 0; }
+    .hr-row .tt { font-size: 14.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hr-row .sb { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .hr-row .when { font-size: 12px; color: var(--text-3); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .hr-row .pl { font-size: 12px; font-weight: 700; color: var(--text-2); flex-shrink: 0; min-width: 34px; text-align: right; }
+    .hr-play, .hr-x { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+    .hr-play:hover { background: var(--surface-3); color: var(--text); }
+    .hr-x { opacity: 0; transition: opacity .15s, background .15s; }
+    .hr-row:hover .hr-x, .hr-x:focus-visible { opacity: 1; }
+    .hr-x:hover { background: var(--surface-3); color: var(--text); }
+    @media (hover: none) { .hr-x { opacity: .7; } }
+    .hr-empty { text-align: center; padding: 56px 20px 64px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); }
+    .hr-empty .ic { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 16px; display: grid; place-items: center; background: var(--brand-bg); color: var(--brand); }
+    .hr-empty h3 { margin: 0 0 6px; font-size: 20px; font-weight: 800; color: var(--text); }
+    .hr-empty p { margin: 0 auto; max-width: 380px; font-size: 14px; color: var(--text-3); line-height: 1.5; }
+    .hr-empty .acts { display: flex; gap: 8px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .hr-none { padding: 26px 8px; color: var(--text-3); font-size: 14px; text-align: center; }
+    .hr-note { font-size: 12px; color: var(--text-3); margin-top: 18px; display: flex; gap: 6px; align-items: center; }
+
+    .hr-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.66); display: grid; place-items: center; padding: 20px; animation: hr-fade .18s ease-out; }
+    .hr-modal .pn { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 18px; padding: 18px; width: min(380px, 100%); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; gap: 14px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.7); }
+    .hr-modal .hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .hr-modal .hd b { font-size: 16px; font-weight: 800; }
+    .hr-modal .pv { flex: 1; min-height: 0; display: flex; justify-content: center; }
+    .hr-modal .pv img, .hr-modal .pv .ph { max-height: min(62dvh, 560px); width: auto; max-width: 100%; aspect-ratio: 9 / 16; border-radius: 12px; box-shadow: 0 16px 40px -14px rgba(0,0,0,.6); background: var(--surface-2); }
+    .hr-modal .pv .ph { height: min(62dvh, 560px); display: grid; place-items: center; color: var(--text-3); font-size: 13px; }
+    .hr-modal .ft { display: flex; gap: 8px; }
+    .hr-mbtn { flex: 1; min-height: 44px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .hr-mbtn.pri { background: var(--brand); color: var(--on-brand); border-color: transparent; }
+    .hr-mbtn[disabled] { opacity: .5; cursor: default; }
+    @keyframes hr-fade { from { opacity: 0; } }
+    @media (max-width: 760px) {
+      .hr-hero { grid-template-columns: 1fr; padding: 20px; gap: 20px; }
+      .hr-mosaic { order: -1; }
+      .hr-big { font-size: 60px; }
+      .hr-rail { grid-auto-columns: 132px; }
+      .hr-head .hr-acts { width: 100%; }
+      .hr-head .hr-acts > * { flex: 1; justify-content: center; }
+      .hr-filter { width: 100%; }
+      .hr-row .pl { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .hr-tile > img { transition: none; } .hr-modal { animation: none; } }
+  </style>
 </head>
 <body>
 <div id="view">
-  <div class="wv-sec-head" style="margin-top:0"><h1 class="wv-page-title" style="margin:6px 0">Listening history</h1>
-    <div style="display:flex;gap:8px;">
-      <button class="wv-btn-play" onclick="playHistory()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play all</button>
-      <button class="wv-btn-ghost" onclick="clearHistory()">Clear</button>
+  <div class="hr-head">
+    <div>
+      <div class="hr-eyebrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10v18H7zM11 18h2"/></svg>listening history &middot; this device</div>
+      <h1 class="wv-page-title">Your recap</h1>
+    </div>
+    <div class="hr-acts">
+      <button type="button" class="wv-btn-play" id="hr-playall"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play all</button>
+      <button type="button" class="wv-btn-ghost" id="hr-clear">Clear</button>
     </div>
   </div>
-  <p class="wv-page-sub">your last 60 plays on this device, newest first...it only stays in your browser, nothing gets sent to wavernrs</p>
-  <div id="hi-top"></div>
-  <div id="hi-body"></div>
+  <div id="hr-hero"></div>
+  <div id="hr-repeat"></div>
+  <div id="hr-top"></div>
+  <div id="hr-recent"></div>
 </div>
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
 <script src="/js/player.js?v=6288d60cd337"></script>
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script>
-initPlayer();
-if (typeof window.setPageWash === 'function') window.setPageWash('history');
-function _hist() { try { return JSON.parse(localStorage.getItem('recently_played') || '[]'); } catch (e) { return []; } }
-function renderTopPlayed() {
-  var el = document.getElementById('hi-top');
-  if (!el) return;
-  var top = typeof getPlayTally === 'function' ? getPlayTally({ min: 2, limit: 10 }) : [];
-  if (!top.length) { el.innerHTML = ''; return; }
-  var max = top[0].n || 1;
-  el.innerHTML = '<h2 class="wv-sec-title" style="margin:18px 0 10px;">Your most played</h2>' +
-    '<div class="wv-top-list">' + top.map(function (e) {
-      var href = e._type === 'album' ? '/album?id=' + e.id : '/track?id=' + e.id;
-      var pct = Math.max(8, Math.round((e.n / max) * 100));
-      return '<div class="wv-top-row" onclick="navigate(\'' + href + '\')">' +
-        '<div class="wv-trow-art" style="background:' + coverGradient(e.title || '') + ';">' +
-          (e.cover_url ? '<img src="' + escHtml(e.cover_url) + '" loading="lazy" alt="" onerror="this.remove()">' : '') + '</div>' +
-        '<div class="wv-top-main">' +
-          '<div class="wv-trow-title">' + escHtml(e.title || 'Untitled') + '</div>' +
-          '<div class="wv-top-bar"><span style="width:' + pct + '%"></span></div>' +
-        '</div>' +
-        '<div class="wv-top-count">' + e.n + '<span> play' + (e.n === 1 ? '' : 's') + '</span></div>' +
-      '</div>';
-    }).join('') + '</div>' +
-    '<h2 class="wv-sec-title" style="margin:26px 0 10px;">Recently played</h2>';
-}
+(function () {
+  if (typeof initPlayer === 'function') initPlayer();
+  if (typeof window.setPageWash === 'function') window.setPageWash('history');
+  if (window._hr && typeof window._hr.teardown === 'function') { try { window._hr.teardown(); } catch (_) {} }
+  var H = window._hr = { alive: true, q: '', cardURL: null, cardBlob: null };
+  window._pageCleanup = window._pageCleanup || [];
+  var MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-function renderHistory() {
-  renderTopPlayed();
-  var items = _hist().filter(function(t) { return t.id; });
-  var el = document.getElementById('hi-body');
-  if (!items.length) {
-    el.innerHTML = '<div class="wv-empty" style="padding:60px 0;"><div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">nothing here yet</div>play something and itll show up here<div style="margin-top:16px;"><button class="wv-btn-play" onclick="navigate(\'/browse\')">Browse</button></div></div>';
-    return;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function num(n) { n = Number(n) || 0; return n.toLocaleString('en-US'); }
+  function img(url, w) { return url ? (typeof wvImg === 'function' ? wvImg(url, w || 160) : url) : ''; }
+  function grad(seed) { return typeof coverGradient === 'function' ? coverGradient(seed || '') : 'linear-gradient(135deg,#5b3fa8,#1d1433)'; }
+  function cov(url, seed, w) { return '<div class="gr" style="background:' + grad(seed) + '"></div>' + (url ? '<img src="' + esc(img(url, w)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : ''); }
+  function plural(n, a, b) { return n === 1 ? a : (b || a + 's'); }
+  function badName(n) { var s = String(n || '').trim().toLowerCase(); return !s || s === 'unknown' || s === 'wvarchivebot'; }
+  function svg(d, size, sw) { return '<svg width="' + (size || 16) + '" height="' + (size || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>'; }
+  var I_PLAY = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>';
+  var I_X = svg('M6 6l12 12M18 6L6 18', 15, 2.4);
+
+  function hist() { try { var r = JSON.parse(localStorage.getItem('recently_played') || '[]'); return Array.isArray(r) ? r.filter(function (t) { return t && t.id; }) : []; } catch (e) { return []; } }
+  function tally() { try { var t = JSON.parse(localStorage.getItem('wv_play_tally') || '{}'); return t && typeof t === 'object' ? t : {}; } catch (e) { return {}; } }
+  function hrefOf(t) { return t._type === 'album' ? '/album?id=' + encodeURIComponent(t.id) : '/track?id=' + encodeURIComponent(t.id); }
+  function ago(ts) {
+    if (!ts) return '';
+    var m = Math.floor((Date.now() - ts) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    var d = Math.floor(h / 24);
+    if (d < 7) return d + 'd ago';
+    var dt = new Date(ts);
+    return MONTHS[dt.getMonth()] + ' ' + dt.getDate();
   }
-  var first = items.find(function(t) { return t.cover_url; });
-  if (first && typeof window.setPageBgImage === 'function') window.setPageBgImage(first.cover_url, first.title);
-  el.innerHTML = '<div class="wv-rows">' + items.map(function(t, i) {
+
+  function summary() {
+    var all = tally();
+    var list = Object.keys(all).map(function (k) { var e = all[k]; if (e && !e.id) e.id = k; return e; }).filter(function (e) { return e && e.id && (Number(e.n) || 0) > 0; });
+    var total = 0, comps = 0;
+    list.forEach(function (e) { total += Number(e.n) || 0; if (e._type === 'album') comps++; });
+    var top = list.slice().sort(function (a, b) { return (b.n - a.n) || ((b.last || 0) - (a.last || 0)); });
+    var cm = {};
+    list.forEach(function (e) {
+      if (badName(e.artist_name)) return;
+      var nm = String(e.artist_name).split(/\s*(?:,|&)\s*/)[0];
+      if (!nm) return;
+      var k = nm.toLowerCase();
+      (cm[k] || (cm[k] = { name: nm, n: 0 })).n += Number(e.n) || 0;
+    });
+    var creators = Object.keys(cm).map(function (k) { return cm[k]; }).sort(function (a, b) { return b.n - a.n; });
+    var first = list.reduce(function (m, e) { return e.last && (!m || e.last < m) ? e.last : m; }, 0);
+    return { list: list, total: total, unique: list.length, comps: comps, edits: list.length - comps, top: top, creators: creators, first: first, map: all };
+  }
+
+  function renderHero(S) {
+    var el = $('hr-hero');
+    if (!el) return;
+    if (!S.total) { el.innerHTML = ''; return; }
+    var t5 = S.top.slice(0, 5);
+    var tile = function (e, i, cls) {
+      if (!e) return '<div class="hr-tile ' + (cls || '') + '" style="cursor:default"></div>';
+      return '<div class="hr-tile ' + (cls || '') + '" role="link" tabindex="0" data-href="' + esc(hrefOf(e)) + '" aria-label="' + esc((i + 1) + '. ' + (e.title || 'Untitled')) + '">' + cov(e.cover_url, e.title, cls === 'big' ? 480 : 200) + '<span class="rk">' + (i + 1) + '</span></div>';
+    };
+    var cr = S.creators.slice(0, 3);
+    el.innerHTML = '<section class="hr-hero" id="hr-hero-card" aria-label="Your listening recap">' +
+      '<div>' +
+        '<div class="hr-kick">your recap &middot; all time on this device</div>' +
+        '<div class="hr-big">' + num(S.total) + '</div>' +
+        '<div class="hr-bigsub">' + plural(S.total, 'listen') + (S.first ? ' since ' + MONTHS[new Date(S.first).getMonth()] + ' ' + new Date(S.first).getDate() : '') + '</div>' +
+        '<div class="hr-stats">' +
+          '<div class="hr-stat"><b>' + num(S.unique) + '</b><span>' + plural(S.unique, 'release') + '</span></div>' +
+          '<div class="hr-stat"><b>' + num(S.comps) + '</b><span>' + plural(S.comps, 'comp') + '</span></div>' +
+          '<div class="hr-stat"><b>' + num(S.edits) + '</b><span>' + plural(S.edits, 'edit') + '</span></div>' +
+        '</div>' +
+        (cr.length ? '<div class="hr-creators"><div class="hr-kick">top creators</div><div class="hr-cr">' + cr.map(function (c, i) {
+          return '<span><i>' + (i + 1) + '</i>' + esc(c.name) + ' <em>' + num(c.n) + '</em></span>';
+        }).join('') + '</div></div>' : '') +
+        '<div class="hr-hero-acts">' +
+          '<a class="hr-hbtn w" href="/wrapped" data-nav="/wrapped">' + svg('M5 4l14 8-14 8z', 14, 2.4) + 'Watch your recap</a>' +
+          '<button type="button" class="hr-hbtn g" id="hr-share">' + svg('M12 15V4m0 0L8 8m4-4l4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7', 15, 2.2) + 'Share card</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="hr-mosaic">' + tile(t5[0], 0, 'big') + [1, 2, 3, 4].map(function (i) { return tile(t5[i], i); }).join('') + '</div>' +
+    '</section>';
+    var top = t5[0];
+    if (top && top.cover_url && typeof extractCoverHues === 'function') {
+      extractCoverHues(top.cover_url, top.title || '', function (c) {
+        if (!H.alive) return;
+        var card = $('hr-hero-card');
+        if (!card || !c) return;
+        var d = ((c.h2 - c.h1 + 540) % 360) - 180;
+        var h2 = Math.abs(d) > 55 ? (c.h1 + 320) % 360 : c.h2;
+        H.hue = { h1: c.h1, s1: c.s1, h2: h2 };
+        card.style.setProperty('--c1', 'hsl(' + c.h1 + ' 62% 40%)');
+        card.style.setProperty('--c2', 'hsl(' + h2 + ' 55% 30%)');
+        card.style.setProperty('--c3', 'hsl(' + c.h1 + ' 40% 15%)');
+        card.style.setProperty('--c4', 'hsl(' + h2 + ' 45% 7%)');
+      });
+    }
+  }
+
+  function renderRepeat() {
+    var el = $('hr-repeat');
+    if (!el) return;
+    var list = typeof getPlayTally === 'function' ? getPlayTally({ days: 7, min: 2, limit: 12 }) : [];
+    if (!list.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="hr-sec"><div><h2>On repeat this week</h2><div class="sub">what you kept coming back to in the last 7 days</div></div></div>' +
+      '<div class="hr-rail" role="list">' + list.map(function (e) {
+        return '<div class="hr-card" role="listitem" tabindex="0" data-href="' + esc(hrefOf(e)) + '" aria-label="' + esc(e.title || 'Untitled') + '">' +
+          '<div class="cv">' + cov(e.cover_url, e.title, 320) + '<span class="cnt">' + svg('M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4', 11, 2.4) + num(e.n) + '</span></div>' +
+          '<div class="t">' + esc(e.title || 'Untitled') + '</div>' +
+          '<div class="s">' + (e._type === 'album' ? 'Comp' : 'Edit') + (badName(e.artist_name) ? '' : ' · ' + esc(e.artist_name)) + '</div>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  function renderTop() {
+    var el = $('hr-top');
+    if (!el) return;
+    var top = typeof getPlayTally === 'function' ? getPlayTally({ min: 2, limit: 10 }) : [];
+    if (!top.length) { el.innerHTML = ''; return; }
+    var max = top[0].n || 1;
+    el.innerHTML = '<div class="hr-sec"><div><h2>Your most played</h2><div class="sub">all time on this device</div></div></div>' +
+      '<div class="wv-top-list">' + top.map(function (e) {
+        var pct = Math.max(8, Math.round((e.n / max) * 100));
+        return '<div class="wv-top-row" role="link" tabindex="0" data-href="' + esc(hrefOf(e)) + '">' +
+          '<div class="wv-trow-art" style="background:' + grad(e.title || '') + ';">' +
+            (e.cover_url ? '<img src="' + esc(img(e.cover_url, 96)) + '" loading="lazy" alt="" onerror="this.remove()">' : '') + '</div>' +
+          '<div class="wv-top-main">' +
+            '<div class="wv-trow-title">' + esc(e.title || 'Untitled') + '</div>' +
+            '<div class="wv-top-bar"><span style="width:' + pct + '%"></span></div>' +
+          '</div>' +
+          '<div class="wv-top-count">' + num(e.n) + '<span> play' + (e.n === 1 ? '' : 's') + '</span></div>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+
+  function rowHTML(t, i, S) {
     var isAlbum = t._type === 'album';
-    var href = isAlbum ? '/album?id=' + t.id : '/track?id=' + t.id;
-    return '<div class="wv-trow" onclick="navigate(\'' + href + '\')">' +
-      '<div class="wv-trow-num">' + (i + 1) + '</div>' +
-      '<div class="wv-trow-art" style="background:' + coverGradient(t.title || '') + ';">' + (t.cover_url ? '<img src="' + escHtml(t.cover_url) + '" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
-      '<div class="wv-trow-main"><div class="wv-trow-title">' + escHtml(t.title || 'Untitled') + '</div><div class="wv-trow-sub">' + (isAlbum ? 'Comp' : 'Edit') + (t.artist_name ? ' · ' + escHtml(t.artist_name) : '') + '</div></div>' +
-      (t.ia_url ? '<button class="wv-icon-btn" title="Play" onclick="event.stopPropagation();playHistoryAt(' + i + ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg></button>' : '<span class="wv-chip hide-sm">Comp</span>') +
+    var tl = S.map[t.id];
+    var when = tl && tl.last ? ago(tl.last) : '';
+    return '<div class="hr-row" role="link" tabindex="0" data-href="' + esc(hrefOf(t)) + '" data-i="' + i + '">' +
+      '<div class="art">' + cov(t.cover_url, t.title, 96) + '</div>' +
+      '<div class="mn"><div class="tt">' + esc(t.title || 'Untitled') + '</div><div class="sb">' + (isAlbum ? 'Comp' : 'Edit') + (badName(t.artist_name) ? '' : ' · ' + esc(t.artist_name)) + (when ? ' · ' + esc(when) : '') + '</div></div>' +
+      (tl && tl.n > 1 ? '<span class="pl" title="plays on this device">' + num(tl.n) + '&times;</span>' : '<span class="pl"></span>') +
+      (t.ia_url && !isAlbum ? '<button type="button" class="hr-play" data-play="' + i + '" aria-label="Play ' + esc(t.title || '') + '">' + I_PLAY + '</button>' :
+        (isAlbum ? '<button type="button" class="hr-play" data-comp="' + esc(t.id) + '" aria-label="Play comp ' + esc(t.title || '') + '">' + I_PLAY + '</button>' : '')) +
+      '<button type="button" class="hr-x" data-rm="' + esc(t.id) + '" aria-label="Remove ' + esc(t.title || 'this') + ' from history">' + I_X + '</button>' +
     '</div>';
-  }).join('') + '</div>';
-}
-function _playable() { return _hist().filter(function(t) { return t.id && t.ia_url && t._type !== 'album'; }); }
-window.playHistoryAt = function(i) {
-  var all = _hist().filter(function(t) { return t.id; }); var t = all[i]; if (!t || !t.ia_url) return;
-  var list = _playable(); var idx = list.findIndex(function(x) { return x.id === t.id; });
-  setPlayerQueue(list, idx); playQueueIndex(idx);
-};
-window.playHistory = function() { var list = _playable(); if (!list.length) return; setPlayerQueue(list, 0); playQueueIndex(0); };
-window.clearHistory = function() {
-  if (!confirm('clear your listening history on this device?')) return;
-  localStorage.removeItem('recently_played'); renderHistory();
-  if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
-};
-renderHistory();
+  }
+
+  function renderRecent(S, keepFocus) {
+    var el = $('hr-recent');
+    if (!el) return;
+    var items = hist();
+    if (!items.length) {
+      el.innerHTML = '<div class="hr-empty" style="margin-top:4px">' +
+        '<div class="ic">' + svg('M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H4zM17 15h3v5h-3z', 32, 1.8) + '</div>' +
+        '<h3>nothing here yet</h3>' +
+        '<p>play some comps and edits and your history and recap build up here. it all stays in this browser, nothing gets sent to wavernrs.</p>' +
+        '<div class="acts"><button type="button" class="wv-btn-play" data-nav="/browse">Browse</button><button type="button" class="wv-btn-ghost" data-nav="/charts">Charts</button></div>' +
+      '</div>';
+      return;
+    }
+    var q = H.q.trim().toLowerCase();
+    var shown = items.map(function (t, i) { return { t: t, i: i }; }).filter(function (x) {
+      return !q || String(x.t.title || '').toLowerCase().indexOf(q) >= 0 || String(x.t.artist_name || '').toLowerCase().indexOf(q) >= 0;
+    });
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var week = today - 6 * 86400000;
+    var groups = [['Today', []], ['This week', []], ['Earlier', []]];
+    shown.forEach(function (x) {
+      var tl = S.map[x.t.id];
+      var ts = tl && tl.last ? tl.last : 0;
+      (ts >= today ? groups[0][1] : ts >= week ? groups[1][1] : groups[2][1]).push(x);
+    });
+    var body = shown.length ? groups.filter(function (g) { return g[1].length; }).map(function (g) {
+      return '<div class="hr-group">' + g[0] + ' <span>' + g[1].length + '</span></div>' + g[1].map(function (x) { return rowHTML(x.t, x.i, S); }).join('');
+    }).join('') : '<div class="hr-none">nothing matches &ldquo;' + esc(H.q) + '&rdquo;</div>';
+    var head = $('hr-rec-head');
+    if (head && keepFocus) {
+      $('hr-rec-body').innerHTML = body;
+      $('hr-rec-count').textContent = shown.length + ' of ' + items.length;
+      return;
+    }
+    el.innerHTML = '<div class="hr-sec" id="hr-rec-head"><div><h2>Recently played</h2><div class="sub"><span id="hr-rec-count">' + items.length + ' ' + plural(items.length, 'release') + '</span> &middot; newest first</div></div>' +
+      '<label class="hr-filter">' + svg('M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4', 15, 2.2) + '<input class="wv-input" id="hr-q" type="search" placeholder="filter your history" aria-label="Filter your history" autocomplete="off" value="' + esc(H.q) + '"></label></div>' +
+      '<div id="hr-rec-body">' + body + '</div>' +
+      '<div class="hr-note">' + svg('M12 11v5M12 8h.01M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 13, 2.2) + 'your last 60 plays live only in this browser.</div>';
+  }
+
+  function renderAll() {
+    var S = H.S = summary();
+    renderHero(S);
+    renderRepeat();
+    renderTop();
+    renderRecent(S);
+    var items = hist();
+    var first = items.filter(function (t) { return t.cover_url; })[0];
+    if (first && typeof window.setPageBgImage === 'function') window.setPageBgImage(first.cover_url, first.title);
+    var pa = $('hr-playall'), cl = $('hr-clear');
+    var has = items.length > 0 || S.total > 0;
+    if (pa) pa.style.display = playable().length ? '' : 'none';
+    if (cl) cl.style.display = has ? '' : 'none';
+  }
+
+  function playable() { return hist().filter(function (t) { return t.ia_url && t._type !== 'album'; }); }
+  function playAt(i) {
+    var t = hist()[i];
+    if (!t || !t.ia_url) return;
+    var list = playable();
+    var idx = list.findIndex(function (x) { return x.id === t.id; });
+    if (idx < 0 || typeof setPlayerQueue !== 'function') return;
+    setPlayerQueue(list, idx); playQueueIndex(idx);
+  }
+  function removeItem(id) {
+    try {
+      var h = hist().filter(function (t) { return t.id !== id; });
+      localStorage.setItem('recently_played', JSON.stringify(h));
+      var tl = tally();
+      if (tl[id]) { delete tl[id]; localStorage.setItem('wv_play_tally', JSON.stringify(tl)); }
+    } catch (_) {}
+    if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
+    renderAll();
+    if (typeof wvToast === 'function') wvToast('removed from your history');
+  }
+  function clearAll() {
+    if (!confirm('clear your listening history and recap on this device?')) return;
+    try { localStorage.removeItem('recently_played'); localStorage.removeItem('wv_play_tally'); } catch (_) {}
+    H.q = '';
+    renderAll();
+    if (typeof window._sidebarLibRender === 'function') window._sidebarLibRender();
+  }
+
+  function loadImage(url, w) {
+    return new Promise(function (resolve) {
+      if (!url) return resolve(null);
+      var im = new Image(), done = false;
+      var to = setTimeout(function () { if (!done) { done = true; resolve(null); } }, 7000);
+      im.crossOrigin = 'anonymous';
+      im.onload = function () { if (!done) { done = true; clearTimeout(to); resolve(im); } };
+      im.onerror = function () { if (!done) { done = true; clearTimeout(to); resolve(null); } };
+      im.src = /^https?:/i.test(url) ? img(url, w || 640) : url;
+    });
+  }
+  function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  function fit(ctx, text, max) {
+    text = String(text || '');
+    if (ctx.measureText(text).width <= max) return text;
+    while (text.length > 1 && ctx.measureText(text + '…').width > max) text = text.slice(0, -1);
+    return text.trim() + '…';
+  }
+  function drawCover(ctx, im, seed, x, y, s, r) {
+    ctx.save(); rr(ctx, x, y, s, s, r); ctx.clip();
+    var c = typeof coverHues === 'function' ? coverHues(seed || '') : { h1: 262, s1: 60, l1: 40, h2: 220, s2: 60, l2: 25 };
+    var g = ctx.createLinearGradient(x, y, x + s, y + s);
+    g.addColorStop(0, 'hsl(' + c.h1 + ',' + c.s1 + '%,' + c.l1 + '%)'); g.addColorStop(1, 'hsl(' + c.h2 + ',' + c.s2 + '%,' + c.l2 + '%)');
+    ctx.fillStyle = g; ctx.fill();
+    if (im) { var iw = im.naturalWidth, ih = im.naturalHeight, sc = Math.max(s / iw, s / ih); try { ctx.drawImage(im, x + (s - iw * sc) / 2, y + (s - ih * sc) / 2, iw * sc, ih * sc); } catch (_) {} }
+    ctx.restore();
+  }
+  var FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif';
+  function drawCard(S) {
+    var W = 1080, Hh = 1920, X = 90;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = Hh;
+    var ctx = cv.getContext('2d');
+    var hue = H.hue || { h1: 262, h2: 222 };
+    var g = ctx.createLinearGradient(0, 0, W * .4, Hh);
+    g.addColorStop(0, 'hsl(' + hue.h1 + ',62%,30%)'); g.addColorStop(.55, 'hsl(' + hue.h2 + ',50%,14%)'); g.addColorStop(1, 'hsl(' + hue.h2 + ',40%,6%)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
+    var rg = ctx.createRadialGradient(W * .9, Hh * .08, 0, W * .9, Hh * .08, 700);
+    rg.addColorStop(0, 'hsla(' + ((hue.h1 + 40) % 360) + ',90%,65%,.32)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, Hh);
+    var top = S.top.slice(0, 5);
+    var user = (typeof getUser === 'function' && getUser()) || null;
+    return Promise.all([loadImage('/logo.png')].concat(top.map(function (t, i) { return loadImage(t.cover_url, i === 0 ? 640 : 320); }))).then(function (ims) {
+      var logo = ims[0], covers = ims.slice(1);
+      if (logo) { ctx.save(); rr(ctx, X, 96, 64, 64, 16); ctx.clip(); ctx.drawImage(logo, X, 96, 64, 64); ctx.restore(); }
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff'; ctx.font = '800 40px ' + FONT; ctx.fillText('wavernrs recap', X + (logo ? 84 : 0), 129);
+      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '700 30px ' + FONT; ctx.fillText('ALL TIME', W - X, 129); ctx.textAlign = 'left';
+      ctx.fillStyle = '#fff'; ctx.font = '900 70px ' + FONT;
+      ctx.fillText(fit(ctx, user && user.username ? '@' + user.username : 'my wavernrs recap', W - X * 2), X, 280);
+      ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.font = '600 32px ' + FONT;
+      ctx.fillText(num(S.total) + ' ' + plural(S.total, 'listen') + ' · ' + num(S.unique) + ' ' + plural(S.unique, 'release'), X, 348);
+      var y = 420, big = 590, gap = 20, sm = (big - gap) / 2, sx = X + big + gap;
+      if (top[0]) {
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24; rr(ctx, X, y, big, big, 28); ctx.fillStyle = '#000'; ctx.fill(); ctx.restore();
+        drawCover(ctx, covers[0], top[0].title, X, y, big, 28);
+      }
+      for (var k = 1; k < 3; k++) {
+        var yy = y + (k - 1) * (sm + gap);
+        if (top[k]) drawCover(ctx, covers[k], top[k].title, sx, yy, sm, 22);
+        else { ctx.fillStyle = 'rgba(255,255,255,.07)'; rr(ctx, sx, yy, sm, sm, 22); ctx.fill(); }
+      }
+      y += big + 66;
+      ctx.font = '800 28px ' + FONT; ctx.fillStyle = 'rgba(255,255,255,.62)'; ctx.fillText('MOST PLAYED', X, y);
+      y += 60;
+      top.forEach(function (t, j) {
+        var right = num(t.n) + '×';
+        ctx.font = '800 32px ' + FONT; var rw = ctx.measureText(right).width + 24;
+        ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.font = '900 38px ' + FONT; ctx.fillText(String(j + 1), X, y);
+        ctx.fillStyle = '#fff'; ctx.font = (j === 0 ? '900 44px ' : '800 40px ') + FONT; ctx.fillText(fit(ctx, t.title || 'Untitled', W - X * 2 - 60 - rw), X + 60, y);
+        ctx.font = '800 32px ' + FONT; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.textAlign = 'right'; ctx.fillText(right, W - X, y); ctx.textAlign = 'left';
+        y += 64;
+      });
+      var stats = [{ k: 'listens', v: num(S.total) }, { k: 'releases', v: num(S.unique) }];
+      if (S.creators[0]) stats.push({ k: 'top creator', v: S.creators[0].name });
+      stats.push({ k: 'comps played', v: num(S.comps) });
+      var gw = (W - X * 2 - 24) / 2, gh = 128, gy0 = Hh - 150 - 2 * gh - 22;
+      stats.slice(0, 4).forEach(function (st, j) {
+        var gx = X + (j % 2) * (gw + 24), gy = gy0 + Math.floor(j / 2) * (gh + 22);
+        ctx.fillStyle = 'rgba(255,255,255,.1)'; rr(ctx, gx, gy, gw, gh, 26); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.62)'; ctx.font = '700 26px ' + FONT; ctx.fillText(st.k.toUpperCase(), gx + 30, gy + 40);
+        ctx.fillStyle = '#fff'; ctx.font = '900 50px ' + FONT; ctx.fillText(fit(ctx, st.v, gw - 60), gx + 30, gy + 92);
+      });
+      ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '700 28px ' + FONT;
+      ctx.fillText('wavernrs.com/wrapped', W / 2, Hh - 72); ctx.textAlign = 'left';
+      return cv;
+    });
+  }
+  function canShare() {
+    try { return !!(H.cardBlob && navigator.canShare && navigator.share && navigator.canShare({ files: [new File([H.cardBlob], 'wavernrs-recap.png', { type: 'image/png' })] })); } catch (_) { return false; }
+  }
+  function closeModal() {
+    var m = $('hr-modal');
+    if (m) m.remove();
+    document.removeEventListener('keydown', onModalKey, true);
+    if (H.lastFocus && H.lastFocus.focus) try { H.lastFocus.focus(); } catch (_) {}
+  }
+  function onModalKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(); }
+    else if (e.key === 'Tab') {
+      var m = $('hr-modal'); if (!m) return;
+      var f = m.querySelectorAll('button:not([disabled])'); if (!f.length) return;
+      var a = f[0], z = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
+      else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
+    }
+  }
+  function openShare() {
+    closeModal();
+    H.lastFocus = document.activeElement;
+    var m = document.createElement('div');
+    m.className = 'hr-modal'; m.id = 'hr-modal';
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Your recap card');
+    m.innerHTML = '<div class="pn"><div class="hd"><b>Your recap card</b><button type="button" class="hr-x" style="opacity:1" data-close aria-label="Close">' + I_X + '</button></div>' +
+      '<div class="pv" id="hr-card-pv"><div class="ph">drawing your card...</div></div>' +
+      '<div class="ft"><button type="button" class="hr-mbtn pri" id="hr-card-save" disabled>' + svg('M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14', 16, 2.2) + 'Save image</button>' +
+      '<button type="button" class="hr-mbtn" id="hr-card-share" disabled>' + svg('M12 15V4m0 0L8 8m4-4l4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7', 16, 2.2) + 'Share</button></div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function (e) {
+      if (e.target === m || (e.target.closest && e.target.closest('[data-close]'))) return closeModal();
+      if (e.target.closest && e.target.closest('#hr-card-save')) {
+        if (!H.cardURL) return;
+        var a = document.createElement('a'); a.href = H.cardURL; a.download = 'wavernrs-recap.png'; document.body.appendChild(a); a.click(); a.remove();
+        if (typeof wvToast === 'function') wvToast('saved your recap card');
+      }
+      if (e.target.closest && e.target.closest('#hr-card-share')) {
+        if (canShare()) navigator.share({ files: [new File([H.cardBlob], 'wavernrs-recap.png', { type: 'image/png' })], title: 'my wavernrs recap' }).catch(function () {});
+        else {
+          var url = location.origin + '/wrapped';
+          try { navigator.clipboard.writeText(url).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }, function () {}); } catch (_) {}
+        }
+      }
+    });
+    document.addEventListener('keydown', onModalKey, true);
+    var cb = m.querySelector('[data-close]'); if (cb) cb.focus();
+    drawCard(H.S || summary()).then(function (cv) {
+      cv.toBlob(function (b) {
+        if (!b || !$('hr-modal')) return;
+        if (H.cardURL) try { URL.revokeObjectURL(H.cardURL); } catch (_) {}
+        H.cardBlob = b; H.cardURL = URL.createObjectURL(b);
+        var pv = $('hr-card-pv'); if (pv) pv.innerHTML = '<img src="' + H.cardURL + '" alt="Your recap card">';
+        var sv = $('hr-card-save'), sh = $('hr-card-share');
+        if (sv) sv.disabled = false;
+        if (sh) { sh.disabled = false; if (!canShare()) sh.innerHTML = svg('M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1', 16, 2.2) + 'Copy link'; }
+      }, 'image/png');
+    }).catch(function () { var pv = $('hr-card-pv'); if (pv) pv.innerHTML = '<div class="ph">could not draw your card</div>'; });
+  }
+
+  function go(href) { if (typeof navigate === 'function') navigate(href); else location.href = href; }
+  var view = document.getElementById('view');
+  function onClick(e) {
+    var t = e.target;
+    if (!t.closest) return;
+    var b;
+    if ((b = t.closest('[data-rm]'))) { e.stopPropagation(); return removeItem(b.getAttribute('data-rm')); }
+    if ((b = t.closest('[data-play]'))) { e.stopPropagation(); return playAt(Number(b.getAttribute('data-play'))); }
+    if ((b = t.closest('[data-comp]'))) { e.stopPropagation(); if (typeof window.playCompById === 'function') window.playCompById(b.getAttribute('data-comp')); return; }
+    if (t.closest('#hr-share')) return openShare();
+    if (t.closest('#hr-playall')) { var list = playable(); if (list.length && typeof setPlayerQueue === 'function') { setPlayerQueue(list, 0); playQueueIndex(0); } return; }
+    if (t.closest('#hr-clear')) return clearAll();
+    if ((b = t.closest('[data-nav]'))) { e.preventDefault(); return go(b.getAttribute('data-nav')); }
+    if ((b = t.closest('[data-href]'))) return go(b.getAttribute('data-href'));
+  }
+  function onKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var t = e.target;
+    if (!t || !t.getAttribute || !t.getAttribute('data-href') || t.tagName === 'BUTTON' || t.tagName === 'A') return;
+    e.preventDefault();
+    go(t.getAttribute('data-href'));
+  }
+  var qTimer = null;
+  function onInput(e) {
+    if (!e.target || e.target.id !== 'hr-q') return;
+    H.q = e.target.value || '';
+    clearTimeout(qTimer);
+    qTimer = setTimeout(function () { renderRecent(H.S || summary(), true); }, 90);
+  }
+  function onStorage(e) { if (e.key === 'recently_played' || e.key === 'wv_play_tally') renderAll(); }
+  if (view) { view.addEventListener('click', onClick); view.addEventListener('keydown', onKey); view.addEventListener('input', onInput); }
+  window.addEventListener('storage', onStorage);
+  H.teardown = function () {
+    if (!H.alive) return;
+    H.alive = false;
+    clearTimeout(qTimer);
+    window.removeEventListener('storage', onStorage);
+    if (view) { view.removeEventListener('click', onClick); view.removeEventListener('keydown', onKey); view.removeEventListener('input', onInput); }
+    closeModal();
+    if (H.cardURL) { var u = H.cardURL; setTimeout(function () { try { URL.revokeObjectURL(u); } catch (_) {} }, 1000); }
+  };
+  window._pageCleanup.push(H.teardown);
+  renderAll();
+})();
 </script>
 </body>
 </html>

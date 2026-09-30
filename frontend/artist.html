@@ -7,11 +7,129 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style id="ep-css">
+    .ep-wrap { padding: 20px 0 48px; }
+    .ep-hero { position: relative; border-radius: 16px; overflow: hidden; min-height: 300px; display: flex; align-items: flex-end; background: var(--ep-bg, var(--surface-2)); isolation: isolate; }
+    .ep-hero-banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
+    .ep-hero-glow { position: absolute; inset: 0; z-index: -1; background: radial-gradient(120% 90% at 85% 0%, rgba(255,255,255,.14), transparent 55%), linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 100%); }
+    .ep-hero.has-banner .ep-hero-glow { background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.25) 40%, rgba(0,0,0,.7) 100%); }
+    .ep-hero-in { display: flex; align-items: flex-end; gap: 26px; padding: 28px; width: 100%; min-width: 0; }
+    .ep-av { width: 176px; height: 176px; border-radius: 50%; flex: none; position: relative; overflow: hidden; box-shadow: 0 16px 48px rgba(0,0,0,.45); display: grid; place-items: center; font-size: 64px; font-weight: 900; color: rgba(255,255,255,.92); }
+    .ep-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ep-hero-txt { min-width: 0; flex: 1; color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.25); padding-bottom: 4px; }
+    .ep-kind { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; }
+    .ep-ver { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px 3px 4px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 11.5px; font-weight: 800; letter-spacing: .03em; text-shadow: none; }
+    .ep-ver i { width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; display: grid; place-items: center; font-style: normal; }
+    .ep-name { font-size: clamp(34px, 6.4vw, 84px); font-weight: 900; letter-spacing: -0.045em; line-height: 0.98; margin: 8px 0 12px; overflow-wrap: anywhere; }
+    .ep-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,.86); }
+    .ep-stats b { color: #fff; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .ep-stats span + span::before { content: '·'; margin-right: 14px; opacity: .6; }
+
+    .ep-actions { display: flex; align-items: center; gap: 12px; padding: 20px 4px 6px; flex-wrap: wrap; }
+    .ep-play { width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 22px rgba(0,0,0,.25); transition: transform .15s var(--ease), filter .15s; }
+    .ep-play:hover { transform: scale(1.05); filter: brightness(1.06); }
+    .ep-ib { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: color .15s, background .15s; }
+    .ep-ib:hover { color: var(--text); background: var(--surface-2); }
+    .ep-pill { min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; transition: border-color .15s, transform .15s; }
+    .ep-pill:hover { border-color: var(--text); }
+    .ep-pill.on { border-color: var(--brand); color: var(--brand); }
+    .ep-play:focus-visible, .ep-ib:focus-visible, .ep-pill:focus-visible, .ep-row:focus-visible, .ep-rowplay:focus-visible, .ep-tabs button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    .ep-about { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 4px 4px 0; font-size: 13.5px; color: var(--text-2); }
+    .ep-bio { font-size: 14.5px; color: var(--text-2); line-height: 1.65; margin: 12px 4px 0; max-width: 680px; white-space: pre-line; overflow-wrap: anywhere; }
+    .ep-about a { color: var(--brand); text-decoration: none; font-weight: 600; }
+    .ep-about span { display: inline-flex; align-items: center; gap: 5px; }
+
+    .ep-h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 0; color: var(--text); }
+    .ep-sec { margin-top: 34px; }
+    .ep-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .ep-feature { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 28px; margin-top: 30px; }
+
+    .ep-rows { display: flex; flex-direction: column; }
+    .ep-row { display: grid; grid-template-columns: 28px 48px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 7px 10px; border-radius: 8px; cursor: pointer; text-decoration: none; color: inherit; }
+    .ep-row:hover { background: var(--surface-2); }
+    .ep-row-n { position: relative; width: 28px; height: 28px; display: grid; place-items: center; font-size: 15px; font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .ep-rowplay { position: absolute; inset: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; opacity: 0; }
+    .ep-row:hover .ep-rowplay, .ep-rowplay:focus-visible { opacity: 1; }
+    .ep-row:hover .ep-row-n > span { opacity: 0; }
+    .ep-row-art { width: 48px; height: 48px; border-radius: 6px; overflow: hidden; position: relative; }
+    .ep-row-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ep-row-t { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ep-row-s { font-size: 12.5px; color: var(--text-3); margin-top: 2px; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+    .ep-row-p { font-size: 13.5px; color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+    .ep-chip { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--surface-3); color: var(--text-2); flex: none; }
+
+    .ep-latest { display: flex; flex-direction: column; background: var(--surface); border-radius: 14px; padding: 16px; gap: 14px; position: relative; cursor: pointer; transition: background .2s; min-width: 0; }
+    .ep-latest:hover { background: var(--surface-hover); }
+    .ep-latest-top { display: flex; gap: 16px; align-items: center; min-width: 0; }
+    .ep-latest-art { width: 132px; height: 132px; border-radius: 10px; overflow: hidden; position: relative; flex: none; box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+    .ep-latest-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ep-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .ep-badge { font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 3px 8px; border-radius: 999px; }
+    .ep-badge.up { background: #fbbf24; color: #1a1300; }
+    .ep-badge.draft { border: 1px dashed var(--text-3); color: var(--text-2); }
+    .ep-badge.new { background: var(--brand); color: var(--on-brand); }
+    .ep-latest-t { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin: 6px 0 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .ep-latest-s { font-size: 13px; color: var(--text-2); }
+    .ep-latest-play { position: absolute; right: 16px; bottom: 16px; width: 48px; height: 48px; }
+
+    .ep-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .ep-tabs .wv-seg button { min-height: 34px; }
+    .ep-tabs .wv-seg button span { opacity: .6; margin-left: 4px; font-weight: 600; }
+    .ep-grid { padding-bottom: 8px; }
+    .ep-card-sub { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; }
+
+    .ep-rail { display: grid; grid-auto-flow: column; grid-auto-columns: 152px; gap: 4px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 0 6px; scroll-snap-type: x proximity; }
+    .ep-rail::-webkit-scrollbar { display: none; }
+    .ep-rail .wv-artist-tile { scroll-snap-align: start; text-decoration: none; color: inherit; display: block; }
+
+    .ep-skel { background: var(--surface-2); border-radius: 10px; position: relative; overflow: hidden; }
+    .ep-skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 6%, transparent), transparent); animation: ep-shine 1.3s infinite; }
+    @keyframes ep-shine { to { transform: translateX(100%); } }
+    .ep-error { text-align: center; padding: 72px 20px; }
+    .ep-error h1 { font-size: 22px; font-weight: 800; margin: 0 0 6px; color: var(--text); }
+    .ep-error p { color: var(--text-2); font-size: 14px; margin: 0 0 20px; }
+
+    @media (max-width: 900px) {
+      .ep-feature { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    }
+    @media (max-width: 640px) {
+      .ep-wrap { padding-top: 10px; }
+      .ep-hero { min-height: 0; border-radius: 14px; }
+      .ep-hero-in { flex-direction: column; align-items: flex-start; gap: 14px; padding: 72px 18px 20px; }
+      .ep-av { width: 108px; height: 108px; font-size: 42px; }
+      .ep-name { margin: 6px 0 10px; }
+      .ep-stats { font-size: 13px; gap: 2px 10px; }
+      .ep-stats span + span::before { content: none; }
+      .ep-stats { gap: 2px 14px; }
+      .ep-row { grid-template-columns: 22px 44px minmax(0, 1fr) auto; gap: 10px; padding: 6px 4px; }
+      .ep-row-art { width: 44px; height: 44px; }
+      .ep-rowplay { opacity: 1; color: var(--text-2); }
+      .ep-row-n > span { opacity: 0; }
+      .ep-latest-art { width: 104px; height: 104px; }
+      .ep-latest-t { font-size: 18px; }
+      .ep-rail { grid-auto-columns: 120px; margin: 0 -4px; }
+      .ep-tabs { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ep-skel::after { animation: none; }
+      .ep-play, .ep-pill, .ep-latest { transition: none; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
-  <div class="loading" style="padding:80px;"><div class="spinner"></div></div>
+  <div class="ep-wrap" aria-busy="true">
+    <div class="ep-hero" style="min-height:300px;"><div class="ep-hero-in"><div class="ep-av ep-skel" style="background:var(--surface-3);"></div><div style="flex:1;"><div class="ep-skel" style="height:14px;width:90px;background:var(--surface-3);"></div><div class="ep-skel" style="height:56px;width:min(420px,80%);margin:14px 0;background:var(--surface-3);"></div><div class="ep-skel" style="height:14px;width:260px;max-width:90%;background:var(--surface-3);"></div></div></div></div>
+    <div class="ep-actions"><div class="ep-skel" style="width:56px;height:56px;border-radius:50%;"></div><div class="ep-skel" style="width:96px;height:40px;border-radius:999px;"></div></div>
+    <div class="wv-comp-grid wv-comp-grid-4" style="margin-top:30px;">
+      <div><div class="ep-skel" style="aspect-ratio:1;"></div><div class="ep-skel" style="height:12px;width:70%;margin-top:10px;"></div></div>
+      <div><div class="ep-skel" style="aspect-ratio:1;"></div><div class="ep-skel" style="height:12px;width:60%;margin-top:10px;"></div></div>
+      <div><div class="ep-skel" style="aspect-ratio:1;"></div><div class="ep-skel" style="height:12px;width:75%;margin-top:10px;"></div></div>
+      <div><div class="ep-skel" style="aspect-ratio:1;"></div><div class="ep-skel" style="height:12px;width:55%;margin-top:10px;"></div></div>
+    </div>
+  </div>
 </div>
 
 <script src="/js/api.js?v=6288d60cd337"></script>
@@ -23,17 +141,61 @@
   initPlayer();
 
   var artistId = new URLSearchParams(location.search).get('id');
-  if (!artistId || artistId === 'null' || artistId === 'undefined') navigate('/index');
-
   var artist = null;
   var uploads = [];
   var isFollowing = false;
   var followerCount = 0;
+  var _epTab = 'all';
+  var _epSort = 'new';
+  var _epEra = '';
+  var _epEraNames = {};
+  var _epGen = (window._epGen || 0) + 1;
+  window._epGen = _epGen;
+
+  var EP_ICON = {
+    play: '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
+    playSm: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
+    shuffle: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>',
+    share: '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>',
+    pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    link: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
+    check: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
+  };
+
+  function epNum(n) {
+    n = Number(n) || 0;
+    return n < 10000 ? n.toLocaleString('en-US') : fmtNum(n);
+  }
+
+  function epImg(url, px) {
+    return typeof wvImg === 'function' ? wvImg(url, px) : url;
+  }
+
+  function epDateOf(u) {
+    return new Date(u.original_date || u.created_at || 0);
+  }
+
+  function epIsEdit(u) {
+    return u._type === 'track' || Number(u.track_count) === 1;
+  }
+
+  function epIsUpcoming(u) {
+    return u._type === 'album' && u.release_status === 'upcoming' && u.release_at && new Date(u.release_at) > new Date();
+  }
+
+  function epEraOf(u) {
+    return (u.era_tag && u.era_tag.name) || _epEraNames[u.era_tag_id] || '';
+  }
+
+  function epTotalPlays() {
+    if (artist && typeof artist.total_plays === 'number') return artist.total_plays;
+    return uploads.reduce(function (s, u) { return s + (u.collab ? 0 : (u.play_count || 0)); }, 0);
+  }
 
   // Play the artist's whole catalogue: standalone edits plus every comp track.
   async function artistPlayAll(shuffle) {
     var singles = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; });
-    var albums = uploads.filter(function (u) { return u._type === 'album'; });
+    var albums = uploads.filter(function (u) { return u._type === 'album' && u.release_status !== 'draft' && !epIsUpcoming(u); });
     if (!singles.length && !albums.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
     if (typeof wvToast === 'function') wvToast('setting up the queue...');
     var who = artist.display_name || '';
@@ -59,213 +221,391 @@
   function artistPlayTrack(id) {
     var t = uploads.find(function (u) { return u.id === id; });
     if (!t || !t.ia_url) { if (typeof wvToast === 'function') wvToast('that edit has no audio yet'); return; }
-    var idx = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; }).findIndex(function (u) { return u.id === id; });
-    var list = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; }).map(function (u) {
+    var playable = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; });
+    var idx = playable.findIndex(function (u) { return u.id === id; });
+    var list = playable.map(function (u) {
       return { id: u.id, title: u.title, ia_url: u.ia_url, cover_url: u.cover_url || null, artist_name: artist.display_name || '', artist_id: artistId };
     });
     setPlayerQueue(list, Math.max(0, idx));
     playQueueIndex(Math.max(0, idx));
   }
 
+  function epPlayItem(type, id) {
+    if (type === 'album') { if (typeof playCompById === 'function') playCompById(id); }
+    else artistPlayTrack(id);
+  }
+
+  function epError(title, sub, retry) {
+    var v = document.getElementById('view');
+    if (!v || window._epGen !== _epGen) return;
+    v.innerHTML = '<div class="ep-error">' +
+      '<h1>' + escHtml(title) + '</h1><p>' + escHtml(sub) + '</p>' +
+      (retry ? '<button class="ep-pill" onclick="epRetry()">Try again</button> ' : '') +
+      '<a class="ep-pill" href="/artists" style="margin-left:6px;">Browse editors</a>' +
+    '</div>';
+  }
+
+  function epRetry() {
+    var v = document.getElementById('view');
+    if (v) v.innerHTML = '<div class="ep-wrap"><div class="ep-hero ep-skel" style="min-height:300px;"></div></div>';
+    loadPage();
+  }
+
   async function loadPage() {
+    var gen = _epGen;
+    var results;
     try {
-      var results = await Promise.all([
+      results = await Promise.all([
         api('/artists/' + artistId),
-        api('/artists/' + artistId + '/tracks'),
-        api('/albums/by-artist/' + artistId).catch(function() { return []; }),
+        api('/artists/' + artistId + '/tracks').catch(function () { return []; }),
+        api('/albums/by-artist/' + artistId).catch(function () { return []; }),
+        api('/artists/' + artistId + '/follow').catch(function () { return null; }),
       ]);
-      artist = results[0];
-      var allTracks = results[1];
-      var allAlbums = results[2];
-
-      uploads = allTracks.map(function(t) { return Object.assign({}, t, { _type: 'track' }); })
-        .concat(allAlbums.map(function(a) { return Object.assign({}, a, { _type: 'album' }); }))
-        .sort(function(a, b) { return new Date(b.original_date || b.created_at) - new Date(a.original_date || a.created_at); });
-
-      try {
-        var followData = await api('/artists/' + artistId + '/follow');
-        isFollowing = followData.following || false;
-        followerCount = followData.follower_count || 0;
-      } catch (_) {}
-
-      document.title = (artist.display_name || 'Artist') + ' — wavernrs';
-
-      // Blurred profile image as the page background (like the home hero).
-      if (typeof window.setPageBgImage === 'function') {
-        window.setPageBgImage(artist.profile_image_url || artist.banner_url || '');
-      }
-
-      render();
     } catch (err) {
-      document.getElementById('view').innerHTML =
-        '<div class="empty-state"><div class="empty-title">couldnt find this artist</div></div>';
+      if (gen !== window._epGen) return;
+      var msg = String((err && err.message) || '');
+      if (/not found|404/i.test(msg)) epError('this editor doesnt exist', 'the link might be old or the profile was removed');
+      else epError('couldnt load this editor', msg || 'something went wrong', true);
+      return;
     }
+    if (gen !== window._epGen) return;
+    artist = results[0];
+    if (!artist || !artist.id) { epError('this editor doesnt exist', 'the link might be old or the profile was removed'); return; }
+    uploads = (results[1] || []).map(function (t) { return Object.assign({}, t, { _type: 'track' }); })
+      .concat((results[2] || []).map(function (a) { return Object.assign({}, a, { _type: 'album' }); }))
+      .sort(function (a, b) { return epDateOf(b) - epDateOf(a); });
+
+    var fd = results[3];
+    isFollowing = !!(fd && fd.following);
+    var fc = fd && typeof fd.follower_count === 'number' ? fd.follower_count : null;
+    followerCount = (fc == null || (fc === 0 && !isFollowing && (artist.follower_count || 0) > 0)) ? (artist.follower_count || 0) : fc;
+
+    document.title = (artist.display_name || 'Editor') + ' — wavernrs';
+    if (typeof window.setPageBgImage === 'function') {
+      window.setPageBgImage(artist.profile_image_url || artist.banner_url || '', artist.display_name || '');
+    }
+    render();
   }
 
   async function toggleFollow() {
-    if (!isLoggedIn()) { location.href = '/login'; return; }
+    if (!isLoggedIn()) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
+    var btn = document.getElementById('follow-btn');
+    if (btn) btn.disabled = true;
     try {
       var res = await api('/artists/' + artistId + '/follow', { method: 'POST' });
-      isFollowing = res.following;
-      followerCount = res.follower_count;
-      var btn = document.getElementById('follow-btn');
+      isFollowing = !!res.following;
+      if (typeof res.follower_count === 'number') followerCount = res.follower_count;
       if (btn) {
         btn.textContent = isFollowing ? 'Following' : 'Follow';
-        btn.className = 'btn ' + (isFollowing ? 'btn-secondary' : 'btn-primary') + ' btn-sm';
+        btn.classList.toggle('on', isFollowing);
+        btn.setAttribute('aria-pressed', String(isFollowing));
       }
       var countEl = document.getElementById('follower-count');
-      if (countEl) countEl.textContent = fmtNum(followerCount);
-    } catch (err) { alert(err.message); }
+      if (countEl) countEl.textContent = epNum(followerCount);
+      var lbl = document.getElementById('follower-label');
+      if (lbl) lbl.textContent = followerCount === 1 ? ' follower' : ' followers';
+      if (typeof wvToast === 'function') wvToast(isFollowing ? 'following ' + (artist.display_name || 'them') : 'unfollowed');
+    } catch (err) {
+      if (typeof wvToast === 'function') wvToast(err.message || 'couldnt do that', 'error'); else alert(err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
-  async function render() {
+  async function shareArtist() {
+    if (!artist) return;
+    var url = 'https://www.wavernrs.com/artist?id=' + encodeURIComponent(artist.id);
+    if (window.wvShare && typeof window.wvShare === 'function') {
+      try { window.wvShare({ kind: 'artist', id: artist.id, title: artist.display_name || 'editor', artist: 'editor on wavernrs', cover: artist.profile_image_url || '' }); return; } catch (_) {}
+    }
+    if (navigator.share) {
+      try { await navigator.share({ title: (artist.display_name || 'editor') + ' on wavernrs', url: url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      if (typeof wvToast === 'function') wvToast('profile link copied');
+    } catch (_) {
+      if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error');
+    }
+  }
+
+  function render() {
+    var v = document.getElementById('view');
+    if (!v || !artist) return;
     var me = null;
     try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
     var isOwner = !!(me && artist.user_id === me.id);
-    var totalPlays = uploads.filter(function(u) { return u._type === 'track'; })
-      .reduce(function(sum, t) { return sum + (t.play_count || 0); }, 0);
+    var name = artist.display_name || 'Unknown';
+    var own = uploads.filter(function (u) { return !u.collab; });
+    var releases = typeof artist.release_count === 'number' ? artist.release_count : own.length;
+    var joinedRaw = (artist.users && artist.users.created_at) || artist.created_at;
+    var joined = joinedRaw ? new Date(joinedRaw) : null;
+    var hues = coverHues(name);
+    var bg = 'linear-gradient(135deg, hsl(' + hues.h1 + ',' + hues.s1 + '%,' + Math.min(hues.l1, 40) + '%) 0%, hsl(' + hues.h2 + ',' + hues.s2 + '%,' + Math.min(hues.l2, 22) + '%) 100%)';
+    var hasBanner = /^https?:\/\//i.test(String(artist.banner_url || ''));
+    var website = /^https?:\/\//i.test(String(artist.website || '')) ? artist.website : '';
 
-    var badges = await getBadgeData().catch(function() { return { verified_artists: [] }; });
-    var isVerified = badges.verified_artists && badges.verified_artists.indexOf(artist.id) !== -1;
-    var verifiedBadge = isVerified ? '<span class="wv-verified-icon" title="verified artist" style="margin-left:6px;width:18px;height:18px;font-size:11px;">✓</span>' : '';
-    var verifiedPill = isVerified ? '<span class="wv-badge-pill wv-badge-verified-pill" style="margin-left:6px;">✓ Verified Artist</span>' : '';
-
-    var avatarBg = coverGradient(artist.display_name || '');
-    var avatarInner = artist.profile_image_url
-      ? '<img src="' + escHtml(artist.profile_image_url) + '" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" onerror="this.style.opacity=0">'
-      : '<span style="font-size:48px;font-weight:800;color:rgba(255,255,255,0.9);">' + escHtml((artist.display_name || '?')[0].toUpperCase()) + '</span>';
-
-    var html =
-      '<div style="padding:28px 0 0;">' +
-        (artist.banner_url
-          ? '<div style="width:100%;height:180px;border-radius:20px;overflow:hidden;margin-bottom:-60px;position:relative;">' +
-              '<img src="' + escHtml(artist.banner_url) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.closest(\'div\').remove()">' +
-              '<div aria-hidden style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,rgba(0,0,0,0.5));"></div>' +
-            '</div>'
-          : '') +
-
-        '<div class="wv-art-hero" style="display:flex;align-items:flex-end;gap:24px;padding:0 4px;margin-bottom:20px;flex-wrap:wrap;position:relative;z-index:1;">' +
-          '<div class="wv-art-avatar" style="width:110px;height:110px;border-radius:50%;background:' + (artist.profile_image_url ? 'var(--surface-2)' : avatarBg) + ';flex-shrink:0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.25);">' +
-            avatarInner +
+    var html = '<div class="ep-wrap">' +
+      '<section class="ep-hero' + (hasBanner ? ' has-banner' : '') + '" id="ep-hero" style="--ep-bg:' + bg + ';" aria-label="' + escHtml(name) + '">' +
+        (hasBanner ? '<img class="ep-hero-banner" src="' + escHtml(typeof wvImg === 'function' ? wvImg(artist.banner_url, 1280, { square: false }) : artist.banner_url) + '" alt="" onerror="this.remove()">' : '') +
+        '<div class="ep-hero-glow" aria-hidden="true"></div>' +
+        '<div class="ep-hero-in">' +
+          '<div class="ep-av" style="background:' + coverGradient(name) + ';">' + escHtml((name[0] || '?').toUpperCase()) +
+            (artist.profile_image_url ? '<img src="' + escHtml(epImg(artist.profile_image_url, 320)) + '" alt="" onerror="this.remove()">' : '') +
           '</div>' +
-          '<div style="flex:1;min-width:0;padding-bottom:4px;">' +
-            '<div class="wv-art-name" style="font-size:28px;font-weight:800;letter-spacing:-0.04em;line-height:1.1;margin-bottom:6px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;"><span data-wv-uid="' + escHtml(artist.user_id || '') + '" data-wv-nocolor="1">' + escHtml(artist.display_name || 'Unknown') + '</span>' + verifiedPill + '</div>' +
-            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
-              '<button class="btn btn-primary btn-sm" onclick="artistPlayAll(false)">' +
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:5px;"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>Play all</button>' +
-              '<button class="btn btn-secondary btn-sm" onclick="artistPlayAll(true)">' +
-                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:5px;"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>Shuffle</button>' +
-              (isOwner
-                ? '<a href="/dashboard" class="btn btn-secondary btn-sm">Manage music</a>'
-                : '<button class="btn ' + (isFollowing ? 'btn-secondary' : 'btn-primary') + ' btn-sm" id="follow-btn" onclick="toggleFollow()">' + (isFollowing ? 'Following' : 'Follow') + '</button>') +
+          '<div class="ep-hero-txt">' +
+            '<div class="ep-kind"><span id="ep-ver-slot"></span><span>Editor</span></div>' +
+            '<h1 class="ep-name"><span data-wv-uid="' + escHtml(artist.user_id || '') + '" data-wv-nocolor="1">' + escHtml(name) + '</span></h1>' +
+            '<div class="ep-stats">' +
+              '<span><b>' + epNum(epTotalPlays()) + '</b> plays</span>' +
+              '<span><b id="follower-count">' + epNum(followerCount) + '</b><span id="follower-label">' + (followerCount === 1 ? ' follower' : ' followers') + '</span></span>' +
+              '<span><b>' + epNum(releases) + '</b> release' + (releases === 1 ? '' : 's') + '</span>' +
+              (joined && !isNaN(joined) ? '<span>joined ' + escHtml(joined.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })) + '</span>' : '') +
             '</div>' +
           '</div>' +
         '</div>' +
+      '</section>' +
 
-        (artist.bio ? '<p style="font-size:14px;color:var(--text-2);line-height:1.65;margin:0 0 16px;max-width:560px;">' + escHtml(artist.bio) + '</p>' : '') +
+      '<div class="ep-actions">' +
+        '<button class="ep-play" onclick="artistPlayAll(false)" aria-label="Play all by ' + escHtml(name) + '" title="Play all">' + EP_ICON.play + '</button>' +
+        '<button class="ep-ib" onclick="artistPlayAll(true)" aria-label="Shuffle" title="Shuffle">' + EP_ICON.shuffle + '</button>' +
+        (isOwner
+          ? '<a href="/dashboard" class="ep-pill">Open studio</a>'
+          : '<button class="ep-pill' + (isFollowing ? ' on' : '') + '" id="follow-btn" aria-pressed="' + isFollowing + '" onclick="toggleFollow()">' + (isFollowing ? 'Following' : 'Follow') + '</button>') +
+        '<button class="ep-ib" onclick="shareArtist()" aria-label="Share profile" title="Share">' + EP_ICON.share + '</button>' +
+      '</div>' +
 
-        '<div class="wv-art-stats" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:28px;font-size:13.5px;color:var(--text-2);">' +
-          '<span><strong style="color:var(--text);">' + uploads.length + '</strong> uploads</span>' +
-          '<span><strong style="color:var(--text);">' + fmtNum(totalPlays) + '</strong> total plays</span>' +
-          '<span><strong style="color:var(--text);" id="follower-count">' + fmtNum(followerCount) + '</strong> followers</span>' +
-          (artist.location ? '<span>📍 ' + escHtml(artist.location) + '</span>' : '') +
-          (/^https?:\/\//i.test(String(artist.website || '')) ? '<span><a href="' + escHtml(artist.website) + '" target="_blank" rel="noopener noreferrer" style="color:var(--brand);">Website ↗</a></span>' : '') +
-        '</div>' +
+      (artist.bio ? '<p class="ep-bio">' + escHtml(artist.bio) + '</p>' : '') +
+      ((artist.location || website) ? '<div class="ep-about" style="margin-top:8px;">' +
+        (artist.location ? '<span>' + EP_ICON.pin + escHtml(artist.location) + '</span>' : '') +
+        (website ? '<span>' + EP_ICON.link + '<a href="' + escHtml(website) + '" target="_blank" rel="noopener noreferrer">' + escHtml(website.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').slice(0, 40)) + '</a></span>' : '') +
+      '</div>' : '') +
 
-        '<div id="art-eras" class="art-eras"></div>' +
-        '<div id="uploads-empty"></div>' +
-        '<div id="comps-section" style="display:none;"><h2 class="wv-section-title">Comps</h2><div id="comps-list"></div></div>' +
-        '<div id="edits-section" style="display:none;"><h2 class="wv-section-title">Edits</h2><div id="edits-list"></div></div>' +
-      '</div>';
+      '<div class="ep-feature" id="ep-feature"></div>' +
 
-    document.getElementById('view').innerHTML = html;
-    var isEdit = function(u) { return u._type === 'track' || Number(u.track_count) === 1; };
-    var comps = uploads.filter(function(u) { return !isEdit(u); });
-    var edits = uploads.filter(isEdit);
-    if (!uploads.length) document.getElementById('uploads-empty').innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><div class="empty-title">no uploads yet</div></div>';
-    if (comps.length) { document.getElementById('comps-section').style.display = ''; renderUploads(comps, 'comps-list'); }
-    if (edits.length) { document.getElementById('edits-section').style.display = ''; renderUploads(edits, 'edits-list'); }
-    renderEraChips(comps, edits);
-  }
+      '<section class="ep-sec" aria-labelledby="ep-disco-title">' +
+        '<div class="ep-sec-head"><h2 class="ep-h2" id="ep-disco-title">Discography</h2><div class="ep-tabs" id="ep-tabs"></div></div>' +
+        '<div id="art-eras" class="art-eras" style="margin-top:0;"></div>' +
+        '<div id="ep-disco"></div>' +
+      '</section>' +
 
-  // Which eras this editor works in, as filters over their uploads.
-  async function renderEraChips(comps, edits) {
-    var box = document.getElementById('art-eras'); if (!box) return;
-    var names = {};
-    if ((comps.concat(edits)).some(function (u) { return u.era_tag_id && !u.era_tag; })) {
-      try { (await api('/eratags') || []).forEach(function (t) { names[t.id] = t.name; }); } catch (_) {}
-    }
-    if (!document.getElementById('art-eras')) return;
-    var eraOf = function (u) { return (u.era_tag && u.era_tag.name) || names[u.era_tag_id] || ''; };
-    var counts = {};
-    comps.concat(edits).forEach(function (u) { var e = eraOf(u); if (e) counts[e] = (counts[e] || 0) + 1; });
-    var eras = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); });
-    if (eras.length < 2) return;
-    var cur = '';
-    function paint() {
-      box.innerHTML = '<button class="art-era' + (!cur ? ' on' : '') + '" data-e="">all eras</button>' + eras.map(function (e) { return '<button class="art-era' + (cur === e ? ' on' : '') + '" data-e="' + escHtml(e) + '">' + escHtml(e) + ' <span>' + counts[e] + '</span></button>'; }).join('');
-      box.querySelectorAll('[data-e]').forEach(function (b) { b.onclick = function () { cur = b.getAttribute('data-e'); apply(); paint(); }; });
-    }
-    function apply() {
-      var c = cur ? comps.filter(function (u) { return eraOf(u) === cur; }) : comps;
-      var e = cur ? edits.filter(function (u) { return eraOf(u) === cur; }) : edits;
-      document.getElementById('comps-section').style.display = c.length ? '' : 'none';
-      document.getElementById('edits-section').style.display = e.length ? '' : 'none';
-      if (c.length) renderUploads(c, 'comps-list');
-      if (e.length) renderUploads(e, 'edits-list');
-    }
-    paint();
-  }
-
-  function renderUploads(list, elId) {
-    var el = document.getElementById(elId);
-    if (!el) return;
-
-    el.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4" style="padding-bottom:32px;">' +
-      list.map(function(item, i) {
-        var isAlbum = item._type === 'album';
-        var coverBg = coverGradient(item.title || '');
-        var coverImg = item.cover_url
-          ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
-          : '';
-        var clickAction = isAlbum
-          ? "navigate('/album?id=" + item.id + "')"
-          : "navigate('/track?id=" + item.id + "')";
-        var eraName = (item.era_tag && item.era_tag.name) || item.genre || '';
-        var isDraft = isAlbum && item.release_status === 'draft';
-        var upAt = isAlbum && item.release_status === 'upcoming' && item.release_at ? new Date(item.release_at) : null;
-        var isUpcoming = !!(upAt && upAt > new Date());
-        var statusTag = isDraft ? '<div class="wv-upcoming-badge" style="background:var(--surface-3);color:var(--text);border:1px dashed var(--text-3);">Draft</div>'
-          : isUpcoming ? '<div class="wv-upcoming-badge">Out ' + escHtml(upAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) + '</div>' : '';
-        var byName = item.collab && item.artists ? item.artists.display_name : artist.display_name;
-
-        return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
-          '<div class="wv-comp-card-cover">' +
-            '<div class="wv-comp-card-cover-inner" style="background:' + coverBg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-              '' +
-              (isAlbum ? '' : '') +
-              coverImg + statusTag +
-              (item.locked ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();' +
-                (isAlbum ? "playCompById('" + item.id + "')" : "artistPlayTrack('" + item.id + "')") + '">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
-              '</button>') +
-            '</div>' +
-          '</div>' +
-          '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
-          '<div class="wv-comp-card-artist" style="display:flex;align-items:center;gap:6px;">' +
-            escHtml(byName || '') + (item.collab ? ' · <span class="badge" style="font-size:10px;">Collab</span>' : '') +
-            (eraName ? ' · <span class="badge" style="font-size:10px;">' + escHtml(eraName) + '</span>' : '') +
-          '</div>' +
-        '</div>';
-      }).join('') +
+      '<section class="ep-sec" id="ep-more" style="display:none;" aria-labelledby="ep-more-title">' +
+        '<div class="ep-sec-head"><h2 class="ep-h2" id="ep-more-title">More editors</h2><a class="ep-pill" href="/artists" style="min-height:34px;padding:0 14px;font-size:12.5px;">See all</a></div>' +
+        '<div class="ep-rail" id="ep-more-rail"></div>' +
+      '</section>' +
     '</div>';
 
-    if (typeof wireIACoverRetry === 'function') {
-      document.querySelectorAll('#' + elId + ' img').forEach(wireIACoverRetry);
+    v.innerHTML = html;
+
+    if (artist.profile_image_url && !hasBanner && typeof extractCoverHues === 'function') {
+      var gen = _epGen;
+      extractCoverHues(artist.profile_image_url, name, function (c, fromImage) {
+        if (gen !== window._epGen || !fromImage) return;
+        var hero = document.getElementById('ep-hero');
+        if (hero) hero.style.setProperty('--ep-bg', 'linear-gradient(135deg, hsl(' + c.h1 + ',' + Math.min(70, c.s1) + '%,34%) 0%, hsl(' + c.h2 + ',' + Math.min(65, c.s2) + '%,16%) 100%)');
+      });
     }
+
+    getBadgeData().then(function (b) {
+      var ok = b && b.verified_artists && b.verified_artists.indexOf(artist.id) !== -1;
+      var slot = document.getElementById('ep-ver-slot');
+      if (ok && slot) slot.outerHTML = '<span class="ep-ver" title="verified editor"><i>' + EP_ICON.check + '</i>Verified</span>';
+    }).catch(function () {});
+
+    renderFeature();
+    renderDisco();
+    loadEraNames();
+    renderMoreEditors();
   }
 
-  loadPage();
+  function epCover(u, px, cls) {
+    var img = u.cover_url ? '<img src="' + escHtml(epImg(u.cover_url, px)) + '" alt="" loading="lazy" onerror="this.remove()">' : '';
+    return '<div class="' + cls + '" style="background:' + coverGradient(u.title || '') + ';">' + img + '</div>';
+  }
+
+  function epHref(u) {
+    return (u._type === 'album' ? '/album?id=' : '/track?id=') + encodeURIComponent(u.id);
+  }
+
+  function renderFeature() {
+    var box = document.getElementById('ep-feature');
+    if (!box) return;
+    var popular = uploads.filter(function (u) { return (u.play_count || 0) > 0 && u.release_status !== 'draft'; })
+      .sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); }).slice(0, 5);
+    var upcoming = uploads.filter(epIsUpcoming).sort(function (a, b) { return new Date(a.release_at) - new Date(b.release_at); })[0];
+    var latest = upcoming || uploads.filter(function (u) { return u.release_status !== 'draft'; })[0] || uploads[0];
+    if (!popular.length && !latest) { box.style.display = 'none'; return; }
+
+    var pop = '';
+    if (popular.length) {
+      pop = '<section aria-labelledby="ep-pop-title"><div class="ep-sec-head"><h2 class="ep-h2" id="ep-pop-title">Popular</h2></div><div class="ep-rows">' +
+        popular.map(function (u, i) {
+          var kind = u._type === 'album' ? (epIsEdit(u) ? 'Edit' : 'Comp') : 'Edit';
+          var era = epEraOf(u);
+          var t = escHtml(u.title || 'Untitled');
+          return '<div class="ep-row" role="link" tabindex="0" onclick="navigate(\'' + epHref(u) + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + epHref(u) + '\')">' +
+            '<div class="ep-row-n"><span>' + (i + 1) + '</span>' +
+              (u.locked || epIsUpcoming(u) ? '' : '<button class="ep-rowplay" aria-label="Play ' + t + '" onclick="event.stopPropagation();epPlayItem(\'' + escHtml(u._type) + '\',\'' + escHtml(u.id) + '\')">' + EP_ICON.playSm + '</button>') +
+            '</div>' +
+            epCover(u, 96, 'ep-row-art') +
+            '<div style="min-width:0;"><div class="ep-row-t">' + t + '</div>' +
+              '<div class="ep-row-s"><span class="ep-chip">' + kind + '</span>' + (u.collab ? '<span class="ep-chip">Collab</span>' : '') + (era ? '<span style="overflow:hidden;text-overflow:ellipsis;">' + escHtml(era) + '</span>' : '') + '</div></div>' +
+            '<div class="ep-row-p">' + epNum(u.play_count || 0) + '<span style="color:var(--text-3);font-size:12px;"> plays</span></div>' +
+          '</div>';
+        }).join('') + '</div></section>';
+    }
+
+    var lat = '';
+    if (latest) {
+      var isUp = epIsUpcoming(latest);
+      var isDraft = latest._type === 'album' && latest.release_status === 'draft';
+      var d = isUp ? new Date(latest.release_at) : epDateOf(latest);
+      var fresh = !isUp && !isDraft && (Date.now() - epDateOf(latest)) < 14 * 86400000;
+      var kindL = latest._type === 'album' ? (epIsEdit(latest) ? 'Edit' : 'Comp') : 'Edit';
+      var meta = [kindL];
+      if (latest._type === 'album' && latest.track_count > 1) meta.push(latest.track_count + ' tracks');
+      if (!isNaN(d)) meta.push((isUp ? 'out ' : '') + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+      var lt = escHtml(latest.title || 'Untitled');
+      lat = '<section aria-labelledby="ep-lat-title"><div class="ep-sec-head"><h2 class="ep-h2" id="ep-lat-title">' + (isUp ? 'Coming soon' : 'Latest release') + '</h2></div>' +
+        '<div class="ep-latest" role="link" tabindex="0" onclick="navigate(\'' + epHref(latest) + '\')" onkeydown="if(event.key===\'Enter\')navigate(\'' + epHref(latest) + '\')">' +
+          '<div class="ep-latest-top">' + epCover(latest, 320, 'ep-latest-art') +
+            '<div style="min-width:0;">' +
+              '<div class="ep-eyebrow">' + (isUp ? '<span class="ep-badge up">Upcoming</span>' : isDraft ? '<span class="ep-badge draft">Draft</span>' : fresh ? '<span class="ep-badge new">New</span>' : '') + '<span>' + escHtml(kindL) + '</span></div>' +
+              '<div class="ep-latest-t">' + lt + '</div>' +
+              '<div class="ep-latest-s">' + escHtml(meta.slice(1).join(' · ')) + '</div>' +
+              ((latest.play_count || 0) > 0 ? '<div class="ep-latest-s" style="color:var(--text-3);margin-top:4px;">' + epNum(latest.play_count) + ' plays</div>' : '') +
+            '</div>' +
+          '</div>' +
+          (isUp || isDraft || latest.locked ? '' : '<button class="ep-play ep-latest-play" aria-label="Play ' + lt + '" onclick="event.stopPropagation();epPlayItem(\'' + escHtml(latest._type) + '\',\'' + escHtml(latest.id) + '\')">' + EP_ICON.play + '</button>') +
+        '</div></section>';
+    }
+    box.innerHTML = pop + lat;
+    if (!pop || !lat) box.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    if (typeof wireIACoverRetry === 'function') box.querySelectorAll('img').forEach(wireIACoverRetry);
+  }
+
+  function epFiltered() {
+    var list = uploads.filter(function (u) {
+      if (_epTab === 'comps' && epIsEdit(u)) return false;
+      if (_epTab === 'edits' && !epIsEdit(u)) return false;
+      if (_epEra && epEraOf(u) !== _epEra) return false;
+      return true;
+    });
+    if (_epSort === 'plays') list = list.slice().sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0) || epDateOf(b) - epDateOf(a); });
+    return list;
+  }
+
+  function epSetTab(t) { _epTab = t; renderDisco(); }
+  function epSetSort(s) { _epSort = s; renderDisco(); }
+  function epSetEra(e) { _epEra = e; renderDisco(); }
+
+  function renderDisco() {
+    var tabs = document.getElementById('ep-tabs');
+    var box = document.getElementById('ep-disco');
+    if (!tabs || !box) return;
+    var comps = uploads.filter(function (u) { return !epIsEdit(u); }).length;
+    var edits = uploads.length - comps;
+    var tb = function (k, label, n) { return '<button class="' + (_epTab === k ? 'on' : '') + '" aria-pressed="' + (_epTab === k) + '" onclick="epSetTab(\'' + k + '\')">' + label + (n != null ? '<span>' + n + '</span>' : '') + '</button>'; };
+    var sb = function (k, label) { return '<button class="' + (_epSort === k ? 'on' : '') + '" aria-pressed="' + (_epSort === k) + '" onclick="epSetSort(\'' + k + '\')">' + label + '</button>'; };
+    tabs.innerHTML = uploads.length ? '<div class="wv-seg" role="group" aria-label="type">' + tb('all', 'All', uploads.length) + (comps ? tb('comps', 'Comps', comps) : '') + (edits ? tb('edits', 'Edits', edits) : '') + '</div>' +
+      '<div class="wv-seg" role="group" aria-label="sort">' + sb('new', 'Newest') + sb('plays', 'Most played') + '</div>' : '';
+
+    renderEraChips();
+
+    if (!uploads.length) {
+      box.innerHTML = '<div class="empty-state" style="padding:40px 12px;"><div class="empty-title">no uploads yet</div><div class="empty-desc">when ' + escHtml(artist.display_name || 'they') + ' posts an edit or a comp it shows up here</div></div>';
+      return;
+    }
+    var list = epFiltered();
+    if (!list.length) {
+      box.innerHTML = '<div class="empty-state" style="padding:32px 12px;"><div class="empty-title">nothing here</div><div class="empty-desc">try another filter</div></div>';
+      return;
+    }
+    box.innerHTML = '<div class="wv-comp-grid wv-comp-grid-4 ep-grid">' + list.map(function (item) {
+      var isAlbum = item._type === 'album';
+      var coverImg = item.cover_url
+        ? '<img src="' + escHtml(epImg(item.cover_url, 320)) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;" onerror="this.style.opacity=0">'
+        : '';
+      var isDraft = isAlbum && item.release_status === 'draft';
+      var upAt = epIsUpcoming(item) ? new Date(item.release_at) : null;
+      var statusTag = isDraft ? '<div class="wv-upcoming-badge" style="background:var(--surface-3);color:var(--text);border:1px dashed var(--text-3);">Draft</div>'
+        : upAt ? '<div class="wv-upcoming-badge">Out ' + escHtml(upAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + '</div>' : '';
+      var byName = item.collab && item.artists ? item.artists.display_name : '';
+      var d = epDateOf(item);
+      var sub = [];
+      if (byName) sub.push('with ' + byName);
+      sub.push(epIsEdit(item) ? 'Edit' : 'Comp');
+      if (_epSort === 'plays') sub.push(epNum(item.play_count || 0) + ' plays');
+      else if (!isNaN(d) && d.getTime() > 0) sub.push(String(d.getFullYear()));
+      var t = escHtml(item.title || 'Untitled');
+      return '<div class="wv-comp-card" onclick="navigate(\'' + epHref(item) + '\')">' +
+        '<div class="wv-comp-card-cover">' +
+          '<div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';">' +
+            coverImg + statusTag +
+            (item.locked || isDraft || upAt ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + t + '" onclick="event.stopPropagation();epPlayItem(\'' + escHtml(item._type) + '\',\'' + escHtml(item.id) + '\')">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
+            '</button>') +
+          '</div>' +
+        '</div>' +
+        '<div class="wv-comp-card-title">' + t + '</div>' +
+        '<div class="wv-comp-card-artist ep-card-sub">' + escHtml(sub.join(' · ')) + '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+
+    if (typeof wireIACoverRetry === 'function') box.querySelectorAll('img').forEach(wireIACoverRetry);
+  }
+
+  async function loadEraNames() {
+    if (!uploads.some(function (u) { return u.era_tag_id && !u.era_tag; })) return;
+    var gen = _epGen;
+    try { (await api('/eratags') || []).forEach(function (t) { _epEraNames[t.id] = t.name; }); } catch (_) { return; }
+    if (gen !== window._epGen) return;
+    renderEraChips();
+    renderFeature();
+  }
+
+  // Which eras this editor works in, as filters over the discography.
+  function renderEraChips() {
+    var box = document.getElementById('art-eras');
+    if (!box) return;
+    var counts = {};
+    uploads.forEach(function (u) { var e = epEraOf(u); if (e) counts[e] = (counts[e] || 0) + 1; });
+    var eras = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); });
+    if (eras.length < 2) { box.innerHTML = ''; return; }
+    box.innerHTML = '<button class="art-era' + (!_epEra ? ' on' : '') + '" data-e="">all eras</button>' + eras.map(function (e) {
+      return '<button class="art-era' + (_epEra === e ? ' on' : '') + '" data-e="' + escHtml(e) + '">' + escHtml(e) + ' <span>' + counts[e] + '</span></button>';
+    }).join('');
+    box.querySelectorAll('[data-e]').forEach(function (b) { b.onclick = function () { epSetEra(b.getAttribute('data-e')); }; });
+  }
+
+  async function renderMoreEditors() {
+    var gen = _epGen;
+    var d;
+    try { d = await api('/stats/artists'); } catch (_) { return; }
+    if (gen !== window._epGen) return;
+    var sec = document.getElementById('ep-more');
+    var rail = document.getElementById('ep-more-rail');
+    if (!sec || !rail) return;
+    var list = ((d && d.items) || []).filter(function (a) { return a.id !== artistId && (a.uploads || 0) > 0; })
+      .sort(function (a, b) { return (b.plays || 0) - (a.plays || 0); }).slice(0, 12);
+    if (!list.length) return;
+    rail.innerHTML = list.map(function (a) {
+      var img = a.profile_image_url || a.cover;
+      var n = a.display_name || 'Unknown';
+      return '<a class="wv-artist-tile" href="/artist?id=' + encodeURIComponent(a.id) + '">' +
+        '<div class="av" style="background:' + coverGradient(n) + ';">' + (img ? '<img src="' + escHtml(epImg(img, 240)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="wv-artist-name">' + escHtml(n) + '</div>' +
+        '<div class="wv-artist-meta">' + (a.uploads || 0) + ' release' + (a.uploads === 1 ? '' : 's') + '</div>' +
+      '</a>';
+    }).join('');
+    sec.style.display = '';
+  }
+
+  if (!artistId || artistId === 'null' || artistId === 'undefined') {
+    navigate('/index');
+  } else {
+    loadPage();
+  }
 </script>
 </body>
 </html>

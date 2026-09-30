@@ -7,6 +7,177 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    #view .br-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:6px 0 0; }
+    #view .br-head h1 { margin:0; font-size:clamp(30px,4vw,44px); font-weight:900; letter-spacing:-.04em; line-height:1.02; }
+    #view .br-sub { font-size:13.5px; color:var(--text-2); margin:6px 0 18px; }
+    #view .br-surprise { display:inline-flex; align-items:stretch; border-radius:99px; background:var(--surface-2); box-shadow:0 0 0 1px var(--hair); overflow:hidden; flex:none; }
+    #view .br-surprise button { border:0; background:transparent; color:var(--text); font:inherit; font-size:13.5px; font-weight:800; cursor:pointer;
+      height:44px; display:inline-flex; align-items:center; gap:8px; transition:background .15s; }
+    #view .br-surprise button:hover { background:var(--surface-3); }
+    #view .br-surprise button svg { width:18px; height:18px; flex:none; }
+    #view .br-surprise .m { padding:0 14px 0 16px; }
+    #view .br-surprise .p { width:46px; justify-content:center; border-left:1px solid var(--hair-strong); color:var(--brand); }
+    #view .br-surprise button.busy svg { animation:br-spin .8s linear infinite; }
+    @keyframes br-spin { to { transform:rotate(360deg); } }
+
+    #view .br-feat { position:relative; border-radius:18px; overflow:hidden; height:300px; outline:none; isolation:isolate;
+      background:#15121c; box-shadow:0 24px 60px -30px rgba(0,0,0,.7); }
+    #view .br-feat:focus-visible { box-shadow:0 0 0 2px var(--page-bg-base), 0 0 0 4px var(--brand); }
+    #view .br-slide { position:absolute; inset:0; opacity:0; visibility:hidden; transition:opacity .7s var(--ease), visibility 0s linear .7s;
+      background:linear-gradient(120deg,hsl(var(--h1,262) 48% 20%),hsl(var(--h2,300) 45% 11%)); color:#fff; }
+    #view .br-slide.on { opacity:1; visibility:visible; transition:opacity .7s var(--ease), visibility 0s; z-index:1; }
+    #view .br-slide-bg { position:absolute; inset:-60px; background-size:cover; background-position:center; filter:blur(46px) saturate(1.6) brightness(1.1); opacity:.8; transform:scale(1.05); }
+    #view .br-slide::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(8,6,14,.72) 0%,rgba(8,6,14,.38) 55%,rgba(8,6,14,.08) 100%); }
+    #view .br-slide-in { position:relative; z-index:1; height:100%; display:flex; align-items:center; gap:32px; padding:0 40px 0 44px; }
+    #view .br-slide-txt { flex:1; min-width:0; opacity:0; transform:translateY(10px); transition:opacity .2s var(--ease), transform .2s var(--ease); }
+    #view .br-slide.on .br-slide-txt { opacity:1; transform:none; transition:opacity .45s var(--ease) .28s, transform .55s var(--ease) .28s; }
+    #view .br-slide-kick { display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.78); }
+    #view .br-slide-kick svg { width:13px; height:13px; color:hsl(var(--h1,262) 90% 72%); }
+    #view .br-slide-t { margin:10px 0 8px; font-size:clamp(26px,3.4vw,44px); font-weight:900; letter-spacing:-.04em; line-height:1.03; color:#fff;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+    #view .br-slide-s { font-size:14px; color:rgba(255,255,255,.76); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #view .br-slide-s b { color:#fff; font-weight:700; }
+    #view .br-slide-acts { display:flex; gap:10px; margin-top:20px; }
+    #view .br-slide-acts button, #view .br-slide-acts a { height:44px; padding:0 22px; border-radius:99px; font:inherit; font-size:14px; font-weight:800; cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px; text-decoration:none; border:0; transition:transform .12s, filter .15s, background .15s; }
+    #view .br-slide-acts svg { width:16px; height:16px; }
+    #view .br-slide-acts .pl { background:#fff; color:#121016; }
+    #view .br-slide-acts .pl:hover { transform:scale(1.03); }
+    #view .br-slide-acts .op { background:rgba(255,255,255,.14); color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.22); }
+    #view .br-slide-acts .op:hover { background:rgba(255,255,255,.22); }
+    #view .br-slide-acts button:focus-visible, #view .br-slide-acts a:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+    #view .br-slide-art { flex:none; width:236px; height:236px; border-radius:12px; overflow:hidden; display:block; position:relative;
+      box-shadow:0 30px 60px -18px rgba(0,0,0,.8), 0 0 0 1px rgba(255,255,255,.08); opacity:0; transform:rotate(3deg) scale(.96); transition:opacity .2s var(--ease), transform .3s var(--ease); }
+    #view .br-slide.on .br-slide-art { opacity:1; transform:none; transition:opacity .45s var(--ease) .18s, transform .7s var(--ease) .18s; }
+    #view .br-slide-art img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .br-feat-ui { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0 0; min-height:40px; }
+    #view .br-dots { display:flex; align-items:center; gap:2px; }
+    #view .br-dot { width:28px; height:40px; border:0; background:transparent; cursor:pointer; padding:0; display:grid; place-items:center; }
+    #view .br-dot i { position:relative; display:block; width:8px; height:8px; border-radius:99px; background:var(--hair-strong); overflow:hidden; transition:width .3s var(--ease), background .2s; }
+    #view .br-dot:hover i { background:var(--text-3); }
+    #view .br-dot.on { width:48px; }
+    #view .br-dot.on i { width:36px; background:var(--hair-strong); }
+    #view .br-dot.on i b { position:absolute; inset:0; background:var(--text); transform-origin:left; transform:scaleX(0); transition:transform .1s linear; }
+    #view .br-feat.still .br-dot.on i b, #view .br-feat-ui.still .br-dot.on i b { transform:scaleX(1); }
+    #view .br-dot:focus-visible { outline:2px solid var(--brand); outline-offset:-4px; border-radius:99px; }
+    #view .br-arrows { display:flex; gap:8px; }
+    #view .br-arrows button { width:40px; height:40px; border-radius:50%; border:1px solid var(--hair-strong); background:transparent; color:var(--text); cursor:pointer; display:grid; place-items:center; transition:border-color .15s, background .15s; }
+    #view .br-arrows button:hover { border-color:var(--text); }
+    #view .br-arrows button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+    #view .br-arrows svg { width:16px; height:16px; }
+    #view .br-feat-skel { height:300px; border-radius:18px; }
+
+    #view .br-cats, #view .br-eras { grid-auto-flow:dense; }
+    @media (min-width:900px) { #view .br-cats { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+    #view a.wv-browse-tile { display:block; text-decoration:none; color:#fff; }
+    #view .wv-browse-tile { transition:transform .22s var(--ease), box-shadow .22s var(--ease), filter .2s; will-change:transform; }
+    #view .wv-browse-tile img, #view .wv-browse-tile .fake { transition:transform .35s var(--ease); }
+    #view .wv-browse-tile:hover { transform:translateY(-4px) scale(1.012); box-shadow:0 18px 36px -16px rgba(0,0,0,.6); filter:brightness(1.06); }
+    #view .wv-browse-tile:hover img, #view .wv-browse-tile:hover .fake { transform:rotate(16deg) scale(1.1) translate(-6px,-4px); }
+    #view .wv-browse-tile:focus-visible { outline:2px solid var(--brand); outline-offset:3px; }
+    #view .wv-browse-tile small { display:block; position:relative; z-index:1; margin-top:4px; font-size:12.5px; font-weight:700; letter-spacing:0; opacity:.82; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+    #view .br-tile-skel { aspect-ratio:1.6; border-radius:var(--r-lg); }
+
+    #view .br-shelf { margin-top:30px; }
+    #view .br-shelf-h { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 0 8px; }
+    #view .br-shelf-id { display:flex; align-items:center; gap:12px; min-width:0; color:inherit; text-decoration:none; }
+    #view .br-shelf-cv { width:48px; height:48px; border-radius:8px; overflow:hidden; flex:none; box-shadow:0 6px 16px -6px rgba(0,0,0,.5); }
+    #view .br-shelf-cv img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .br-shelf-k { display:block; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--text-3); }
+    #view .br-shelf-t { display:block; font-size:22px; font-weight:800; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #view .br-shelf-id:hover .br-shelf-t { text-decoration:underline; }
+    #view .br-shelf-n { font-size:12.5px; color:var(--text-3); font-weight:600; margin-left:8px; letter-spacing:0; }
+    #view .br-shelf .wv-see-all { flex:none; padding:10px 0; }
+    #view .br-card a { color:inherit; text-decoration:none; }
+    #view .br-card .br-cl { position:absolute; inset:0; display:block; }
+    #view .br-card .br-cl img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+    #view a.wv-comp-card-title { display:block; }
+    #view a.wv-comp-card-title:hover { text-decoration:underline; }
+    #view .br-card:focus-within { background:var(--surface-hover); }
+    #view .br-card .wv-cover-play-btn:focus-visible { opacity:1; transform:none; outline:2px solid var(--text); outline-offset:2px; }
+    #view .br-card a:focus-visible, #view .br-card button:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+    #view .br-rank { position:absolute; top:8px; left:8px; z-index:1; pointer-events:none; font-size:11px; font-weight:900; padding:3px 8px; border-radius:99px; background:rgba(10,8,16,.62); color:#fff; font-variant-numeric:tabular-nums; }
+
+    #view .br-back { display:inline-flex; align-items:center; gap:4px; height:36px; color:var(--text-2); font-size:13px; font-weight:700; text-decoration:none; margin:2px 0 4px; }
+    #view .br-back:hover { color:var(--text); }
+    #view .br-back svg { width:16px; height:16px; }
+    #view .br-lhead { display:flex; align-items:center; gap:18px; margin:0 0 6px; }
+    #view .br-lhead h1 { margin:0; }
+    #view .br-lart { width:84px; height:84px; flex:none; border-radius:10px; overflow:hidden; box-shadow:0 14px 30px -12px rgba(0,0,0,.6); }
+    #view .br-lart img { width:100%; height:100%; object-fit:cover; display:block; }
+    #view .br-lmeta { font-size:13px; color:var(--text-2); margin-top:6px; }
+    #view .br-lmeta a { color:var(--brand); font-weight:700; text-decoration:none; }
+    #view .br-lmeta a:hover { text-decoration:underline; }
+    #view .br-hint { font-size:12px; color:var(--text-3); margin:8px 0 0; display:flex; gap:10px; flex-wrap:wrap; }
+    #view .br-count-m { display:none; font-weight:700; color:var(--text-2); margin-left:0; }
+    #view .br-sentinel-top { height:1px; }
+    #view .br-sticky { position:sticky; top:0; z-index:4; margin:4px -28px 14px; padding:10px 28px 10px; transition:background .2s, box-shadow .2s; }
+    #view .br-sticky.stuck { background:var(--page-bg-base); box-shadow:0 1px 0 var(--hair), 0 14px 24px -20px rgba(0,0,0,.6); }
+    #view .br-chips { display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; padding:2px 0 10px;
+      -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent); mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent); }
+    #view .br-chips::-webkit-scrollbar { display:none; }
+    #view .br-chips .wv-chip { flex:none; cursor:pointer; padding:0 14px; height:36px; display:inline-flex; align-items:center; font-size:13px; border:0; font-family:inherit; white-space:nowrap; }
+    #view .br-chips .wv-chip:hover { background:var(--surface-3); }
+    #view .br-chips .wv-chip.acc, #view .br-chips .wv-chip.acc:hover { background:var(--text); color:var(--page-bg-base); }
+    #view .br-chips .wv-chip:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+    #view .br-ctrl { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    #view .br-ctrl .br-go { height:40px; padding:0 18px; border-radius:99px; font:inherit; font-size:13.5px; font-weight:800; cursor:pointer;
+      display:inline-flex; align-items:center; gap:8px; border:0; transition:transform .12s, filter .15s, background .15s; }
+    #view .br-ctrl .br-go svg { width:16px; height:16px; }
+    #view .br-ctrl .br-go.pl { background:var(--brand); color:var(--on-brand); }
+    #view .br-ctrl .br-go.pl:hover { filter:brightness(1.08); transform:scale(1.02); }
+    #view .br-ctrl .br-go.sh { background:transparent; color:var(--text); box-shadow:inset 0 0 0 1px var(--hair-strong); }
+    #view .br-ctrl .br-go.sh:hover { box-shadow:inset 0 0 0 1px var(--text); }
+    #view .br-ctrl .br-go.busy { opacity:.65; pointer-events:none; }
+    #view .br-ctrl .br-go:focus-visible, #view .br-ctrl select:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+    #view .br-ctrl select { height:40px; padding:0 12px; font-size:13px; width:auto; border-radius:99px; }
+    #view .br-count { font-size:12.5px; color:var(--text-3); font-variant-numeric:tabular-nums; margin-left:auto; }
+    #view .br-more { grid-column:1/-1; display:flex; justify-content:center; align-items:center; gap:10px; padding:14px 0 6px; min-height:60px; color:var(--text-3); font-size:13px; }
+    #view .br-more .wv-pill { padding:0 20px; height:40px; font-weight:700; }
+    #view .br-end { display:flex; align-items:center; gap:12px; color:var(--text-3); font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+    #view .br-end::before, #view .br-end::after { content:''; width:40px; height:1px; background:var(--hair-strong); }
+    #view .br-spin { width:18px; height:18px; border-radius:50%; border:2px solid var(--hair-strong); border-top-color:var(--text); animation:br-spin .8s linear infinite; }
+
+    @media (max-width:768px) {
+      #view .br-sticky { margin:4px -16px 12px; padding:8px 16px; }
+      #view .br-feat { height:268px; border-radius:16px; }
+      #view .br-feat-skel { height:268px; }
+      #view .br-slide-in { display:block; padding:20px 20px 18px; }
+      #view .br-slide-txt { position:absolute; left:20px; right:20px; bottom:18px; }
+      #view .br-slide-art { position:absolute; top:18px; right:18px; width:104px; height:104px; border-radius:10px; }
+      #view .br-slide-t { font-size:25px; margin:8px 0 6px; }
+      #view .br-slide-s { font-size:13px; }
+      #view .br-slide-acts { margin-top:14px; }
+      #view .br-slide-acts button, #view .br-slide-acts a { height:40px; padding:0 18px; font-size:13.5px; }
+      #view .br-slide::after { background:linear-gradient(0deg,rgba(8,6,14,.85) 0%,rgba(8,6,14,.4) 60%,rgba(8,6,14,.2) 100%); }
+      #view .br-arrows { display:none; }
+      #view .br-feat-ui { justify-content:center; }
+      #view .br-shelf-t { font-size:19px; }
+      #view .br-shelf-cv { width:42px; height:42px; }
+      #view .br-lart { width:64px; height:64px; }
+      #view .br-ctrl .br-count { display:none; }
+      #view .br-count-m:not(:empty) { display:inline; }
+      #view .br-ctrl { flex-wrap:nowrap; gap:8px; }
+      #view .br-ctrl .br-go { padding:0 14px; font-size:13px; flex:none; }
+      #view .br-ctrl select { flex:1; min-width:0; font-size:14px; }
+      #view .br-chips { padding-bottom:8px; }
+    }
+    @media (max-width:420px) {
+      #view .br-surprise .m { padding:0 12px 0 14px; }
+      #view .br-surprise .p { width:42px; }
+      #view .br-ctrl .br-go { padding:0 14px; }
+      #view .br-ctrl select { flex:1; min-width:0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #view .br-slide, #view .br-slide.on { transition:none; }
+      #view .br-slide-art, #view .br-slide.on .br-slide-art, #view .br-slide-txt, #view .br-slide.on .br-slide-txt { transform:none; transition:none; }
+      #view .wv-browse-tile, #view .wv-browse-tile img, #view .wv-browse-tile .fake { transition:none; }
+      #view .wv-browse-tile:hover, #view .wv-browse-tile:hover img, #view .wv-browse-tile:hover .fake { transform:none; }
+      #view .wv-browse-tile:hover img, #view .wv-browse-tile:hover .fake { transform:rotate(24deg); }
+      #view .br-surprise button.busy svg, #view .br-spin { animation:none; }
+    }
+  </style>
 </head>
 <body>
 <div id="view"><div class="loading"><div class="spinner"></div></div></div>
@@ -16,250 +187,792 @@
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script src="/js/playlists.js?v=6288d60cd337"></script>
 <script>
-initPlayer();
-var _p = new URLSearchParams(location.search);
-var _tab = _p.get('tab') || '';          // '' | recent | trending | highlighted | comps | edits
-var _era = _p.get('era') || '';
-var _eras = [];
-var _items = [];
-var _badges = {};
-getBadgeData().then(function(b) { _badges = b || {}; }).catch(function() {});
+(function () {
+  if (typeof initPlayer === 'function') initPlayer();
+  if (!window._pageCleanup) window._pageCleanup = [];
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); };
+  var grad = function (seed) { return window.coverGradient ? window.coverGradient(seed || '') : 'linear-gradient(135deg,#2a2a34,#15151b)'; };
+  var num = function (n) { return (Number(n) || 0).toLocaleString(); };
+  var plural = function (n, w) { return num(n) + ' ' + w + (n === 1 ? '' : 's'); };
+  var reduced = function () { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
+  var toast = function (m, k) { if (typeof window.wvToast === 'function') window.wvToast(m, k); };
+  var IMG_ERR = 'if(!this.dataset.wvOrig||this.src===this.dataset.wvOrig)this.style.opacity=0';
+  var img = function (url, size, extra) { return url ? '<img src="' + esc(url) + '" data-size="' + size + '" alt="" loading="lazy" decoding="async" onerror="' + IMG_ERR + '"' + (extra || '') + '>' : ''; };
+  var ICON = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
+    dice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.8 2.7 5.9 6.4.7-4.8 4.3 1.4 6.3L12 16.8 6.3 20l1.4-6.3L2.9 9.4l6.4-.7Z"/></svg>',
+    left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>',
+    right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>',
+    open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>'
+  };
 
-// Fixed categories, each with a colour and a destination or in-page tab.
-var CATS = [
-  { k: 'recent',      l: 'New releases', h: 262 },
-  { k: 'trending',    l: 'Trending',     h: 16 },
-  { k: 'highlighted', l: 'Highlighted',  h: 42 },
-  { k: 'comps',       l: 'Comps',        h: 200 },
-  { k: 'edits',       l: 'Edits',        h: 330 },
-  { href: '/charts',    l: 'Charts',    h: 150 },
-  { href: '/artists',   l: 'Artists',   h: 275 },
-  { href: '/stats',     l: 'Stats',     h: 190 },
-  { href: '/archive',   l: 'Archive',   h: 220 },
-  { href: '/community', l: 'Community', h: 95 },
-  { href: '/resources', l: 'Tracker',   h: 300 },
-];
+  var P = new URLSearchParams(location.search);
+  var S = {
+    tab: P.get('tab') || '',
+    era: P.get('era') || '',
+    eras: [],
+    stats: null,
+    badges: {},
+    hl: null,
+    sort: (function () { try { return localStorage.getItem('wv_browse_sort') || 'newest'; } catch (_) { return 'newest'; } })(),
+    alive: true,
+    seq: 0
+  };
+  var cleanups = [];
+  window._pageCleanup.push(function () { S.alive = false; cleanups.forEach(function (f) { try { f(); } catch (_) {} }); cleanups = []; });
+  function onGone(f) { cleanups.push(f); }
 
-function tileBg(h) { return 'linear-gradient(135deg, hsl(' + h + ',55%,42%), hsl(' + ((h + 40) % 360) + ',60%,26%))'; }
-
-async function init() {
-  if (typeof window.setPageWash === 'function') window.setPageWash('browse');
-  try { _eras = await api('/eratags'); } catch (e) { _eras = []; }
-  if (_tab || _era) return renderList();
-  renderIndex();
-}
-
-function renderIndex() {
-  var view = document.getElementById('view');
-  var html = '<h1 class="wv-page-title">Browse all</h1>';
-  html += '<div class="wv-browse-grid">';
-  CATS.forEach(function(c, i) {
-    var go = c.href ? "navigate('" + c.href + "')" : "go('tab','" + c.k + "')";
-    html += '<div class="wv-browse-tile' + (i === 0 ? ' wide' : '') + '" data-tile="' + (c.k || c.href) + '" style="background:' + tileBg(c.h) + ';" onclick="' + go + '"><span>' + escHtml(c.l) + '</span><div class="fake" style="background:' + tileBg((c.h + 180) % 360) + ';"></div></div>';
-  });
-  html += '</div>';
-  if (_eras.length) {
-    html += '<div class="wv-sec-head"><h2 class="wv-sec-title">Eras</h2></div>';
-    html += '<div class="wv-browse-grid">' + _eras.map(function(t) {
-      var c = coverHues(t.name || '');
-      return '<div class="wv-browse-tile" data-tile="era:' + escHtml(t.id) + '" style="background:' + tileBg(c.h1) + ';" onclick="go(\'era\',\'' + escHtml(t.id) + '\')"><span>' + escHtml(t.name) + '</span><div class="fake" style="background:' + tileBg(c.h2) + ';"></div></div>';
-    }).join('') + '</div>';
+  if (typeof getBadgeData === 'function') getBadgeData().then(function (b) { S.badges = b || {}; }).catch(function () {});
+  var statsP = null;
+  function eraStats() {
+    if (!statsP) statsP = api('/archive/eras').then(function (d) { S.stats = (d && d.items) || []; return S.stats; }).catch(function (e) { statsP = null; throw e; });
+    return statsP;
   }
-  view.innerHTML = html;
-  // Each era has its own album art now; only fall back to a comp cover when
-  // the wiki has nothing for that era (Turbo Grafx 16, Other).
-  _eras.forEach(function(t) { if (t.cover) setTileCover('era:' + t.id, t.cover); });
-  fillTileCovers();
-}
+  function statFor(id) { return (S.stats || []).filter(function (e) { return String(e.id) === String(id); })[0] || null; }
+  function eraName(id) { var t = S.eras.filter(function (e) { return String(e.id) === String(id); })[0]; return t ? t.name : ''; }
 
-function setTileCover(key, url) {
-  if (!url) return;
-  var tile = document.querySelector('.wv-browse-tile[data-tile="' + key + '"]');
-  if (!tile || tile.querySelector('img')) return;
-  var fake = tile.querySelector('.fake');
-  var img = document.createElement('img');
-  img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
-  img.onerror = function() { img.remove(); };
-  img.src = url;
-  if (fake) fake.replaceWith(img); else tile.appendChild(img);
-}
+  var CATS = [
+    { k: 'recent',   l: 'New releases', h: 262, wide: 1 },
+    { k: 'trending', l: 'Trending',     h: 16 },
+    { k: 'highlighted', l: 'Highlighted', h: 42 },
+    { k: 'comps',    l: 'Comps',        h: 200 },
+    { k: 'edits',    l: 'Edits',        h: 330 },
+    { href: '/archive?view=top', l: 'Top 150', h: 350, wide: 1, key: 'top' },
+    { href: '/eras',      l: 'Eras',      h: 28 },
+    { href: '/charts',    l: 'Charts',    h: 150 },
+    { href: '/music',     l: 'Artists',   h: 240 },
+    { href: '/artists',   l: 'Editors',   h: 275 },
+    { href: '/archive',   l: 'Archive',   h: 220 },
+    { href: '/stats',     l: 'Stats',     h: 190 },
+    { href: '/community', l: 'Community', h: 95 },
+    { href: '/resources', l: 'Tracker',   h: 300 }
+  ];
+  function tileBg(h) { return 'linear-gradient(135deg, hsl(' + h + ',55%,42%), hsl(' + ((h + 40) % 360) + ',60%,26%))'; }
+  function tileKey(c) { return c.key || c.k || c.href; }
 
-async function fillTileCovers() {
-  var d;
-  try { d = await api('/discover'); } catch (e) { return; }
-  var recent = (d && d.recent) || [], trending = (d && d.trending) || [];
-  var withCover = function(list, pred) { var it = list.find(function(x) { return x && x.cover_url && (!pred || pred(x)); }); return it ? it.cover_url : ''; };
-  var used = {};
-  var pick = function(list, pred) { var it = list.find(function(x) { return x && x.cover_url && !used[x.cover_url] && (!pred || pred(x)); }); if (it) { used[it.cover_url] = 1; return it.cover_url; } return withCover(list, pred); };
-  setTileCover('recent', pick(recent));
-  setTileCover('trending', pick(trending));
-  setTileCover('comps', pick(recent, function(x) { return x._type === 'album'; }));
-  setTileCover('edits', pick(recent, function(x) { return x._type === 'track'; }));
-  setTileCover('/charts', pick(trending));
-  setTileCover('/artists', pick(recent));
-  setTileCover('/stats', pick(recent));
-  _eras.forEach(function(t) { if (!t.cover) setTileCover('era:' + t.id, pick(recent, function(x) { return String(x.era_tag_id) === String(t.id); })); });
-  try { var hl = await api('/discover/highlighted'); setTileCover('highlighted', pick(hl || [])); } catch (e) {}
-  var missing = _eras.filter(function(t) { return !t.cover && !document.querySelector('.wv-browse-tile[data-tile="era:' + t.id + '"] img'); }).slice(0, 12);
-  for (var i = 0; i < missing.length; i++) {
-    try { var items = await api('/discover/era/' + encodeURIComponent(missing[i].id)); setTileCover('era:' + missing[i].id, pick(items || [])); } catch (e) {}
-  }
-}
-
-function _eraList() { return String(_era || '').split(',').filter(Boolean); }
-window.toggleEra = function (id) {
-  var list = _eraList();
-  var i = list.indexOf(String(id));
-  if (i >= 0) list.splice(i, 1); else list.push(String(id));
-  if (!list.length) return go('tab', _tab || 'recent');
-  var u = new URL(location.href);
-  u.searchParams.delete('tab');
-  u.searchParams.set('era', list.join(','));
-  history.replaceState(null, '', u);
-  _tab = ''; _era = list.join(',');
-  _shown = 60;
-  renderList();
-};
-
-window.go = function(kind, v) {
-  var u = new URL(location.href);
-  u.searchParams.delete('tab'); u.searchParams.delete('era');
-  u.searchParams.set(kind, v);
-  history.pushState(null, '', u);
-  _tab = kind === 'tab' ? v : ''; _era = kind === 'era' ? v : '';
-  renderList();
-};
-
-async function renderList() {
-  var view = document.getElementById('view');
-  var picked = _eraList();
-  var pickedObjs = picked.map(function (id) { return _eras.find(function(t) { return String(t.id) === id; }); }).filter(Boolean);
-  var eraObj = pickedObjs.length === 1 ? pickedObjs[0] : null;
-  var title = pickedObjs.length ? pickedObjs.map(function (t) { return t.name; }).join(' + ') : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[_tab] || 'Browse');
-  view.innerHTML =
-    '<div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px;"><button class="wv-see-all" onclick="navigate(\'/browse\')">‹ Browse</button></div>' +
-    '<h1 class="wv-page-title">' + escHtml(title) + '</h1>' +
-    '<div class="wv-filters" id="era-chips"></div>' +
-    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 14px;">' +
-      '<select id="br-sort" class="wv-input" style="padding:8px 12px;font-size:13px;width:auto;" onchange="setBrowseSort(this.value)">' +
-        '<option value="newest">Newest first</option>' +
-        '<option value="oldest">Oldest first</option>' +
-        '<option value="title">Title A–Z</option>' +
-        '<option value="artist">Creator A–Z</option>' +
-        '<option value="plays">Most played</option>' +
-      '</select>' +
-      '<span id="br-count" style="font-size:12px;color:var(--text-3);"></span>' +
-    '</div>' +
-    '<div class="wv-tile-grid" id="grid">' + '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div>'.repeat(8) + '</div>';
-  if (_eras.length) {
-    document.getElementById('era-chips').innerHTML =
-      '<span class="wv-chip' + (!picked.length ? ' acc' : '') + '" onclick="go(\'tab\',\'' + (_tab || 'recent') + '\')">All</span>' +
-      _eras.map(function(t) { var on = picked.indexOf(String(t.id)) >= 0; return '<span class="wv-chip' + (on ? ' acc' : '') + '" role="button" aria-pressed="' + on + '" onclick="toggleEra(\'' + escHtml(t.id) + '\')">' + (on && picked.length > 1 ? '✓ ' : '') + escHtml(t.name) + '</span>'; }).join('') +
-      '<div style="flex-basis:100%;font-size:11.5px;color:var(--text-3);margin-top:2px;">' + (picked.length ? 'tap more eras to add them...tap one again to take it off' : 'tap an era to pick it...you can pick more than one') + '</div>';
-  }
-  try {
-    var items = [];
-    if (picked.length) {
-      var lists = await Promise.all(picked.map(function (id) { return api('/discover/era/' + encodeURIComponent(id)).catch(function () { return []; }); }).concat(picked.map(function (id) {
-        return api('/archive?limit=120&sort=likes&kind=all&era=' + encodeURIComponent(id)).then(function (d) {
-          return ((d && d.items) || (Array.isArray(d) ? d : [])).map(function (a) { return Object.assign({}, a, { _type: 'album', is_archive: true, era_tag_id: id }); });
-        }).catch(function () { return []; });
-      })));
-      var seen = {};
-      items = [];
-      lists.forEach(function (l) { (Array.isArray(l) ? l : []).forEach(function (it) { var k = (it._type || '') + ':' + it.id; if (!seen[k]) { seen[k] = 1; items.push(it); } }); });
+  function init() {
+    if (typeof window.setPageWash === 'function') window.setPageWash('browse');
+    if (S.tab || S.era) {
+      var v = document.getElementById('view');
+      if (v) v.innerHTML = '<div class="br-back">&nbsp;</div><div class="wv-skel" style="height:40px;width:260px;border-radius:8px;margin:6px 0 20px;"></div>' + gridSkel(10);
+      api('/eratags').then(function (t) { S.eras = Array.isArray(t) ? t : []; }).catch(function () { S.eras = []; }).then(function () { if (S.alive) renderList(); });
+      return;
     }
-    else if (_tab === 'trending') items = await api('/discover/trending');
-    else if (_tab === 'highlighted') items = await api('/discover/highlighted');
-    else { var d = await api('/discover'); items = d.recent || []; }
-    if (_tab === 'comps') items = items.filter(function(i) { return i._type === 'album'; });
-    if (_tab === 'edits') items = items.filter(function(i) { return i._type !== 'album'; });
-    _items = Array.isArray(items) ? items : [];
-    var eraArt = eraObj && eraObj.cover;
-    var withCover = _items.find(function(i) { return i.cover_url; });
-    if (typeof window.setPageBgImage === 'function') window.setPageBgImage(eraArt || (withCover ? withCover.cover_url : ''), title);
-    var sel = document.getElementById('br-sort');
-    if (sel) sel.value = _sort;
-    paintGrid();
-  } catch (err) {
-    document.getElementById('grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">something broke: ' + escHtml(err.message) + '</div>';
+    renderIndex();
   }
-}
 
-var _sort = (function () { try { return localStorage.getItem('wv_browse_sort') || 'newest'; } catch (_) { return 'newest'; } })();
-var _shown = 60;
+  function renderIndex() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    var tiles = CATS.map(function (c) {
+      var href = c.href || ('/browse?tab=' + c.k);
+      return '<a class="wv-browse-tile' + (c.wide ? ' wide' : '') + '" href="' + esc(href) + '"' + (c.k ? ' data-tab="' + esc(c.k) + '"' : '') + ' data-tile="' + esc(tileKey(c)) + '" style="background:' + tileBg(c.h) + ';">' +
+        '<span>' + esc(c.l) + '</span><div class="fake" style="background:' + tileBg((c.h + 180) % 360) + ';"></div></a>';
+    }).join('');
+    view.innerHTML =
+      '<div class="br-head"><h1>Browse</h1>' +
+        '<div class="br-surprise" role="group" aria-label="Surprise me">' +
+          '<button type="button" class="m" data-act="surprise" title="Open a random comp from the archive">' + ICON.dice + '<span>Surprise me</span></button>' +
+          '<button type="button" class="p" data-act="surprise-play" aria-label="Play a random comp" title="Play a random comp">' + ICON.play + '</button>' +
+        '</div></div>' +
+      '<div class="br-sub">everything on wavernrs, sorted a few different ways</div>' +
+      '<div id="br-feat-box"><div class="wv-skel br-feat-skel"></div><div class="br-feat-ui"></div></div>' +
+      '<div class="wv-sec-head"><h2 class="wv-sec-title">Browse all</h2></div>' +
+      '<div class="wv-browse-grid br-cats">' + tiles + '</div>' +
+      '<div id="br-shelves">' + [0, 1].map(function () { return shelfSkel(); }).join('') + '</div>' +
+      '<div class="wv-sec-head"><h2 class="wv-sec-title">Eras</h2><a class="wv-see-all" href="/eras">See the timeline</a></div>' +
+      '<div class="wv-browse-grid br-eras" id="br-eras">' + '<div class="wv-skel br-tile-skel"></div>'.repeat(8) + '</div>';
+    loadFeatured();
+    loadShelves();
+    api('/eratags').then(function (t) {
+      if (!S.alive) return;
+      S.eras = Array.isArray(t) ? t : [];
+      renderEraTiles();
+      var big = S.eras.filter(function (e) { return e.cover; });
+      if (S.stats) big.sort(function (a, b) { return ((statFor(b.id) || {}).comps || 0) - ((statFor(a.id) || {}).comps || 0); });
+      if (big[0]) setTileCover('/eras', big[0].cover);
+      fillTileCovers();
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      var box = document.getElementById('br-eras');
+      if (box && window.wvErrorHTML) box.innerHTML = window.wvErrorHTML(err);
+      fillTileCovers();
+    });
+  }
 
-window.setBrowseSort = function (v) {
-  _sort = v;
-  try { localStorage.setItem('wv_browse_sort', v); } catch (_) {}
-  _shown = 60;
-  paintGrid();
-};
+  function renderEraTiles() {
+    var box = document.getElementById('br-eras');
+    if (!box) return;
+    if (!S.eras.length) { box.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;padding:24px;">no eras yet</div>'; return; }
+    box.innerHTML = S.eras.map(function (t) {
+      var c = window.coverHues ? window.coverHues(t.name || '') : { h1: 262, h2: 300 };
+      var st = statFor(t.id);
+      return '<a class="wv-browse-tile" href="/browse?era=' + encodeURIComponent(t.id) + '" data-era="' + esc(t.id) + '" data-tile="era:' + esc(t.id) + '" style="background:' + tileBg(c.h1) + ';">' +
+        '<span>' + esc(t.name) + '<small data-n="' + esc(t.id) + '">' + (st && st.comps ? plural(st.comps, 'comp') : '') + '</small></span>' +
+        '<div class="fake" style="background:' + tileBg(c.h2) + ';"></div></a>';
+    }).join('');
+    S.eras.forEach(function (t) { if (t.cover) setTileCover('era:' + t.id, t.cover); });
+  }
+  function paintEraCounts() {
+    (S.stats || []).forEach(function (e) {
+      document.querySelectorAll('#br-eras small[data-n]').forEach(function (el) {
+        if (el.getAttribute('data-n') === String(e.id) && e.comps) el.textContent = plural(e.comps, 'comp');
+      });
+    });
+  }
 
-window.showMoreBrowse = function () { _shown += 60; paintGrid(); };
+  function setTileCover(key, url) {
+    if (!url) return;
+    var tile = null;
+    document.querySelectorAll('.wv-browse-tile[data-tile]').forEach(function (t) { if (!tile && t.getAttribute('data-tile') === key) tile = t; });
+    if (!tile || tile.querySelector('img')) return;
+    var fake = tile.querySelector('.fake');
+    var im = document.createElement('img');
+    im.alt = ''; im.loading = 'lazy'; im.decoding = 'async'; im.setAttribute('data-size', '120');
+    im.onerror = function () { if (!im.dataset.wvOrig || im.src === im.dataset.wvOrig) im.remove(); };
+    im.src = url;
+    if (fake) fake.replaceWith(im); else tile.appendChild(im);
+  }
 
-function _sorted(list) {
-  var str = function (x) { return String(x || ''); };
-  var when = function (x) { return new Date(x.original_date || x.created_at || 0).getTime(); };
-  var who = function (x) { return x.archive_artist_name || (x.artists && x.artists.display_name) || ''; };
-  var out = list.slice();
-  if (_sort === 'oldest') out.sort(function (a, b) { return when(a) - when(b); });
-  else if (_sort === 'title') out.sort(function (a, b) { return str(a.title).localeCompare(str(b.title)); });
-  else if (_sort === 'artist') out.sort(function (a, b) { return who(a).localeCompare(who(b)) || str(a.title).localeCompare(str(b.title)); });
-  else if (_sort === 'plays') out.sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); });
-  else out.sort(function (a, b) { return when(b) - when(a); });
-  return out;
-}
+  function fillTileCovers() {
+    var used = {};
+    var first = function (list, pred) { var it = (list || []).filter(function (x) { return x && x.cover_url && (!pred || pred(x)); }); return it; };
+    var pick = function (list, pred) {
+      var all = first(list, pred);
+      var it = all.filter(function (x) { return !used[x.cover_url]; })[0] || all[0];
+      if (it) { used[it.cover_url] = 1; return it.cover_url; }
+      return '';
+    };
+    api('/discover').then(function (d) {
+      if (!S.alive) return;
+      var recent = (d && d.recent) || [], trending = (d && d.trending) || [];
+      setTileCover('recent', pick(recent));
+      setTileCover('trending', pick(trending));
+      setTileCover('comps', pick(recent, function (x) { return x._type === 'album'; }));
+      setTileCover('edits', pick(recent, function (x) { return x._type === 'track'; }));
+      setTileCover('/charts', pick(trending));
+      setTileCover('/music', pick(recent));
+      var faces = recent.filter(function (x) { return x.artists && x.artists.profile_image_url && /^https?:/.test(x.artists.profile_image_url); });
+      setTileCover('/artists', faces.length ? faces[0].artists.profile_image_url : pick(recent));
+      setTileCover('/stats', pick(recent));
+      if (S.hl) setTileCover('highlighted', pick(S.hl));
+      var missing = S.eras.filter(function (t) { return !t.cover; });
+      missing.forEach(function (t) { var u = pick(recent, function (x) { return String(x.era_tag_id) === String(t.id); }); if (u) setTileCover('era:' + t.id, u); });
+      var hasImg = {};
+      document.querySelectorAll('.wv-browse-tile[data-tile]').forEach(function (tl) { if (tl.querySelector('img')) hasImg[tl.getAttribute('data-tile')] = 1; });
+      missing = missing.filter(function (t) { return !hasImg['era:' + t.id]; }).slice(0, 12);
+      return Promise.all(missing.map(function (t) {
+        return api('/discover/era/' + encodeURIComponent(t.id)).then(function (items) { if (S.alive) setTileCover('era:' + t.id, pick(items || [])); }).catch(function () {});
+      }));
+    }).catch(function () {});
+  }
 
-// A few hundred cards in one go is slow to paint and impossible to scan, so
-// the list grows on demand.
-function paintGrid() {
-  var grid = document.getElementById('grid');
-  if (!grid) return;
-  var all = _sorted(_items);
-  var page = all.slice(0, _shown);
-  grid.innerHTML = page.length
-    ? page.map(card).join('') +
-      (all.length > page.length
-        ? '<div style="grid-column:1/-1;display:flex;justify-content:center;padding:12px 0;">' +
-          '<button class="wv-pill" style="padding:9px 20px;font-weight:700;" onclick="showMoreBrowse()">Show more (' + (all.length - page.length) + ' left)</button></div>'
-        : '')
-    : '<div class="wv-empty" style="grid-column:1/-1;">nothing here yet</div>';
-  var c = document.getElementById('br-count');
-  if (c) c.textContent = all.length ? all.length.toLocaleString() + (all.length === 1 ? ' release' : ' releases') : '';
-}
+  function shelfSkel() {
+    var c = '';
+    for (var i = 0; i < 7; i++) c += '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1" style="height:12px;width:80%;"></div><div class="wv-skel l2" style="height:10px;width:50%;margin-top:8px;"></div></div>';
+    return '<section class="br-shelf"><div class="br-shelf-h"><div class="br-shelf-id"><div class="wv-skel br-shelf-cv"></div><div><div class="wv-skel" style="height:10px;width:90px;border-radius:5px;"></div><div class="wv-skel" style="height:18px;width:180px;border-radius:6px;margin-top:8px;"></div></div></div></div><div class="wv-rail">' + c + '</div></section>';
+  }
+  function gridSkel(n) { return '<div class="wv-tile-grid">' + '<div class="wv-skel-card"><div class="wv-skel art"></div><div class="wv-skel l1" style="height:12px;width:80%;"></div><div class="wv-skel l2" style="height:10px;width:50%;margin-top:8px;"></div></div>'.repeat(n) + '</div>'; }
 
-function card(item) {
-  var isAlbum = item._type === 'album';
-  var artist = item.archive_artist_name || (item.artists ? item.artists.display_name : '') || 'Unknown';
-  var href = isAlbum ? '/album?id=' + item.id : '/track?id=' + item.id;
-  var b = _badges || {};
-  var hl = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
-  var ex = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1 : (b.exclusive_tracks || []).indexOf(item.id) !== -1;
-  var ver = item.artists && (b.verified_artists || []).indexOf(item.artists.id) !== -1;
-  return '<div class="wv-comp-card" onclick="navigate(\'' + href + '\')">' +
-    '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';">' +
-      (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') +
-      '<button class="wv-cover-play-btn" aria-label="Play" onclick="event.stopPropagation();play(\'' + item.id + '\')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg></button>' +
-    '</div></div>' +
-    '<div class="wv-comp-card-title">' + escHtml(item.title || '') + (hl ? '<span class="wv-badge-hl-icon">★</span>' : '') + (ex ? '<span class="wv-badge-ex-icon">◆</span>' : '') + '</div>' +
-    '<div class="wv-comp-card-artist">' + (isAlbum ? 'Comp' : 'Edit') + ' · ' + escHtml(artist) + (ver ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +
-  '</div>';
-}
-window.play = function(id) {
-  var it = _items.find(function(i) { return i.id === id; }); if (!it) return;
-  if (it._type === 'album') return playCompById(id, { album: it });
-  if (!it.ia_url) { if (typeof wvToast === 'function') wvToast('that edit has no audio yet'); return; }
-  var playable = _sorted(_items).filter(function (x) { return x._type !== 'album' && x.ia_url; });
-  var idx = playable.findIndex(function (x) { return x.id === id; });
-  var queue = playable.map(function (x) {
+  var _shelf = {};
+  function loadShelves() {
+    var box = document.getElementById('br-shelves');
+    eraStats().then(function (stats) {
+      if (!S.alive) return;
+      paintEraCounts();
+      var top = stats.filter(function (e) { return e.comps > 0 && String(e.name || '').toLowerCase() !== 'other'; })
+        .sort(function (a, b) { return (b.comps || 0) - (a.comps || 0); }).slice(0, 4);
+      if (!top.length) { if (box) box.innerHTML = ''; return; }
+      if (box) box.innerHTML = top.map(function () { return shelfSkel(); }).join('');
+      return Promise.all(top.map(function (e) {
+        return api('/archive?era=' + encodeURIComponent(e.id) + '&sort=likes&limit=12&kind=comps').then(function (d) { return (d && d.items) || []; }).catch(function (err) { if (err && err.navAborted) throw err; return []; });
+      })).then(function (lists) {
+        if (!S.alive) return;
+        var b = document.getElementById('br-shelves');
+        if (!b) return;
+        var html = '';
+        top.forEach(function (e, i) {
+          var items = lists[i];
+          if (!items.length) return;
+          items = items.map(function (a) { return Object.assign({}, a, { _type: 'album', is_archive: a.is_archive !== false }); });
+          lists[i] = items;
+          _shelf[e.id] = items;
+          html += '<section class="br-shelf">' +
+            '<div class="br-shelf-h">' +
+              '<a class="br-shelf-id" href="/browse?era=' + encodeURIComponent(e.id) + '">' +
+                '<span class="br-shelf-cv" style="background:' + grad(e.name) + ';">' + img(e.cover, 48) + '</span>' +
+                '<span style="min-width:0;"><span class="br-shelf-k">Most liked in</span><span class="br-shelf-t">' + esc(e.name) + '<span class="br-shelf-n">' + plural(e.comps, 'comp') + '</span></span></span>' +
+              '</a>' +
+              '<a class="wv-see-all" href="/browse?era=' + encodeURIComponent(e.id) + '">See all</a>' +
+            '</div>' +
+            '<div class="wv-rail">' + items.map(function (a, j) { return card(a, { rank: j + 1, src: 'shelf:' + e.id }); }).join('') + '</div>' +
+          '</section>';
+        });
+        b.innerHTML = html;
+        var t0 = lists[0] && lists[0][0];
+        if (t0) setTileCover('top', t0.cover_url);
+        var t1 = lists[1] && lists[1][1];
+        if (t1) setTileCover('/archive', t1.cover_url);
+      });
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      if (box) box.innerHTML = '';
+    });
+  }
+
+  var F = { i: 0, n: 0, t: 0, hover: false, focus: false, iv: null };
+  var DWELL = 7000, TICK = 100;
+  function loadFeatured() {
+    api('/discover/highlighted').then(function (items) {
+      if (!S.alive) return;
+      S.hl = (Array.isArray(items) ? items : []).filter(function (x) { return x && x.id && x.title; });
+      renderFeatured();
+      if (S.hl.length) setTileCover('highlighted', S.hl[0].cover_url);
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      var box = document.getElementById('br-feat-box');
+      if (box) box.innerHTML = '';
+    });
+  }
+  function renderFeatured() {
+    var box = document.getElementById('br-feat-box');
+    if (!box) return;
+    var list = S.hl.slice(0, 8);
+    if (!list.length) { box.innerHTML = ''; return; }
+    F.n = list.length; F.i = 0; F.t = 0;
+    var slides = list.map(function (it, i) {
+      var isAlbum = it._type === 'album';
+      var who = (isAlbum && it.is_archive && it.archive_artist_name) || (it.artists && it.artists.display_name) || it.archive_artist_name || '';
+      var c = window.coverHues ? window.coverHues(it.title || '') : { h1: 262, h2: 300 };
+      var bits = [];
+      if (who) bits.push('by <b>' + esc(who) + '</b>');
+      if (it.play_count) bits.push(plural(it.play_count, 'play'));
+      var en = it.era_tag_id ? eraName(it.era_tag_id) : '';
+      if (en) bits.push(esc(en));
+      var href = (isAlbum ? '/album?id=' : '/track?id=') + encodeURIComponent(it.id);
+      return '<article class="br-slide' + (i === 0 ? ' on' : '') + '" role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' of ' + list.length + '" data-i="' + i + '" data-hl="' + i + '" style="--h1:' + c.h1 + ';--h2:' + c.h2 + ';"' + (i === 0 ? '' : ' aria-hidden="true"') + '>' +
+        (it.cover_url ? '<div class="br-slide-bg" style="background-image:url(&quot;' + esc(window.wvImg ? window.wvImg(it.cover_url, 64) : it.cover_url) + '&quot;)"></div>' : '') +
+        '<div class="br-slide-in">' +
+          '<div class="br-slide-txt">' +
+            '<div class="br-slide-kick">' + ICON.star + 'Featured ' + (isAlbum ? 'comp' : 'edit') + '</div>' +
+            '<h2 class="br-slide-t">' + esc(it.title) + '</h2>' +
+            '<div class="br-slide-s">' + bits.join(' · ') + '</div>' +
+            '<div class="br-slide-acts">' +
+              '<button type="button" class="pl" data-feat-play="' + i + '"' + (i === 0 ? '' : ' tabindex="-1"') + '>' + ICON.play + 'Play</button>' +
+              '<a class="op" href="' + href + '"' + (i === 0 ? '' : ' tabindex="-1"') + '>Open' + ICON.open + '</a>' +
+            '</div>' +
+          '</div>' +
+          '<a class="br-slide-art" href="' + href + '" tabindex="-1" aria-hidden="true" style="background:' + grad(it.title) + ';">' + img(it.cover_url, 240) + '</a>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+    var dots = list.map(function (it, i) { return '<button type="button" class="br-dot' + (i === 0 ? ' on' : '') + '" data-dot="' + i + '" aria-label="Show ' + esc(it.title) + '"' + (i === 0 ? ' aria-current="true"' : '') + '><i><b></b></i></button>'; }).join('');
+    box.innerHTML =
+      '<section class="br-feat" id="br-feat" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Featured">' + slides + '</section>' +
+      '<div class="br-feat-ui' + (reduced() ? ' still' : '') + '" id="br-feat-ui"><div class="br-dots" role="group" aria-label="Featured slides">' + (list.length > 1 ? dots : '') + '</div>' +
+        (list.length > 1 ? '<div class="br-arrows"><button type="button" data-feat-step="-1" aria-label="Previous featured">' + ICON.left + '</button><button type="button" data-feat-step="1" aria-label="Next featured">' + ICON.right + '</button></div>' : '') +
+      '</div>';
+    list.forEach(function (it, i) {
+      if (!it.cover_url || typeof window.extractCoverHues !== 'function') return;
+      window.extractCoverHues(it.cover_url, it.title, function (h, ok) {
+        if (!ok || !S.alive) return;
+        var s = document.querySelectorAll('#br-feat .br-slide')[i];
+        if (s) { s.style.setProperty('--h1', h.h1); s.style.setProperty('--h2', h.h2); }
+      });
+    });
+    wireFeatured();
+  }
+  function featGo(i, fromTimer) {
+    if (!F.n) return;
+    F.i = (i + F.n) % F.n;
+    F.t = 0;
+    document.querySelectorAll('#br-feat .br-slide').forEach(function (s, k) {
+      var on = k === F.i;
+      s.classList.toggle('on', on);
+      if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
+      s.querySelectorAll('button, a.op').forEach(function (b) { if (on) b.removeAttribute('tabindex'); else b.setAttribute('tabindex', '-1'); });
+    });
+    document.querySelectorAll('#br-feat-ui .br-dot').forEach(function (d, k) {
+      var on = k === F.i;
+      d.classList.toggle('on', on);
+      if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+      var b = d.querySelector('b'); if (b) { b.style.transition = 'none'; b.style.transform = 'scaleX(0)'; }
+    });
+    if (!fromTimer) setProg();
+  }
+  function setProg() {
+    var b = document.querySelector('#br-feat-ui .br-dot.on i b');
+    if (!b) return;
+    if (reduced()) { b.style.transform = 'scaleX(1)'; return; }
+    b.style.transition = '';
+    b.style.transform = 'scaleX(' + Math.min(1, F.t / DWELL) + ')';
+  }
+  function wireFeatured() {
+    var feat = document.getElementById('br-feat');
+    if (!feat) return;
+    if (F.iv) { clearInterval(F.iv); F.iv = null; }
+    feat.addEventListener('mouseenter', function () { F.hover = true; });
+    feat.addEventListener('mouseleave', function () { F.hover = false; });
+    var ui = document.getElementById('br-feat-ui');
+    [feat, ui].forEach(function (el) {
+      if (!el) return;
+      el.addEventListener('focusin', function () { F.focus = true; });
+      el.addEventListener('focusout', function (ev) { if (!ev.relatedTarget || !(feat.contains(ev.relatedTarget) || (ui && ui.contains(ev.relatedTarget)))) F.focus = false; });
+    });
+    feat.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { ev.preventDefault(); ev.stopPropagation(); featGo(F.i + (ev.key === 'ArrowRight' ? 1 : -1)); }
+    });
+    var x0 = null, y0 = 0;
+    feat.addEventListener('touchstart', function (ev) { if (ev.touches.length !== 1) return; x0 = ev.touches[0].clientX; y0 = ev.touches[0].clientY; F.hover = true; }, { passive: true });
+    feat.addEventListener('touchend', function (ev) {
+      F.hover = false;
+      if (x0 == null) return;
+      var t = ev.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) featGo(F.i + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+    if (F.n < 2 || reduced()) { setProg(); return; }
+    F.iv = setInterval(function () {
+      if (!S.alive || !document.getElementById('br-feat')) { clearInterval(F.iv); F.iv = null; return; }
+      if (F.hover || F.focus || document.hidden) return;
+      F.t += TICK;
+      if (F.t >= DWELL) featGo(F.i + 1, true);
+      setProg();
+    }, TICK);
+    onGone(function () { if (F.iv) clearInterval(F.iv); F.iv = null; });
+  }
+  function playFeatured(i) {
+    var list = (S.hl || []).slice(0, 8);
+    var it = list[i];
+    if (!it) return;
+    if (it._type === 'album') { if (window.playCompById) window.playCompById(it.id, { album: it }); return; }
+    playTracks(list, it);
+  }
+
+  function playTracks(list, it) {
+    if (!it.ia_url) { toast('that edit has no audio yet'); return; }
+    var playable = list.filter(function (x) { return x._type !== 'album' && x.ia_url; });
+    var idx = Math.max(0, playable.indexOf(it));
+    var queue = playable.map(trackQ);
+    window.setPlayerQueue(queue, idx);
+    window.playQueueIndex(idx);
+  }
+  function trackQ(x) {
     return { id: x.id, title: x.title, ia_url: x.ia_url, cover_url: x.cover_url || null,
-      artist_name: x.archive_artist_name || (x.artists && x.artists.display_name) || '', album_id: x.album_id || null };
-  });
-  setPlayerQueue(queue, Math.max(0, idx));
-  playQueueIndex(Math.max(0, idx));
-};
-init();
+      artist_name: x.archive_artist_name || (x.artists && x.artists.display_name) || '', album_id: x.album_id || null,
+      artist_id: x.artist_id || (x.artists && x.artists.id) || null };
+  }
+
+  function surprise(btn, andPlay) {
+    if (btn.classList.contains('busy')) return;
+    btn.classList.add('busy');
+    api('/archive/random?n=1').then(function (d) {
+      var a = d && d.items && d.items[0];
+      if (!a) { toast('couldnt find one...try again'); return; }
+      if (andPlay) {
+        toast('playing ' + (a.title || 'a random comp') + (a.archive_artist_name ? ' by ' + a.archive_artist_name : ''));
+        return window.playCompById && window.playCompById(a.id, { album: Object.assign({ is_archive: true }, a), quiet: true });
+      }
+      if (typeof window.navigate === 'function') window.navigate('/album?id=' + encodeURIComponent(a.id)); else location.href = '/album?id=' + encodeURIComponent(a.id);
+    }).catch(function (err) { if (!(err && err.navAborted)) toast('couldnt pick one rn', 'error'); })
+      .then(function () { btn.classList.remove('busy'); });
+  }
+
+  function card(item, o) {
+    o = o || {};
+    var isAlbum = item._type === 'album';
+    var single = isAlbum && item.is_archive && item.track_count === 1;
+    var artist = item.archive_artist_name || (item.artists ? item.artists.display_name : '') || 'Unknown';
+    var href = (isAlbum ? '/album?id=' : '/track?id=') + encodeURIComponent(item.id);
+    var b = S.badges || {};
+    var hl = isAlbum ? (b.highlighted_albums || []).indexOf(item.id) !== -1 : (b.highlighted_tracks || []).indexOf(item.id) !== -1;
+    var ex = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1 : (b.exclusive_tracks || []).indexOf(item.id) !== -1;
+    var ver = item.artists && item.artists.id && (b.verified_artists || []).indexOf(item.artists.id) !== -1;
+    var tail = '';
+    if (o.plays && typeof item.play_count === 'number') tail = ' · ' + plural(item.play_count, 'play');
+    else if (o.rank && item.external_likes) tail = ' · ♥ ' + num(item.external_likes);
+    return '<div class="wv-comp-card br-card" data-href="' + esc(href) + '">' +
+      '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + grad(item.title || '') + ';">' +
+        '<a class="br-cl" href="' + esc(href) + '" tabindex="-1" aria-hidden="true">' + img(item.cover_url, 184) + '</a>' +
+        (o.rank ? '<span class="br-rank">' + o.rank + '</span>' : '') +
+        '<button type="button" class="wv-cover-play-btn" data-play="' + esc(item.id) + '" data-src="' + esc(o.src || 'list') + '" aria-label="Play ' + esc(item.title || '') + '">' + ICON.play + '</button>' +
+      '</div></div>' +
+      '<a class="wv-comp-card-title" href="' + esc(href) + '">' + esc(item.title || 'untitled') + (hl ? '<span class="wv-badge-hl-icon">★</span>' : '') + (ex ? '<span class="wv-badge-ex-icon">◆</span>' : '') + '</a>' +
+      '<div class="wv-comp-card-artist">' + (isAlbum ? (single ? 'Edit' : 'Comp') : 'Edit') + ' · ' + esc(artist) + (ver ? '<span class="wv-verified-icon">✓</span>' : '') + tail + '</div>' +
+    '</div>';
+  }
+
+  function eraList() { return String(S.era || '').split(',').filter(Boolean); }
+  window.toggleEra = function (id) {
+    var list = eraList();
+    var i = list.indexOf(String(id));
+    if (i >= 0) list.splice(i, 1); else list.push(String(id));
+    if (!list.length) return window.go('tab', S.tab || 'recent');
+    var u = new URL(location.href);
+    u.searchParams.delete('tab');
+    u.searchParams.set('era', list.join(','));
+    history.replaceState(null, '', u);
+    S.tab = ''; S.era = list.join(',');
+    renderList();
+  };
+  window.go = function (kind, v) {
+    var u = new URL(location.href);
+    u.searchParams.delete('tab'); u.searchParams.delete('era');
+    u.searchParams.set(kind, v);
+    history.pushState(null, '', u);
+    S.tab = kind === 'tab' ? v : ''; S.era = kind === 'era' ? v : '';
+    if (!S.eras.length) {
+      api('/eratags').then(function (t) { S.eras = Array.isArray(t) ? t : []; }).catch(function () {}).then(function () { if (S.alive) renderList(); });
+      return;
+    }
+    renderList();
+    var c = document.getElementById('wv-content');
+    if (c) c.scrollTop = 0;
+  };
+
+  var L = null;
+  var PAGE = 48, ARC_PAGE = 60;
+  var SORT_SERVER = { newest: 'newest', oldest: 'oldest', title: 'title', artist: 'artist', plays: 'plays' };
+  function when(x) { var t = new Date(x.original_date || x.created_at || 0).getTime(); return isNaN(t) ? 0 : t; }
+  function who(x) { return String(x.archive_artist_name || (x.artists && x.artists.display_name) || ''); }
+  function str(x) { return String(x || ''); }
+  function cmpFor(sort) {
+    if (sort === 'oldest') return function (a, b) { var ta = when(a), tb = when(b); if (!ta && !tb) return 0; if (!ta) return 1; if (!tb) return -1; return ta - tb; };
+    if (sort === 'title') return function (a, b) { return str(a.title).localeCompare(str(b.title)); };
+    if (sort === 'artist') return function (a, b) { return who(a).localeCompare(who(b)) || str(a.title).localeCompare(str(b.title)); };
+    if (sort === 'plays') return function (a, b) { return (b.play_count || 0) - (a.play_count || 0); };
+    return function (a, b) { return when(b) - when(a); };
+  }
+  function keyOf(it) { return (it._type || '') + ':' + it.id; }
+
+  function newState(seq) {
+    return { seq: seq, streams: [], out: [], seen: {}, rr: 0, shown: 0, busy: false, fail: false, io: null, numericPlays: false };
+  }
+  function pullSync(target) {
+    var cmp = cmpFor(S.sort);
+    while (L.out.length < target) {
+      var heads = [], need = null;
+      for (var i = 0; i < L.streams.length; i++) {
+        var s = L.streams[i];
+        if (s.i < s.items.length) heads.push(s);
+        else if (!s.done) { need = s; break; }
+      }
+      if (need) return need;
+      if (!heads.length) return null;
+      var pick;
+      if (S.sort === 'plays' && !L.numericPlays && heads.length > 1) { pick = heads[L.rr % heads.length]; L.rr++; }
+      else { pick = heads[0]; for (var k = 1; k < heads.length; k++) if (cmp(heads[k].items[heads[k].i], pick.items[pick.i]) < 0) pick = heads[k]; }
+      var it = pick.items[pick.i++];
+      var key = keyOf(it);
+      if (L.seen[key]) continue;
+      L.seen[key] = 1;
+      L.out.push(it);
+    }
+    return null;
+  }
+  function fetchArc(s) {
+    var seq = L.seq;
+    return api('/archive?limit=' + ARC_PAGE + '&offset=' + s.offset + '&sort=' + SORT_SERVER[S.sort] + '&kind=all&era=' + encodeURIComponent(s.era)).then(function (d) {
+      if (!L || L.seq !== seq) return;
+      var items = ((d && d.items) || (Array.isArray(d) ? d : [])).map(function (a) { return Object.assign({}, a, { _type: 'album', is_archive: true, era_tag_id: s.era }); });
+      if (s.offset === 0 && typeof (d && d.total) === 'number') s.total = d.total;
+      var enrich = S.sort === 'plays' ? withPlays(items) : Promise.resolve(items);
+      return enrich.then(function (items) {
+        if (!L || L.seq !== seq) return;
+        if (items.length && items.every(function (x) { return typeof x.play_count === 'number'; })) L.numericPlays = true;
+        s.items = s.items.concat(items);
+        s.offset += items.length;
+        if (items.length < ARC_PAGE) s.done = true;
+      });
+    });
+  }
+  function withPlays(items) {
+    var missing = items.filter(function (x) { return typeof x.play_count !== 'number'; });
+    if (!missing.length) return Promise.resolve(items);
+    var chunks = [];
+    for (var i = 0; i < missing.length; i += 40) chunks.push(missing.slice(i, i + 40));
+    return Promise.all(chunks.map(function (c) {
+      return api('/albums/batch/by-ids?ids=' + c.map(function (x) { return encodeURIComponent(x.id); }).join(',')).then(function (r) { return (r && r.items) || []; }).catch(function (e) { if (e && e.navAborted) throw e; return []; });
+    })).then(function (parts) {
+      var byId = {};
+      parts.forEach(function (p) { p.forEach(function (r) { if (r && r.id) byId[r.id] = r; }); });
+      return items.map(function (x) { var r = byId[x.id]; return r && typeof r.play_count === 'number' && typeof x.play_count !== 'number' ? Object.assign({}, x, { play_count: r.play_count }) : x; });
+    });
+  }
+  function pull(target) {
+    var seq = L.seq;
+    var need = pullSync(target);
+    if (!need) return Promise.resolve();
+    return fetchArc(need).then(function () { if (L && L.seq === seq) return pull(target); });
+  }
+  function allDone() { return L.streams.every(function (s) { return s.done && s.i >= s.items.length; }); }
+
+  function renderList() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    if (L && L.io) { try { L.io.disconnect(); } catch (_) {} }
+    var seq = ++S.seq;
+    L = newState(seq);
+    var picked = eraList();
+    var pickedObjs = picked.map(function (id) { return S.eras.filter(function (t) { return String(t.id) === id; })[0]; }).filter(Boolean);
+    var eraObj = pickedObjs.length === 1 ? pickedObjs[0] : null;
+    var title = pickedObjs.length ? pickedObjs.map(function (t) { return t.name; }).join(' + ') : ({ recent: 'New releases', trending: 'Trending', highlighted: 'Highlighted', comps: 'Comps', edits: 'Edits' }[S.tab] || 'Browse');
+    var sorts = [['newest', 'Newest first'], ['oldest', 'Oldest first'], ['title', 'Title A–Z'], ['artist', 'Creator A–Z'], ['plays', 'Most played']];
+    view.innerHTML =
+      '<a class="br-back" href="/browse">' + ICON.left + 'Browse</a>' +
+      '<div class="br-lhead">' +
+        (eraObj ? '<div class="br-lart" style="background:' + grad(eraObj.name) + ';">' + img(eraObj.cover, 84) + '</div>' : '') +
+        '<div style="min-width:0;"><h1 class="wv-page-title" style="margin:0;">' + esc(title) + '</h1>' +
+        (eraObj ? '<div class="br-lmeta" id="br-lmeta"><a href="/eras?era=' + encodeURIComponent(eraObj.id) + '">Era details</a></div>' : '') + '</div>' +
+      '</div>' +
+      '<div class="br-hint"><span class="br-count br-count-m" id="br-count2"></span>' + (S.eras.length ? '<span>' + (picked.length ? 'tap more eras to add them...tap one again to take it off' : 'tap an era to pick it...you can pick more than one') + '</span>' : '') + '</div>' +
+      '<div class="br-sentinel-top" id="br-top"></div>' +
+      '<div class="br-sticky" id="br-sticky">' +
+        (S.eras.length ? '<div class="br-chips" id="era-chips" role="group" aria-label="Eras"></div>' : '') +
+        '<div class="br-ctrl">' +
+          '<button type="button" class="br-go pl" data-act="playall">' + ICON.play + 'Play all</button>' +
+          '<button type="button" class="br-go sh" data-act="shuffle">' + ICON.shuffle + 'Shuffle</button>' +
+          '<select id="br-sort" class="wv-input" aria-label="Sort">' + sorts.map(function (s) { return '<option value="' + s[0] + '"' + (S.sort === s[0] ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('') + '</select>' +
+          '<span class="br-count" id="br-count" aria-live="polite"></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="wv-tile-grid" id="grid">' + gridSkel(10).replace(/^<div class="wv-tile-grid">|<\/div>$/g, '') + '</div>' +
+      '<div class="br-more" id="br-more"></div>';
+    if (S.eras.length) {
+      var chips = document.getElementById('era-chips');
+      chips.innerHTML =
+        '<button type="button" class="wv-chip' + (!picked.length ? ' acc' : '') + '" data-chip-all="1" aria-pressed="' + (!picked.length) + '">All</button>' +
+        S.eras.map(function (t) { var on = picked.indexOf(String(t.id)) >= 0; return '<button type="button" class="wv-chip' + (on ? ' acc' : '') + '" data-chip="' + esc(t.id) + '" aria-pressed="' + on + '">' + (on && picked.length > 1 ? '✓ ' : '') + esc(t.name) + '</button>'; }).join('');
+      var firstOn = chips.querySelector('.wv-chip.acc');
+      if (firstOn && firstOn.offsetLeft > chips.clientWidth - 80) chips.scrollLeft = firstOn.offsetLeft - 24;
+    }
+    wireSticky();
+    if (eraObj) {
+      eraStats().then(function () {
+        var st = statFor(eraObj.id), m = document.getElementById('br-lmeta');
+        if (!st || !m || S.seq !== seq) return;
+        var bits = [];
+        if (st.comps) bits.push(plural(st.comps, 'comp'));
+        if (st.edits) bits.push(plural(st.edits, 'edit'));
+        m.innerHTML = bits.join(' · ') + (bits.length ? ' · ' : '') + '<a href="/eras?era=' + encodeURIComponent(eraObj.id) + '">Era details</a>';
+      }).catch(function () {});
+    }
+    var discP;
+    if (picked.length) {
+      discP = Promise.all(picked.map(function (id) { return api('/discover/era/' + encodeURIComponent(id)).catch(function (e) { if (e && e.navAborted) throw e; return []; }); }))
+        .then(function (lists) { var all = []; lists.forEach(function (l) { if (Array.isArray(l)) all = all.concat(l); }); return all; });
+    } else if (S.tab === 'trending') discP = api('/discover/trending');
+    else if (S.tab === 'highlighted') discP = api('/discover/highlighted');
+    else discP = api('/discover').then(function (d) { return (d && d.recent) || []; });
+    L.discP = discP;
+    loadInitial(seq, title, eraObj);
+  }
+
+  function loadInitial(seq, title, eraObj) {
+    var picked = eraList();
+    L.streams = [];
+    L.discP.then(function (items) {
+      if (!L || L.seq !== seq) return;
+      items = Array.isArray(items) ? items : [];
+      if (S.tab === 'comps') items = items.filter(function (i) { return i._type === 'album'; });
+      if (S.tab === 'edits') items = items.filter(function (i) { return i._type !== 'album'; });
+      var local = { items: items.slice().sort(cmpFor(S.sort)), i: 0, done: true, local: true };
+      L.streams = [local].concat(picked.map(function (id) { return { era: id, items: [], i: 0, offset: 0, done: false, total: null }; }));
+      var first = Promise.all(L.streams.filter(function (s) { return !s.local; }).map(fetchArc));
+      return first.then(function () {
+        if (!L || L.seq !== seq) return;
+        var withCover = items.filter(function (i) { return i.cover_url; })[0];
+        if (typeof window.setPageBgImage === 'function') window.setPageBgImage((eraObj && eraObj.cover) || (withCover ? withCover.cover_url : ''), title);
+        return pull(PAGE).then(function () { if (L && L.seq === seq) paint(true); });
+      });
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      if (!L || L.seq !== seq) return;
+      var g = document.getElementById('grid');
+      if (g && window.wvErrorHTML) g.innerHTML = window.wvErrorHTML(err, 'brRetry()');
+      else if (g) g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">couldnt load this<br><button class="wv-pill brand" onclick="brRetry()">Try again</button></div>';
+    });
+  }
+  window.brRetry = function () { renderList(); };
+
+  function paint(full) {
+    var grid = document.getElementById('grid');
+    if (!grid) return;
+    var from = full ? 0 : L.shown;
+    var chunk = L.out.slice(from);
+    var o = { plays: S.sort === 'plays' };
+    if (full) {
+      grid.innerHTML = L.out.length ? chunk.map(function (it) { return card(it, o); }).join('') : '<div class="wv-empty" style="grid-column:1/-1;">nothing here yet</div>';
+    } else if (chunk.length) {
+      grid.insertAdjacentHTML('beforeend', chunk.map(function (it) { return card(it, o); }).join(''));
+    }
+    L.shown = L.out.length;
+    paintCount();
+    paintMore();
+    watchMore();
+  }
+  function paintCount() {
+    var c = document.getElementById('br-count'), c2 = document.getElementById('br-count2');
+    if (!c) return;
+    var local = L.streams.filter(function (s) { return s.local; })[0];
+    var arcs = L.streams.filter(function (s) { return !s.local; });
+    var exact = arcs.every(function (s) { return typeof s.total === 'number' || s.done; });
+    var n = (local ? local.items.length : 0) + arcs.reduce(function (t, s) { return t + (typeof s.total === 'number' ? s.total : s.items.length); }, 0);
+    var txt = L.out.length ? num(n) + (exact ? '' : '+') + (n === 1 ? ' release' : ' releases') : '';
+    c.textContent = txt;
+    if (c2) c2.textContent = txt;
+  }
+  function paintMore() {
+    var m = document.getElementById('br-more');
+    if (!m) return;
+    if (L.fail) { m.innerHTML = '<span>couldnt load more</span><button type="button" class="wv-pill brand" data-act="more">Try again</button>'; return; }
+    if (L.busy) { m.innerHTML = '<div class="br-spin" aria-label="Loading"></div>'; return; }
+    if (allDone()) { m.innerHTML = L.out.length > PAGE ? '<div class="br-end">that is everything</div>' : ''; return; }
+    m.innerHTML = '<button type="button" class="wv-pill" data-act="more">Show more</button>';
+  }
+  function loadMore() {
+    if (!L || L.busy || allDone()) return;
+    var seq = L.seq;
+    L.busy = true; L.fail = false;
+    paintMore();
+    pull(L.out.length + PAGE).then(function () {
+      if (!L || L.seq !== seq) return;
+      L.busy = false;
+      paint(false);
+    }).catch(function (err) {
+      if (err && err.navAborted) return;
+      if (!L || L.seq !== seq) return;
+      L.busy = false; L.fail = true;
+      paintMore();
+    });
+  }
+  function watchMore() {
+    if (!('IntersectionObserver' in window)) return;
+    var m = document.getElementById('br-more');
+    if (!m) return;
+    if (L.io) { try { L.io.disconnect(); } catch (_) {} }
+    var seq = L.seq;
+    L.io = new IntersectionObserver(function (entries) {
+      if (!L || L.seq !== seq) return;
+      if (entries.some(function (e) { return e.isIntersecting; }) && !L.fail) loadMore();
+    }, { rootMargin: '700px 0px' });
+    L.io.observe(m);
+  }
+  onGone(function () { if (L && L.io) try { L.io.disconnect(); } catch (_) {} });
+  var stickyIO = null;
+  function wireSticky() {
+    if (stickyIO) { try { stickyIO.disconnect(); } catch (_) {} stickyIO = null; }
+    var top = document.getElementById('br-top'), bar = document.getElementById('br-sticky');
+    if (!top || !bar || !('IntersectionObserver' in window)) return;
+    stickyIO = new IntersectionObserver(function (en) { bar.classList.toggle('stuck', !en[0].isIntersecting); }, { threshold: 0 });
+    stickyIO.observe(top);
+  }
+  onGone(function () { if (stickyIO) try { stickyIO.disconnect(); } catch (_) {} stickyIO = null; });
+
+  function setSort(v) {
+    S.sort = v;
+    try { localStorage.setItem('wv_browse_sort', v); } catch (_) {}
+    if (!L) return;
+    var seq = ++S.seq;
+    var disc = L.discP;
+    if (L.io) try { L.io.disconnect(); } catch (_) {}
+    L = newState(seq);
+    L.discP = disc;
+    var g = document.getElementById('grid');
+    if (g) g.innerHTML = gridSkel(10).replace(/^<div class="wv-tile-grid">|<\/div>$/g, '');
+    var m = document.getElementById('br-more'); if (m) m.innerHTML = '';
+    var picked = eraList();
+    var pickedObjs = picked.map(function (id) { return S.eras.filter(function (t) { return String(t.id) === id; })[0]; }).filter(Boolean);
+    loadInitial(seq, pickedObjs.map(function (t) { return t.name; }).join(' + '), pickedObjs.length === 1 ? pickedObjs[0] : null);
+  }
+  window.setBrowseSort = setSort;
+
+  function findItem(id, src) {
+    var pool = [];
+    if (src && src.indexOf('shelf:') === 0) pool = _shelf[src.slice(6)] || [];
+    else if (L) pool = L.out;
+    return pool.filter(function (x) { return String(x.id) === String(id); })[0] || null;
+  }
+  function playCard(id, src) {
+    var it = findItem(id, src);
+    if (!it) return;
+    if (it._type === 'album') { if (window.playCompById) window.playCompById(it.id, { album: it }); return; }
+    playTracks(L ? L.out : [it], it);
+  }
+
+  function albumTracks(a) {
+    return api('/albums/' + encodeURIComponent(a.id) + '/tracks').then(function (rows) {
+      var who = (a.is_archive && a.archive_artist_name) || (a.artists && a.artists.display_name) || '';
+      var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+      var credits = (typeof window.wvEditCredits === 'function' && window.wvEditCredits(tracks.map(function (t) { return t.title; }), who)) || [];
+      return tracks.map(function (t, i) {
+        return { id: t.id, title: credits[i] ? credits[i].title : t.title, ia_url: t.ia_url, cover_url: t.cover_url || a.cover_url || null,
+          artist_name: credits[i] ? credits[i].credit : (who || (t.artists && t.artists.display_name) || ''),
+          album_id: a.id, artist_id: t.artist_id || null, _album_id: a.id, _album_title: a.title || null, _album_cover: a.cover_url || null,
+          _archive_artist: a.is_archive ? (a.archive_artist_name || null) : null };
+      });
+    }).catch(function (e) { if (e && e.navAborted) throw e; return []; });
+  }
+  function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function playAll(btn, shuffled) {
+    if (!L || !L.out.length) { toast('nothing to play yet'); return; }
+    if (btn.classList.contains('busy')) return;
+    var list = L.out.slice();
+    if (shuffled) shuffleArr(list);
+    var picked = [], albums = 0, tracks = 0;
+    for (var i = 0; i < list.length && (albums < 6 || tracks < 60); i++) {
+      var it = list[i];
+      if (it._type === 'album') { if (albums < 6) { picked.push(it); albums++; } }
+      else if (it.ia_url && tracks < 60) { picked.push(it); tracks++; }
+    }
+    if (!picked.length) { toast('nothing here can play yet'); return; }
+    btn.classList.add('busy');
+    Promise.all(picked.map(function (it) { return it._type === 'album' ? albumTracks(it) : Promise.resolve([trackQ(it)]); })).then(function (parts) {
+      btn.classList.remove('busy');
+      var q = [];
+      parts.forEach(function (p) { q = q.concat(p); });
+      q = q.slice(0, 200);
+      if (shuffled) shuffleArr(q);
+      if (!q.length) { toast('nothing here can play yet', 'error'); return; }
+      window.setPlayerQueue(q, 0);
+      window.playQueueIndex(0);
+      toast((shuffled ? 'shuffling ' : 'playing ') + plural(q.length, 'track'));
+    }).catch(function (err) { btn.classList.remove('busy'); if (!(err && err.navAborted)) toast('couldnt start playback', 'error'); });
+  }
+
+  var view = document.getElementById('view');
+  if (view && !view._brWired) {
+    view._brWired = true;
+    view.addEventListener('click', function (ev) {
+      var t = ev.target;
+      var el;
+      if ((el = t.closest('[data-feat-play]'))) { ev.preventDefault(); playFeatured(parseInt(el.getAttribute('data-feat-play'), 10)); return; }
+      if ((el = t.closest('[data-feat-step]'))) { featGo(F.i + parseInt(el.getAttribute('data-feat-step'), 10)); return; }
+      if ((el = t.closest('[data-dot]'))) { featGo(parseInt(el.getAttribute('data-dot'), 10)); return; }
+      if ((el = t.closest('[data-play]'))) { ev.preventDefault(); ev.stopPropagation(); playCard(el.getAttribute('data-play'), el.getAttribute('data-src')); return; }
+      if ((el = t.closest('[data-chip]'))) { window.toggleEra(el.getAttribute('data-chip')); return; }
+      if ((el = t.closest('[data-chip-all]'))) { window.go('tab', S.tab || 'recent'); return; }
+      if ((el = t.closest('[data-act]'))) {
+        var act = el.getAttribute('data-act');
+        if (act === 'surprise') return surprise(el, false);
+        if (act === 'surprise-play') return surprise(el, true);
+        if (act === 'playall') return playAll(el, false);
+        if (act === 'shuffle') return playAll(el, true);
+        if (act === 'more') { if (L) L.fail = false; return loadMore(); }
+        return;
+      }
+      var plain = ev.button === 0 && !ev.metaKey && !ev.ctrlKey && !ev.shiftKey && !ev.altKey;
+      if ((el = t.closest('a[data-tab]')) && plain) { ev.preventDefault(); window.go('tab', el.getAttribute('data-tab')); return; }
+      if ((el = t.closest('#br-eras a[data-era]')) && plain) { ev.preventDefault(); window.go('era', el.getAttribute('data-era')); return; }
+      if (!t.closest('a,button,select') && (el = t.closest('.br-card[data-href]')) && plain) { if (window.navigate) window.navigate(el.getAttribute('data-href')); }
+    });
+    view.addEventListener('change', function (ev) { if (ev.target && ev.target.id === 'br-sort') setSort(ev.target.value); });
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>

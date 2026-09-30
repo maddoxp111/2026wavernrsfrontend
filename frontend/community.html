@@ -7,10 +7,293 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style id="cm-page-style">
+    .cm-wrap { container-type: inline-size; max-width: 1180px; margin: 0 auto; padding: 14px 0 88px; }
+    .cm-wrap *, .cm-wrap *::before, .cm-wrap *::after { box-sizing: border-box; }
+    .cm-wrap [hidden] { display: none !important; }
+    .cm-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+    .cm-main { min-width: 0; }
+    .cm-rail { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .cm-rail .cm-online-card { display: none; }
+    @container (min-width: 840px) {
+      .cm-grid { grid-template-columns: minmax(0, 1fr) 280px; gap: 24px; }
+      .cm-rail .cm-online-card { display: block; }
+      .cm-head-online { display: none !important; }
+    }
+    @container (min-width: 1040px) {
+      .cm-grid { grid-template-columns: minmax(0, 1fr) 312px; gap: 28px; }
+    }
+
+    .cm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 4px 0 22px; }
+    .cm-title { margin: 0; font-size: clamp(30px, 4.4vw, 44px); font-weight: 900; letter-spacing: -0.04em; line-height: 1.02; color: var(--text); }
+    .cm-sub { margin: 8px 0 0; font-size: 14px; color: var(--text-2); line-height: 1.45; }
+    .cm-head-stats { display: flex; gap: 14px; margin-top: 12px; font-size: 12.5px; color: var(--text-3); flex-wrap: wrap; }
+    .cm-head-stats b { color: var(--text); font-weight: 700; }
+    .cm-head-online { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+    .cm-head-online:empty { display: none; }
+    .cm-live { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+    .cm-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent); animation: cm-pulse 2.2s var(--ease) infinite; flex-shrink: 0; }
+    @keyframes cm-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+    .cm-faces { display: flex; align-items: center; padding-left: 6px; }
+    .cm-faces .wv-face { margin-left: -6px; border-color: var(--page-bg-base); }
+    .cm-faces .wv-face:first-child { margin-left: 0; }
+    .cm-wrap .wv-face img { position: absolute; inset: 0; }
+
+    .cm-composer { background: var(--surface); border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--hair); transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease); }
+    .cm-composer.is-open { border-color: var(--hair-strong); box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+    .cm-composer-bar { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 12px 12px 14px; background: none; border: 0; cursor: text; font-family: inherit; text-align: left; color: var(--text-3); border-radius: 12px; min-height: 60px; }
+    .cm-composer-bar:hover .cm-fake-input { background: var(--surface-3); }
+    .cm-fake-input { flex: 1; min-width: 0; background: var(--surface-2); border-radius: var(--r-pill); padding: 10px 16px; font-size: 14px; color: var(--text-3); transition: background 120ms var(--ease); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cm-fake-input b { color: var(--text-2); font-weight: 600; }
+    .cm-composer-body { padding: 16px 16px 14px; }
+    .cm-composer-who { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; color: var(--text-3); }
+    .cm-composer-who strong { color: var(--text); font-weight: 700; }
+    .cm-field { width: 100%; background: transparent; border: 0; outline: none; color: var(--text); font-family: inherit; }
+    .cm-title-input { font-size: 19px; font-weight: 750; letter-spacing: -0.02em; padding: 6px 0 10px; border-bottom: 1px solid var(--hair); }
+    .cm-title-input::placeholder, .cm-textarea::placeholder { color: var(--text-3); font-weight: 500; }
+    .cm-editor-tools { display: flex; align-items: center; gap: 4px; margin: 10px 0 6px; flex-wrap: wrap; }
+    .cm-tab { font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--text-3); background: none; border: 0; padding: 7px 10px; border-radius: var(--r-pill); cursor: pointer; min-height: 32px; }
+    .cm-tab:hover { color: var(--text); }
+    .cm-tab.on { color: var(--text); background: var(--surface-2); }
+    .cm-fmt { margin-left: auto; display: flex; gap: 2px; }
+    .cm-fmt button { width: 32px; height: 32px; border-radius: 8px; border: 0; background: none; color: var(--text-2); font-family: inherit; font-size: 13.5px; cursor: pointer; display: grid; place-items: center; }
+    .cm-fmt button:hover { background: var(--surface-2); color: var(--text); }
+    .cm-textarea { width: 100%; min-height: 120px; max-height: 60vh; resize: vertical; background: var(--surface-2); border: 1px solid transparent; border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14.5px; line-height: 1.6; padding: 12px 14px; outline: none; transition: border-color 120ms var(--ease), background 120ms var(--ease); }
+    .cm-textarea:focus { border-color: var(--hair-strong); background: var(--surface-3); }
+    .cm-preview { min-height: 120px; background: var(--surface-2); border-radius: 10px; padding: 14px 16px; }
+    .cm-preview-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 6px; color: var(--text); overflow-wrap: anywhere; }
+    .cm-preview-empty { color: var(--text-3); font-size: 13.5px; }
+    .cm-composer-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .cm-meta-line { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+    .cm-count.warn { color: var(--orange); }
+    .cm-count.over { color: var(--red); font-weight: 700; }
+    .cm-saved { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 200ms var(--ease); }
+    .cm-saved.show { opacity: 1; }
+    .cm-kbd { font-family: var(--font-mono); font-size: 10.5px; padding: 1px 5px; border-radius: 4px; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--hair); }
+    .cm-foot-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .cm-btn { font-family: inherit; font-size: 13px; font-weight: 700; border-radius: var(--r-pill); border: 0; cursor: pointer; padding: 0 18px; min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: filter 120ms var(--ease), transform 90ms var(--ease), background 120ms var(--ease); white-space: nowrap; text-decoration: none; }
+    .cm-btn:active { transform: scale(.97); }
+    .cm-btn-primary { background: var(--brand); color: var(--on-brand); }
+    .cm-btn-primary:hover { filter: brightness(1.08); }
+    .cm-btn-primary[disabled] { opacity: .45; cursor: not-allowed; filter: none; transform: none; }
+    .cm-btn-quiet { background: transparent; color: var(--text-2); }
+    .cm-btn-quiet:hover { color: var(--text); background: var(--surface-2); }
+    .cm-btn-outline { background: transparent; color: var(--text); border: 1px solid var(--hair-strong); }
+    .cm-btn-outline:hover { border-color: var(--text); }
+    .cm-btn-danger { background: var(--red); color: #fff; }
+    .cm-err { font-size: 12.5px; color: var(--red); margin-top: 8px; }
+    .cm-err:empty { display: none; }
+
+    .cm-join { display: flex; align-items: center; gap: 16px; padding: 18px 18px; background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .cm-join-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-bg); color: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
+    .cm-join-t { font-size: 15px; font-weight: 750; color: var(--text); letter-spacing: -0.01em; }
+    .cm-join-d { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+    .cm-join-actions { margin-left: auto; display: flex; gap: 8px; }
+
+    .cm-toolbar { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; flex-wrap: wrap; }
+    .cm-seg { display: inline-flex; background: var(--surface-2); border-radius: var(--r-pill); padding: 3px; flex-shrink: 0; }
+    .cm-seg button { font-family: inherit; font-size: 12.5px; font-weight: 700; border: 0; cursor: pointer; padding: 0 14px; min-height: 34px; border-radius: var(--r-pill); background: transparent; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; transition: background 140ms var(--ease), color 140ms var(--ease); }
+    .cm-seg button:hover { color: var(--text); }
+    .cm-seg button.on { background: var(--text); color: var(--page-bg-base); }
+    .cm-seg button svg { opacity: .9; }
+    .cm-search { position: relative; flex: 1 1 200px; max-width: 320px; margin-left: auto; }
+    .cm-search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+    .cm-search input { width: 100%; height: 40px; border-radius: var(--r-pill); border: 1px solid transparent; background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 13.5px; padding: 0 38px 0 36px; outline: none; transition: border-color 120ms var(--ease), background 120ms var(--ease); }
+    .cm-search input:hover { background: var(--surface-3); }
+    .cm-search input:focus { border-color: var(--hair-strong); background: var(--surface-3); }
+    .cm-search input::placeholder { color: var(--text-3); }
+    .cm-search input::-webkit-search-cancel-button { display: none; }
+    .cm-search-clear { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; border: 0; background: none; color: var(--text-3); cursor: pointer; display: none; place-items: center; }
+    .cm-search-clear:hover { color: var(--text); background: var(--surface-2); }
+    .cm-search.has-q .cm-search-clear { display: grid; }
+    .cm-search-kbd { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+    .cm-search.has-q .cm-search-kbd, .cm-search input:focus ~ .cm-search-kbd { display: none; }
+    @media (max-width: 640px) { .cm-search { max-width: none; flex-basis: 100%; margin-left: 0; order: 2; } .cm-search-kbd { display: none; } }
+    .cm-search-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--text-3); margin: -4px 0 12px; flex-wrap: wrap; }
+    .cm-search-note b { color: var(--text); }
+    .cm-link-btn { background: none; border: 0; padding: 6px 4px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--brand); cursor: pointer; }
+    .cm-link-btn:hover { text-decoration: underline; }
+
+    .cm-list { display: flex; flex-direction: column; gap: 10px; }
+    .cm-post { position: relative; background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; padding: 14px 16px 10px; cursor: pointer; transition: border-color 140ms var(--ease), background 140ms var(--ease), transform 140ms var(--ease); outline: none; }
+    .cm-post:hover { border-color: var(--hair-strong); background: color-mix(in srgb, var(--surface) 88%, var(--surface-2)); }
+    .cm-post:focus-visible { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-bg); }
+    .cm-post.is-fresh { animation: cm-fresh 2.4s var(--ease); }
+    @keyframes cm-fresh { 0%, 30% { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-bg); } 100% { box-shadow: 0 0 0 0 transparent; } }
+    .cm-post-meta { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12.5px; color: var(--text-3); }
+    .cm-post-meta .cm-name { font-weight: 700; color: var(--text); text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+    .cm-post-meta a.cm-name:hover, .cm-c-head a.cm-name:hover { text-decoration: underline; }
+    .cm-sep { color: var(--text-4, var(--text-3)); }
+    .cm-time { white-space: nowrap; }
+    .cm-pill-new { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--on-brand); background: var(--brand); padding: 2px 7px; border-radius: var(--r-pill); line-height: 1.4; flex-shrink: 0; }
+    .cm-hot { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 800; color: var(--orange); background: color-mix(in srgb, var(--orange) 14%, transparent); padding: 2px 8px 2px 6px; border-radius: var(--r-pill); line-height: 1.4; flex-shrink: 0; }
+    .cm-post-title { margin: 8px 0 0; font-size: 16.5px; font-weight: 750; letter-spacing: -0.018em; line-height: 1.32; color: var(--text); overflow-wrap: anywhere; }
+    .cm-post-body { margin: 5px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: pre-line; }
+    .cm-post mark, .cm-rail mark { background: color-mix(in srgb, var(--brand) 26%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+    .cm-unfurl { margin-top: 10px; min-height: 1px; }
+    .cm-c-body + .cm-unfurl { margin-top: 8px; }
+    .cm-mini { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; border-radius: 10px; background: var(--surface-2); color: var(--text); text-decoration: none; max-width: 440px; border: 1px solid transparent; transition: background 120ms var(--ease), border-color 120ms var(--ease); }
+    .cm-mini:hover { background: var(--surface-3); border-color: var(--hair); }
+    .cm-mini-art { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; flex-shrink: 0; position: relative; display: grid; place-items: center; color: rgba(255,255,255,.9); }
+    .cm-mini-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cm-mini-t { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cm-mini-s { font-size: 12px; color: var(--text-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cm-mini-go { margin-left: auto; color: var(--text-3); flex-shrink: 0; }
+    .cm-mini.is-plain { padding: 8px 12px; }
+    .cm-mini-skel { height: 60px; max-width: 440px; border-radius: 10px; }
+
+    .cm-actions { display: flex; align-items: center; gap: 4px; margin: 10px -6px 0; flex-wrap: wrap; }
+    .cm-vote { display: inline-flex; align-items: center; background: var(--surface-2); border-radius: var(--r-pill); padding: 0 2px; transition: background 140ms var(--ease); }
+    .cm-vote.is-up { background: var(--brand-bg); }
+    .cm-vote.is-down { background: color-mix(in srgb, var(--blue) 14%, transparent); }
+    .cm-vote-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: none; color: var(--text-2); cursor: pointer; display: grid; place-items: center; transition: color 120ms var(--ease), background 120ms var(--ease), transform 120ms var(--ease); }
+    .cm-vote-btn:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+    .cm-vote-btn.up:hover { color: var(--brand); }
+    .cm-vote-btn.down:hover { color: var(--blue); }
+    .cm-vote-btn.on.up { color: var(--brand); }
+    .cm-vote-btn.on.down { color: var(--blue); }
+    .cm-vote-btn.on path { fill: currentColor; }
+    .cm-vote-btn:active { transform: scale(.88); }
+    .cm-score { min-width: 18px; text-align: center; font-size: 13px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; display: inline-block; }
+    .cm-vote.is-up .cm-score { color: var(--brand); }
+    .cm-vote.is-down .cm-score { color: var(--blue); }
+    .cm-score.bump-up { animation: cm-bump-up 420ms var(--ease); }
+    .cm-score.bump-down { animation: cm-bump-down 420ms var(--ease); }
+    @keyframes cm-bump-up { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-5px) scale(1.3); } 100% { transform: translateY(0) scale(1); } }
+    @keyframes cm-bump-down { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(5px) scale(1.3); } 100% { transform: translateY(0) scale(1); } }
+    .cm-act { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--r-pill); border: 0; background: none; color: var(--text-2); font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background 120ms var(--ease), color 120ms var(--ease); white-space: nowrap; text-decoration: none; }
+    .cm-act:hover { background: var(--surface-2); color: var(--text); }
+    .cm-act.danger:hover { color: var(--red); background: color-mix(in srgb, var(--red) 10%, transparent); }
+    .cm-act.done { color: var(--green); }
+    .cm-act-new { font-size: 10.5px; font-weight: 800; color: var(--brand); background: var(--brand-bg); padding: 1px 7px; border-radius: var(--r-pill); }
+    .cm-spacer { flex: 1; }
+    @media (max-width: 640px) { .cm-textarea, .cm-search input { font-size: 16px; } }
+    @media (hover: none) { .cm-kbd-hint { display: none !important; } }
+    @media (max-width: 480px) { .cm-act .cm-act-label { display: none; } .cm-act { padding: 0 10px; } .cm-post { padding: 13px 14px 9px; } }
+
+    .cm-more { display: flex; justify-content: center; margin: 18px 0 4px; }
+    .cm-end { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 26px 0 4px; color: var(--text-3); font-size: 12.5px; }
+    .cm-end::before, .cm-end::after { content: ''; height: 1px; flex: 1; max-width: 120px; background: var(--hair); }
+    .cm-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: cm-spin .7s linear infinite; display: inline-block; }
+    @keyframes cm-spin { to { transform: rotate(360deg); } }
+
+    .cm-state { text-align: center; padding: 56px 20px; background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; }
+    .cm-state-ic { width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 14px; display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); }
+    .cm-state-t { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .cm-state-d { font-size: 13.5px; color: var(--text-2); margin: 6px auto 18px; max-width: 360px; line-height: 1.5; }
+
+    .cm-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; padding: 16px; }
+    .cm-card-h { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; color: var(--text); letter-spacing: -0.005em; margin: 0 0 12px; }
+    .cm-card-h svg { color: var(--text-3); flex-shrink: 0; }
+    .cm-card-h .cm-card-aside { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--text-3); }
+    .cm-card-note { font-size: 12.5px; color: var(--text-3); line-height: 1.5; }
+    .cm-online-faces { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .cm-online-faces .wv-face { margin-left: 0; border: 0; }
+    .cm-online-more { width: 34px; height: 34px; border-radius: 50%; background: var(--surface-2); color: var(--text-2); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+    .cm-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; margin: 0 -8px; border-radius: 8px; color: var(--text); text-decoration: none; min-width: 0; min-height: 44px; }
+    a.cm-row:hover, .cm-row.is-link:hover { background: var(--surface-2); cursor: pointer; }
+    .cm-row-rank { width: 16px; text-align: center; font-size: 12px; font-weight: 800; color: var(--text-3); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .cm-row-main { min-width: 0; flex: 1; }
+    .cm-row-t { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .cm-row-s { font-size: 11.5px; color: var(--text-3); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cm-award-art { width: 42px; height: 42px; border-radius: 6px; overflow: hidden; position: relative; flex-shrink: 0; display: grid; place-items: center; color: #fff; font-weight: 800; }
+    .cm-award-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cm-award-chip { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; color: var(--brand); text-transform: uppercase; }
+    .cm-rules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; counter-reset: cmr; }
+    .cm-rules li { counter-increment: cmr; display: flex; gap: 10px; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+    .cm-rules li::before { content: counter(cmr); width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); color: var(--text-2); font-size: 10.5px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; margin-top: 0; }
+    .cm-rules b { color: var(--text); }
+    .cm-fmt-tip { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hair); font-size: 12px; color: var(--text-3); line-height: 1.8; }
+    .cm-fmt-tip code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; color: var(--text-2); }
+
+    .cm-av { display: inline-grid; place-items: center; border-radius: 50%; flex-shrink: 0; overflow: hidden; position: relative; color: #fff; font-weight: 800; }
+    .cm-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .cm-uname { display: inline-flex; align-items: center; gap: 4px; }
+    .theme-light .cm-wrap [data-wv-uid][style*="rgb(255, 255, 255)"], .theme-light .cm-wrap [data-wv-uid][style*="rgb(254, 254, 254)"], .theme-light .cm-wrap [data-wv-uid][style*="rgb(250, 250, 250)"] { color: var(--text) !important; }
+    .theme-dark .cm-wrap [data-wv-uid][style*="rgb(0, 0, 0)"], .theme-dark .cm-wrap [data-wv-uid][style*="rgb(1, 1, 1)"] { color: var(--text) !important; }
+
+    .cm-back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 10px; border-radius: var(--r-pill); background: var(--surface-2); border: 0; color: var(--text); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
+    .cm-back:hover { background: var(--surface-3); }
+    .cm-full { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 20px 22px 14px; }
+    .cm-full .cm-post-meta { font-size: 13px; }
+    .cm-full-title { margin: 12px 0 0; font-size: clamp(21px, 3vw, 27px); font-weight: 850; letter-spacing: -0.03em; line-height: 1.2; color: var(--text); overflow-wrap: anywhere; }
+    .cm-md { font-size: 14.5px; line-height: 1.7; color: var(--text); overflow-wrap: anywhere; }
+    .cm-full .cm-md { margin-top: 10px; color: var(--text-2); font-size: 15px; }
+    .cm-md a { color: var(--brand); }
+    #post-cards:empty { display: none; }
+    #post-cards { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    @media (max-width: 480px) { .cm-full { padding: 16px 16px 10px; } }
+
+    .cm-comments { margin-top: 22px; }
+    .cm-comments-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .cm-comments-h { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); margin: 0; }
+    .cm-reply-box { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 22px; }
+    .cm-reply-box .cm-reply-main { flex: 1; min-width: 0; }
+    .cm-reply-box .cm-textarea, .cm-inline-reply .cm-textarea { min-height: 84px; font-size: 14px; }
+    .cm-login-cta { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px dashed var(--hair-strong); margin-bottom: 22px; font-size: 13.5px; color: var(--text-2); flex-wrap: wrap; }
+    .cm-login-cta .cm-btn { margin-left: auto; }
+
+    .cm-tree { display: flex; flex-direction: column; }
+    .cm-c { position: relative; }
+    .cm-c-row { display: flex; gap: 10px; }
+    .cm-c-gutter { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 30px; }
+    .cm-thread { flex: 1; width: 22px; margin-top: 6px; border: 0; background: none; cursor: pointer; position: relative; padding: 0; min-height: 12px; }
+    .cm-thread::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 4px; width: 2px; margin-left: -1px; background: var(--hair-strong); border-radius: 2px; transition: background 120ms var(--ease); }
+    .cm-thread:hover::before, .cm-thread:focus-visible::before { background: var(--brand); }
+    .cm-c-main { flex: 1; min-width: 0; padding-bottom: 12px; }
+    .cm-c-bubble { border-radius: 10px; padding: 2px 0 0; transition: background 600ms var(--ease), box-shadow 600ms var(--ease); }
+    .cm-c.flash > .cm-c-row > .cm-c-main > .cm-c-bubble { background: var(--brand-bg); box-shadow: 0 0 0 8px var(--brand-bg); }
+    .cm-c-head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-3); min-height: 28px; flex-wrap: wrap; }
+    .cm-c-head .cm-name { font-weight: 700; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .cm-op { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; color: var(--brand); background: var(--brand-bg); padding: 1px 6px; border-radius: 4px; line-height: 1.5; }
+    .cm-newdot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); display: inline-block; }
+    .cm-replying { font-size: 12px; color: var(--text-3); }
+    .cm-c-body { margin-top: 2px; font-size: 14px; line-height: 1.62; }
+    .cm-c-actions { display: flex; align-items: center; gap: 2px; margin: 4px 0 0 -8px; flex-wrap: wrap; }
+    .cm-c-actions .cm-vote { background: transparent; }
+    .cm-c-actions .cm-vote-btn { width: 32px; height: 32px; }
+    .cm-c-actions .cm-act { min-height: 32px; padding: 0 10px; font-size: 12px; }
+    .cm-c-children { margin-top: 6px; }
+    .cm-c-collapsed-note { display: none; font-size: 12px; font-weight: 700; color: var(--brand); background: none; border: 0; cursor: pointer; padding: 4px 0; font-family: inherit; }
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-c-body,
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-unfurl,
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-c-actions,
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-inline-reply,
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-c-children { display: none; }
+    .cm-c.collapsed > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-c-head .cm-c-collapsed-note { display: inline-flex; }
+    .cm-c.collapsed > .cm-c-row > .cm-c-gutter .cm-thread { display: none; }
+    .cm-c.collapsed > .cm-c-row > .cm-c-main { padding-bottom: 8px; }
+    .cm-c.collapsed .cm-c-head .cm-av { opacity: .7; }
+    .cm-inline-reply { margin: 8px 0 6px; }
+    .cm-inline-reply[hidden] { display: none; }
+    .cm-inline-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .cm-inline-foot .cm-foot-actions .cm-btn { min-height: 34px; padding: 0 14px; font-size: 12.5px; }
+    .cm-empty-comments { text-align: center; padding: 34px 16px; color: var(--text-3); font-size: 13.5px; border-radius: 12px; border: 1px dashed var(--hair-strong); }
+    .cm-empty-comments b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+    @media (max-width: 480px) { .cm-c-gutter { width: 24px; } .cm-c-row { gap: 8px; } }
+
+    .cm-modal-back { position: fixed; inset: 0; z-index: 5000; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 16px; animation: cm-fade 140ms var(--ease); }
+    .cm-modal { width: 100%; max-width: 380px; background: var(--elevated); color: var(--text); border-radius: 14px; padding: 20px; box-shadow: 0 24px 60px rgba(0,0,0,.45); border: 1px solid var(--hair); animation: cm-rise 180ms var(--ease); }
+    .cm-modal-t { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+    .cm-modal-d { font-size: 13.5px; color: var(--text-2); margin: 6px 0 18px; line-height: 1.5; }
+    .cm-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    @keyframes cm-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes cm-rise { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+
+    .cm-skel-line { display: block; }
+    .cm-wrap button:focus-visible, .cm-wrap a:focus-visible, .cm-wrap input:focus-visible, .cm-wrap textarea:focus-visible, .cm-modal button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .cm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @media (prefers-reduced-motion: reduce) {
+      .cm-live-dot, .cm-score.bump-up, .cm-score.bump-down, .cm-post.is-fresh, .cm-modal, .cm-modal-back { animation: none !important; }
+      .cm-post, .cm-c-bubble, .cm-vote-btn { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
-  <div class="loading"><div class="spinner"></div></div>
+  <div class="cm-wrap" aria-busy="true">
+    <div class="cm-head"><div><h1 class="cm-title">Community</h1><p class="cm-sub">talk about comps and edits with everyone else on here.</p></div></div>
+  </div>
 </div>
 
 <script src="/js/api.js?v=6288d60cd337"></script>
@@ -18,79 +301,100 @@
 <script src="/js/player.js?v=6288d60cd337"></script>
 <script src="/js/router.js?v=6288d60cd337"></script>
 <script>
-  // Inject community styles once (works on both hard refresh and SPA navigation)
-  if (!document.getElementById('comm-styles')) {
-    var _cs = document.createElement('style');
-    _cs.id = 'comm-styles';
-    _cs.textContent = [
-      '.comm-post-card{background:var(--surface-2,#18181b);border:1px solid var(--border,#27272a);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color 0.15s,background 0.15s;}',
-      '.comm-post-card:hover{border-color:var(--purple-light,var(--purple));background:var(--surface-3,#1c1c1f);}',
-      '.comm-vote-col{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:32px;}',
-      '.comm-vote-btn{background:none;border:none;cursor:pointer;padding:3px 6px;font-size:14px;color:var(--text-3,#71717a);border-radius:4px;transition:color 0.12s,background 0.12s;line-height:1;}',
-      '.comm-vote-btn.up:hover{color:var(--purple);background:rgba(139,92,246,0.1);}',
-      '.comm-vote-btn.down:hover{color:var(--red);background:rgba(248,113,113,0.1);}',
-      '.comm-vote-score{font-size:13px;font-weight:700;color:var(--text-2,#a1a1aa);min-width:20px;text-align:center;line-height:1.2;}',
-      '.comm-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}',
-      '.comm-meta-item{font-size:12px;color:var(--text-3,#71717a);display:flex;align-items:center;gap:3px;}',
-      '.comm-avatar{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}',
-      '.comm-dot{font-size:12px;color:var(--text-3,#71717a);}',
-      '.comm-comment-block{background:var(--surface-2,#18181b);border:1px solid var(--border,#27272a);border-radius:10px;padding:12px 14px;margin-bottom:8px;}',
-      '.comm-reply-btn{background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3,#71717a);padding:2px 6px;border-radius:4px;font-family:inherit;transition:color 0.12s;}',
-      '.comm-reply-btn:hover{color:var(--text,#fafafa);}',
-      '.comm-format-bar{display:flex;gap:4px;margin-bottom:6px;padding:4px 0;}',
-      '.comm-fmt-btn{background:none;border:1px solid var(--border,#27272a);border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;color:var(--text-2,#a1a1aa);font-family:inherit;transition:border-color 0.12s,color 0.12s;}',
-      '.comm-fmt-btn:hover{border-color:var(--purple-light,var(--purple));color:var(--purple);}',
-    ].join('');
-    document.head.appendChild(_cs);
-  }
-
   initPlayer();
 
+  var CM = window._wvComm || (window._wvComm = { posts: null, hasMore: false, at: 0, presence: null, awards: null, links: {}, collapsed: {}, mine: {}, me: null });
+  var PAGE_SIZE = 30;
   var currentView = 'list';
-  var posts = [];
+  var posts = CM.posts || [];
   var currentPost = null;
   var currentComments = [];
   var me = null;
   var isMod = false;
-  var _sort = 'trending'; // trending | top | latest
+  var _sort = CM.sort || 'trending';
+  var _csort = CM.csort || 'top';
+  var _q = '';
+  var _loadingMore = false;
+  var _unfurlObs = null;
+  var _prevSeen = 0;
+  var _visitsBefore = {};
+  var _visitsNow = null;
 
-  try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch(_) {}
+  try { me = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
+  if (me && !me.id) me = null;
   isMod = sessionStorage.getItem('wv_is_mod') === 'true';
-  // The role check finishes after this script runs on a hard refresh.
-  window.addEventListener('wv-roles', function (e) {
+  if (!Array.isArray(window._pageCleanup)) window._pageCleanup = [];
+  if (!window._wvCommPopBound) {
+    window._wvCommPopBound = 1;
+    window.addEventListener('popstate', function () { window._wvCommPopAt = Date.now(); });
+  }
+  function setTabTitle(t) {
+    var full = t ? 'wavernrs — ' + t : 'wavernrs — community';
+    if (typeof window._wvRestoreTabTitle === 'function') { try { window._wvRestoreTabTitle(full); return; } catch (_) {} }
+    document.title = full;
+  }
+
+  window._wvCommOnRoles = function (e) {
     var next = !!(e.detail && e.detail.isMod);
     if (next === isMod) return;
     isMod = next;
-    if (typeof rerenderComments === 'function' && currentComments.length) rerenderComments();
-    if (typeof renderList === 'function') { try { renderList(); } catch (_) {} }
-  });
-  // Fetch the full artist profile to get profile_image_url for the page background.
-  if (typeof window.setPageBgImage === 'function' && isLoggedIn()) {
-    api('/auth/me').then(function(full) {
-      var img = full && full.artist && (full.artist.profile_image_url || full.artist.banner_url);
-      window.setPageBgImage(img || '');
-    }).catch(function() {});
+    if (currentView === 'post') { if (currentPost) rerenderComments(); }
+    else renderFeed();
+  };
+  window.addEventListener('wv-roles', window._wvCommOnRoles);
+  window._pageCleanup.push(function () { window.removeEventListener('wv-roles', window._wvCommOnRoles); });
+
+  if (isLoggedIn()) {
+    api('/auth/me').then(function (full) {
+      var a = full && full.artist;
+      if (typeof window.setPageBgImage === 'function') window.setPageBgImage((a && (a.profile_image_url || a.banner_url)) || '');
+      CM.me = { avatar: (a && a.profile_image_url) || null, artist_id: (a && a.id) || null };
+      document.querySelectorAll('[data-cm-me-av]').forEach(function (el) { el.outerHTML = avatarHTML(me && me.username, CM.me.avatar, +el.getAttribute('data-cm-me-av') || 36, true); });
+    }).catch(function () {});
   }
 
-  // ── Formatting ────────────────────────────────────────────────────────────
-  function wrapFormat(tid, pre, suf) {
-    var ta = document.getElementById(tid);
-    if (!ta) return;
-    var s = ta.selectionStart, e = ta.selectionEnd;
-    var word = ta.value.substring(s, e) || 'text';
-    ta.value = ta.value.substring(0, s) + pre + word + suf + ta.value.substring(e);
-    ta.focus();
-    ta.setSelectionRange(s + pre.length, s + pre.length + word.length);
-  }
+  (function initSeen() {
+    try {
+      var s = sessionStorage.getItem('wv_comm_seen_prev');
+      if (s === null) {
+        s = localStorage.getItem('wv_comm_seen_at') || '';
+        sessionStorage.setItem('wv_comm_seen_prev', s);
+      }
+      _prevSeen = s ? (Date.parse(s) || 0) : 0;
+    } catch (_) { _prevSeen = 0; }
+  })();
 
-  function formatBar(tid) {
-    return '<div class="comm-format-bar">' +
-      '<button class="comm-fmt-btn" type="button" style="font-weight:800;" onclick="wrapFormat(\'' + tid + '\',\'**\',\'**\')" title="Bold">B</button>' +
-      '<button class="comm-fmt-btn" type="button" style="text-decoration:line-through;" onclick="wrapFormat(\'' + tid + '\',\'~~\',\'~~\')" title="Strike">S</button>' +
-      '<button class="comm-fmt-btn" type="button" style="text-decoration:underline;" onclick="wrapFormat(\'' + tid + '\',\'__\',\'__\')" title="Underline">U</button>' +
-      '<button type="button" style="background:none;border:none;padding:2px 8px;cursor:pointer;color:var(--text-3);font-size:12px;font-family:inherit;margin-left:auto;" onclick="var ta=document.getElementById(\'' + tid + '\');if(ta)ta.value=\'\';" title="Clear">Clear</button>' +
-    '</div>';
-  }
+  var IC = {
+    up: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 4.2l7.3 8.3h-4.4v7.3H9.1v-7.3H4.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    down: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19.8l7.3-8.3h-4.4V4.2H9.1v7.3H4.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    comment: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.1 8.1 0 0 1-11.9 7.2L3.5 20.5l1.6-4.8a8.1 8.1 0 1 1 15.4-4.1z"/></svg>',
+    share: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5a4.5 4.5 0 0 0 6.4.4l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4-.4l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>',
+    check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M12.6 2.2c.5 3-1 4.8-2.6 6.6C8.5 10.5 6.8 12.4 6.8 15.3c0 3.6 2.4 6.5 5.4 6.5s5.6-2.8 5.6-6.4c0-2.4-1-4.3-2.3-5.8.1 1.5-.4 2.8-1.5 3.5.2-3.5-.8-7.8-1.4-10.9z"/></svg>',
+    search: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    back: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.6c0 4.4-3.1 8.2-7.5 9.4-4.4-1.2-7.5-5-7.5-9.4V6z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>',
+    reply: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 8.5L4.5 13l5 4.5"/><path d="M4.5 13h9.5a5.5 5.5 0 0 1 5.5 5.5V19"/></svg>',
+    pen: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0 0-3l-1.2-1.2a2.1 2.1 0 0 0-3 0L4 15.8z"/><path d="M13.5 6.5l4 4"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.3 5.2 5.2 2.3-5.2 2.3L12 18.5l-2.3-5.2L4.5 11l5.2-2.3z"/></svg>',
+    book: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5h10.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10.5M9 8.5h6"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.6a8.1 8.1 0 0 1-11.9 7.2L3.5 20.5l1.6-4.8a8.1 8.1 0 1 1 15.4-4.1z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg>',
+    warn: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>',
+    music: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5.5l10-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>'
+  };
+
+  function esc(s) { return escHtml(s == null ? '' : String(s)).replace(/'/g, '&#39;'); }
+  function sid(id) { return String(id == null ? '' : id).replace(/[^0-9a-zA-Z_-]/g, ''); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function absTime(iso) { try { return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (_) { return ''; } }
+  function ago(iso) { try { return timeAgo(iso); } catch (_) { return ''; } }
+  function scroller() { return document.getElementById('wv-content') || document.scrollingElement || document.documentElement; }
+  function reducedMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
+  function toast(msg, kind) { if (typeof wvToast === 'function') wvToast(msg, kind); }
 
   function renderMd(text) {
     if (!text) return '';
@@ -106,365 +410,94 @@
     return s;
   }
 
+  function stripMd(text) { return String(text || '').replace(/\*\*|~~|__/g, ''); }
+
+  function highlight(text, q) {
+    text = String(text == null ? '' : text);
+    var terms = String(q || '').toLowerCase().split(/\s+/).filter(function (t) { return t.length > 1; }).map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    if (!terms.length) return esc(text);
+    var re, out = '', last = 0, m;
+    try { re = new RegExp(terms.join('|'), 'gi'); } catch (_) { return esc(text); }
+    while ((m = re.exec(text))) {
+      if (!m[0].length) { re.lastIndex++; continue; }
+      out += esc(text.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>';
+      last = m.index + m[0].length;
+    }
+    return out + esc(text.slice(last));
+  }
+
   function netScore(item) {
     if (item.net_votes !== undefined) return item.net_votes;
     return (item.upvotes || 0) - (item.downvotes || 0);
   }
 
-  function userInitial(username) {
-    return (username || '?')[0].toUpperCase();
+  function hueOf(name) {
+    var s = String(name || '?'), h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+    return h;
   }
 
-  function avatarHTML(username, profileImageUrl) {
-    var colors = ['var(--purple)','#06b6d4','#10b981','var(--orange)','#ec4899','#3b82f6'];
-    var idx = (username || '').charCodeAt(0) % colors.length;
-    if (profileImageUrl) {
-      return '<span class="comm-avatar" style="background:' + colors[idx] + ';overflow:hidden;padding:0;">' +
-        '<img src="' + escHtml(profileImageUrl) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display=\'none\'">' +
-        '</span>';
-    }
-    return '<span class="comm-avatar" style="background:' + colors[idx] + ';">' + escHtml(userInitial(username)) + '</span>';
+  function imgTag(url, px) {
+    var src = typeof wvImg === 'function' ? wvImg(url, px) : url;
+    var raw = src !== url ? ' data-raw="' + esc(url) + '"' : '';
+    return '<img src="' + esc(src) + '"' + raw + ' alt="" loading="lazy" onerror="var r=this.getAttribute(\'data-raw\');if(r){this.removeAttribute(\'data-raw\');this.src=r;}else{this.remove();}">';
+  }
+
+  function avatarHTML(username, url, size, isMe) {
+    var sz = size || 28;
+    var h = hueOf(username);
+    var bg = 'linear-gradient(135deg, hsl(' + h + ',62%,52%), hsl(' + ((h + 40) % 360) + ',58%,40%))';
+    var initial = esc((String(username || '?').trim()[0] || '?').toUpperCase());
+    var img = url ? imgTag(url, sz * 2) : '';
+    return '<span class="cm-av"' + (isMe ? ' data-cm-me-av="' + sz + '"' : '') + ' style="width:' + sz + 'px;height:' + sz + 'px;font-size:' + Math.round(sz * 0.42) + 'px;background:' + bg + ';" aria-hidden="true">' + initial + img + '</span>';
   }
 
   function usernameLink(username, artistId, userId) {
-    var name = '@' + escHtml(username || 'unknown');
-    var uid = userId ? ' data-wv-uid="' + escHtml(userId) + '"' : '';
+    var name = '@' + esc(username || 'unknown');
+    var uid = userId ? ' data-wv-uid="' + esc(sid(userId)) + '"' : '';
     if (artistId) {
-      return '<a' + uid + ' onclick="event.stopPropagation();navigate(\'/artist?id=' + escHtml(artistId) + '\')" style="font-weight:600;color:var(--text-2);text-decoration:none;cursor:pointer;" onmouseenter="this.style.textDecoration=\'underline\'" onmouseleave="this.style.textDecoration=\'none\'">' + name + '</a>';
+      var href = '/artist?id=' + encodeURIComponent(artistId);
+      return '<a class="cm-name"' + uid + ' href="' + esc(href) + '" onclick="event.stopPropagation();event.preventDefault();navigate(this.getAttribute(\'href\'))">' + name + '</a>';
     }
-    return '<span' + uid + ' style="font-weight:600;color:var(--text-2);">' + name + '</span>';
+    return '<span class="cm-name"' + uid + '>' + name + '</span>';
   }
 
-  function _sortedPosts() {
-    var now = Date.now();
-    var weekMs = 7 * 24 * 60 * 60 * 1000;
-    if (_sort === 'latest') {
-      return posts.slice().sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
-    }
-    if (_sort === 'top') {
-      return posts.slice().sort(function(a, b) {
-        var diff = netScore(b) - netScore(a);
-        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
-      });
-    }
-    // trending: recent posts weighted by engagement
-    return posts.slice().sort(function(a, b) {
-      var aRecent = (now - new Date(a.created_at)) < weekMs ? 1 : 0;
-      var bRecent = (now - new Date(b.created_at)) < weekMs ? 1 : 0;
-      if (aRecent !== bRecent) return bRecent - aRecent;
-      var aScore = netScore(a) + (a.comment_count || 0) * 0.5;
-      var bScore = netScore(b) + (b.comment_count || 0) * 0.5;
-      var diff = bScore - aScore;
-      return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
-    });
-  }
-
-  function setSort(sort) {
-    _sort = sort;
-    var listEl = document.getElementById('posts-list');
-    if (!listEl) return;
-    var sorted = _sortedPosts();
-    listEl.innerHTML = sorted.length
-      ? '<div style="display:flex;flex-direction:column;gap:12px;">' + sorted.map(postRowHTML).join('') + '</div>'
-      : '<div class="empty-state" style="padding:60px 0;"><div style="font-size:32px;margin-bottom:12px;">💬</div><div class="empty-title">no posts yet</div></div>';
-    // Update pill active state
-    document.querySelectorAll('.comm-sort-btn').forEach(function(btn) {
-      btn.classList.toggle('is-active', btn.dataset.sort === sort);
-    });
-  }
-
-  // ── Init ──────────────────────────────────────────────────────────────────
-  (function init() {
-    var params = new URLSearchParams(location.search);
-    var postId = params.get('post');
-    if (postId) loadPost(postId); else loadPosts();
-  })();
-
-  // ── List view ─────────────────────────────────────────────────────────────
-  async function loadPosts() {
-    currentView = 'list';
-    var view = document.getElementById('view');
-    if (!view) return;
-    view.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  function readVisits() { try { return JSON.parse(localStorage.getItem('wv_comm_visits') || '{}') || {}; } catch (_) { return {}; } }
+  function writeVisit(id, n) {
     try {
-      var data = await api('/community/posts');
-      posts = Array.isArray(data) ? data : [];
-      posts.sort(function(a, b) {
-        var diff = netScore(b) - netScore(a);
-        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
-      });
-      renderList();
-    } catch (err) {
-      document.getElementById('view').innerHTML =
-        '<div style="padding:60px 20px;text-align:center;color:var(--text-2);">couldnt load posts: ' + escHtml(err.message) + '</div>';
-    }
+      var v = readVisits();
+      v[id] = { n: n, t: new Date().toISOString() };
+      var keys = Object.keys(v);
+      if (keys.length > 300) keys.sort(function (a, b) { return (v[a].t < v[b].t) ? -1 : 1; }).slice(0, keys.length - 300).forEach(function (k) { delete v[k]; });
+      localStorage.setItem('wv_comm_visits', JSON.stringify(v));
+    } catch (_) {}
+  }
+  function markListSeen() { try { localStorage.setItem('wv_comm_seen_at', new Date().toISOString()); } catch (_) {} }
+
+  function isNew(p) {
+    if (!_prevSeen || !p || !p.created_at) return false;
+    if (me && p.user_id === me.id) return false;
+    return Date.parse(p.created_at) > _prevSeen;
+  }
+  function isHot(p) {
+    var ageDays = (Date.now() - Date.parse(p.created_at)) / 864e5;
+    var e = netScore(p) + 2 * (p.comment_count || 0);
+    return (e >= 5 && ageDays <= 21) || (e >= 12 && ageDays <= 60);
   }
 
-  function renderList() {
-    var view = document.getElementById('view');
-    if (!view) return;
-
-    var newPostForm =
-      '<div id="new-post-form" style="display:none;margin-bottom:20px;">' +
-        '<div class="wv-card" style="padding:22px;display:flex;flex-direction:column;gap:14px;">' +
-          '<div style="font-size:16px;font-weight:800;letter-spacing:-0.02em;">New Post</div>' +
-          '<div>' +
-            '<label class="wv-form-label">Title *</label>' +
-            '<input id="np-title" type="text" class="wv-input" placeholder="whats it about?" style="width:100%;box-sizing:border-box;" maxlength="200">' +
-          '</div>' +
-          '<div>' +
-            '<label class="wv-form-label">Body</label>' +
-            formatBar('np-body') +
-            '<textarea id="np-body" class="wv-input" placeholder="say what you wanna say..." rows="4" style="width:100%;box-sizing:border-box;resize:vertical;min-height:90px;"></textarea>' +
-          '</div>' +
-          '<div id="np-error" style="font-size:13px;color:var(--red);display:none;"></div>' +
-          '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-            '<button class="wv-pill" onclick="hideNewPostForm()">Cancel</button>' +
-            '<button class="wv-pill brand" onclick="submitNewPost()">Post</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-
-    var sortPills =
-      '<div style="display:flex;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;">' +
-        ['trending','top','latest'].map(function(s) {
-          var label = s[0].toUpperCase() + s.slice(1);
-          return '<button class="comm-sort-btn wv-seg' + (s === _sort ? ' is-active' : '') + '" data-sort="' + s + '" onclick="setSort(\'' + s + '\')" style="background:none;border:none;cursor:pointer;padding:5px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--text-2);transition:background 0.15s,color 0.15s;">' + label + '</button>';
-        }).join('') +
-      '</div>';
-    if (!document.getElementById('comm-seg-styles')) {
-      var _ss = document.createElement('style');
-      _ss.id = 'comm-seg-styles';
-      _ss.textContent = '.comm-sort-btn.is-active{background:var(--purple,#7c3aed)!important;color:#fff!important;}';
-      document.head.appendChild(_ss);
-    }
-    var header =
-      '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap;">' +
-        '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
-          '<div>' +
-            '<h1 style="margin:0 0 4px;font-size:30px;font-weight:800;letter-spacing:-0.035em;">Community</h1>' +
-            '<p style="margin:0;font-size:13.5px;color:var(--text-2);">talk about comps and edits with everyone else on here.</p>' +
-          '</div>' +
-          sortPills +
-        '</div>' +
-        (me ? '<button class="wv-pill brand" onclick="showNewPostForm()" style="flex-shrink:0;gap:6px;">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>' +
-          ' New Post</button>' : '') +
-      '</div>';
-
-    var _sorted = _sortedPosts();
-    var postsHTML = !_sorted.length
-      ? '<div class="empty-state" style="padding:60px 0;">' +
-          '<div style="font-size:32px;margin-bottom:12px;">💬</div>' +
-          '<div class="empty-title">no posts yet</div>' +
-          '<div class="empty-desc">be the first one to post something</div>' +
-        '</div>'
-      : '<div style="display:flex;flex-direction:column;gap:12px;">' +
-          _sorted.map(postRowHTML).join('') +
-        '</div>';
-
-    view.innerHTML =
-      '<div style="max-width:740px;margin:0 auto;padding:28px 16px 80px;">' +
-        header + newPostForm +
-        '<div id="posts-list">' + postsHTML + '</div>' +
-      '</div>';
+  function firstSiteLink(text) {
+    var m = String(text || '').match(/https?:\/\/(www\.)?wavernrs\.com\/[^\s<)]+/);
+    return m ? m[0].replace(/[.,!?]+$/, '') : null;
+  }
+  function shortUrl(u) {
+    var s = String(u).replace(/^https?:\/\/(www\.)?/, '');
+    return s.length > 42 ? s.slice(0, 40) + '…' : s;
   }
 
-  function postRowHTML(p) {
-    var s = netScore(p);
-    var isOwner = me && me.id === p.user_id;
-    var bodyPreview = p.body ? p.body.replace(/\*\*|~~|__/g, '').slice(0, 140) + (p.body.length > 140 ? '…' : '') : '';
-
-    var actionBtns = '';
-    if (isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();deletePost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="delete your post">Delete</button>';
-    }
-    if (isMod && !isOwner) {
-      actionBtns += '<button onclick="event.stopPropagation();modTakeDownPost(\'' + escHtml(p.id) + '\')" class="comm-reply-btn" style="color:var(--red);" title="mod only...take this post down">Take down</button>';
-    }
-
-    return (
-      '<div class="comm-post-card" id="post-row-' + escHtml(p.id) + '" onclick="openPost(\'' + escHtml(p.id) + '\')">' +
-        '<div style="display:flex;gap:14px;">' +
-          // Vote column
-          '<div class="comm-vote-col" style="padding-top:2px;">' +
-            '<button class="comm-vote-btn up' + (p.user_vote === 1 ? ' on' : '') + '" id="post-up-' + escHtml(p.id) + '" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote" aria-pressed="' + (p.user_vote === 1) + '">▲</button>' +
-            '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '">' + s + '</span>' +
-            '<button class="comm-vote-btn down' + (p.user_vote === -1 ? ' on' : '') + '" id="post-down-' + escHtml(p.id) + '" onclick="event.stopPropagation();votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote" aria-pressed="' + (p.user_vote === -1) + '">▼</button>' +
-          '</div>' +
-          // Content
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.02em;line-height:1.3;margin-bottom:' + (bodyPreview ? '6px' : '8px') + ';">' +
-              escHtml(p.title) +
-            '</div>' +
-            (bodyPreview ? '<div style="font-size:13px;color:var(--text-3);line-height:1.55;margin-bottom:10px;">' + escHtml(bodyPreview) + '</div>' : '') +
-            '<div class="comm-meta">' +
-              avatarHTML(p.username, p.profile_image_url) +
-              '<span class="comm-meta-item">' + usernameLink(p.username, p.artist_id, p.user_id) + '</span>' +
-              '<span class="comm-dot">·</span>' +
-              '<span class="comm-meta-item">' +
-                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/></svg>' +
-                (p.comment_count || 0) + ' ' + ((p.comment_count || 0) === 1 ? 'comment' : 'comments') +
-              '</span>' +
-              '<span class="comm-dot">·</span>' +
-              '<span class="comm-meta-item">' + timeAgo(p.created_at) + '</span>' +
-              (actionBtns ? '<span style="margin-left:auto;">' + actionBtns + '</span>' : '') +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>'
-    );
-  }
-
-  function showNewPostForm() {
-    var form = document.getElementById('new-post-form');
-    if (form) {
-      form.style.display = '';
-      var inp = document.getElementById('np-title');
-      if (inp) setTimeout(function() { inp.focus(); }, 50);
-    }
-  }
-  function hideNewPostForm() {
-    var form = document.getElementById('new-post-form');
-    if (form) form.style.display = 'none';
-    var errEl = document.getElementById('np-error');
-    if (errEl) errEl.style.display = 'none';
-  }
-
-  async function submitNewPost() {
-    var titleEl = document.getElementById('np-title');
-    var bodyEl = document.getElementById('np-body');
-    var errEl = document.getElementById('np-error');
-    var title = titleEl ? titleEl.value.trim() : '';
-    var body = bodyEl ? bodyEl.value.trim() : '';
-    if (!title) {
-      if (errEl) { errEl.textContent = 'you need a title'; errEl.style.display = ''; }
-      if (titleEl) titleEl.focus();
-      return;
-    }
-    if (errEl) errEl.style.display = 'none';
-    try {
-      var newPost = await api('/community/posts', { method: 'POST', body: JSON.stringify({ title, body }) });
-      newPost.comment_count = 0;
-      posts.unshift(newPost);
-      hideNewPostForm();
-      if (titleEl) titleEl.value = '';
-      if (bodyEl) bodyEl.value = '';
-      var listEl = document.getElementById('posts-list');
-      if (listEl) listEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>';
-    } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ''; }
-    }
-  }
-
-  async function deletePost(id) {
-    if (!confirm('delete this post? you cant undo this.')) return;
-    try {
-      await api('/community/posts/' + id, { method: 'DELETE' });
-      posts = posts.filter(function(p) { return p.id !== id; });
-      if (currentView === 'post' && currentPost && currentPost.id === id) {
-        goBackToList();
-      } else {
-        var listEl = document.getElementById('posts-list');
-        if (listEl) listEl.innerHTML = posts.length
-          ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
-          : '<div class="empty-state"><div class="empty-title">no posts yet</div></div>';
-      }
-    } catch (err) { alert('couldnt delete: ' + err.message); }
-  }
-
-  async function modTakeDownPost(id) {
-    if (!confirm('take down this post? you cant undo this.')) return;
-    try {
-      await api('/mod/community-posts/' + id, { method: 'DELETE' });
-      posts = posts.filter(function(p) { return p.id !== id; });
-      if (currentView === 'post' && currentPost && currentPost.id === id) {
-        goBackToList();
-      } else {
-        var listEl = document.getElementById('posts-list');
-        if (listEl) listEl.innerHTML = posts.length
-          ? '<div style="display:flex;flex-direction:column;gap:12px;">' + posts.map(postRowHTML).join('') + '</div>'
-          : '<div class="empty-state"><div class="empty-title">no posts</div></div>';
-      }
-    } catch (err) { alert('couldnt take it down: ' + err.message); }
-  }
-
-  function _paintVote(kind, id, v) {
-    var up = document.getElementById(kind + '-up-' + id);
-    var down = document.getElementById(kind + '-down-' + id);
-    if (up) { up.classList.toggle('on', v === 1); up.setAttribute('aria-pressed', v === 1); }
-    if (down) { down.classList.toggle('on', v === -1); down.setAttribute('aria-pressed', v === -1); }
-  }
-
-  async function votePost(id, vote) {
-    if (!isLoggedIn()) { navigate('/login'); return; }
-    var post = posts.find(function(p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
-    if (!post) return;
-    var prev = netScore(post);
-    var prevVote = post.user_vote || 0;
-    var nextVote = prevVote === vote ? 0 : vote;
-    post.net_votes = prev - prevVote + nextVote;
-    post.user_vote = nextVote;
-    _updatePostScore(id);
-    _paintVote('post', id, nextVote);
-    try {
-      var result = await api('/community/posts/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
-      if (result) {
-        post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
-        if (result.user_vote !== undefined) { post.user_vote = result.user_vote; _paintVote('post', id, result.user_vote); }
-      }
-      _updatePostScore(id);
-    } catch (err) {
-      post.net_votes = prev;
-      post.user_vote = prevVote;
-      _updatePostScore(id);
-      _paintVote('post', id, prevVote);
-      if (err.message && err.message.includes('401')) navigate('/login');
-    }
-  }
-  function _updatePostScore(id) {
-    var el = document.getElementById('post-score-' + id);
-    var post = posts.find(function(p) { return p.id === id; }) || currentPost;
-    if (el && post) el.textContent = netScore(post);
-  }
-
-  function openPost(id) {
-    history.pushState(null, '', location.pathname + '?post=' + encodeURIComponent(id));
-    loadPost(id);
-  }
-  function goBackToList() {
-    history.pushState(null, '', location.pathname);
-    loadPosts();
-  }
-
-  // ── Post view ─────────────────────────────────────────────────────────────
-  async function loadPost(id) {
-    currentView = 'post';
-    var view = document.getElementById('view');
-    if (!view) return;
-    view.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      var data = await api('/community/posts/' + id);
-      currentPost = data.post || data;
-      currentComments = Array.isArray(data.comments) ? data.comments : [];
-      renderPost();
-      unfurlPost();
-    } catch (err) {
-      document.getElementById('view').innerHTML =
-        '<div style="max-width:740px;margin:0 auto;padding:28px 16px;">' +
-          '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;">← Community</button>' +
-          '<div style="color:var(--text-2);">couldnt load this post</div>' +
-        '</div>';
-    }
-  }
-
-  // Links to things on wavernrs get a little card under the post.
-  async function unfurlPost() {
-    var box = document.getElementById('post-cards'); if (!box || !currentPost || !currentPost.body) return;
-    var urls = (String(currentPost.body).match(/https?:\/\/(www\.)?wavernrs\.com\/[^\s<)]+/g) || []).slice(0, 3);
-    var pid = currentPost.id, cards = [];
-    for (var i = 0; i < urls.length; i++) {
-      var u; try { u = new URL(urls[i].replace(/[.,!?]+$/, '')); } catch (_) { continue; }
+  function resolveLink(url) {
+    if (CM.links[url]) return CM.links[url];
+    var p = (async function () {
+      var u; try { u = new URL(url); } catch (_) { return null; }
       var q = u.searchParams, path = u.pathname.replace(/\.html$/, ''), c = null;
       try {
         if (path === '/album' && q.get('id')) { var a = await api('/albums/' + encodeURIComponent(q.get('id'))); a = a.album || a; if (a && a.title) c = { t: a.title, s: 'comp · ' + ((a.artists && a.artists.display_name) || a.archive_artist_name || ''), img: a.cover_url, href: '/album?id=' + encodeURIComponent(a.id) }; }
@@ -472,209 +505,1158 @@
         else if (path === '/resources' && q.get('view') === 'song' && q.get('t')) { var sg = await api('/ye/song?t=' + encodeURIComponent(q.get('t'))); var r = sg.released && sg.released[0]; c = { t: sg.title, s: 'ye song · ' + (r ? r.album + ' ' + r.year : (sg.tracker || []).length + ' versions on the tracker'), img: r ? r.cover : ((sg.tracker || []).find(function (x) { return x.art; }) || {}).art, href: '/resources?view=song&t=' + encodeURIComponent(sg.title) }; }
         else if (path === '/resources' && q.get('view') === 'disco' && q.get('album')) { var al = (await api('/ye/disco/' + encodeURIComponent(q.get('album')))).album; c = { t: al.title, s: 'ye album · ' + al.year, img: al.cover_sm, href: '/resources?view=disco&album=' + encodeURIComponent(al.slug) }; }
         else if (path === '/resources' && q.get('view') === 'tweets' && q.get('tweet')) { var tw = (await api('/ye/tweets/' + encodeURIComponent(q.get('tweet')))).tweet; c = { t: String(tw.text || '').replace(/\s*https?:\/\/\S+/g, '').slice(0, 120), s: 'ye tweet · ' + new Date(tw.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), img: null, href: '/resources?view=tweets&tweet=' + encodeURIComponent(tw.id) }; }
-      } catch (_) { c = null; }
-      if (c) cards.push(c);
+      } catch (e) { if (e && e.navAborted) { delete CM.links[url]; } c = null; }
+      return c;
+    })();
+    CM.links[url] = p;
+    return p;
+  }
+
+  function miniCardHTML(c, url) {
+    if (!c) {
+      var local = url.replace(/^https?:\/\/(www\.)?wavernrs\.com/, '');
+      return '<a class="cm-mini is-plain" href="' + esc(local) + '" onclick="event.stopPropagation();event.preventDefault();navigate(this.getAttribute(\'href\'))">' +
+        '<div class="cm-row-main"><div class="cm-mini-t">' + esc(shortUrl(url)) + '</div><div class="cm-mini-s">link on wavernrs</div></div><span class="cm-mini-go">' + IC.chev + '</span></a>';
     }
+    var art = c.img ? (typeof wvImg === 'function' ? wvImg(c.img, 96) : c.img) : '';
+    return '<a class="cm-mini" href="' + esc(c.href) + '" onclick="event.stopPropagation();event.preventDefault();navigate(this.getAttribute(\'href\'))">' +
+      '<div class="cm-mini-art" style="background:' + esc(coverGradient(c.t || '')) + ';">' + (art ? '<img src="' + esc(art) + '" alt="" loading="lazy" onerror="this.remove()">' : IC.music) + '</div>' +
+      '<div class="cm-row-main"><div class="cm-mini-t">' + esc(c.t) + '</div><div class="cm-mini-s">' + esc(c.s) + '</div></div>' +
+      '<span class="cm-mini-go">' + IC.chev + '</span></a>';
+  }
+
+  function observeUnfurls() {
+    if (_unfurlObs) { try { _unfurlObs.disconnect(); } catch (_) {} _unfurlObs = null; }
+    var slots = document.querySelectorAll('.cm-unfurl[data-url]:not([data-done])');
+    if (!slots.length) return;
+    var fill = function (el) {
+      if (el.hasAttribute('data-done')) return;
+      el.setAttribute('data-done', '1');
+      var url = el.getAttribute('data-url');
+      el.innerHTML = '<div class="wv-skel cm-mini-skel"></div>';
+      resolveLink(url).then(function (c) {
+        if (!el.isConnected) return;
+        if (!c && !el.hasAttribute('data-fallback')) { el.remove(); return; }
+        el.innerHTML = miniCardHTML(c, url);
+      });
+    };
+    if (!('IntersectionObserver' in window)) { slots.forEach(fill); return; }
+    _unfurlObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { _unfurlObs && _unfurlObs.unobserve(en.target); fill(en.target); } });
+    }, { rootMargin: '240px 0px' });
+    slots.forEach(function (el) { _unfurlObs.observe(el); });
+  }
+  window._pageCleanup.push(function () { if (_unfurlObs) { try { _unfurlObs.disconnect(); } catch (_) {} _unfurlObs = null; } });
+
+  function _sortedPosts() {
+    var now = Date.now();
+    var weekMs = 7 * 24 * 60 * 60 * 1000;
+    var out;
+    if (_sort === 'latest') {
+      out = posts.slice().sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    } else if (_sort === 'top') {
+      out = posts.slice().sort(function (a, b) {
+        var diff = netScore(b) - netScore(a);
+        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
+      });
+    } else {
+      out = posts.slice().sort(function (a, b) {
+        var aRecent = (now - new Date(a.created_at)) < weekMs ? 1 : 0;
+        var bRecent = (now - new Date(b.created_at)) < weekMs ? 1 : 0;
+        if (aRecent !== bRecent) return bRecent - aRecent;
+        var aScore = netScore(a) + (a.comment_count || 0) * 0.5;
+        var bScore = netScore(b) + (b.comment_count || 0) * 0.5;
+        var diff = bScore - aScore;
+        return diff !== 0 ? diff : new Date(b.created_at) - new Date(a.created_at);
+      });
+    }
+    var pinned = out.filter(function (p) { return CM.mine[p.id]; });
+    if (!pinned.length) return out;
+    return pinned.concat(out.filter(function (p) { return !CM.mine[p.id]; }));
+  }
+
+  function _filteredPosts() {
+    var list = _sortedPosts();
+    var q = _q.trim().toLowerCase();
+    if (!q) return list;
+    var terms = q.split(/\s+/);
+    return list.filter(function (p) {
+      var hay = (p.title + ' ' + (p.body || '') + ' ' + (p.username || '')).toLowerCase();
+      return terms.every(function (t) { return hay.indexOf(t) >= 0; });
+    });
+  }
+
+  (function init() {
+    var params = new URLSearchParams(location.search);
+    var postId = params.get('post');
+    if (postId) loadPost(postId); else loadPosts();
+  })();
+
+  function skelPost() {
+    return '<div class="cm-post" aria-hidden="true" style="cursor:default;">' +
+      '<div class="cm-post-meta"><span class="wv-skel" style="width:28px;height:28px;border-radius:50%;"></span><span class="wv-skel" style="width:128px;height:11px;"></span></div>' +
+      '<div class="wv-skel" style="height:15px;width:58%;margin:14px 0 10px;"></div>' +
+      '<div class="wv-skel" style="height:11px;width:94%;margin-bottom:7px;"></div>' +
+      '<div class="wv-skel" style="height:11px;width:72%;"></div>' +
+      '<div class="cm-actions" style="margin-left:0;"><span class="wv-skel" style="width:98px;height:32px;border-radius:999px;"></span><span class="wv-skel" style="width:74px;height:32px;border-radius:999px;margin-left:6px;"></span></div>' +
+    '</div>';
+  }
+  function skelRail() {
+    return '<div class="cm-card" aria-hidden="true"><div class="wv-skel" style="height:12px;width:40%;margin-bottom:14px;"></div>' +
+      [0, 1, 2].map(function () { return '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;"><span class="wv-skel" style="width:32px;height:32px;border-radius:50%;flex-shrink:0;"></span><span style="flex:1;"><span class="wv-skel cm-skel-line" style="height:10px;width:70%;margin-bottom:6px;"></span><span class="wv-skel cm-skel-line" style="height:9px;width:45%;"></span></span></div>'; }).join('') +
+    '</div>';
+  }
+
+  function headHTML() {
+    return '<div class="cm-head">' +
+      '<div><h1 class="cm-title">Community</h1><p class="cm-sub">talk about comps and edits with everyone else on here.</p>' +
+      '<div class="cm-head-stats" id="cm-head-stats"></div></div>' +
+      '<div class="cm-head-online" id="cm-head-online"></div>' +
+    '</div>';
+  }
+
+  function renderSkeleton() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    view.innerHTML = '<div class="cm-wrap" aria-busy="true">' + headHTML() +
+      '<div class="cm-grid"><div class="cm-main">' +
+        '<div class="wv-skel" style="height:62px;border-radius:12px;margin-bottom:16px;"></div>' +
+        '<div style="display:flex;gap:10px;margin-bottom:14px;"><span class="wv-skel" style="width:236px;height:40px;border-radius:999px;"></span></div>' +
+        '<div class="cm-list">' + skelPost() + skelPost() + skelPost() + skelPost() + '</div>' +
+      '</div><aside class="cm-rail">' + skelRail() + skelRail() + '</aside></div></div>';
+  }
+
+  async function loadPosts(force) {
+    currentView = 'list';
+    currentPost = null;
+    var view = document.getElementById('view');
+    if (!view) return;
+    var fresh = CM.posts && (Date.now() - CM.at < 120000);
+    if (CM.posts && !force) {
+      posts = CM.posts;
+      renderList();
+      var y = CM.listScroll || 0;
+      var back = CM.restore || (Date.now() - (window._wvCommPopAt || 0) < 4000);
+      CM.restore = false;
+      if (y && back) requestAnimationFrame(function () { setTimeout(function () { var s = scroller(); if (s) s.scrollTop = y; }, 0); });
+      if (fresh) { loadSide(); return; }
+    } else {
+      renderSkeleton();
+    }
+    loadSide();
+    try {
+      var data = await api('/community/posts?limit=' + PAGE_SIZE);
+      var list = Array.isArray(data) ? data : [];
+      var keep = (CM.posts || []).filter(function (p) { return CM.mine[p.id] && !list.some(function (x) { return x.id === p.id; }); });
+      posts = keep.concat(list);
+      CM.posts = posts;
+      CM.hasMore = list.length === PAGE_SIZE;
+      CM.at = Date.now();
+      if (currentView !== 'list') return;
+      if (document.getElementById('posts-list')) { renderFeed(); renderRail(); }
+      else renderList();
+    } catch (err) {
+      if (err && err.navAborted) return;
+      if (currentView !== 'list') return;
+      if (CM.posts && CM.posts.length && document.getElementById('posts-list')) return;
+      var v = document.getElementById('view');
+      if (!v) return;
+      v.innerHTML = '<div class="cm-wrap">' + headHTML() +
+        '<div class="cm-state" role="alert"><div class="cm-state-ic">' + IC.warn + '</div>' +
+        '<div class="cm-state-t">couldnt load the community</div>' +
+        '<div class="cm-state-d">' + esc((err && err.message) || 'something went wrong on our end') + '</div>' +
+        '<button class="cm-btn cm-btn-primary" onclick="loadPosts(true)">Try again</button></div></div>';
+    }
+  }
+
+  function loadSide() {
+    refreshPresence();
+    if (!CM.awards || Date.now() - (CM.awardsAt || 0) > 300000) {
+      api('/awards/current').then(function (d) {
+        CM.awards = ((d && d.picks) || []).filter(function (p) { return p && (p.album || p.editor); });
+        CM.awardsAt = Date.now();
+        renderRail();
+      }).catch(function () {});
+    }
+  }
+
+  function refreshPresence() {
+    api('/site/presence').then(function (d) {
+      CM.presence = { online: ((d && d.online) || []).filter(function (p) { return p && p.username; }), count: (d && d.count) || 0 };
+      renderOnline();
+    }).catch(function () {});
+  }
+  if (!window._wvCommPresenceTimer) {
+    window._wvCommPresenceTimer = setInterval(function () { if (!document.hidden && document.getElementById('cm-rail')) refreshPresence(); }, 60000);
+    window._pageCleanup.push(function () { clearInterval(window._wvCommPresenceTimer); window._wvCommPresenceTimer = null; });
+  }
+
+  function renderList() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    currentView = 'list';
+    view.innerHTML =
+      '<div class="cm-wrap">' + headHTML() +
+        '<div class="cm-grid">' +
+          '<div class="cm-main">' +
+            composerHTML() +
+            '<div class="cm-toolbar">' +
+              '<div class="cm-seg" role="tablist" aria-label="Sort posts">' +
+                ['trending', 'top', 'latest'].map(function (s) {
+                  return '<button role="tab" data-sort="' + s + '" aria-selected="' + (s === _sort) + '" class="' + (s === _sort ? 'on' : '') + '" onclick="setSort(\'' + s + '\')">' + (s === 'trending' ? IC.flame : '') + s[0].toUpperCase() + s.slice(1) + '</button>';
+                }).join('') +
+              '</div>' +
+              '<label class="cm-search' + (_q ? ' has-q' : '') + '" id="cm-search">' + IC.search +
+                '<span class="cm-sr">Search posts</span>' +
+                '<input id="cm-search-input" type="search" placeholder="Search posts" autocomplete="off" value="' + esc(_q) + '" oninput="onSearchInput(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();searchServer();}">' +
+                '<span class="cm-kbd cm-search-kbd" aria-hidden="true">/</span>' +
+                '<button type="button" class="cm-search-clear" aria-label="Clear search" onclick="clearSearch()">' + IC.x + '</button>' +
+              '</label>' +
+            '</div>' +
+            '<div id="cm-search-note"></div>' +
+            '<div id="posts-list"></div>' +
+          '</div>' +
+          '<aside class="cm-rail" id="cm-rail" aria-label="Community sidebar"></aside>' +
+        '</div>' +
+      '</div>';
+    renderFeed();
+    renderRail();
+    markListSeen();
+    setTabTitle('');
+  }
+
+  function renderFeed() {
+    var listEl = document.getElementById('posts-list');
+    if (!listEl) return;
+    var list = _filteredPosts();
+    var html;
+    if (!posts.length) {
+      html = '<div class="cm-state"><div class="cm-state-ic">' + IC.chat + '</div><div class="cm-state-t">no posts yet</div><div class="cm-state-d">be the first one to post something. new comps, hot takes, questions, all good.</div>' +
+        (me ? '<button class="cm-btn cm-btn-primary" onclick="openComposer()">Start a post</button>' : '<a class="cm-btn cm-btn-primary" href="/login">Log in to post</a>') + '</div>';
+    } else if (!list.length) {
+      html = '<div class="cm-state"><div class="cm-state-ic">' + IC.search.replace('width="16" height="16"', 'width="24" height="24"') + '</div><div class="cm-state-t">nothing matches “' + esc(_q.trim()) + '”</div><div class="cm-state-d">try another word, or search older posts too.</div>' +
+        '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' + (CM.hasMore ? '<button class="cm-btn cm-btn-primary" onclick="searchServer()">Search older posts</button>' : '') + '<button class="cm-btn cm-btn-outline" onclick="clearSearch()">Clear search</button></div></div>';
+    } else {
+      _visitsNow = readVisits();
+      html = '<div class="cm-list">' + list.map(postRowHTML).join('') + '</div>';
+      if (CM.hasMore && !_q) html += '<div class="cm-more"><button class="cm-btn cm-btn-outline" id="cm-more-btn" onclick="loadMore()">Load more posts</button></div>';
+      else if (!_q && posts.length > 4) html += '<div class="cm-end">' + IC.check + ' you’re all caught up</div>';
+    }
+    listEl.innerHTML = html;
+    var note = document.getElementById('cm-search-note');
+    if (note) note.innerHTML = _q.trim() && list.length ? '<div class="cm-search-note"><span><b>' + list.length + '</b> ' + (list.length === 1 ? 'post matches' : 'posts match') + ' “' + esc(_q.trim()) + '”</span>' + (CM.hasMore ? '<button class="cm-link-btn" onclick="searchServer()">search older posts</button>' : '') + '</div>' : '';
+    var stats = document.getElementById('cm-head-stats');
+    if (stats) {
+      var cc = posts.reduce(function (n, p) { return n + (p.comment_count || 0); }, 0);
+      var people = {}; posts.forEach(function (p) { if (p.user_id) people[p.user_id] = 1; });
+      stats.innerHTML = posts.length ? '<span><b>' + posts.length + (CM.hasMore ? '+' : '') + '</b> ' + (posts.length === 1 ? 'post' : 'posts') + '</span><span><b>' + cc + '</b> ' + (cc === 1 ? 'reply' : 'replies') + '</span><span><b>' + Object.keys(people).length + '</b> ' + (Object.keys(people).length === 1 ? 'poster' : 'posters') + '</span>' : '';
+    }
+    observeUnfurls();
+  }
+
+  function postRowHTML(p) {
+    var id = sid(p.id);
+    var s = netScore(p);
+    var isOwner = me && me.id === p.user_id;
+    var link = firstSiteLink(p.body);
+    var preview = stripMd(p.body || '');
+    if (link) preview = preview.replace(link, '');
+    preview = preview.replace(/https?:\/\/[^\s<]+/g, function (u) { return shortUrl(u); }).replace(/[ \t]*\n[\s]*/g, '\n').trim();
+    if (preview.length > 320) preview = preview.slice(0, 320) + '…';
+    var cc = p.comment_count || 0;
+    var visit = (_visitsNow || {})[p.id];
+    var newReplies = visit && cc > visit.n ? cc - visit.n : 0;
+    var badges = (isNew(p) ? '<span class="cm-pill-new">new</span>' : '') + (isHot(p) ? '<span class="cm-hot" title="lots of activity lately">' + IC.flame + 'hot</span>' : '');
+    var tools = '';
+    if (isOwner) tools += '<button class="cm-act danger" onclick="event.stopPropagation();deletePost(\'' + id + '\')" aria-label="Delete your post">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
+    else if (isMod) tools += '<button class="cm-act danger" onclick="event.stopPropagation();modTakeDownPost(\'' + id + '\')" aria-label="Take down post (mod)">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
+    var uv = p.user_vote || 0;
+    return '<article class="cm-post" id="post-row-' + id + '" tabindex="0" aria-label="' + esc(p.title) + '" onclick="openPost(\'' + id + '\')" onkeydown="if(event.key===\'Enter\'&&event.target===this)openPost(\'' + id + '\')">' +
+      '<div class="cm-post-meta">' + avatarHTML(p.username, p.profile_image_url, 28) + usernameLink(p.username, p.artist_id, p.user_id) +
+        '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '">' + esc(ago(p.created_at)) + '</time>' + badges + '</div>' +
+      '<h3 class="cm-post-title">' + highlight(p.title, _q) + '</h3>' +
+      (preview ? '<p class="cm-post-body">' + highlight(preview, _q) + '</p>' : '') +
+      (link ? '<div class="cm-unfurl" data-fallback="1" data-url="' + esc(link) + '"></div>' : '') +
+      '<div class="cm-actions">' + voteHTML('post', id, s, uv) +
+        '<button class="cm-act" onclick="event.stopPropagation();openPost(\'' + id + '\')" aria-label="' + plural(cc, 'comment') + '">' + IC.comment + '<span>' + cc + '</span><span class="cm-act-label">' + (cc === 1 ? 'comment' : 'comments') + '</span>' + (newReplies ? '<span class="cm-act-new">+' + newReplies + ' new</span>' : '') + '</button>' +
+        '<button class="cm-act" id="share-' + id + '" onclick="event.stopPropagation();sharePost(\'' + id + '\')" aria-label="Copy link to post">' + IC.share + '<span class="cm-act-label">Share</span></button>' +
+        '<span class="cm-spacer"></span>' + tools +
+      '</div>' +
+    '</article>';
+  }
+
+  function voteHTML(kind, id, score, uv) {
+    var shown = kind === 'comment' ? Math.max(0, score) : score;
+    return '<div class="cm-vote' + (uv === 1 ? ' is-up' : uv === -1 ? ' is-down' : '') + '" id="' + kind + '-vote-' + id + '" onclick="event.stopPropagation()">' +
+      '<button class="cm-vote-btn up' + (uv === 1 ? ' on' : '') + '" id="' + kind + '-up-' + id + '" onclick="event.stopPropagation();' + (kind === 'post' ? 'votePost' : 'voteComment') + '(\'' + id + '\',1)" aria-label="Upvote" aria-pressed="' + (uv === 1) + '">' + IC.up + '</button>' +
+      '<span class="cm-score" id="' + kind + '-score-' + id + '" aria-live="polite">' + shown + '</span>' +
+      '<button class="cm-vote-btn down' + (uv === -1 ? ' on' : '') + '" id="' + kind + '-down-' + id + '" onclick="event.stopPropagation();' + (kind === 'post' ? 'votePost' : 'voteComment') + '(\'' + id + '\',-1)" aria-label="Downvote" aria-pressed="' + (uv === -1) + '">' + IC.down + '</button>' +
+    '</div>';
+  }
+
+  function renderRail() {
+    var rail = document.getElementById('cm-rail');
+    if (!rail) return;
+    var html = '<div class="cm-card cm-online-card" id="cm-online-card">' + onlineCardInner() + '</div>';
+    if (currentView === 'post') html += morePostsCard() + awardsCard() + rulesCard();
+    else html += awardsCard() + contributorsCard() + rulesCard();
+    rail.innerHTML = html;
+    renderOnline(true);
+  }
+
+  function faceHTML(p, size) {
+    var title = '@' + (p.username || 'someone');
+    var inner = '<span>' + esc((String(p.username || '?').trim()[0] || '?').toUpperCase()) + '</span>' + (p.avatar ? imgTag(p.avatar, size * 2) : '');
+    var style = 'width:' + size + 'px;height:' + size + 'px;background:linear-gradient(135deg,hsl(' + hueOf(p.username) + ',58%,50%),hsl(' + ((hueOf(p.username) + 40) % 360) + ',55%,38%));color:#fff;';
+    if (p.artist_id) {
+      var href = '/artist?id=' + encodeURIComponent(p.artist_id);
+      return '<a class="wv-face" href="' + esc(href) + '" onclick="event.preventDefault();navigate(this.getAttribute(\'href\'))" style="' + style + '" data-tip="' + esc(title) + '" aria-label="' + esc(title) + '">' + inner + '</a>';
+    }
+    return '<span class="wv-face" style="' + style + '" data-tip="' + esc(title) + '" aria-label="' + esc(title) + '">' + inner + '</span>';
+  }
+
+  function onlineCardInner() {
+    var pr = CM.presence;
+    var head = '<div class="cm-card-h"><span class="cm-live-dot" aria-hidden="true"></span>Online now' + (pr && pr.online.length ? '<span class="cm-card-aside">' + pr.online.length + '</span>' : '') + '</div>';
+    if (!pr) return head + '<div style="display:flex;gap:6px;">' + [0, 1, 2, 3].map(function () { return '<span class="wv-skel" style="width:34px;height:34px;border-radius:50%;"></span>'; }).join('') + '</div>';
+    if (!pr.online.length) return head + '<div class="cm-card-note">nobody signed in is around right now. post something and theyll see it when they are.</div>';
+    var shown = pr.online.slice(0, 11);
+    var rest = pr.online.length - shown.length;
+    return head + '<div class="cm-online-faces">' + shown.map(function (p) { return faceHTML(p, 34); }).join('') + (rest > 0 ? '<span class="cm-online-more">+' + rest + '</span>' : '') + '</div>' +
+      '<div class="cm-card-note">' + (pr.online.length === 1 ? '1 person is' : pr.online.length + ' people are') + ' on wavernrs right now.</div>';
+  }
+
+  function renderOnline(skipCard) {
+    if (!skipCard) { var card = document.getElementById('cm-online-card'); if (card) card.innerHTML = onlineCardInner(); }
+    var strip = document.getElementById('cm-head-online');
+    var pr = CM.presence;
+    if (!strip) return;
+    if (!pr || !pr.online.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = '<div class="cm-faces">' + pr.online.slice(0, 5).map(function (p) { return faceHTML(p, 28); }).join('') + '</div>' +
+      '<span class="cm-live"><span class="cm-live-dot" aria-hidden="true"></span>' + pr.online.length + ' online</span>';
+  }
+
+  var AWARD_SHORT = { edit: 'EOTW', comp: 'COTW', album: 'AOTW', yeditor: 'YOTW' };
+  function awardsCard() {
+    var picks = CM.awards || [];
+    if (!picks.length) return '';
+    return '<div class="cm-card"><div class="cm-card-h">' + IC.trophy + 'This week’s picks</div>' + picks.slice(0, 4).map(function (p) {
+      if (p.editor) {
+        var slug = typeof archiveArtistSlug === 'function' ? archiveArtistSlug(p.editor.name) : p.editor.name;
+        var href = '/archive-artist?a=' + encodeURIComponent(slug);
+        return '<a class="cm-row" href="' + esc(href) + '" onclick="event.preventDefault();navigate(this.getAttribute(\'href\'))"><span class="cm-award-art" style="background:' + esc(coverGradient(p.editor.name || '')) + ';border-radius:50%;">' + esc((p.editor.name || '?').charAt(0).toUpperCase()) + '</span>' +
+          '<span class="cm-row-main"><span class="cm-award-chip">' + esc(AWARD_SHORT[p.category] || p.label || '') + '</span><span class="cm-row-t">' + esc(p.editor.name) + '</span><span class="cm-row-s" style="display:block;">' + esc(p.label || '') + '</span></span></a>';
+      }
+      var a = p.album, href2 = '/album?id=' + encodeURIComponent(a.id);
+      return '<a class="cm-row" href="' + esc(href2) + '" onclick="event.preventDefault();navigate(this.getAttribute(\'href\'))"><span class="cm-award-art" style="background:' + esc(coverGradient(a.title || '')) + ';">' + (a.cover_url ? '<img src="' + esc(typeof wvImg === 'function' ? wvImg(a.cover_url, 96) : a.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</span>' +
+        '<span class="cm-row-main"><span class="cm-award-chip">' + esc(AWARD_SHORT[p.category] || '') + '</span><span class="cm-row-t">' + esc(a.title || '') + '</span><span class="cm-row-s" style="display:block;">' + esc(a.creator || p.label || '') + '</span></span></a>';
+    }).join('') + '</div>';
+  }
+
+  function contributorsCard() {
+    if (!posts.length) return '';
+    var by = {};
+    posts.forEach(function (p) {
+      if (!p.user_id) return;
+      var u = by[p.user_id] || (by[p.user_id] = { id: p.user_id, username: p.username, avatar: p.profile_image_url, artist_id: p.artist_id, posts: 0, votes: 0, replies: 0 });
+      u.posts++; u.votes += Math.max(0, netScore(p)); u.replies += (p.comment_count || 0);
+    });
+    var top = Object.keys(by).map(function (k) { var u = by[k]; u.score = u.posts * 2 + u.votes + u.replies; return u; })
+      .sort(function (a, b) { return b.score - a.score || b.votes - a.votes; }).slice(0, 5);
+    if (!top.length) return '';
+    return '<div class="cm-card"><div class="cm-card-h">' + IC.spark + 'Top contributors<span class="cm-card-aside">by posts &amp; votes</span></div>' + top.map(function (u, i) {
+      var href = u.artist_id ? '/artist?id=' + encodeURIComponent(u.artist_id) : '';
+      var open = href ? '<a class="cm-row" href="' + esc(href) + '" onclick="event.preventDefault();navigate(this.getAttribute(\'href\'))">' : '<div class="cm-row">';
+      return open + '<span class="cm-row-rank">' + (i + 1) + '</span>' + avatarHTML(u.username, u.avatar, 32) +
+        '<span class="cm-row-main"><span class="cm-row-t"><span class="cm-uname" data-wv-uid="' + esc(sid(u.id)) + '">@' + esc(u.username || 'unknown') + '</span></span>' +
+        '<span class="cm-row-s" style="display:block;">' + plural(u.posts, 'post') + ' · ' + plural(u.votes, 'upvote') + (u.replies ? ' · ' + plural(u.replies, 'reply', 'replies') : '') + '</span></span>' + (href ? '</a>' : '</div>');
+    }).join('') + '</div>';
+  }
+
+  function rulesCard() {
+    return '<div class="cm-card"><div class="cm-card-h">' + IC.book + 'House rules</div><ol class="cm-rules">' +
+      '<li><span><b>keep it about the music.</b> comps, edits, eras, leaks talk, the site.</span></li>' +
+      '<li><span><b>be decent.</b> go at takes, not people. no slurs, no harassment.</span></li>' +
+      '<li><span><b>no spam.</b> one post per drop is plenty. dont flood the feed.</span></li>' +
+      '<li><span><b>link it.</b> paste a wavernrs link and it turns into a card.</span></li>' +
+      '</ol><div class="cm-fmt-tip">formatting: <code>**bold**</code> <code>~~strike~~</code> <code>__underline__</code></div></div>';
+  }
+
+  function morePostsCard() {
+    var pool = (CM.posts || []).filter(function (p) { return !currentPost || p.id !== currentPost.id; });
+    if (!pool.length) return '';
+    var now = Date.now();
+    var pick = pool.slice().sort(function (a, b) {
+      var sa = netScore(a) + 2 * (a.comment_count || 0) - (now - Date.parse(a.created_at)) / 864e5 / 7;
+      var sb = netScore(b) + 2 * (b.comment_count || 0) - (now - Date.parse(b.created_at)) / 864e5 / 7;
+      return sb - sa;
+    }).slice(0, 5);
+    return '<div class="cm-card"><div class="cm-card-h">' + IC.comment + 'More discussions</div>' + pick.map(function (p) {
+      var id = sid(p.id);
+      return '<div class="cm-row is-link" role="link" tabindex="0" onclick="openPost(\'' + id + '\')" onkeydown="if(event.key===\'Enter\')openPost(\'' + id + '\')">' + avatarHTML(p.username, p.profile_image_url, 30) +
+        '<span class="cm-row-main"><span class="cm-row-t">' + esc(p.title) + '</span><span class="cm-row-s" style="display:block;">' + plural(netScore(p), 'vote') + ' · ' + plural(p.comment_count || 0, 'comment') + '</span></span></div>';
+    }).join('') + '</div>';
+  }
+
+  function readDraft() { try { return JSON.parse(localStorage.getItem('wv_comm_draft') || 'null'); } catch (_) { return null; } }
+  function hasDraft() { var d = readDraft(); return !!(d && ((d.title || '').trim() || (d.body || '').trim())); }
+
+  function composerHTML() {
+    if (!me) {
+      return '<div class="cm-join"><div class="cm-join-ic">' + IC.chat + '</div><div style="min-width:0;flex:1 1 180px;"><div class="cm-join-t">join the conversation</div><div class="cm-join-d">log in to post, vote and reply to people.</div></div>' +
+        '<div class="cm-join-actions"><a class="cm-btn cm-btn-outline" href="/register">Sign up</a><a class="cm-btn cm-btn-primary" href="/login">Log in</a></div></div>';
+    }
+    var d = readDraft();
+    var draftTitle = d && (d.title || '').trim();
+    var avatar = avatarHTML(me.username, CM.me && CM.me.avatar, 36, true);
+    return '<div class="cm-composer" id="cm-composer">' +
+      '<button type="button" class="cm-composer-bar" id="cm-composer-bar" onclick="openComposer()" aria-expanded="false" aria-controls="cm-composer-body">' + avatar +
+        '<span class="cm-fake-input">' + (hasDraft() ? '<b>continue your draft</b>' + (draftTitle ? ' · ' + esc(draftTitle) : '') : 'Start a post…') + '</span>' +
+        '<span class="cm-btn cm-btn-primary" style="pointer-events:none;" aria-hidden="true">Post</span>' +
+      '</button>' +
+      '<div class="cm-composer-body" id="cm-composer-body" hidden>' +
+        '<div class="cm-composer-who">' + avatarHTML(me.username, CM.me && CM.me.avatar, 28, true) + '<span>posting as <strong>@' + esc(me.username || '') + '</strong></span></div>' +
+        '<label class="cm-sr" for="np-title">Title</label>' +
+        '<input id="np-title" class="cm-field cm-title-input" type="text" maxlength="200" placeholder="title — whats it about?" autocomplete="off" oninput="composerInput()">' +
+        '<div class="cm-editor-tools">' +
+          '<button type="button" class="cm-tab on" id="np-tab-write" onclick="setComposerTab(\'write\')" aria-pressed="true">Write</button>' +
+          '<button type="button" class="cm-tab" id="np-tab-preview" onclick="setComposerTab(\'preview\')" aria-pressed="false">Preview</button>' +
+          '<div class="cm-fmt">' +
+            '<button type="button" onclick="wrapFormat(\'np-body\',\'**\',\'**\')" aria-label="Bold" title="Bold"><b>B</b></button>' +
+            '<button type="button" onclick="wrapFormat(\'np-body\',\'~~\',\'~~\')" aria-label="Strikethrough" title="Strikethrough"><s>S</s></button>' +
+            '<button type="button" onclick="wrapFormat(\'np-body\',\'__\',\'__\')" aria-label="Underline" title="Underline"><u>U</u></button>' +
+          '</div>' +
+        '</div>' +
+        '<label class="cm-sr" for="np-body">Body</label>' +
+        '<textarea id="np-body" class="cm-textarea" maxlength="10000" placeholder="say what you wanna say… paste a wavernrs link to share a comp or edit" oninput="composerInput()"></textarea>' +
+        '<div class="cm-preview" id="np-preview" hidden></div>' +
+        '<div id="np-error" class="cm-err" role="alert"></div>' +
+        '<div class="cm-composer-foot">' +
+          '<div class="cm-meta-line"><span class="cm-count" id="np-title-count">0/200</span><span class="cm-count" id="np-body-count">0/10,000</span><span class="cm-saved" id="np-saved">' + IC.check + 'draft saved</span></div>' +
+          '<div class="cm-foot-actions"><span class="cm-meta-line cm-kbd-hint" style="margin-right:4px;" title="post with this shortcut"><span class="cm-kbd">' + (/Mac|iP/.test(navigator.platform || '') ? '⌘' : 'Ctrl') + '</span><span class="cm-kbd">Enter</span></span>' +
+            '<button type="button" class="cm-btn cm-btn-quiet" onclick="closeComposer()">Cancel</button>' +
+            '<button type="button" class="cm-btn cm-btn-primary" id="np-submit" onclick="submitNewPost()" disabled>Post</button></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function openComposer() {
+    if (!me) { navigate('/login'); return; }
+    var bar = document.getElementById('cm-composer-bar');
+    var body = document.getElementById('cm-composer-body');
+    var box = document.getElementById('cm-composer');
+    if (!bar || !body) {
+      var s = scroller(); if (s) s.scrollTop = 0;
+      return;
+    }
+    bar.hidden = true; bar.setAttribute('aria-expanded', 'true');
+    body.hidden = false; box.classList.add('is-open');
+    var d = readDraft();
+    var t = document.getElementById('np-title'), b = document.getElementById('np-body');
+    if (d && t && b && !t.value && !b.value) { t.value = d.title || ''; b.value = d.body || ''; }
+    composerInput(true);
+    setTimeout(function () { if (t) t.focus(); }, 30);
+  }
+
+  function closeComposer() {
+    var bar = document.getElementById('cm-composer-bar');
+    var body = document.getElementById('cm-composer-body');
+    var box = document.getElementById('cm-composer');
+    if (!bar || !body) return;
+    saveDraftNow();
+    body.hidden = true; bar.hidden = false; bar.setAttribute('aria-expanded', 'false');
+    box.classList.remove('is-open');
+    var fake = bar.querySelector('.cm-fake-input');
+    var d = readDraft();
+    if (fake) fake.innerHTML = hasDraft() ? '<b>continue your draft</b>' + (d.title && d.title.trim() ? ' · ' + esc(d.title.trim()) : '') : 'Start a post…';
+    var err = document.getElementById('np-error'); if (err) err.textContent = '';
+    setComposerTab('write');
+    bar.focus();
+  }
+
+  var _draftTimer = null;
+  function saveDraftNow() {
+    var t = document.getElementById('np-title'), b = document.getElementById('np-body');
+    if (!t || !b) return false;
+    try {
+      if (!t.value.trim() && !b.value.trim()) { localStorage.removeItem('wv_comm_draft'); return false; }
+      localStorage.setItem('wv_comm_draft', JSON.stringify({ title: t.value, body: b.value, at: Date.now() }));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function setCount(el, n, max) {
+    if (!el) return;
+    el.textContent = n.toLocaleString() + '/' + max.toLocaleString();
+    el.classList.toggle('warn', n >= max * 0.9 && n <= max);
+    el.classList.toggle('over', n > max);
+  }
+
+  function composerInput(noSave) {
+    var t = document.getElementById('np-title'), b = document.getElementById('np-body');
+    if (!t || !b) return;
+    setCount(document.getElementById('np-title-count'), t.value.length, 200);
+    setCount(document.getElementById('np-body-count'), b.value.length, 10000);
+    var btn = document.getElementById('np-submit');
+    if (btn) btn.disabled = !t.value.trim() || t.value.length > 200 || b.value.length > 10000;
+    autosize(b);
+    var prev = document.getElementById('np-preview');
+    if (prev && !prev.hidden) renderPreview();
+    if (noSave === true) return;
+    clearTimeout(_draftTimer);
+    _draftTimer = setTimeout(function () {
+      var ok = saveDraftNow();
+      var s = document.getElementById('np-saved');
+      if (s && ok) { s.classList.add('show'); clearTimeout(s._t); s._t = setTimeout(function () { s.classList.remove('show'); }, 1600); }
+    }, 450);
+  }
+
+  function autosize(ta) {
+    if (!ta || ta.offsetParent === null) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, Math.round(window.innerHeight * 0.6)) + 'px';
+  }
+
+  function renderPreview() {
+    var t = document.getElementById('np-title'), b = document.getElementById('np-body'), prev = document.getElementById('np-preview');
+    if (!prev) return;
+    var title = t ? t.value.trim() : '', body = b ? b.value : '';
+    prev.innerHTML = (title || body.trim())
+      ? (title ? '<div class="cm-preview-title">' + esc(title) + '</div>' : '') + '<div class="cm-md" style="color:var(--text-2);">' + renderMd(body) + '</div>'
+      : '<div class="cm-preview-empty">nothing to preview yet</div>';
+  }
+
+  function setComposerTab(tab) {
+    var b = document.getElementById('np-body'), prev = document.getElementById('np-preview');
+    var tw = document.getElementById('np-tab-write'), tp = document.getElementById('np-tab-preview');
+    if (!b || !prev) return;
+    var isPrev = tab === 'preview';
+    if (isPrev) { prev.style.minHeight = Math.max(120, b.offsetHeight) + 'px'; renderPreview(); }
+    b.hidden = isPrev; prev.hidden = !isPrev;
+    if (tw) { tw.classList.toggle('on', !isPrev); tw.setAttribute('aria-pressed', String(!isPrev)); }
+    if (tp) { tp.classList.toggle('on', isPrev); tp.setAttribute('aria-pressed', String(isPrev)); }
+    if (!isPrev) { autosize(b); b.focus(); }
+  }
+
+  function wrapFormat(tid, pre, suf) {
+    var ta = document.getElementById(tid);
+    if (!ta) return;
+    if (tid === 'np-body' && ta.hidden) setComposerTab('write');
+    var s = ta.selectionStart, e = ta.selectionEnd;
+    var word = ta.value.substring(s, e) || 'text';
+    ta.value = ta.value.substring(0, s) + pre + word + suf + ta.value.substring(e);
+    ta.focus();
+    ta.setSelectionRange(s + pre.length, s + pre.length + word.length);
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  async function submitNewPost() {
+    var titleEl = document.getElementById('np-title');
+    var bodyEl = document.getElementById('np-body');
+    var errEl = document.getElementById('np-error');
+    var btn = document.getElementById('np-submit');
+    var title = titleEl ? titleEl.value.trim() : '';
+    var body = bodyEl ? bodyEl.value.trim() : '';
+    if (!title) {
+      if (errEl) errEl.textContent = 'you need a title';
+      if (titleEl) titleEl.focus();
+      return;
+    }
+    if (btn && btn.getAttribute('data-busy')) return;
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.setAttribute('data-busy', '1'); btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Posting'; }
+    try {
+      var newPost = await api('/community/posts', { method: 'POST', body: JSON.stringify({ title: title, body: body }) });
+      newPost.comment_count = 0;
+      newPost.net_votes = newPost.net_votes || 0;
+      newPost.user_vote = newPost.user_vote || 0;
+      if (!newPost.username && me) newPost.username = me.username;
+      if (!newPost.profile_image_url && CM.me) newPost.profile_image_url = CM.me.avatar;
+      if (!newPost.artist_id && CM.me) newPost.artist_id = CM.me.artist_id;
+      CM.mine[newPost.id] = 1;
+      posts.unshift(newPost);
+      CM.posts = posts;
+      try { localStorage.removeItem('wv_comm_draft'); } catch (_) {}
+      if (titleEl) titleEl.value = '';
+      if (bodyEl) bodyEl.value = '';
+      closeComposer();
+      if (_q) { _q = ''; var si = document.getElementById('cm-search-input'); if (si) si.value = ''; var sb = document.getElementById('cm-search'); if (sb) sb.classList.remove('has-q'); }
+      renderFeed();
+      renderRail();
+      var card = document.getElementById('post-row-' + sid(newPost.id));
+      if (card) { card.classList.add('is-fresh'); card.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' }); }
+      toast('posted');
+    } catch (err) {
+      if (errEl) errEl.textContent = (err && err.message) || 'couldnt post that';
+    } finally {
+      if (btn) { btn.removeAttribute('data-busy'); btn.innerHTML = 'Post'; composerInput(true); }
+    }
+  }
+
+  var _searchTimer = null;
+  function onSearchInput(v) {
+    _q = String(v || '');
+    var box = document.getElementById('cm-search');
+    if (box) box.classList.toggle('has-q', !!_q);
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(renderFeed, 110);
+  }
+  function clearSearch() {
+    _q = '';
+    var inp = document.getElementById('cm-search-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+    var box = document.getElementById('cm-search');
+    if (box) box.classList.remove('has-q');
+    renderFeed();
+  }
+  async function searchServer() {
+    var q = _q.trim();
+    if (!q || !CM.hasMore) return;
+    var note = document.getElementById('cm-search-note');
+    if (note) note.innerHTML = '<div class="cm-search-note"><span><span class="cm-spin" style="vertical-align:-2px;margin-right:8px;"></span>searching older posts…</span></div>';
+    try {
+      var rows = await api('/community/posts?limit=100&q=' + encodeURIComponent(q));
+      var seen = {}; posts.forEach(function (p) { seen[p.id] = 1; });
+      (Array.isArray(rows) ? rows : []).forEach(function (p) { if (!seen[p.id]) { posts.push(p); seen[p.id] = 1; } });
+      CM.posts = posts;
+    } catch (_) {}
+    renderFeed();
+  }
+
+  async function loadMore() {
+    if (_loadingMore || !CM.hasMore || !posts.length) return;
+    _loadingMore = true;
+    var btn = document.getElementById('cm-more-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Loading'; }
+    var oldest = posts.reduce(function (m, p) { return !m || Date.parse(p.created_at) < Date.parse(m.created_at) ? p : m; }, null);
+    try {
+      var rows = await api('/community/posts?limit=' + PAGE_SIZE + '&before=' + encodeURIComponent(oldest.created_at));
+      rows = Array.isArray(rows) ? rows : [];
+      var seen = {}; posts.forEach(function (p) { seen[p.id] = 1; });
+      var fresh = rows.filter(function (p) { return !seen[p.id]; });
+      posts = posts.concat(fresh);
+      CM.posts = posts;
+      CM.hasMore = fresh.length > 0 && rows.length === PAGE_SIZE;
+    } catch (err) {
+      if (err && err.navAborted) return;
+      toast('couldnt load more posts', 'error');
+    }
+    _loadingMore = false;
+    renderFeed();
+    renderRail();
+  }
+
+  function setSort(sort) {
+    _sort = sort;
+    CM.sort = sort;
+    document.querySelectorAll('.cm-seg [data-sort]').forEach(function (btn) {
+      var on = btn.getAttribute('data-sort') === sort;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-selected', String(on));
+    });
+    renderFeed();
+  }
+
+  function _paintVote(kind, id, v) {
+    var up = document.getElementById(kind + '-up-' + id);
+    var down = document.getElementById(kind + '-down-' + id);
+    var wrap = document.getElementById(kind + '-vote-' + id);
+    if (up) { up.classList.toggle('on', v === 1); up.setAttribute('aria-pressed', String(v === 1)); }
+    if (down) { down.classList.toggle('on', v === -1); down.setAttribute('aria-pressed', String(v === -1)); }
+    if (wrap) { wrap.classList.toggle('is-up', v === 1); wrap.classList.toggle('is-down', v === -1); }
+  }
+
+  function bump(kind, id, dir) {
+    var el = document.getElementById(kind + '-score-' + id);
+    if (!el || reducedMotion()) return;
+    el.classList.remove('bump-up', 'bump-down');
+    void el.offsetWidth;
+    el.classList.add(dir > 0 ? 'bump-up' : 'bump-down');
+  }
+
+  async function votePost(id, vote) {
+    if (!isLoggedIn()) { navigate('/login'); return; }
+    var post = posts.find(function (p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
+    if (!post) return;
+    var twin = (currentPost && currentPost.id === id && post !== currentPost) ? currentPost : null;
+    var prev = netScore(post);
+    var prevVote = post.user_vote || 0;
+    var nextVote = prevVote === vote ? 0 : vote;
+    post.net_votes = prev - prevVote + nextVote;
+    post.user_vote = nextVote;
+    if (twin) { twin.net_votes = post.net_votes; twin.user_vote = nextVote; }
+    _updatePostScore(id);
+    _paintVote('post', id, nextVote);
+    bump('post', id, nextVote - prevVote);
+    try {
+      var result = await api('/community/posts/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
+      if (result) {
+        post.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
+        if (result.user_vote !== undefined) { post.user_vote = result.user_vote; _paintVote('post', id, result.user_vote); }
+        if (twin) { twin.net_votes = post.net_votes; twin.user_vote = post.user_vote; }
+      }
+      _updatePostScore(id);
+    } catch (err) {
+      post.net_votes = prev;
+      post.user_vote = prevVote;
+      if (twin) { twin.net_votes = prev; twin.user_vote = prevVote; }
+      _updatePostScore(id);
+      _paintVote('post', id, prevVote);
+      if (err && err.status === 401) navigate('/login');
+      else if (!(err && err.navAborted)) toast((err && err.message) || 'couldnt save your vote', 'error');
+    }
+  }
+  function _updatePostScore(id) {
+    var el = document.getElementById('post-score-' + id);
+    var post = posts.find(function (p) { return p.id === id; }) || currentPost;
+    if (el && post) el.textContent = netScore(post);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (res, rej) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand('copy'); ta.remove();
+        ok ? res() : rej(new Error('copy failed'));
+      } catch (e) { rej(e); }
+    });
+  }
+
+  function sharePost(id, commentId) {
+    var url = location.origin + '/community?post=' + encodeURIComponent(id) + (commentId ? '#c-' + commentId : '');
+    var btn = document.getElementById(commentId ? 'cshare-' + commentId : 'share-' + id);
+    copyText(url).then(function () {
+      toast(commentId ? 'link to comment copied' : 'link copied');
+      if (btn) {
+        var label = btn.querySelector('.cm-act-label');
+        var old = label ? label.textContent : '';
+        btn.classList.add('done');
+        if (label) label.textContent = 'Copied';
+        clearTimeout(btn._t);
+        btn._t = setTimeout(function () { btn.classList.remove('done'); if (label) label.textContent = old; }, 1600);
+      }
+    }).catch(function () {
+      try { window.prompt('copy this link', url); } catch (_) {}
+    });
+  }
+
+  function cmConfirm(title, desc, okLabel) {
+    return new Promise(function (resolve) {
+      var prevFocus = document.activeElement;
+      var back = document.createElement('div');
+      back.className = 'cm-modal-back';
+      back.innerHTML = '<div class="cm-modal" role="alertdialog" aria-modal="true" aria-labelledby="cm-modal-t" aria-describedby="cm-modal-d">' +
+        '<div class="cm-modal-t" id="cm-modal-t">' + esc(title) + '</div><div class="cm-modal-d" id="cm-modal-d">' + esc(desc) + '</div>' +
+        '<div class="cm-modal-actions"><button class="cm-btn cm-btn-quiet" data-a="no">Cancel</button><button class="cm-btn cm-btn-danger" data-a="yes">' + esc(okLabel || 'Delete') + '</button></div></div>';
+      function done(v) {
+        document.removeEventListener('keydown', onKey, true);
+        back.remove();
+        try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+        resolve(v);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
+        if (e.key === 'Tab') {
+          var bs = back.querySelectorAll('button');
+          if (e.shiftKey && document.activeElement === bs[0]) { e.preventDefault(); bs[bs.length - 1].focus(); }
+          else if (!e.shiftKey && document.activeElement === bs[bs.length - 1]) { e.preventDefault(); bs[0].focus(); }
+        }
+      }
+      back.addEventListener('click', function (e) {
+        var a = e.target.closest('[data-a]');
+        if (a) done(a.getAttribute('data-a') === 'yes');
+        else if (e.target === back) done(false);
+      });
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(back);
+      var yes = back.querySelector('[data-a="yes"]');
+      if (yes) yes.focus();
+    });
+  }
+
+  async function deletePost(id) {
+    if (!(await cmConfirm('delete this post?', 'it and all its comments will be gone for good. you cant undo this.', 'Delete post'))) return;
+    try {
+      await api('/community/posts/' + id, { method: 'DELETE' });
+      removePostLocal(id);
+      toast('post deleted');
+    } catch (err) { toast('couldnt delete: ' + ((err && err.message) || 'error'), 'error'); }
+  }
+
+  async function modTakeDownPost(id) {
+    if (!(await cmConfirm('take down this post?', 'mod action. the post and its comments get removed for everyone.', 'Take down'))) return;
+    try {
+      await api('/mod/community-posts/' + id, { method: 'DELETE' });
+      removePostLocal(id);
+      toast('post taken down');
+    } catch (err) { toast('couldnt take it down: ' + ((err && err.message) || 'error'), 'error'); }
+  }
+
+  function removePostLocal(id) {
+    posts = posts.filter(function (p) { return p.id !== id; });
+    CM.posts = posts;
+    delete CM.mine[id];
+    if (currentView === 'post' && currentPost && currentPost.id === id) goBackToList();
+    else { renderFeed(); renderRail(); }
+  }
+
+  function openPost(id) {
+    if (currentView === 'list') { var s = scroller(); CM.listScroll = s ? s.scrollTop : 0; }
+    history.pushState(null, '', location.pathname + '?post=' + encodeURIComponent(id));
+    loadPost(id);
+  }
+  function goBackToList() {
+    CM.restore = true;
+    history.pushState(null, '', location.pathname);
+    loadPosts();
+  }
+
+  function renderPostSkeleton() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    view.innerHTML = '<div class="cm-wrap is-post" aria-busy="true"><button class="cm-back" onclick="goBackToList()">' + IC.back + 'Community</button>' +
+      '<div class="cm-grid"><div class="cm-main"><div class="cm-full">' +
+        '<div class="cm-post-meta"><span class="wv-skel" style="width:36px;height:36px;border-radius:50%;"></span><span class="wv-skel" style="width:150px;height:12px;"></span></div>' +
+        '<div class="wv-skel" style="height:24px;width:66%;margin:18px 0 14px;"></div>' +
+        '<div class="wv-skel" style="height:12px;width:96%;margin-bottom:8px;"></div><div class="wv-skel" style="height:12px;width:84%;margin-bottom:8px;"></div><div class="wv-skel" style="height:12px;width:40%;"></div>' +
+        '<div class="cm-actions" style="margin-left:0;"><span class="wv-skel" style="width:98px;height:34px;border-radius:999px;"></span><span class="wv-skel" style="width:80px;height:34px;border-radius:999px;margin-left:6px;"></span></div>' +
+      '</div>' +
+      '<div style="margin-top:26px;">' + [0, 1, 2].map(function () { return '<div style="display:flex;gap:10px;margin-bottom:22px;"><span class="wv-skel" style="width:28px;height:28px;border-radius:50%;flex-shrink:0;"></span><span style="flex:1;"><span class="wv-skel cm-skel-line" style="height:10px;width:30%;margin:4px 0 10px;"></span><span class="wv-skel cm-skel-line" style="height:11px;width:88%;margin-bottom:6px;"></span><span class="wv-skel cm-skel-line" style="height:11px;width:60%;"></span></span></div>'; }).join('') + '</div>' +
+      '</div><aside class="cm-rail">' + skelRail() + '</aside></div></div>';
+  }
+
+  async function loadPost(id) {
+    currentView = 'post';
+    var view = document.getElementById('view');
+    if (!view) return;
+    renderPostSkeleton();
+    var s = scroller(); if (s) s.scrollTop = 0;
+    try {
+      var data = await api('/community/posts/' + encodeURIComponent(id));
+      if (currentView !== 'post') return;
+      currentPost = data.post || data;
+      currentComments = Array.isArray(data.comments) ? data.comments : [];
+      var visits = readVisits();
+      _visitsBefore[currentPost.id] = visits[currentPost.id] || null;
+      var listCopy = posts.find(function (p) { return p.id === currentPost.id; });
+      if (listCopy) { listCopy.comment_count = currentComments.length; listCopy.net_votes = currentPost.net_votes; listCopy.user_vote = currentPost.user_vote; }
+      renderPost();
+      unfurlPost();
+      writeVisit(currentPost.id, currentComments.length);
+      focusCommentFromUrl();
+      if (!CM.posts) {
+        api('/community/posts?limit=' + PAGE_SIZE).then(function (rows) {
+          if (!Array.isArray(rows) || CM.posts) return;
+          CM.posts = rows; posts = rows; CM.hasMore = rows.length === PAGE_SIZE; CM.at = Date.now();
+          if (currentView === 'post') renderRail();
+        }).catch(function () {});
+      }
+      loadSide();
+    } catch (err) {
+      if (err && err.navAborted) return;
+      var v = document.getElementById('view');
+      if (!v || currentView !== 'post') return;
+      var missing = err && err.status === 404;
+      v.innerHTML = '<div class="cm-wrap is-post"><button class="cm-back" onclick="goBackToList()">' + IC.back + 'Community</button>' +
+        '<div class="cm-state" role="alert"><div class="cm-state-ic">' + (missing ? IC.chat : IC.warn) + '</div>' +
+        '<div class="cm-state-t">' + (missing ? 'this post is gone' : 'couldnt load this post') + '</div>' +
+        '<div class="cm-state-d">' + (missing ? 'it was deleted or taken down.' : esc((err && err.message) || 'something went wrong')) + '</div>' +
+        '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' + (missing ? '' : '<button class="cm-btn cm-btn-primary" onclick="loadPost(\'' + sid(id) + '\')">Try again</button>') +
+        '<button class="cm-btn cm-btn-outline" onclick="goBackToList()">Back to community</button></div></div></div>';
+    }
+  }
+
+  async function unfurlPost() {
+    var box = document.getElementById('post-cards'); if (!box || !currentPost || !currentPost.body) return;
+    var urls = (String(currentPost.body).match(/https?:\/\/(www\.)?wavernrs\.com\/[^\s<)]+/g) || []).slice(0, 3).map(function (u) { return u.replace(/[.,!?]+$/, ''); });
+    if (!urls.length) return;
+    var pid = currentPost.id;
+    box.innerHTML = urls.map(function () { return '<div class="wv-skel cm-mini-skel"></div>'; }).join('');
+    var cards = await Promise.all(urls.map(function (u) { return resolveLink(u); }));
     box = document.getElementById('post-cards');
-    if (!box || !currentPost || currentPost.id !== pid || !cards.length) return;
-    box.innerHTML = cards.map(function (c) {
-      var art = c.img ? (typeof wvImg === 'function' ? wvImg(c.img, 120) : c.img) : '';
-      return '<a class="comm-card" href="' + escHtml(c.href) + '" onclick="navigate(this.getAttribute(\'href\'));return false;"><div class="comm-card-art" style="background:' + coverGradient(c.t || '') + ';">' + (art ? '<img src="' + escHtml(art) + '" alt="" onerror="this.remove()">' : '') + '</div><div style="min-width:0;"><div class="comm-card-t">' + escHtml(c.t) + '</div><div class="comm-card-s">' + escHtml(c.s) + '</div></div></a>';
-    }).join('');
+    if (!box || !currentPost || currentPost.id !== pid) return;
+    box.innerHTML = cards.map(function (c, i) { return c ? miniCardHTML(c, urls[i]) : ''; }).join('');
   }
 
   function renderPost() {
     var view = document.getElementById('view');
     if (!view || !currentPost) return;
     var p = currentPost;
-    var s = netScore(p);
+    var id = sid(p.id);
     var isOwner = me && me.id === p.user_id;
+    var tools = '';
+    if (isOwner) tools = '<button class="cm-act danger" onclick="deletePost(\'' + id + '\')">' + IC.trash + '<span class="cm-act-label">Delete post</span></button>';
+    else if (isMod) tools = '<button class="cm-act danger" onclick="modTakeDownPost(\'' + id + '\')">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
+    var badges = (isNew(p) ? '<span class="cm-pill-new">new</span>' : '') + (isHot(Object.assign({ comment_count: currentComments.length }, p)) ? '<span class="cm-hot">' + IC.flame + 'hot</span>' : '');
 
-    var modBtn = isMod && !isOwner
-      ? '<button onclick="modTakeDownPost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:var(--red);border-color:var(--red);padding:5px 12px;">Take down</button>'
-      : '';
-    var deleteBtn = isOwner
-      ? '<button onclick="deletePost(\'' + escHtml(p.id) + '\')" class="wv-pill" style="font-size:12px;color:var(--red);border-color:var(--red);padding:5px 12px;">Delete post</button>'
-      : '';
-
-    var commentForm = isLoggedIn()
-      ? '<div style="margin-bottom:28px;">' +
-          '<div style="font-size:14px;font-weight:600;margin-bottom:10px;">Add a comment</div>' +
-          formatBar('top-comment-body') +
-          '<textarea id="top-comment-body" class="wv-input" rows="3" placeholder="write something..." style="width:100%;box-sizing:border-box;resize:vertical;min-height:74px;"></textarea>' +
-          '<div id="top-comment-error" style="font-size:12px;color:var(--red);display:none;margin-top:4px;"></div>' +
-          '<div style="display:flex;justify-content:flex-end;margin-top:8px;">' +
-            '<button class="wv-pill brand" onclick="submitTopComment()">Comment</button>' +
+    var commentForm = isLoggedIn() && me
+      ? '<div class="cm-reply-box">' + avatarHTML(me.username, CM.me && CM.me.avatar, 32, true) +
+          '<div class="cm-reply-main">' +
+            '<label class="cm-sr" for="top-comment-body">Add a comment</label>' +
+            '<textarea id="top-comment-body" class="cm-textarea" maxlength="5000" placeholder="add a comment…" oninput="replyInput(\'top-comment-body\',\'top-comment-count\',\'top-comment-submit\')" onkeydown="replyKey(event,null)"></textarea>' +
+            '<div id="top-comment-error" class="cm-err" role="alert"></div>' +
+            '<div class="cm-inline-foot"><div class="cm-meta-line"><span class="cm-count" id="top-comment-count">0/5,000</span><span>**bold** ~~strike~~ __underline__</span></div>' +
+              '<div class="cm-foot-actions"><button class="cm-btn cm-btn-primary" id="top-comment-submit" onclick="submitTopComment()" disabled>Comment</button></div></div>' +
           '</div>' +
         '</div>'
-      : '<div style="margin-bottom:24px;font-size:13px;color:var(--text-2);">' +
-          '<a href="/login" style="color:var(--brand,var(--purple));">Log in</a> to comment' +
-        '</div>';
+      : '<div class="cm-login-cta">' + IC.comment + '<span>log in to join the conversation</span><a class="cm-btn cm-btn-primary" href="/login">Log in</a></div>';
 
     view.innerHTML =
-      '<div style="max-width:740px;margin:0 auto;padding:28px 16px 80px;">' +
-        // Back
-        '<button class="wv-pill" onclick="goBackToList()" style="margin-bottom:20px;gap:6px;">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>' +
-          ' Community' +
-        '</button>' +
-
-        // Post card
-        '<div class="wv-card" style="padding:24px;margin-bottom:20px;">' +
-          '<div style="display:flex;gap:16px;">' +
-            // Vote
-            '<div class="comm-vote-col">' +
-              '<button class="comm-vote-btn up' + (p.user_vote === 1 ? ' on' : '') + '" id="post-up-' + escHtml(p.id) + '" onclick="votePost(\'' + escHtml(p.id) + '\',1)" title="Upvote" aria-pressed="' + (p.user_vote === 1) + '">▲</button>' +
-              '<span class="comm-vote-score" id="post-score-' + escHtml(p.id) + '" style="font-size:16px;">' + s + '</span>' +
-              '<button class="comm-vote-btn down' + (p.user_vote === -1 ? ' on' : '') + '" id="post-down-' + escHtml(p.id) + '" onclick="votePost(\'' + escHtml(p.id) + '\',-1)" title="Downvote" aria-pressed="' + (p.user_vote === -1) + '">▼</button>' +
+      '<div class="cm-wrap is-post">' +
+        '<button class="cm-back" onclick="goBackToList()">' + IC.back + 'Community</button>' +
+        '<div class="cm-grid"><div class="cm-main">' +
+          '<article class="cm-full">' +
+            '<div class="cm-post-meta">' + avatarHTML(p.username, p.profile_image_url, 36) +
+              '<span style="display:flex;flex-direction:column;min-width:0;gap:1px;">' + usernameLink(p.username, p.artist_id, p.user_id) +
+              '<time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '" style="font-size:12px;">' + esc(ago(p.created_at)) + '</time></span>' + badges + '</div>' +
+            '<h1 class="cm-full-title">' + esc(p.title) + '</h1>' +
+            (p.body ? '<div class="cm-md">' + renderMd(p.body) + '</div><div id="post-cards"></div>' : '') +
+            '<div class="cm-actions">' + voteHTML('post', id, netScore(p), p.user_vote || 0) +
+              '<button class="cm-act" onclick="focusComposer()">' + IC.comment + '<span id="comment-count-inline">' + currentComments.length + '</span><span class="cm-act-label">' + (currentComments.length === 1 ? 'comment' : 'comments') + '</span></button>' +
+              '<button class="cm-act" id="share-' + id + '" onclick="sharePost(\'' + id + '\')" aria-label="Copy link to post">' + IC.share + '<span class="cm-act-label">Share</span></button>' +
+              '<span class="cm-spacer"></span>' + tools +
             '</div>' +
-            // Content
-            '<div style="flex:1;min-width:0;">' +
-              '<h1 style="margin:0 0 10px;font-size:22px;font-weight:800;letter-spacing:-0.025em;line-height:1.25;">' + escHtml(p.title) + '</h1>' +
-              (p.body ? '<div style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:14px;">' + renderMd(p.body) + '</div><div id="post-cards"></div>' : '') +
-              '<div class="comm-meta">' +
-                avatarHTML(p.username, p.profile_image_url) +
-                '<span style="font-size:12.5px;">' + usernameLink(p.username, p.artist_id, p.user_id) + '</span>' +
-                '<span class="comm-dot">·</span>' +
-                '<span class="comm-meta-item">' + timeAgo(p.created_at) + '</span>' +
-                (deleteBtn || modBtn ? '<div style="margin-left:auto;display:flex;gap:6px;">' + deleteBtn + modBtn + '</div>' : '') +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-
-        // Comments
-        '<div>' +
-          '<div style="font-size:15px;font-weight:700;letter-spacing:-0.02em;margin-bottom:16px;" id="comment-heading">' +
-            currentComments.length + (currentComments.length === 1 ? ' Comment' : ' Comments') +
-          '</div>' +
-          commentForm +
-          '<div id="comments-tree">' + buildCommentTree() + '</div>' +
-        '</div>' +
+          '</article>' +
+          '<section class="cm-comments" aria-labelledby="comment-heading">' +
+            '<div class="cm-comments-head"><h2 class="cm-comments-h" id="comment-heading">' + plural(currentComments.length, 'comment') + '</h2>' +
+              '<div class="cm-seg" role="tablist" aria-label="Sort comments" id="cm-csort">' +
+                ['top', 'new'].map(function (s) { return '<button role="tab" data-csort="' + s + '" aria-selected="' + (s === _csort) + '" class="' + (s === _csort ? 'on' : '') + '" onclick="setCommentSort(\'' + s + '\')">' + s[0].toUpperCase() + s.slice(1) + '</button>'; }).join('') +
+              '</div></div>' +
+            commentForm +
+            '<div id="comments-tree" class="cm-tree">' + buildCommentTree() + '</div>' +
+          '</section>' +
+        '</div><aside class="cm-rail" id="cm-rail" aria-label="Community sidebar"></aside></div>' +
       '</div>';
+    renderRail();
+    observeUnfurls();
+    setTabTitle(p.title);
   }
 
-  // ── Comments ──────────────────────────────────────────────────────────────
+  function focusComposer() {
+    var ta = document.getElementById('top-comment-body');
+    if (!ta) { if (!isLoggedIn()) navigate('/login'); return; }
+    ta.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    setTimeout(function () { ta.focus(); }, reducedMotion() ? 0 : 250);
+  }
+
+  function setCommentSort(s) {
+    _csort = s; CM.csort = s;
+    document.querySelectorAll('#cm-csort [data-csort]').forEach(function (b) {
+      var on = b.getAttribute('data-csort') === s;
+      b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on));
+    });
+    rerenderComments();
+  }
+
   function buildCommentTree() {
     if (!currentComments.length) {
-      return '<div style="text-align:center;padding:32px 0;color:var(--text-3);font-size:14px;">no comments yet...be the first!!</div>';
+      return '<div class="cm-empty-comments"><b>no comments yet</b>be the first one to say something.</div>';
     }
-    var childrenOf = {}, roots = [];
-    currentComments.forEach(function(c) {
+    var byId = {}, childrenOf = {}, roots = [];
+    currentComments.forEach(function (c) { byId[c.id] = c; });
+    currentComments.forEach(function (c) {
       var pid = c.parent_id || null;
-      if (pid) { (childrenOf[pid] = childrenOf[pid] || []).push(c); }
+      if (pid && byId[pid]) { (childrenOf[pid] = childrenOf[pid] || []).push(c); }
       else { roots.push(c); }
     });
-    roots.sort(function(a, b) { return netScore(b) - netScore(a); });
-    Object.keys(childrenOf).forEach(function(pid) {
-      childrenOf[pid].sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+    if (_csort === 'new') roots.sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    else roots.sort(function (a, b) { var d = netScore(b) - netScore(a); return d !== 0 ? d : new Date(a.created_at) - new Date(b.created_at); });
+    Object.keys(childrenOf).forEach(function (pid) {
+      childrenOf[pid].sort(function (a, b) { return new Date(a.created_at) - new Date(b.created_at); });
     });
+    function countDesc(id) { var k = childrenOf[id] || []; return k.reduce(function (n, c) { return n + 1 + countDesc(c.id); }, 0); }
+    var postAuthor = currentPost && currentPost.user_id;
+    var before = currentPost && _visitsBefore[currentPost.id];
+    var lastSeen = before && before.t ? Date.parse(before.t) : 0;
+    var MAX = 3;
 
-    function renderNode(c, depth) {
-      var s = netScore(c);
-      var indent = Math.min(depth, 3) * 20;
+    function renderNode(c, depth, parentName, flat) {
+      var id = sid(c.id);
       var isOwner = me && me.id === c.user_id;
-      var children = (childrenOf[c.id] || []).map(function(ch) { return renderNode(ch, depth + 1); }).join('');
-
-      var actionBtns = '';
-      if (isLoggedIn()) actionBtns += '<button class="comm-reply-btn" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Reply</button>';
-      if (isOwner) actionBtns += '<button class="comm-reply-btn" style="color:var(--red);" onclick="deleteComment(\'' + escHtml(c.id) + '\')">Delete</button>';
-      if (isMod && !isOwner) actionBtns += '<button class="comm-reply-btn" style="color:var(--red);" onclick="modDeleteComment(\'' + escHtml(c.id) + '\')">Take down</button>';
-
-      var replyForm =
-        '<div id="reply-form-' + escHtml(c.id) + '" style="display:none;margin-top:10px;">' +
-          formatBar('reply-body-' + c.id) +
-          '<textarea id="reply-body-' + escHtml(c.id) + '" class="wv-input" rows="2" placeholder="reply..." ' +
-            'style="width:100%;box-sizing:border-box;resize:vertical;min-height:56px;font-size:13px;"></textarea>' +
-          '<div id="reply-error-' + escHtml(c.id) + '" style="font-size:12px;color:var(--red);display:none;margin-top:3px;"></div>' +
-          '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px;">' +
-            '<button class="wv-pill" style="font-size:12px;padding:4px 12px;" onclick="toggleReplyForm(\'' + escHtml(c.id) + '\')">Cancel</button>' +
-            '<button class="wv-pill brand" style="font-size:12px;padding:4px 12px;" onclick="submitReply(\'' + escHtml(c.id) + '\')">Reply</button>' +
-          '</div>' +
-        '</div>';
-
-      return (
-        '<div style="margin-left:' + indent + 'px;" id="comment-node-' + escHtml(c.id) + '">' +
-          '<div class="comm-comment-block">' +
-            '<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">' +
-              avatarHTML(c.username, c.profile_image_url) +
-              '<span style="font-size:12.5px;">' + usernameLink(c.username, c.artist_id, c.user_id) + '</span>' +
-              '<span class="comm-meta-item">' + timeAgo(c.created_at) + '</span>' +
+      var kids = childrenOf[c.id] || [];
+      var desc = countDesc(c.id);
+      var fresh = lastSeen && Date.parse(c.created_at) > lastSeen && !isOwner;
+      var nested = depth < MAX;
+      var childHTML = kids.map(function (k) { return renderNode(k, nested ? depth + 1 : depth, c.username, !nested); }).join('');
+      var actions = voteHTML('comment', id, netScore(c), c.user_vote || 0);
+      if (isLoggedIn()) actions += '<button class="cm-act" onclick="toggleReplyForm(\'' + id + '\')" aria-label="Reply to @' + esc(c.username || '') + '">' + IC.reply + '<span class="cm-act-label">Reply</span></button>';
+      actions += '<button class="cm-act" id="cshare-' + id + '" onclick="sharePost(\'' + sid(currentPost.id) + '\',\'' + id + '\')" aria-label="Copy link to comment">' + IC.share + '<span class="cm-act-label">Share</span></button>';
+      if (isOwner) actions += '<button class="cm-act danger" onclick="deleteComment(\'' + id + '\')" aria-label="Delete your comment">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
+      else if (isMod) actions += '<button class="cm-act danger" onclick="modDeleteComment(\'' + id + '\')" aria-label="Take down comment (mod)">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
+      var collapsed = !!CM.collapsed[c.id];
+      return '<div class="cm-c' + (collapsed ? ' collapsed' : '') + '" id="c-' + id + '" data-depth="' + depth + '">' +
+        '<div class="cm-c-row">' +
+          '<div class="cm-c-gutter">' + avatarHTML(c.username, c.profile_image_url, 28) +
+            '<button class="cm-thread" onclick="toggleThread(\'' + id + '\')" aria-label="Collapse thread by @' + esc(c.username || '') + '" aria-expanded="' + (!collapsed) + '"></button></div>' +
+          '<div class="cm-c-main">' +
+            '<div class="cm-c-bubble">' +
+              '<div class="cm-c-head">' + usernameLink(c.username, c.artist_id, c.user_id) +
+                (postAuthor && c.user_id === postAuthor ? '<span class="cm-op" title="original poster">OP</span>' : '') +
+                '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(c.created_at) + '" title="' + esc(absTime(c.created_at)) + '">' + esc(ago(c.created_at)) + '</time>' +
+                (fresh ? '<span class="cm-newdot" title="new since your last visit"></span>' : '') +
+                (flat && parentName ? '<span class="cm-replying">replying to @' + esc(parentName) + '</span>' : '') +
+                '<button class="cm-c-collapsed-note" onclick="toggleThread(\'' + id + '\')">' + (nested && desc ? '+' + plural(desc, 'reply', 'replies') : 'show') + '</button>' +
+              '</div>' +
+              '<div class="cm-c-body cm-md">' + renderMd(c.body) + '</div>' +
+              (firstSiteLink(c.body) ? '<div class="cm-unfurl" data-url="' + esc(firstSiteLink(c.body)) + '"></div>' : '') +
+              '<div class="cm-c-actions">' + actions + '</div>' +
             '</div>' +
-            '<div style="font-size:13.5px;line-height:1.65;color:var(--text);margin-bottom:8px;">' + renderMd(c.body) + '</div>' +
-            '<div style="display:flex;align-items:center;gap:2px;">' +
-              '<button class="comm-vote-btn up' + (c.user_vote === 1 ? ' on' : '') + '" id="comment-up-' + escHtml(c.id) + '" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',1)" aria-pressed="' + (c.user_vote === 1) + '">▲</button>' +
-              '<span id="comment-score-' + escHtml(c.id) + '" style="font-size:12px;font-weight:600;color:var(--text-3);min-width:18px;text-align:center;">' + Math.max(0, s) + '</span>' +
-              '<button class="comm-vote-btn down' + (c.user_vote === -1 ? ' on' : '') + '" id="comment-down-' + escHtml(c.id) + '" style="font-size:13px;padding:2px 5px;" onclick="voteComment(\'' + escHtml(c.id) + '\',-1)" aria-pressed="' + (c.user_vote === -1) + '">▼</button>' +
-              '<span style="width:8px;"></span>' +
-              actionBtns +
-            '</div>' +
-            replyForm +
+            '<div class="cm-inline-reply" id="reply-form-' + id + '" hidden></div>' +
+            (nested && childHTML ? '<div class="cm-c-children">' + childHTML + '</div>' : '') +
           '</div>' +
-          children +
-        '</div>'
-      );
+        '</div>' +
+      '</div>' + (!nested ? childHTML : '');
     }
-
-    return roots.map(function(c) { return renderNode(c, 0); }).join('');
+    return roots.map(function (c) { return renderNode(c, 0, null, false); }).join('');
   }
 
   function rerenderComments() {
     var el = document.getElementById('comments-tree');
     if (el) el.innerHTML = buildCommentTree();
+    observeUnfurls();
     var h = document.getElementById('comment-heading');
-    if (h) h.textContent = currentComments.length + (currentComments.length === 1 ? ' Comment' : ' Comments');
+    if (h) h.textContent = plural(currentComments.length, 'comment');
+    var inl = document.getElementById('comment-count-inline');
+    if (inl) inl.textContent = currentComments.length;
+    var listCopy = currentPost && posts.find(function (p) { return p.id === currentPost.id; });
+    if (listCopy) listCopy.comment_count = currentComments.length;
+  }
+
+  function toggleThread(id) {
+    var node = document.getElementById('c-' + id);
+    if (!node) return;
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
+    var now = !node.classList.contains('collapsed');
+    node.classList.toggle('collapsed', now);
+    if (c) { if (now) CM.collapsed[c.id] = 1; else delete CM.collapsed[c.id]; }
+    var line = node.querySelector(':scope > .cm-c-row > .cm-c-gutter > .cm-thread');
+    if (line) line.setAttribute('aria-expanded', String(!now));
+    if (!now) { var t = node.querySelector(':scope > .cm-c-row > .cm-c-main > .cm-c-bubble .cm-c-actions button'); if (t && document.activeElement && document.activeElement.classList.contains('cm-c-collapsed-note')) t.focus(); }
+    else { var note = node.querySelector(':scope > .cm-c-row > .cm-c-main > .cm-c-bubble .cm-c-collapsed-note'); if (note && document.activeElement && document.activeElement.classList.contains('cm-thread')) note.focus(); }
+  }
+
+  function flashComment(id) {
+    var node = document.getElementById('c-' + id);
+    if (!node) return false;
+    var self = currentComments.find(function (x) { return sid(x.id) === id; });
+    var cur = self;
+    var guard = 0;
+    while (cur && cur.parent_id && guard++ < 50) {
+      if (CM.collapsed[cur.parent_id]) { delete CM.collapsed[cur.parent_id]; var pn = document.getElementById('c-' + sid(cur.parent_id)); if (pn) pn.classList.remove('collapsed'); }
+      var pid = cur.parent_id;
+      cur = currentComments.find(function (x) { return x.id === pid; });
+    }
+    if (node.classList.contains('collapsed')) { node.classList.remove('collapsed'); if (self) delete CM.collapsed[self.id]; }
+    node.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    node.classList.add('flash');
+    setTimeout(function () { node.classList.remove('flash'); }, 2600);
+    return true;
+  }
+
+  function focusCommentFromUrl() {
+    var m = (location.hash || '').match(/^#c-([0-9a-zA-Z_-]+)$/);
+    var cid = m ? m[1] : sid(new URLSearchParams(location.search).get('c') || '');
+    if (!cid) return;
+    setTimeout(function () { flashComment(cid); }, 60);
+  }
+
+  function replyInput(taId, countId, btnId) {
+    var ta = document.getElementById(taId);
+    if (!ta) return;
+    setCount(document.getElementById(countId), ta.value.length, 5000);
+    var btn = document.getElementById(btnId);
+    if (btn && !btn.getAttribute('data-busy')) btn.disabled = !ta.value.trim() || ta.value.length > 5000;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, Math.round(window.innerHeight * 0.5)) + 'px';
+  }
+
+  function replyKey(e, parentId) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (parentId) submitReply(parentId); else submitTopComment(); }
+    else if (e.key === 'Escape' && parentId) { e.preventDefault(); toggleReplyForm(parentId, false); }
+  }
+
+  function fillMine(c) {
+    if (!c) return c;
+    if ((!c.username || c.username === 'unknown') && me) c.username = me.username;
+    if (!c.profile_image_url && CM.me) c.profile_image_url = CM.me.avatar;
+    if (!c.artist_id && CM.me) c.artist_id = CM.me.artist_id;
+    if (c.net_votes === undefined) c.net_votes = 0;
+    if (c.user_vote === undefined) c.user_vote = 0;
+    return c;
   }
 
   async function submitTopComment() {
     var bodyEl = document.getElementById('top-comment-body');
     var errEl = document.getElementById('top-comment-error');
+    var btn = document.getElementById('top-comment-submit');
     var body = bodyEl ? bodyEl.value.trim() : '';
-    if (!body) {
-      if (errEl) { errEl.textContent = 'write something first'; errEl.style.display = ''; }
-      return;
-    }
-    if (errEl) errEl.style.display = 'none';
+    if (!body) { if (errEl) errEl.textContent = 'write something first'; return; }
+    if (!currentPost || (btn && btn.getAttribute('data-busy'))) return;
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.setAttribute('data-busy', '1'); btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Posting'; }
     try {
-      var c = await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body }) });
+      var c = fillMine(await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body: body }) }));
       currentComments.push(c);
-      if (bodyEl) bodyEl.value = '';
+      if (bodyEl) { bodyEl.value = ''; bodyEl.style.height = ''; }
+      setCount(document.getElementById('top-comment-count'), 0, 5000);
       rerenderComments();
+      writeVisit(currentPost.id, currentComments.length);
+      flashComment(sid(c.id));
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ''; }
+      if (errEl) errEl.textContent = (err && err.message) || 'couldnt post that';
+    } finally {
+      if (btn) { btn.removeAttribute('data-busy'); btn.innerHTML = 'Comment'; btn.disabled = !(bodyEl && bodyEl.value.trim()); }
     }
   }
 
-  function toggleReplyForm(commentId) {
+  function toggleReplyForm(commentId, force) {
     var form = document.getElementById('reply-form-' + commentId);
     if (!form) return;
-    var hidden = form.style.display === 'none' || !form.style.display;
-    form.style.display = hidden ? '' : 'none';
-    if (hidden) { var ta = document.getElementById('reply-body-' + commentId); if (ta) setTimeout(function() { ta.focus(); }, 50); }
+    var open = force === undefined ? form.hidden : !!force;
+    if (!open) { form.hidden = true; form.innerHTML = ''; return; }
+    var c = currentComments.find(function (x) { return sid(x.id) === commentId; });
+    form.innerHTML =
+      '<label class="cm-sr" for="reply-body-' + commentId + '">Reply</label>' +
+      '<textarea id="reply-body-' + commentId + '" class="cm-textarea" maxlength="5000" placeholder="reply to @' + esc(c ? c.username : '') + '…" oninput="replyInput(\'reply-body-' + commentId + '\',\'reply-count-' + commentId + '\',\'reply-submit-' + commentId + '\')" onkeydown="replyKey(event,\'' + commentId + '\')"></textarea>' +
+      '<div id="reply-error-' + commentId + '" class="cm-err" role="alert"></div>' +
+      '<div class="cm-inline-foot"><div class="cm-meta-line"><span class="cm-count" id="reply-count-' + commentId + '">0/5,000</span></div>' +
+        '<div class="cm-foot-actions"><button class="cm-btn cm-btn-quiet" onclick="toggleReplyForm(\'' + commentId + '\',false)">Cancel</button>' +
+        '<button class="cm-btn cm-btn-primary" id="reply-submit-' + commentId + '" onclick="submitReply(\'' + commentId + '\')" disabled>Reply</button></div></div>';
+    form.hidden = false;
+    var ta = document.getElementById('reply-body-' + commentId);
+    if (ta) setTimeout(function () { ta.focus(); }, 20);
   }
 
   async function submitReply(parentId) {
     var bodyEl = document.getElementById('reply-body-' + parentId);
     var errEl = document.getElementById('reply-error-' + parentId);
+    var btn = document.getElementById('reply-submit-' + parentId);
     var body = bodyEl ? bodyEl.value.trim() : '';
-    if (!body) {
-      if (errEl) { errEl.textContent = 'write something first'; errEl.style.display = ''; }
-      return;
-    }
-    if (errEl) errEl.style.display = 'none';
+    if (!body) { if (errEl) errEl.textContent = 'write something first'; return; }
+    if (!currentPost || (btn && btn.getAttribute('data-busy'))) return;
+    var parent = currentComments.find(function (x) { return sid(x.id) === parentId; });
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.setAttribute('data-busy', '1'); btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Replying'; }
     try {
-      var c = await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body, parent_id: parentId }) });
+      var c = fillMine(await api('/community/posts/' + currentPost.id + '/comments', { method: 'POST', body: JSON.stringify({ body: body, parent_id: parent ? parent.id : parentId }) }));
       currentComments.push(c);
-      if (bodyEl) bodyEl.value = '';
+      if (parent) delete CM.collapsed[parent.id];
       rerenderComments();
+      writeVisit(currentPost.id, currentComments.length);
+      flashComment(sid(c.id));
     } catch (err) {
-      if (errEl) { errEl.textContent = err.message; errEl.style.display = ''; }
+      if (errEl) errEl.textContent = (err && err.message) || 'couldnt post that';
+      if (btn) { btn.removeAttribute('data-busy'); btn.innerHTML = 'Reply'; btn.disabled = false; }
     }
   }
 
   async function voteComment(id, vote) {
     if (!isLoggedIn()) { navigate('/login'); return; }
-    var c = currentComments.find(function(x) { return x.id === id; });
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
     if (!c) return;
     var prev = netScore(c);
     var prevVote = c.user_vote || 0;
@@ -684,8 +1666,9 @@
     var el = document.getElementById('comment-score-' + id);
     if (el) el.textContent = Math.max(0, netScore(c));
     _paintVote('comment', id, nextVote);
+    bump('comment', id, nextVote - prevVote);
     try {
-      var result = await api('/community/comments/' + id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
+      var result = await api('/community/comments/' + c.id + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
       if (result) {
         c.net_votes = result.net_votes !== undefined ? result.net_votes : (result.upvotes - result.downvotes);
         if (result.user_vote !== undefined) { c.user_vote = result.user_vote; _paintVote('comment', id, result.user_vote); }
@@ -696,30 +1679,63 @@
       c.user_vote = prevVote;
       if (el) el.textContent = Math.max(0, netScore(c));
       _paintVote('comment', id, prevVote);
+      if (err && err.status === 401) navigate('/login');
+      else if (!(err && err.navAborted)) toast((err && err.message) || 'couldnt save your vote', 'error');
     }
+  }
+
+  function dropComment(id) {
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
+    if (!c) return;
+    var gone = {}; gone[c.id] = 1;
+    var changed = true;
+    while (changed) {
+      changed = false;
+      currentComments.forEach(function (x) { if (x.parent_id && gone[x.parent_id] && !gone[x.id]) { gone[x.id] = 1; changed = true; } });
+    }
+    currentComments = currentComments.filter(function (x) { return !gone[x.id]; });
+    rerenderComments();
+    if (currentPost) writeVisit(currentPost.id, currentComments.length);
   }
 
   async function deleteComment(id) {
-    if (!confirm('delete this comment?')) return;
+    if (!(await cmConfirm('delete this comment?', 'replies under it will go with it. you cant undo this.', 'Delete'))) return;
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
     try {
-      await api('/community/comments/' + id, { method: 'DELETE' });
-      currentComments = currentComments.filter(function(c) { return c.id !== id; });
-      rerenderComments();
-    } catch (err) { alert('couldnt delete: ' + err.message); }
+      await api('/community/comments/' + (c ? c.id : id), { method: 'DELETE' });
+      dropComment(id);
+      toast('comment deleted');
+    } catch (err) { toast('couldnt delete: ' + ((err && err.message) || 'error'), 'error'); }
   }
 
   async function modDeleteComment(id) {
-    if (!confirm('take down this comment?')) return;
+    if (!(await cmConfirm('take down this comment?', 'mod action. it gets removed for everyone.', 'Take down'))) return;
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
     try {
-      await api('/mod/community-comments/' + id, { method: 'DELETE' });
-      currentComments = currentComments.filter(function(c) { return c.id !== id; });
-      rerenderComments();
-      if (typeof wvToast === 'function') wvToast('comment taken down');
-    } catch (err) {
-      if (typeof wvToast === 'function') wvToast('couldnt take it down: ' + (err.message || 'error'), 'error');
-      else alert('couldnt take it down: ' + err.message);
-    }
+      await api('/mod/community-comments/' + (c ? c.id : id), { method: 'DELETE' });
+      dropComment(id);
+      toast('comment taken down');
+    } catch (err) { toast('couldnt take it down: ' + ((err && err.message) || 'error'), 'error'); }
   }
+
+  window._wvCommKeys = function (e) {
+    var t = e.target;
+    var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    if (document.querySelector('.cm-modal-back')) return;
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && t && (t.id === 'np-title' || t.id === 'np-body')) { e.preventDefault(); submitNewPost(); return; }
+    if (e.key === 'Escape') {
+      if (t && (t.id === 'np-title' || t.id === 'np-body')) { e.preventDefault(); closeComposer(); return; }
+      if (t && t.id === 'cm-search-input') { e.preventDefault(); if (_q) clearSearch(); else t.blur(); return; }
+      if (t && t.id === 'top-comment-body') { t.blur(); return; }
+    }
+    if (!typing && e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && currentView === 'list') {
+      var si = document.getElementById('cm-search-input');
+      if (si) { e.preventDefault(); si.focus(); }
+    }
+  };
+  document.addEventListener('keydown', window._wvCommKeys);
+  window._pageCleanup.push(function () { document.removeEventListener('keydown', window._wvCommKeys); });
+  window._pageCleanup.push(function () { if (currentView === 'list') { var s = scroller(); CM.listScroll = s ? s.scrollTop : 0; } });
 </script>
 </body>
 </html>

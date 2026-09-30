@@ -4,7 +4,10 @@ const API_BASE = 'https://2026wavernrs-production.up.railway.app/api';
 function getToken() { return localStorage.getItem('token'); }
 function getUser() {
   const u = localStorage.getItem('user');
-  return u ? JSON.parse(u) : null;
+  if (!u) return null;
+  // A half-written or hand-edited value used to throw here and take the whole
+  // shell down with it. Treat it as logged out instead.
+  try { return JSON.parse(u); } catch (_) { return null; }
 }
 function isLoggedIn() { return !!getToken(); }
 
@@ -86,19 +89,80 @@ window.wvIsRetryable = function (e) {
 const GET_TIMEOUT_MS = 25000;
 const GET_RETRIES = 1;
 
+// ── Keeping reads cheap ─────────────────────────────────────────────────────
+// The API lives on another origin, so any request that is not a CORS "simple"
+// request makes the browser send an OPTIONS preflight and wait for it first.
+// A GET carrying Content-Type: application/json is not simple, and that header
+// used to go out on every call, so each read cost two round trips. Reads now
+// send no Content-Type; only writes do.
+function _hasHeader(headers, name) {
+  const want = name.toLowerCase();
+  return Object.keys(headers).some(k => k.toLowerCase() === want);
+}
+function _isNativeBody(b) {
+  // The browser picks the right Content-Type (with the multipart boundary) for these.
+  return (typeof FormData !== 'undefined' && b instanceof FormData) ||
+    (typeof Blob !== 'undefined' && b instanceof Blob) ||
+    (typeof URLSearchParams !== 'undefined' && b instanceof URLSearchParams) ||
+    (typeof ArrayBuffer !== 'undefined' && (b instanceof ArrayBuffer || ArrayBuffer.isView(b))) ||
+    (typeof ReadableStream !== 'undefined' && b instanceof ReadableStream);
+}
+function _plainHeaders(h) {
+  if (!h) return {};
+  if (typeof Headers !== 'undefined' && h instanceof Headers) { const o = {}; h.forEach((v, k) => { o[k] = v; }); return o; }
+  if (Array.isArray(h)) { const o = {}; h.forEach(p => { if (p && p.length >= 2) o[p[0]] = p[1]; }); return o; }
+  return { ...h };
+}
+// A site-access pass (issued while the site is locked) is good for 14 days.
+// Once it has expired the server ignores it, but sending it still forces a
+// preflight on every request, so leave an expired one at home.
+function _siteAccessToken() {
+  let t = null;
+  try { t = localStorage.getItem('wv_site_access'); } catch (_) { return null; }
+  if (!t) return null;
+  try {
+    const part = t.split('.')[1];
+    if (part) {
+      const claims = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+      if (claims && typeof claims.exp === 'number' && claims.exp * 1000 < Date.now()) return null;
+    }
+  } catch (_) {}
+  return t;
+}
+// These endpoints answer with a fresh random pick every time ("surprise me",
+// autoplay's pool). Response caches keyed by URL used to hand every click, and
+// every visitor, the same pick for up to half an hour, so each call gets a
+// throwaway query value that no cache can have seen before.
+const _RANDOM_PATH = /^\/(archive\/random|trackers\/pool)\/?(\?|$)/;
+function _uncachedPath(path) {
+  return path + (path.indexOf('?') >= 0 ? '&' : '?') + '_r=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
 async function _apiOnce(path, options, navGen) {
   const token = getToken();
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const method = String(options.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
+  const headers = _plainHeaders(options.headers);
+  let body = options.body;
+  // Callers stringify their payloads; if a plain object slips through, send it
+  // as JSON rather than the string "[object Object]".
+  if (body && Object.prototype.toString.call(body) === '[object Object]') body = JSON.stringify(body);
+  const isWrite = method !== 'GET' && method !== 'HEAD';
+  if (isWrite && !_hasHeader(headers, 'content-type') && !_isNativeBody(body)) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const siteAccess = localStorage.getItem('wv_site_access');
+  const siteAccess = _siteAccessToken();
   if (siteAccess) headers['X-Site-Access'] = siteAccess;
 
-  const isGet = !options.method || String(options.method).toUpperCase() === 'GET';
+  const url = `${API_BASE}${isGet && _RANDOM_PATH.test(path) ? _uncachedPath(path) : path}`;
   const ctrl = isGet && !options.signal && typeof AbortController === 'function' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), GET_TIMEOUT_MS) : null;
+  const init = { ...options, method, headers, ...(ctrl ? { signal: ctrl.signal } : {}) };
+  if (body !== undefined) init.body = body;
   let res;
   try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers, ...(ctrl ? { signal: ctrl.signal } : {}) });
+    res = await fetch(url, init);
   } catch (e) {
     if (timer) clearTimeout(timer);
     _noteApi(false);

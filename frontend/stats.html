@@ -7,12 +7,245 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .st-wrap { min-width: 0; padding-bottom: 32px; }
+    .st-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+    .st-head .wv-page-title { margin: 6px 0 4px; }
+    .st-head .wv-page-sub { margin: 0; }
+    .st-live { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: var(--r-pill);
+      background: var(--surface); border: 1px solid var(--hair); color: var(--text-2); font-size: 12.5px; font-weight: 600; text-decoration: none; }
+    .st-live:hover { color: var(--text); border-color: var(--hair-strong); }
+    .st-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent); }
+
+    .st-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .st-kpi { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--hair); border-radius: 12px;
+      padding: 16px 16px 14px; min-height: 128px; display: flex; flex-direction: column; text-decoration: none; color: inherit;
+      transition: border-color 160ms var(--ease), transform 160ms var(--ease); }
+    a.st-kpi:hover { border-color: var(--hair-strong); }
+    a.st-kpi:active { transform: scale(.99); }
+    .st-kpi .k { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); }
+    .st-kpi .k svg { color: var(--text-3); flex-shrink: 0; }
+    .st-kpi .v { font-size: clamp(26px, 2.6vw, 34px); font-weight: 850; letter-spacing: -.035em; line-height: 1.05; margin-top: 10px; color: var(--text); white-space: nowrap; }
+    .st-kpi .d { margin-top: auto; padding-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); position: relative; z-index: 1; flex-wrap: wrap; }
+    .st-kpi .d b { font-weight: 700; color: var(--text); }
+    .st-up { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 5px; border-radius: var(--r-pill); font-weight: 700; font-size: 12px;
+      color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+    .st-flat { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: var(--r-pill); font-weight: 700; font-size: 12px; color: var(--text-2); background: var(--surface-2); }
+    .st-vs { color: var(--text-3); font-size: 11.5px; }
+    .st-spark { position: absolute; right: 12px; top: 14px; width: 42%; max-width: 120px; height: 34px; pointer-events: none; }
+    .st-spark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .st-spark .ln { fill: none; stroke: var(--brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    .st-spark .ar { fill: var(--brand); opacity: .1; }
+    .st-spark .dot { position: absolute; right: -4px; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px var(--surface); }
+
+    .st-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; padding: 18px 18px 16px; min-width: 0; }
+    .st-card + .st-card, .st-grid2 + .st-card, .st-card + .st-grid2, .st-grid2 + .st-grid2 { margin-top: 14px; }
+    .st-grid2 > .st-card { margin-top: 0; }
+    .st-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+    .st-ch { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .st-ch h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .st-ch h2 a { color: inherit; text-decoration: none; }
+    .st-ch h2 a:hover { text-decoration: underline; }
+    .st-ch p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-2); }
+    .st-ch .more { font-size: 12.5px; font-weight: 700; color: var(--text-2); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; padding: 0 2px; }
+    .st-ch .more:hover { color: var(--text); text-decoration: underline; }
+    .st-legend { display: flex; gap: 14px; align-items: center; font-size: 12px; color: var(--text-2); font-weight: 600; }
+    .st-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .st-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    .st-sumrow { display: flex; gap: 22px; flex-wrap: wrap; margin: -4px 0 12px; }
+    .st-sum .n { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .st-sum .l { font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+
+    .st-chart { position: relative; width: 100%; outline: none; border-radius: 8px; }
+    .st-chart:focus-visible { box-shadow: 0 0 0 2px var(--brand); }
+    .st-chart svg { display: block; width: 100%; overflow: visible; }
+    .st-chart .grid { stroke: var(--hair); stroke-width: 1; shape-rendering: crispEdges; }
+    .st-chart .base { stroke: var(--hair-strong); stroke-width: 1; shape-rendering: crispEdges; }
+    .st-chart .tk { fill: var(--text-3); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+    .st-chart .xl { fill: var(--text-3); font-size: 10.5px; }
+    .st-chart .lab { fill: var(--text-2); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .st-chart .s0 { fill: var(--brand); }
+    .st-chart .s1 { fill: color-mix(in srgb, var(--brand) 42%, var(--surface)); }
+    .st-chart .col { transition: opacity 120ms var(--ease); }
+    .st-chart.hov .col { opacity: .38; }
+    .st-chart.hov .col.on { opacity: 1; }
+    .st-chart .hit { fill: transparent; cursor: default; }
+    .st-legend .s0 { background: var(--brand); }
+    .st-legend .s1 { background: color-mix(in srgb, var(--brand) 42%, var(--surface)); }
+    .st-tip { position: absolute; z-index: 5; pointer-events: none; min-width: 124px; padding: 9px 11px; border-radius: 10px;
+      background: var(--elevated, var(--surface-2)); border: 1px solid var(--hair-strong); box-shadow: 0 10px 28px rgba(0,0,0,.28);
+      font-size: 12px; color: var(--text-2); transform: translate(-50%, calc(-100% - 10px)); opacity: 0; transition: opacity 100ms linear; white-space: nowrap; }
+    .st-tip.show { opacity: 1; }
+    .st-tip .t { font-weight: 700; color: var(--text); margin-bottom: 5px; font-size: 12px; }
+    .st-tip .r { display: flex; align-items: center; gap: 8px; line-height: 1.6; }
+    .st-tip .r b { color: var(--text); font-weight: 800; font-variant-numeric: tabular-nums; min-width: 26px; }
+    .st-tip .r i { width: 12px; height: 3px; border-radius: 2px; display: inline-block; }
+    .st-tip .s0 { background: var(--brand); }
+    .st-tip .s1 { background: color-mix(in srgb, var(--brand) 42%, var(--surface)); }
+    .st-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    .st-heat { display: grid; grid-template-columns: 34px minmax(0, 1fr) 120px; gap: 4px 14px; align-items: center; position: relative; }
+    .st-heat .dl { font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+    .st-hrow { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; }
+    .st-cell { height: 20px; border-radius: 3px; background: var(--surface-2); position: relative; min-width: 0; }
+    .st-cell b { position: absolute; inset: 0; border-radius: 3px; background: var(--brand); }
+    .st-cell:hover, .st-cell:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; z-index: 1; }
+    .st-wbar { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+    .st-wbar span { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+    .st-wbar span i { display: block; height: 100%; border-radius: 3px; background: var(--brand); }
+    .st-wbar em { font-style: normal; min-width: 26px; text-align: right; }
+    .st-hx { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; font-size: 10.5px; color: var(--text-3); }
+    .st-hx span { white-space: nowrap; }
+    .st-hfoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+    .st-scale { display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: 11px; }
+    .st-scale i { width: 11px; height: 11px; border-radius: 3px; background: var(--surface-2); display: inline-block; position: relative; overflow: hidden; }
+    .st-scale i b { position: absolute; inset: 0; background: var(--brand); }
+
+    .st-comps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+    .st-comp { text-decoration: none; color: inherit; min-width: 0; border-radius: 10px; padding: 6px; margin: -6px; transition: background 140ms var(--ease); }
+    .st-comp:hover { background: var(--surface-2); }
+    .st-comp .art { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: var(--surface-2); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+    .st-comp .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .st-comp .rk { position: absolute; left: 7px; top: 7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.62); color: #fff; font-size: 12px; font-weight: 800; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+    .st-comp .ti { margin-top: 9px; font-size: 13.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-comp .me { margin-top: 2px; font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-comp .me b { color: var(--text); font-weight: 700; }
+
+    .st-list { display: flex; flex-direction: column; }
+    .st-row { display: grid; grid-template-columns: 22px 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 7px 8px; margin: 0 -8px;
+      border-radius: 10px; text-decoration: none; color: inherit; min-height: 52px; transition: background 140ms var(--ease); }
+    .st-row:hover { background: var(--surface-2); }
+    .st-row .n { font-size: 13px; font-weight: 800; color: var(--text-3); text-align: center; font-variant-numeric: tabular-nums; }
+    .st-row .im { width: 40px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--surface-2); position: relative; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 15px; color: rgba(255,255,255,.92); }
+    .st-row .im.round { border-radius: 50%; }
+    .st-row .im img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .st-row .tx { min-width: 0; }
+    .st-row .tx .a { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-row .tx .b { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .st-row .tx .bar { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+    .st-row .tx .bar i { display: block; height: 100%; border-radius: 2px; background: var(--brand); }
+    .st-row .val { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; display: inline-flex; align-items: center; gap: 5px; }
+    .st-row .val small { font-weight: 600; color: var(--text-3); font-size: 11.5px; }
+    .st-row .val svg { color: var(--text-3); }
+
+    .st-eras { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; }
+    .st-era { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 8px; margin: 0 -8px; border-radius: 10px;
+      text-decoration: none; color: inherit; min-height: 48px; transition: background 140ms var(--ease); }
+    .st-era:hover { background: var(--surface-2); }
+    .st-era .im { width: 36px; height: 36px; border-radius: 6px; overflow: hidden; background: var(--surface-2); position: relative; }
+    .st-era .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .st-era .nm { font-size: 13.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-era .bar { height: 6px; border-radius: 3px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+    .st-era .bar i { display: block; height: 100%; border-radius: 3px; background: var(--brand); transform-origin: left center; transition: transform 500ms var(--ease); }
+    .st-era .c { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; min-width: 48px; }
+    .st-era .c small { display: block; font-size: 11px; font-weight: 600; color: var(--text-3); }
+    .st-seg { display: inline-flex; background: var(--surface-2); border-radius: var(--r-pill); padding: 3px; }
+    .st-seg button { font: inherit; font-size: 12.5px; font-weight: 700; border: 0; cursor: pointer; min-height: 32px; padding: 0 14px; border-radius: var(--r-pill);
+      background: transparent; color: var(--text-2); transition: background 140ms var(--ease), color 140ms var(--ease); }
+    .st-seg button[aria-pressed="true"] { background: var(--text); color: var(--page-bg-base, var(--surface)); }
+    .st-seg button:focus-visible, .st-btn:focus-visible, .st-row:focus-visible, .st-era:focus-visible, .st-comp:focus-visible, .st-ed:focus-visible, .st-kpi:focus-visible, .st-live:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .st-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 16px; margin-top: 10px; border-radius: var(--r-pill);
+      border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .st-btn:hover { border-color: var(--text); }
+
+    .st-eds { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+    .st-ed { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 14px 8px 12px; border-radius: 12px; background: var(--surface-2);
+      text-decoration: none; color: inherit; min-width: 0; transition: transform 160ms var(--ease), background 160ms var(--ease); }
+    .st-ed:hover { background: var(--surface-3); }
+    .st-ed .av { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; position: relative; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 800; color: rgba(255,255,255,.94); box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--hair-strong); }
+    .st-ed .av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .st-ed .nm { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--text); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-ed .wh { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+    .st-new { display: inline-block; margin-top: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text, var(--brand)); }
+
+    .st-ye { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .st-yt { background: var(--surface-2); border-radius: 12px; padding: 14px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px; min-width: 0; transition: background 140ms var(--ease); }
+    .st-yt:hover { background: var(--surface-3); }
+    .st-yt .ic { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--text); margin-bottom: 6px; }
+    .st-yt .v { font-size: 22px; font-weight: 850; letter-spacing: -.03em; color: var(--text); }
+    .st-yt .k { font-size: 12.5px; font-weight: 700; color: var(--text); }
+    .st-yt .d { font-size: 11.5px; color: var(--text-2); }
+
+    .st-foot { margin-top: 20px; font-size: 12px; color: var(--text-3); display: flex; gap: 6px 14px; flex-wrap: wrap; }
+    .st-foot a { color: var(--text-2); }
+    .st-sk { background: var(--surface-2); border-radius: 6px; position: relative; overflow: hidden; }
+    .st-sk::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 6%, transparent), transparent); animation: wv-skel 1.4s infinite; }
+    .st-err { text-align: center; padding: 48px 16px; color: var(--text-2); }
+    .st-err b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
+    .st-fade { animation: st-in 320ms var(--ease) both; }
+    @keyframes st-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    @media (max-width: 1100px) {
+      .st-comps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .st-comps .st-comp:nth-child(n+9) { display: none; }
+    }
+    @media (max-width: 900px) {
+      .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .st-grid2 { grid-template-columns: minmax(0, 1fr); }
+      .st-eras { grid-template-columns: minmax(0, 1fr); }
+      .st-eds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .st-ye { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .st-kpi { min-height: 112px; padding: 14px 13px 12px; }
+      .st-kpi .v { font-size: 25px; }
+      .st-spark { width: 38%; top: 12px; right: 10px; height: 28px; }
+      .st-kpi .k { font-size: 10.5px; letter-spacing: .06em; }
+      .st-kpi .k svg { display: none; }
+      .st-card { padding: 15px 14px 14px; border-radius: 12px; }
+      .st-comps { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 14px; gap: 12px; margin: 0 -14px; padding: 6px 14px 8px; scrollbar-width: none; }
+      .st-comps::-webkit-scrollbar { display: none; }
+      .st-comps .st-comp { flex: 0 0 40%; scroll-snap-align: start; margin: 0; padding: 0; }
+      .st-comps .st-comp:nth-child(n+9) { display: block; }
+      .st-comp:hover { background: none; }
+      .st-heat { grid-template-columns: 28px minmax(0, 1fr); }
+      .st-heat .st-wbar, .st-heat .wh { display: none; }
+      .st-hrow, .st-hx { gap: 2px; }
+      .st-cell { height: auto; aspect-ratio: 1; }
+      .st-cell, .st-cell b { border-radius: 2px; }
+      .st-eds { gap: 8px; }
+      .st-ed { padding: 12px 6px 10px; }
+      .st-ed .av { width: 52px; height: 52px; font-size: 20px; }
+      .st-ye { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .st-ye .st-yt:first-child { grid-column: span 2; }
+      .st-sumrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+      .st-sum .n { font-size: 18px; }
+      .st-sum .l { font-size: 11px; line-height: 1.3; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .st-fade { animation: none; }
+      .st-era .bar i { transition: none; }
+      .st-sk::after { animation: none; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
-  <h1 class="wv-page-title">Stats</h1>
-  <p class="wv-page-sub">the whole site in numbers...updates every minute</p>
-  <div id="st-body"><div class="loading"><div class="spinner"></div></div></div>
+  <div class="st-wrap">
+    <div class="st-head">
+      <div>
+        <h1 class="wv-page-title">Stats</h1>
+        <p class="wv-page-sub" id="st-sub">the whole site in numbers...refreshes every 15 min</p>
+      </div>
+      <a class="st-live" href="/status" id="st-live" aria-label="Open the live status page"><i aria-hidden="true"></i><span>live status</span></a>
+    </div>
+    <div id="st-body" aria-busy="true">
+      <div class="st-kpis">
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:46%"></div><div class="st-sk" style="height:30px;width:64%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:52%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:40%"></div><div class="st-sk" style="height:30px;width:52%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:58%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:44%"></div><div class="st-sk" style="height:30px;width:58%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:48%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:38%"></div><div class="st-sk" style="height:30px;width:50%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:56%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:42%"></div><div class="st-sk" style="height:30px;width:60%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:50%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:36%"></div><div class="st-sk" style="height:30px;width:54%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:46%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:48%"></div><div class="st-sk" style="height:30px;width:62%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:54%;margin-top:auto"></div></div>
+        <div class="st-kpi"><div class="st-sk" style="height:11px;width:40%"></div><div class="st-sk" style="height:30px;width:48%;margin-top:14px"></div><div class="st-sk" style="height:12px;width:50%;margin-top:auto"></div></div>
+      </div>
+      <div class="st-card"><div class="st-sk" style="height:16px;width:180px"></div><div class="st-sk" style="height:12px;width:260px;margin-top:8px"></div><div class="st-sk" style="height:220px;margin-top:18px"></div></div>
+    </div>
+  </div>
 </div>
 <script src="/js/api.js?v=6288d60cd337"></script>
 <script src="/js/layout.js?v=6288d60cd337"></script>
@@ -21,55 +254,471 @@
 <script>
 initPlayer();
 if (typeof window.setPageWash === 'function') window.setPageWash('stats');
-function tile(k, v, d) { return '<div class="wv-stat-tile"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (d ? '<div class="d">' + d + '</div>' : '') + '</div>'; }
-function bars(rows, key, label) {
-  var max = Math.max.apply(null, rows.map(function(r) { return r[key] || 0; }).concat([1]));
-  return rows.map(function(r) {
-    return '<div class="wv-bar-row"' + (r.href ? ' style="cursor:pointer" onclick="navigate(\'' + r.href + '\')"' : '') + '>' +
-      '<div class="n">' + escHtml(r.name) + '</div>' +
-      '<div class="b"><i style="width:' + Math.max(2, Math.round((r[key] || 0) / max * 100)) + '%"></i></div>' +
-      '<div class="c">' + fmtNum(r[key] || 0) + (label ? ' ' + label : '') + '</div>' +
-    '</div>';
-  }).join('');
+window._pageCleanup = window._pageCleanup || [];
+
+var ST_ICONS = {
+  play: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  wave: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/></svg>',
+  disc: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>',
+  user: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  heart: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C1 8.4 3 4.5 6.9 4.5c2.1 0 3.6 1.1 5.1 3 1.5-1.9 3-3 5.1-3 3.9 0 5.9 3.9 4.5 7.2C19.5 16.4 12 21 12 21z"/></svg>',
+  plus: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  box: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>',
+  star: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  up: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  chat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+  shirt: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 5 3-1v11h8V10l3 1 2-5-5-3c0 2-1.8 3-4 3S8 5 8 3z"/></svg>',
+  album: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="4"/></svg>',
+  people: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.8c1.8.8 3 2.5 3.5 5.2"/></svg>',
+  mic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>'
+};
+var ST_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+var ST_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function stEsc(s) { return escHtml(s == null ? '' : String(s)); }
+function stNum(n) { n = Math.round(+n || 0); return n.toLocaleString('en-US'); }
+function stBig(n) { n = +n || 0; return n >= 1e6 ? fmtNum(n) : stNum(n); }
+function stReduced() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
+function stImg(url, px) { return typeof wvImg === 'function' ? wvImg(url, px) : url; }
+function stWeekLabel(iso) { var p = String(iso || '').split('-'); if (p.length < 3) return String(iso || ''); return ST_MON[(+p[1] || 1) - 1] + ' ' + (+p[2]); }
+function stAgo(iso) {
+  var t = Date.parse(iso); if (!isFinite(t)) return '';
+  var s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return 'just now';
+  var m = Math.round(s / 60); if (m < 60) return m + 'm ago';
+  var h = Math.round(m / 60); if (h < 48) return h + 'h ago';
+  var d = Math.round(h / 24); if (d < 60) return d + 'd ago';
+  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
+function stNice(max) {
+  if (max <= 4) return 1;
+  var raw = max / 4, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+}
+function stAvatar(name, url, cls, px) {
+  var n = String(name || '?');
+  var bg = typeof coverGradient === 'function' ? coverGradient(n) : 'var(--surface-3)';
+  return '<div class="' + cls + '" style="background:' + bg + '">' + stEsc((n.trim()[0] || '?').toUpperCase()) +
+    (url ? '<img src="' + stEsc(stImg(url, px)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '</div>';
+}
+
+function stSpark(vals) {
+  if (!vals || vals.length < 2) return '';
+  var max = Math.max.apply(null, vals.concat([1]));
+  var n = vals.length, pts = vals.map(function (v, i) { return [i / (n - 1) * 100, 30 - (v / max) * 28]; });
+  var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2); }).join(' ');
+  var last = pts[n - 1][1];
+  return '<div class="st-spark" aria-hidden="true"><svg viewBox="0 0 100 32" preserveAspectRatio="none"><path class="ar" d="' + d + ' L100 32 L0 32 Z"/><path class="ln" d="' + d + '"/></svg>' +
+    '<span class="dot" style="top:' + (last / 32 * 100).toFixed(1) + '%"></span></div>';
+}
+
+function stDelta(now, prev, unit) {
+  if (now == null) return '';
+  var pill = now > 0 ? '<span class="st-up">' + ST_ICONS.up + stNum(now) + '</span>' : '<span class="st-flat">0</span>';
+  var vs = prev != null ? '<span class="st-vs">vs ' + stNum(prev) + ' last wk</span>' : '';
+  return pill + '<span>' + (unit || 'this week') + '</span>' + vs;
+}
+
+function stKpi(o) {
+  var tag = o.href ? 'a' : 'div';
+  return '<' + tag + ' class="st-kpi"' + (o.href ? ' href="' + o.href + '"' : '') + '>' +
+    (o.spark || '') +
+    '<div class="k">' + (o.icon || '') + '<span>' + stEsc(o.k) + '</span></div>' +
+    '<div class="v" data-count="' + (+o.v || 0) + '">' + (stReduced() ? stBig(o.v) : '0') + '</div>' +
+    '<div class="d">' + (o.d || '') + '</div>' +
+  '</' + tag + '>';
+}
+
+function stCountUp(root) {
+  var els = root.querySelectorAll('[data-count]');
+  if (stReduced() || !('IntersectionObserver' in window)) { els.forEach(function (el) { el.textContent = stBig(el.getAttribute('data-count')); }); return; }
+  var io = new IntersectionObserver(function (ents) {
+    ents.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      var el = en.target, to = +el.getAttribute('data-count') || 0, t0 = performance.now(), dur = 900 + Math.min(500, Math.log10(to + 1) * 90);
+      (function step(t) {
+        if (!el.isConnected) return;
+        var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        el.textContent = stBig(p >= 1 ? to : Math.round(to * e));
+        if (p < 1) requestAnimationFrame(step);
+      })(t0);
+    });
+  }, { threshold: 0.3 });
+  els.forEach(function (el) { io.observe(el); });
+  window._pageCleanup.push(function () { io.disconnect(); });
+}
+
+function stColumns(host, cfg) {
+  var rows = cfg.rows || [], keys = cfg.keys || [];
+  if (!host || !rows.length) return;
+  var tip = document.createElement('div'); tip.className = 'st-tip'; tip.setAttribute('aria-hidden', 'true');
+  var state = { i: -1, w: 0 };
+  function totalOf(r) { return keys.reduce(function (s, k) { return s + (+r[k.k] || 0); }, 0); }
+  function draw() {
+    var w = Math.round(host.clientWidth || 600);
+    if (w === state.w) return;
+    state.w = w;
+    var H = cfg.h || 220, padL = 34, padR = 6, padT = 20, padB = 24;
+    var n = rows.length, iw = w - padL - padR, band = iw / n;
+    var bw = Math.max(3, Math.min(24, band * 0.64));
+    var totals = rows.map(totalOf);
+    var max = Math.max.apply(null, totals.concat([1]));
+    var step = stNice(max), top = Math.ceil(max / step) * step;
+    if (top === max && max > 4) top += step;
+    var ih = H - padT - padB;
+    function y(v) { return padT + ih * (1 - v / top); }
+    var s = '<svg width="' + w + '" height="' + H + '" viewBox="0 0 ' + w + ' ' + H + '" role="presentation">';
+    for (var g = 0; g <= top + 1e-9; g += step) {
+      var gy = Math.round(y(g)) + 0.5;
+      s += '<line class="' + (g === 0 ? 'base' : 'grid') + '" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + gy + '" y2="' + gy + '"/>';
+      s += '<text class="tk" x="' + (padL - 8) + '" y="' + (gy + 3.5) + '" text-anchor="end">' + stBig(g) + '</text>';
+    }
+    var maxI = totals.indexOf(max), lastX = -99;
+    rows.forEach(function (r, i) {
+      var x = padL + band * i + (band - bw) / 2, cum = 0, segs = [];
+      keys.forEach(function (k, ki) { var v = +r[k.k] || 0; if (v > 0) segs.push({ v: v, ki: ki }); });
+      s += '<g class="col" data-i="' + i + '">';
+      segs.forEach(function (sg, si) {
+        var yb = y(cum) - (si > 0 ? 2 : 0), yt = y(cum + sg.v); cum += sg.v;
+        var h = yb - yt; if (h < 0.8) { if (si === segs.length - 1 && h > 0) h = 0.8; else return; }
+        var cls = 's' + sg.ki;
+        if (si === segs.length - 1) {
+          var r2 = Math.min(4, h, bw / 2);
+          s += '<path class="' + cls + '" d="M' + x.toFixed(2) + ' ' + yb.toFixed(2) + 'V' + (yt + r2).toFixed(2) + 'Q' + x.toFixed(2) + ' ' + yt.toFixed(2) + ' ' + (x + r2).toFixed(2) + ' ' + yt.toFixed(2) +
+            'H' + (x + bw - r2).toFixed(2) + 'Q' + (x + bw).toFixed(2) + ' ' + yt.toFixed(2) + ' ' + (x + bw).toFixed(2) + ' ' + (yt + r2).toFixed(2) + 'V' + yb.toFixed(2) + 'Z"/>';
+        } else {
+          s += '<rect class="' + cls + '" x="' + x.toFixed(2) + '" y="' + yt.toFixed(2) + '" width="' + bw.toFixed(2) + '" height="' + h.toFixed(2) + '"/>';
+        }
+      });
+      s += '</g>';
+      var p = String(r.week || '').split('-'), prev = i ? String(rows[i - 1].week || '').split('-') : null;
+      var cx = padL + band * i + band / 2;
+      if (p.length === 3 && (!prev || prev[1] !== p[1]) && cx - lastX > 34 && cx < w - 14) {
+        s += '<text class="xl" x="' + cx.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + ST_MON[(+p[1] || 1) - 1] + '</text>';
+        lastX = cx;
+      }
+    });
+    if (max > 0) {
+      var mx = padL + band * maxI + band / 2;
+      s += '<text class="lab" x="' + Math.min(w - padR - 10, Math.max(padL + 10, mx)).toFixed(1) + '" y="' + (y(max) - 6).toFixed(1) + '" text-anchor="middle">' + stBig(max) + '</text>';
+    }
+    s += '<rect class="hit" x="' + padL + '" y="0" width="' + iw + '" height="' + H + '"/></svg>';
+    host.innerHTML = s;
+    host.appendChild(tip);
+    state.geo = { padL: padL, band: band, y: y, n: n };
+    if (state.i >= 0) show(state.i);
+  }
+  function show(i) {
+    var g = state.geo; if (!g) return;
+    i = Math.max(0, Math.min(g.n - 1, i)); state.i = i;
+    var r = rows[i], tot = totalOf(r);
+    host.classList.add('hov');
+    host.querySelectorAll('.col').forEach(function (c) { c.classList.toggle('on', +c.getAttribute('data-i') === i); });
+    tip.textContent = '';
+    var t = document.createElement('div'); t.className = 't'; t.textContent = (cfg.titleFor ? cfg.titleFor(r) : stWeekLabel(r.week)); tip.appendChild(t);
+    keys.slice().reverse().forEach(function (k) {
+      var row = document.createElement('div'); row.className = 'r';
+      if (keys.length > 1) { var ic = document.createElement('i'); ic.className = 's' + keys.indexOf(k); row.appendChild(ic); }
+      var b = document.createElement('b'); b.textContent = stNum(r[k.k] || 0); row.appendChild(b);
+      row.appendChild(document.createTextNode(k.label));
+      tip.appendChild(row);
+    });
+    if (keys.length > 1) { var tr = document.createElement('div'); tr.className = 'r'; tr.style.marginTop = '2px'; var tb = document.createElement('b'); tb.textContent = stNum(tot); tr.appendChild(tb); tr.appendChild(document.createTextNode('total')); tip.appendChild(tr); }
+    var cx = g.padL + g.band * i + g.band / 2;
+    var half = (tip.offsetWidth || 130) / 2, w = host.clientWidth;
+    tip.style.left = Math.max(half, Math.min(w - half, cx)) + 'px';
+    tip.style.top = Math.max(tip.offsetHeight + 12, g.y(tot)) + 'px';
+    tip.classList.add('show');
+  }
+  function hide() { state.i = -1; tip.classList.remove('show'); host.classList.remove('hov'); host.querySelectorAll('.col.on').forEach(function (c) { c.classList.remove('on'); }); }
+  host.addEventListener('pointermove', function (e) {
+    var g = state.geo; if (!g) return;
+    var rect = host.getBoundingClientRect(), x = e.clientX - rect.left;
+    if (x < g.padL - 4) { hide(); return; }
+    show(Math.floor((x - g.padL) / g.band));
+  });
+  host.addEventListener('pointerleave', hide);
+  host.addEventListener('focus', function () { show(state.i >= 0 ? state.i : rows.length - 1); });
+  host.addEventListener('blur', hide);
+  host.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); show((state.i < 0 ? rows.length - 1 : state.i) + (e.key === 'ArrowLeft' ? -1 : 1)); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(rows.length - 1); }
+    else if (e.key === 'Escape') { hide(); }
+  });
+  draw();
+  if ('ResizeObserver' in window) {
+    var ro = new ResizeObserver(function () { draw(); });
+    ro.observe(host);
+    window._pageCleanup.push(function () { ro.disconnect(); });
+  }
+}
+
+function stTable(caption, heads, rows) {
+  return '<table class="st-sr"><caption>' + stEsc(caption) + '</caption><thead><tr>' + heads.map(function (h) { return '<th>' + stEsc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + stEsc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+}
+
+function stChartCard(id, title, sub, legend, extra) {
+  return '<div class="st-card st-fade"><div class="st-ch"><div><h2>' + title + '</h2>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>' + (legend || '') + '</div>' +
+    (extra || '') + '<div class="st-chart" id="' + id + '" tabindex="0" role="group"></div></div>';
+}
+
+function stHeatHTML(hours, weekday) {
+  var off = Math.round(-new Date().getTimezoneOffset() / 60);
+  var grid = [0, 1, 2, 3, 4, 5, 6].map(function () { return new Array(24).fill(0); });
+  var have = Array.isArray(hours) && hours.length === 7;
+  if (have) {
+    for (var ud = 0; ud < 7; ud++) for (var uh = 0; uh < 24; uh++) {
+      var v = +(hours[ud] && hours[ud][uh]) || 0; if (!v) continue;
+      var idx = ((ud * 24 + uh + off) % 168 + 168) % 168, ld = Math.floor(idx / 24), lh = idx % 24;
+      grid[(ld + 6) % 7][lh] += v;
+    }
+  }
+  var days = [0, 0, 0, 0, 0, 0, 0];
+  if (have) grid.forEach(function (r, i) { days[i] = r.reduce(function (a, b) { return a + b; }, 0); });
+  else if (Array.isArray(weekday) && weekday.length === 7) weekday.forEach(function (v, i) { days[(i + 6) % 7] = +v || 0; });
+  var all = [];
+  grid.forEach(function (r) { r.forEach(function (v) { if (v > 0) all.push(v); }); });
+  all.sort(function (a, b) { return a - b; });
+  function q(p) { return all.length ? all[Math.min(all.length - 1, Math.floor(p * all.length))] : 1; }
+  var cuts = [q(0.25), q(0.5), q(0.8)];
+  function lvl(v) { return !v ? 0 : v <= cuts[0] ? 1 : v <= cuts[1] ? 2 : v <= cuts[2] ? 3 : 4; }
+  var OP = [0, 0.26, 0.48, 0.72, 1];
+  var dmax = Math.max.apply(null, days.concat([1]));
+  var best = { v: 0 };
+  grid.forEach(function (r, d) { r.forEach(function (v, h) { if (v > best.v) best = { v: v, d: d, h: h }; }); });
+  var bestDay = days.indexOf(Math.max.apply(null, days));
+  function hl(h) { return h === 0 ? '12a' : h < 12 ? h + 'a' : h === 12 ? '12p' : (h - 12) + 'p'; }
+  var s = '<div class="st-heat" id="st-heat">';
+  if (have) {
+    s += '<div></div><div class="st-hx" aria-hidden="true">' + new Array(24).fill(0).map(function (_, h) { return '<span>' + (h % 6 === 0 ? hl(h) : '') + '</span>'; }).join('') + '</div><div class="wh"></div>';
+  }
+  ST_DAYS.forEach(function (dn, d) {
+    s += '<div class="dl">' + dn + '</div>';
+    if (have) {
+      s += '<div class="st-hrow">' + grid[d].map(function (v, h) {
+        var l = lvl(v);
+        return '<div class="st-cell" tabindex="-1" data-t="' + dn + ' ' + hl(h) + '" data-v="' + v + '">' + (l ? '<b style="opacity:' + OP[l] + '"></b>' : '') + '</div>';
+      }).join('') + '</div>';
+      s += '<div class="st-wbar"><span><i style="width:' + Math.round(days[d] / dmax * 100) + '%"></i></span><em>' + stNum(days[d]) + '</em></div>';
+    } else {
+      s += '<div class="st-wbar" style="grid-column:span 2"><span style="height:10px"><i style="width:' + Math.round(days[d] / dmax * 100) + '%"></i></span><em>' + stNum(days[d]) + '</em></div>';
+    }
+  });
+  s += '</div>';
+  var foot = '<div class="st-hfoot"><span>' + (have && best.v ? 'busiest slot: <b style="color:var(--text)">' + ST_DAYS[best.d] + 's around ' + hl(best.h) + '</b> · ' : '') +
+    'busiest day: <b style="color:var(--text)">' + ST_DAYS[bestDay] + '</b></span>' +
+    (have ? '<span class="st-scale" aria-hidden="true">less <i></i><i><b style="opacity:.26"></b></i><i><b style="opacity:.48"></b></i><i><b style="opacity:.72"></b></i><i><b></b></i> more</span>' : '') + '</div>';
+  var table = stTable('Uploads by weekday', ['Day', 'Uploads'], ST_DAYS.map(function (dn, i) { return [dn, stNum(days[i])]; }));
+  return s + foot + table;
+}
+
+function stWireHeat(box) {
+  var heat = box.querySelector('#st-heat'); if (!heat) return;
+  var tip = document.createElement('div'); tip.className = 'st-tip'; tip.setAttribute('aria-hidden', 'true'); heat.appendChild(tip);
+  heat.addEventListener('pointerover', function (e) {
+    var c = e.target.closest && e.target.closest('.st-cell'); if (!c) return;
+    var hr = heat.getBoundingClientRect(), cr = c.getBoundingClientRect(), v = +c.getAttribute('data-v') || 0;
+    tip.textContent = '';
+    var t = document.createElement('div'); t.className = 't'; t.textContent = c.getAttribute('data-t'); tip.appendChild(t);
+    var r = document.createElement('div'); r.className = 'r'; var b = document.createElement('b'); b.textContent = stNum(v); r.appendChild(b); r.appendChild(document.createTextNode(v === 1 ? 'upload' : 'uploads')); tip.appendChild(r);
+    var half = (tip.offsetWidth || 110) / 2, cx = cr.left - hr.left + cr.width / 2;
+    tip.style.left = Math.max(half, Math.min(hr.width - half, cx)) + 'px';
+    tip.style.top = (cr.top - hr.top) + 'px';
+    tip.classList.add('show');
+  });
+  heat.addEventListener('pointerleave', function () { tip.classList.remove('show'); });
+}
+
+function stEraRows(eras, covers, mode, all) {
+  var list = (eras || []).filter(function (e) { return (e[mode] || 0) > 0; }).slice().sort(function (a, b) { return (b[mode] || 0) - (a[mode] || 0); });
+  var shown = all ? list : list.slice(0, 10);
+  var max = Math.max.apply(null, shown.map(function (e) { return e[mode] || 0; }).concat([1]));
+  var html = shown.map(function (e) {
+    var cv = covers[e.id];
+    var other = mode === 'plays' ? stNum(e.releases || 0) + ' releases' : stBig(e.plays || 0) + ' plays';
+    return '<a class="st-era" href="/browse?era=' + encodeURIComponent(e.id) + '" aria-label="' + stEsc(e.name) + ', ' + stNum(e[mode] || 0) + ' ' + mode + '">' +
+      '<div class="im" style="background:' + (typeof coverGradient === 'function' ? coverGradient(e.name || e.id) : 'var(--surface-2)') + '">' + (cv ? '<img src="' + stEsc(stImg(cv, 72)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '</div>' +
+      '<div style="min-width:0"><div class="nm">' + stEsc(e.name) + '</div><div class="bar"><i style="transform:scaleX(' + Math.max(0.02, (e[mode] || 0) / max).toFixed(3) + ')"></i></div></div>' +
+      '<div class="c">' + stBig(e[mode] || 0) + '<small>' + other + '</small></div>' +
+    '</a>';
+  }).join('');
+  return { html: html, total: list.length };
+}
+
+function stRenderEras() {
+  var S = window._stState; var box = document.getElementById('st-eras-box'); if (!S || !box) return;
+  var r = stEraRows(S.eras, S.eraCovers || {}, S.eraMode, S.eraAll);
+  box.innerHTML = '<div class="st-eras">' + (r.html || '<div class="wv-empty" style="padding:12px 0">no era data yet</div>') + '</div>' +
+    (r.total > 10 ? '<button class="st-btn" type="button" onclick="window._stState.eraAll=!window._stState.eraAll;stRenderEras()">' + (S.eraAll ? 'show top 10' : 'show all ' + r.total + ' eras') + '</button>' : '');
+}
+function stEraMode(m, btn) {
+  var S = window._stState; if (!S) return; S.eraMode = m;
+  var seg = btn && btn.parentNode; if (seg) seg.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+  stRenderEras();
+}
+
+function stYe(y) {
+  var box = document.getElementById('st-ye'); if (!box || !y) return;
+  var tiles = [];
+  if (y.tweets) tiles.push({ ic: ST_ICONS.chat, v: y.tweets, k: 'Tweets', d: 'every ye tweet', href: '/resources' });
+  if (y.yeezy) tiles.push({ ic: ST_ICONS.shirt, v: y.yeezy, k: 'Yeezy pieces', d: 'the full catalog', href: '/resources' });
+  if (y.disco) tiles.push({ ic: ST_ICONS.album, v: y.disco, k: 'Albums', d: stNum(y.disco_songs || 0) + ' songs with credits', href: '/resources' });
+  if (y.credits) tiles.push({ ic: ST_ICONS.people, v: y.credits, k: 'Songs with others', d: 'produced or featured', href: '/resources' });
+  if (y.tour_shows) tiles.push({ ic: ST_ICONS.mic, v: y.tour_shows, k: 'Tour shows', d: 'across ' + stNum(y.tour_years || 0) + ' tours', href: '/resources' });
+  if (!tiles.length) return;
+  var synced = y.tweets_at ? 'tweets synced ' + stAgo(y.tweets_at) : '';
+  box.innerHTML = '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/resources">The Ye archive</a></h2><p>everything we track outside the edits' + (synced ? ' · ' + stEsc(synced) : '') + '</p></div><a class="more" href="/resources">Open</a></div>' +
+    '<div class="st-ye">' + tiles.map(function (t) {
+      return '<a class="st-yt" href="' + t.href + '"><span class="ic">' + t.ic + '</span><span class="v">' + stNum(t.v) + '</span><span class="k">' + stEsc(t.k) + '</span><span class="d">' + stEsc(t.d) + '</span></a>';
+    }).join('') + '</div></div>';
+}
+
+function stRender(d) {
+  var el = document.getElementById('st-body'); if (!el) return;
+  var t = d.totals || {}, tw = d.this_week || null, pw = d.prev_week || null;
+  var ub = Array.isArray(d.uploads_by_week) ? d.uploads_by_week : null;
+  var eb = Array.isArray(d.editors_by_week) ? d.editors_by_week : null;
+  var gb = Array.isArray(d.engagement_by_week) ? d.engagement_by_week : null;
+  function last12(arr, f) { return arr ? arr.slice(-12).map(f) : null; }
+  var uploads = (t.edits || 0) + (t.comps || 0);
+  var kpis = [
+    { k: 'Plays', v: t.plays, icon: ST_ICONS.play, href: '/charts', d: uploads ? '<span>about <b>' + stNum(Math.round((t.plays || 0) / uploads)) + '</b> per upload</span>' : '<span>on every edit and comp</span>' },
+    { k: 'Edits', v: t.edits, icon: ST_ICONS.wave, href: '/browse', d: tw ? stDelta(tw.edits, pw && pw.edits) : '<span>standalone edits</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.edits || 0; })) : '' },
+    { k: 'Comps', v: t.comps, icon: ST_ICONS.disc, href: '/browse', d: tw ? stDelta(tw.comps, pw && pw.comps) : '<span>full comps</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.comps || 0; })) : '' },
+    { k: 'Editors', v: t.artists, icon: ST_ICONS.user, href: '/artists', d: tw ? stDelta(tw.artists, pw && pw.artists, 'joined') : '<span>on wavernrs</span>', spark: eb ? stSpark(last12(eb, function (r) { return r.count || 0; })) : '' },
+    { k: 'Likes', v: t.likes, icon: ST_ICONS.heart, d: tw ? stDelta(tw.likes, pw && pw.likes) : '<span>on edits and comps</span>', spark: gb ? stSpark(last12(gb, function (r) { return r.likes || 0; })) : '' },
+    { k: 'Follows', v: t.follows, icon: ST_ICONS.plus, href: '/artists', d: tw ? stDelta(tw.follows, pw && pw.follows) : '<span>editors followed</span>', spark: gb ? stSpark(last12(gb, function (r) { return r.follows || 0; })) : '' },
+    { k: 'Archive comps', v: t.archive_comps, icon: ST_ICONS.box, href: '/archive', d: '<span>in the yedits archive</span>' },
+    { k: 'New this week', v: t.new_this_week, icon: ST_ICONS.star, href: '/browse', d: pw ? '<span>edits and comps</span><span class="st-vs">vs ' + stNum((pw.edits || 0) + (pw.comps || 0)) + ' last wk</span>' : '<span>edits and comps</span>' }
+  ];
+  var html = '<div class="st-kpis st-fade">' + kpis.map(stKpi).join('') + '</div>';
+
+  if (ub && ub.length) {
+    var tot26 = ub.reduce(function (s, r) { return s + (r.edits || 0) + (r.comps || 0); }, 0);
+    var bestW = ub.reduce(function (b, r) { var v = (r.edits || 0) + (r.comps || 0); return v > b.v ? { v: v, w: r.week } : b; }, { v: -1 });
+    var active = ub.filter(function (r) { return (r.edits || 0) + (r.comps || 0) > 0; }).length;
+    var sum = '<div class="st-sumrow">' +
+      '<div class="st-sum"><div class="n">' + stNum(tot26) + '</div><div class="l">uploads in ' + ub.length + ' weeks</div></div>' +
+      (bestW.v > 0 ? '<div class="st-sum"><div class="n">' + stNum(bestW.v) + '</div><div class="l">busiest week · ' + stEsc(stWeekLabel(bestW.w)) + '</div></div>' : '') +
+      '<div class="st-sum"><div class="n">' + active + '<span style="font-size:13px;color:var(--text-3);font-weight:700">/' + ub.length + '</span></div><div class="l">weeks with a drop</div></div>' +
+    '</div>';
+    html += stChartCard('st-c-up', 'Uploads per week', 'new edits and comps, last ' + ub.length + ' weeks',
+      '<div class="st-legend" aria-hidden="true"><span><i class="s1"></i>Edits</span><span><i class="s0"></i>Comps</span></div>', sum) ;
+    html = html.replace('<div class="st-chart" id="st-c-up"', stTable('Uploads per week', ['Week of', 'Edits', 'Comps'], ub.map(function (r) { return [r.week, stNum(r.edits || 0), stNum(r.comps || 0)]; })) + '<div class="st-chart" id="st-c-up"');
+  }
+  if (eb || gb) {
+    html += '<div class="st-grid2">';
+    if (eb) {
+      var eTot = eb.reduce(function (s, r) { return s + (r.count || 0); }, 0);
+      html += stChartCard('st-c-ed', 'New editors', stNum(eTot) + ' joined in the last ' + eb.length + ' weeks', '') ;
+    }
+    if (gb) {
+      var lTot = gb.reduce(function (s, r) { return s + (r.likes || 0); }, 0);
+      html += stChartCard('st-c-lk', 'Likes per week', stNum(lTot) + ' likes in the last ' + gb.length + ' weeks', '');
+    }
+    html += '</div>';
+  }
+  if (Array.isArray(d.upload_hours) || Array.isArray(d.weekday_uploads)) {
+    html += '<div class="st-card st-fade"><div class="st-ch"><div><h2>When uploads land</h2><p>every edit and comp by day and hour, in your time zone</p></div></div>' + stHeatHTML(d.upload_hours, d.weekday_uploads) + '</div>';
+  }
+  var tc = Array.isArray(d.top_comps) ? d.top_comps.filter(function (c) { return c && c.id; }) : [];
+  if (tc.length) {
+    html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/charts">Most played comps</a></h2><p>all time, by plays</p></div><a class="more" href="/charts">Charts</a></div><div class="st-comps">' +
+      tc.slice(0, 10).map(function (c, i) {
+        return '<a class="st-comp" href="/album?id=' + encodeURIComponent(c.id) + '" aria-label="#' + (i + 1) + ' ' + stEsc(c.title) + (c.artist_name ? ' by ' + stEsc(c.artist_name) : '') + ', ' + stNum(c.plays) + ' plays">' +
+          '<div class="art" style="background:' + (typeof coverGradient === 'function' ? coverGradient(c.title || c.id) : 'var(--surface-2)') + '">' + (c.cover_url ? '<img src="' + stEsc(stImg(c.cover_url, 240)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '<span class="rk">' + (i + 1) + '</span></div>' +
+          '<div class="ti">' + stEsc(c.title || 'untitled') + '</div>' +
+          '<div class="me"><b>' + stBig(c.plays) + '</b> plays' + (c.artist_name ? ' · ' + stEsc(c.artist_name) : '') + '</div>' +
+        '</a>';
+      }).join('') + '</div></div>';
+  }
+  var ta = (d.top_artists || []).filter(function (a) { return a && a.id; });
+  var tl = Array.isArray(d.top_liked_tracks) ? d.top_liked_tracks.filter(function (x) { return x && x.id; }) : [];
+  if (ta.length || tl.length) {
+    html += '<div class="st-grid2">';
+    if (ta.length) {
+      var amax = Math.max.apply(null, ta.map(function (a) { return a.plays || 0; }).concat([1]));
+      html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/artists">Top editors</a></h2><p>by plays on their edits and comps</p></div><a class="more" href="/artists">All editors</a></div><div class="st-list">' +
+        ta.slice(0, 10).map(function (a, i) {
+          return '<a class="st-row" href="/artist?id=' + encodeURIComponent(a.id) + '">' +
+            '<span class="n">' + (i + 1) + '</span>' + stAvatar(a.display_name, a.profile_image_url, 'im round', 80) +
+            '<div class="tx"><div class="a">' + stEsc(a.display_name || 'unknown') + '</div><div class="b">' + stNum(a.uploads || 0) + ' uploads · ' + stNum(a.followers || 0) + ' followers</div>' +
+            '<div class="bar"><i style="width:' + Math.max(2, Math.round((a.plays || 0) / amax * 100)) + '%"></i></div></div>' +
+            '<span class="val">' + stBig(a.plays || 0) + '<small>plays</small></span></a>';
+        }).join('') + '</div></div>';
+    }
+    if (tl.length) {
+      html += '<div class="st-card st-fade"><div class="st-ch"><div><h2>Most liked tracks</h2><p>all time, by likes</p></div></div><div class="st-list">' +
+        tl.slice(0, 10).map(function (x, i) {
+          var sub = [x.artist_name, x.album_title && x.album_title !== x.title ? 'from ' + x.album_title : ''].filter(Boolean).join(' · ');
+          return '<a class="st-row" href="/track?id=' + encodeURIComponent(x.id) + '">' +
+            '<span class="n">' + (i + 1) + '</span>' + stAvatar(x.title, x.cover_url, 'im', 80) +
+            '<div class="tx"><div class="a">' + stEsc(x.title || 'untitled') + '</div><div class="b">' + stEsc(sub || (stNum(x.plays || 0) + ' plays')) + '</div></div>' +
+            '<span class="val">' + ST_ICONS.heart + stNum(x.likes || 0) + '</span></a>';
+        }).join('') + '</div></div>';
+    }
+    html += '</div>';
+  }
+  html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/browse">Eras</a></h2><p id="st-era-sub">where the plays and releases go</p></div>' +
+    '<div class="st-seg" role="group" aria-label="Rank eras by"><button type="button" aria-pressed="' + (window._stState.eraMode === 'plays') + '" onclick="stEraMode(\'plays\',this)">Plays</button><button type="button" aria-pressed="' + (window._stState.eraMode === 'releases') + '" onclick="stEraMode(\'releases\',this)">Releases</button></div></div>' +
+    '<div id="st-eras-box"></div></div>';
+  var ne = Array.isArray(d.newest_editors) ? d.newest_editors.filter(function (a) { return a && a.id; }) : [];
+  if (ne.length) {
+    html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/artists">Newest editors</a></h2><p>say hi to the latest people on wavernrs</p></div><a class="more" href="/artists">Directory</a></div><div class="st-eds">' +
+      ne.slice(0, 6).map(function (a) {
+        var fresh = Date.now() - Date.parse(a.created_at) < 48 * 3600e3;
+        return '<a class="st-ed" href="/artist?id=' + encodeURIComponent(a.id) + '">' + stAvatar(a.display_name, a.profile_image_url, 'av', 128) +
+          '<div class="nm">' + stEsc(a.display_name || 'new editor') + '</div><div class="wh">joined ' + stEsc(stAgo(a.created_at)) + '</div>' +
+          (fresh ? '<span class="st-new">new</span>' : (a.uploads ? '<span class="wh">' + stNum(a.uploads) + ' uploads</span>' : '')) + '</a>';
+      }).join('') + '</div></div>';
+  }
+  html += '<div id="st-ye"></div>';
+  var ttl = Math.round((+d.cache_ttl_s || 900) / 60);
+  html += '<div class="st-foot"><span id="st-upd">updated ' + stEsc(d.generated_at ? stAgo(d.generated_at) : 'just now') + '</span><span>numbers refresh every ' + ttl + ' min</span><a href="/status">system status</a></div>';
+
+  el.innerHTML = html;
+  el.setAttribute('aria-busy', 'false');
+  var sub = document.getElementById('st-sub');
+  if (sub) sub.textContent = 'the whole site in numbers...refreshes every ' + ttl + ' min';
+  stCountUp(el);
+  stRenderEras();
+  if (ub && ub.length) {
+    var c1 = document.getElementById('st-c-up');
+    c1.setAttribute('aria-label', 'Uploads per week chart. Use left and right arrow keys to read each week.');
+    stColumns(c1, { rows: ub, keys: [{ k: 'comps', label: 'comps' }, { k: 'edits', label: 'edits' }], h: 230, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } });
+  }
+  if (eb) { var c2 = document.getElementById('st-c-ed'); if (c2) { c2.setAttribute('aria-label', 'New editors per week chart'); stColumns(c2, { rows: eb, keys: [{ k: 'count', label: 'joined' }], h: 170, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } }); } }
+  if (gb) { var c3 = document.getElementById('st-c-lk'); if (c3) { c3.setAttribute('aria-label', 'Likes per week chart'); stColumns(c3, { rows: gb, keys: [{ k: 'likes', label: 'likes' }], h: 170, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } }); } }
+  stWireHeat(el);
+  if (window._stState.ye) stYe(window._stState.ye);
+  if (d.generated_at) {
+    var tick = setInterval(function () { var u = document.getElementById('st-upd'); if (!u) { clearInterval(tick); return; } u.textContent = 'updated ' + stAgo(d.generated_at); }, 30000);
+    window._pageCleanup.push(function () { clearInterval(tick); });
+  }
+}
+
 async function loadStats() {
+  window._stState = { eraMode: 'plays', eraAll: false, eraCovers: {}, eras: [], ye: null };
   var el = document.getElementById('st-body');
+  api('/eratags').then(function (list) {
+    var S = window._stState; if (!S || !Array.isArray(list)) return;
+    list.forEach(function (e) { if (e && e.id && e.cover) S.eraCovers[e.id] = e.cover; });
+    if (document.getElementById('st-eras-box')) stRenderEras();
+  }).catch(function () {});
+  api('/ye/status').then(function (y) { if (window._stState) { window._stState.ye = y; stYe(y); } }).catch(function () {});
   try {
     var d = await api('/stats');
-    var t = d.totals || {};
-    var html = '<div class="wv-stat-grid">' +
-      tile('Plays', fmtNum(t.plays || 0), 'on every edit and comp') +
-      tile('Edits', fmtNum(t.edits || 0)) +
-      tile('Comps', fmtNum(t.comps || 0)) +
-      tile('Archive comps', fmtNum(t.archive_comps || 0)) +
-      tile('Artists', fmtNum(t.artists || 0)) +
-      tile('Likes', fmtNum(t.likes || 0)) +
-      tile('Follows', fmtNum(t.follows || 0)) +
-      tile('New this week', fmtNum(t.new_this_week || 0), 'edits and comps') +
-      '</div>';
-    html += '<div class="wv-cols2">';
-    html += '<div><div class="wv-sec-head" style="margin-top:0"><h2 class="wv-sec-title" onclick="navigate(\'/artists\')">Top artists</h2><button class="wv-see-all" onclick="navigate(\'/artists\')">All artists</button></div>' +
-      bars((d.top_artists || []).map(function(a) { return { name: a.display_name, plays: a.plays, href: '/artist?id=' + a.id }; }), 'plays', 'plays') + '</div>';
-    html += '<div><div class="wv-sec-head" style="margin-top:0"><h2 class="wv-sec-title" onclick="navigate(\'/browse\')">Eras by plays</h2><button class="wv-see-all" onclick="navigate(\'/browse\')">Browse</button></div>' +
-      bars((d.eras || []).slice(0, 12).map(function(e) { return { name: e.name, plays: e.plays, href: '/browse?era=' + e.id }; }), 'plays', 'plays') + '</div>';
-    html += '</div>';
-    html += '<div style="margin-top:28px;"><div class="wv-sec-head"><h2 class="wv-sec-title">Releases per era</h2></div>' +
-      bars((d.eras || []).slice().sort(function(a, b) { return b.releases - a.releases; }).slice(0, 12).map(function(e) { return { name: e.name, releases: e.releases, href: '/browse?era=' + e.id }; }), 'releases') + '</div>';
-    html += '<div id="st-ye"></div>';
-    html += '<div style="font-size:12px;color:var(--text-3);margin-top:22px;">updated ' + (d.generated_at ? timeAgo(d.generated_at) : 'just now') + '</div>';
-    el.innerHTML = html;
-    api('/ye/status').then(function (y) {
-      var box = document.getElementById('st-ye'); if (!box || !y) return;
-      box.innerHTML = '<div class="wv-sec-head" style="margin-top:28px;"><h2 class="wv-sec-title" onclick="navigate(\'/resources\')">The Ye archive</h2><button class="wv-see-all" onclick="navigate(\'/resources\')">Open</button></div><div class="wv-stat-grid">' +
-        (y.tweets ? tile('Tweets', fmtNum(y.tweets), 'every ye tweet') : '') +
-        (y.yeezy ? tile('Yeezy pieces', fmtNum(y.yeezy)) : '') +
-        (y.disco ? tile('Albums', fmtNum(y.disco), (y.disco_songs || 0) + ' songs with credits') : '') +
-        (y.credits ? tile('Songs with others', fmtNum(y.credits), 'produced or featured') : '') +
-        (y.tour_shows ? tile('Tour shows', fmtNum(y.tour_shows), 'across ' + y.tour_years + ' tours') : '') +
-        '</div>';
-    }).catch(function () {});
+    if (!document.getElementById('st-body')) return;
+    window._stState.eras = d.eras || [];
+    stRender(d || {});
   } catch (e) {
-    el.innerHTML = '<div class="wv-empty">couldnt load stats...' + escHtml(e.message) + '</div>';
+    if (e && e.navAborted) return;
+    if (!el || !el.isConnected) return;
+    el.setAttribute('aria-busy', 'false');
+    el.innerHTML = '<div class="st-err"><b>couldnt load stats</b>' + escHtml(e && e.message ? e.message : 'try again in a minute') + '<br><button class="st-btn" type="button" onclick="loadStats()">Try again</button></div>';
   }
 }
 loadStats();

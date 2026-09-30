@@ -61,7 +61,8 @@
     };
     var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
       'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
-      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists'];
+      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists',
+      'music', 'tracker', 'notifications', 'wrapped', 'awards', 'whatsnew', 'games', 'status'];
     if (ALIAS[name]) return ALIAS[name];
     return KNOWN.indexOf(name) >= 0 ? name : '';
   }
@@ -126,6 +127,7 @@
     if (isLoggedIn) {
       html += '<a href="/feed" data-page="feed">Following</a>';
       html += '<a href="' + profileHref + '" data-page="profile">Profile</a>';
+      html += '<a href="/notifications" data-page="notifications">Notifications</a>';
       html += '<a href="/settings" data-page="settings">Settings</a>';
       if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel" data-page="modpanel">Mod panel</a>';
       if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel" data-page="archivepanel">Archive panel</a>';
@@ -133,6 +135,9 @@
     } else {
       html += '<a href="/login">Log in</a><a href="/register">Sign up</a>';
     }
+    html += '<a href="/wrapped" data-page="wrapped">Recap</a>';
+    html += '<a href="/awards" data-page="awards">Hall of Fame</a>';
+    html += '<a href="/whatsnew" data-page="whatsnew">What\u2019s new</a>';
     html += '<a href="/stats" data-page="stats">Stats</a>';
     html += '<a href="/about" data-page="about">About</a>';
     html += '<a href="/status" data-page="status">Status</a>';
@@ -346,13 +351,14 @@
     html += extra || '';
     html += '<button class="wv-icon-circle" id="wv-theme-btn" onclick="window.wvOpenThemePicker()" title="Theme" aria-label="Choose a theme">' + _currentThemeIcon() + '</button>';
     if (isLoggedIn && user) {
-      html += '<button class="wv-icon-circle" id="wv-notif-btn" title="Notifications" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
+      var unread = (window.wvNotif && window.wvNotif.state && window.wvNotif.state.unread) || 0;
+      html += '<button type="button" class="wv-icon-circle" id="wv-notif-btn" title="Notifications" aria-haspopup="dialog" aria-expanded="false" ' +
+              'aria-label="' + (unread ? unread + ' unread notification' + (unread === 1 ? '' : 's') : 'Notifications') + '" onclick="window._toggleNotifPanel(event)" style="position:relative;">' +
               icon('bell') +
-              '<span id="wv-notif-dot" style="display:none;"></span>' +
+              '<span id="wv-notif-dot"' + (unread ? ' class="wv-notif-count">' + (unread > 9 ? '9+' : unread) : ' style="display:none;">') + '</span>' +
               '</button>';
-      html += '<button class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More">' + icon('more') + '</button>';
-      var initials = (user.username || user.display_name || '?').charAt(0).toUpperCase();
-      html += '<div class="wv-avatar" onclick="window._wvAvatarTap()" title="My profile">' + initials + '</div>';
+      html += '<button type="button" class="wv-icon-circle" id="wv-more-btn" onclick="window._toggleMoreMenu(event)" title="More" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">' + icon('more') + '</button>';
+      html += '<button type="button" class="wv-avatar" id="wv-avatar-btn" onclick="window._wvAvatarTap(event)" title="Account" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">' + _avatarInner(user) + '</button>';
     } else {
       html += '<a href="/register" class="wv-pill wv-signup-pill" style="padding:7px 14px;font-size:12.5px;background:transparent;color:var(--text-2);">Sign up</a>';
       html += '<a href="/login" class="wv-pill is-active" style="padding:8px 22px;font-size:13px;">Log in</a>';
@@ -399,10 +405,10 @@
     var isLoggedIn = !!localStorage.getItem('token');
     if (_skin() === 'spotify') return _topbarSpotify(isLoggedIn, user);
 
-    var html = '<button id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu">' + icon('menu') + '</button>';
+    var html = '<button type="button" id="wv-menu-btn" class="wv-icon-circle" onclick="window.openMobileDrawer()" style="display:none;" aria-label="Menu" aria-expanded="false" aria-controls="wv-drawer">' + icon('menu') + '</button>';
     html += '<div class="wv-topbar-nav">' +
-      '<button onclick="history.back()" aria-label="Back" title="Back">‹</button>' +
-      '<button onclick="history.forward()" aria-label="Forward" title="Forward">›</button>' +
+      '<button type="button" id="wv-nav-back" onclick="history.back()" aria-label="Back" title="Back">' + NAV_CHEV_L + '</button>' +
+      '<button type="button" id="wv-nav-fwd" onclick="history.forward()" aria-label="Forward" title="Forward">' + NAV_CHEV_R + '</button>' +
       '</div>';
 
     html += '<div class="wv-topbar-mobile-logo">wavernrs</div>';
@@ -410,6 +416,7 @@
     html += '<div class="wv-topbar-search">' +
       '<div class="wv-input wv-search-wrap" onclick="document.getElementById(\'wv-search-inp\').focus()">' +
       _searchInputHTML('What do you want to play?') +
+      '<button type="button" class="wv-kbd-chip" onmousedown="event.preventDefault()" onclick="event.stopPropagation();window._wvQuickOpen()" title="Quick search" aria-label="Open quick search">' + _kbdLabel() + '</button>' +
       '</div></div>';
     html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
     html += _topRightHTML(isLoggedIn, user,
@@ -418,12 +425,68 @@
   }
 
   // Spotify's phone app opens its side menu from your picture, top left;
-  // everywhere else the picture goes to your profile.
-  window._wvAvatarTap = function () {
+  // everywhere else the picture opens the account menu.
+  window._wvAvatarTap = function (e) {
     var phone = false;
     try { phone = window.matchMedia('(max-width: 768px)').matches; } catch (_) {}
     if (phone && _skin() === 'spotify' && typeof window.openMobileDrawer === 'function') { window.openMobileDrawer(); return; }
-    navigate(getProfileHref());
+    _toggleAcctMenu(e, document.getElementById('wv-avatar-btn'));
+  };
+
+  var NAV_CHEV_L = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.6 5.4 8 12l6.6 6.6"/></svg>';
+  var NAV_CHEV_R = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>';
+
+  function _kbdLabel() {
+    var mac = false;
+    try { mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || ''); } catch (_) {}
+    return mac ? '<kbd>\u2318</kbd><kbd>K</kbd>' : '<kbd>Ctrl</kbd><kbd>K</kbd>';
+  }
+  window._wvQuickOpen = function () {
+    if (typeof window.wvOpenPalette === 'function') { try { window.wvOpenPalette(); return; } catch (_) {} }
+    var box = document.getElementById('wv-search-inp');
+    if (box) { box.focus(); if (box.select) box.select(); }
+  };
+
+  function _navBtnsState() {
+    var nav = window.navigation;
+    if (!nav || typeof nav.canGoBack !== 'boolean') return;
+    var b = document.getElementById('wv-nav-back'), f = document.getElementById('wv-nav-fwd');
+    if (b) b.disabled = !nav.canGoBack;
+    if (f) f.disabled = !nav.canGoForward;
+  }
+  window._wvNavBtnsState = _navBtnsState;
+  try {
+    if (window.navigation && window.navigation.addEventListener) {
+      window.navigation.addEventListener('currententrychange', function () { setTimeout(_navBtnsState, 0); });
+    }
+  } catch (_) {}
+  window.addEventListener('popstate', function () { setTimeout(_navBtnsState, 0); });
+
+  // Your picture comes from the presence beat; the last one is kept so the
+  // next load paints it straight away.
+  function _myAvatarUrl() {
+    try {
+      var u = JSON.parse(localStorage.getItem('user') || 'null');
+      var c = JSON.parse(localStorage.getItem('wv_me_avatar') || 'null');
+      if (u && c && c.id && c.id === u.id && c.url) return String(c.url);
+    } catch (_) {}
+    return '';
+  }
+  function _avatarInner(user) {
+    var initial = _escL(String((user && (user.username || user.display_name)) || '?').charAt(0).toUpperCase());
+    var url = _myAvatarUrl();
+    return '<span class="wv-avatar-i" aria-hidden="true">' + initial + '</span>' +
+      (url ? '<img src="' + _escL(url) + '" alt="" onerror="this.remove()">' : '');
+  }
+  window._wvSetMyAvatar = function (id, url) {
+    if (!id) return;
+    var prev = '';
+    try { prev = (JSON.parse(localStorage.getItem('wv_me_avatar') || 'null') || {}).url || ''; } catch (_) {}
+    try { localStorage.setItem('wv_me_avatar', JSON.stringify({ id: id, url: url || '' })); } catch (_) {}
+    if ((url || '') === prev && document.querySelector('.wv-avatar img, .wv-avatar .wv-avatar-i')) return;
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch (_) {}
+    document.querySelectorAll('#wv-avatar-btn, .wva-av').forEach(function (el) { el.innerHTML = _avatarInner(user); });
   };
 
   // ── Topbar live search ───────────────────────────────────────
@@ -507,52 +570,410 @@
     document.querySelectorAll('.wv-side-foot a[data-page]').forEach(function(el) {
       el.classList.toggle('is-active', el.dataset.page === cur);
     });
+    document.querySelectorAll('.sp-pin[data-page]').forEach(function(el) {
+      el.classList.toggle('now', el.dataset.page === cur);
+    });
+    document.querySelectorAll('.sp-home').forEach(function(el) {
+      el.classList.toggle('is-active', cur === 'home');
+    });
+    _navBtnsState();
+    _closeShellOverlays();
   }
   window._updateNavActive = updateActive;
 
-  // ── More menu (profile dropdown) ─────────────────────────────
-  window._toggleMoreMenu = function(e) {
-    e.stopPropagation();
-    var existing = document.getElementById('wv-more-menu');
-    if (existing) { existing.remove(); return; }
+  // ── Shell styles: account menu, notification centre, top bar ──
+  // Injected once so css/style.css keeps a single owner.
+  var SHELL_CSS = [
+    '.wv-topbar-nav button{display:grid;place-items:center;padding:0;font-size:0;transition:background .12s var(--ease),color .12s var(--ease),opacity .12s var(--ease)}',
+    '.wv-topbar-nav button svg{width:18px;height:18px;display:block}',
+    '.wv-topbar-nav button:not(:disabled):hover{background:rgba(0,0,0,.78)}',
+    '.theme-light .wv-topbar-nav button:not(:disabled):hover{background:#fff}',
+    '.wv-topbar-nav button:disabled{opacity:.38;cursor:default}',
+    '.wv-kbd-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;height:24px;padding:0 4px;margin-right:-6px;border:0;border-radius:6px;background:transparent;cursor:pointer;color:var(--text-3);font-family:inherit;transition:opacity .12s var(--ease),color .12s var(--ease)}',
+    '.wv-kbd-chip kbd{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:5px;background:var(--hair);box-shadow:inset 0 0 0 1px var(--hair);font:600 11px/1 var(--font-sans);color:inherit}',
+    '.wv-kbd-chip:hover{color:var(--text)}',
+    '.wv-search-wrap:has(input:focus) .wv-kbd-chip,.wv-search-wrap:has(input:not(:placeholder-shown)) .wv-kbd-chip{opacity:0;pointer-events:none}',
+    'button.wv-avatar{border:0;padding:0;font-family:inherit;overflow:hidden;position:relative;transition:transform 80ms var(--ease),box-shadow .12s var(--ease)}',
+    '.wv-avatar img,.wva-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}',
+    '.wv-avatar[aria-expanded="true"]{box-shadow:0 0 0 2px var(--brand)}',
+    '#wv-more-btn{display:none}',
+    '@media (max-width:768px){.theme-spotify #wv-more-btn{display:flex}}',
+    '#wv-notif-dot.wv-notif-count{color:var(--on-brand);background:var(--brand)}',
+    '@keyframes wvn-ring{0%{transform:rotate(0)}12%{transform:rotate(16deg)}26%{transform:rotate(-13deg)}40%{transform:rotate(9deg)}54%{transform:rotate(-6deg)}68%{transform:rotate(3deg)}82%,100%{transform:rotate(0)}}',
+    '@keyframes wvn-badge{0%{transform:scale(.4)}60%{transform:scale(1.18)}100%{transform:scale(1)}}',
+    '#wv-notif-btn.ring svg{animation:wvn-ring 1s var(--ease);transform-origin:50% 8%}',
+    '#wv-notif-btn.ring #wv-notif-dot{animation:wvn-badge .45s var(--ease)}',
+    '@keyframes wvn-pop{from{opacity:0;transform:translateY(-6px) scale(.985)}to{opacity:1;transform:none}}',
+    '@keyframes wvn-sheet{from{opacity:.4;transform:translateY(-14px)}to{opacity:1;transform:none}}',
+    '@keyframes wvn-fade{from{opacity:0}to{opacity:1}}',
+    '@keyframes wvn-pulse{from{opacity:.5}to{opacity:1}}',
 
-    var btn = document.getElementById('wv-more-btn');
-    var r = btn ? btn.getBoundingClientRect() : { bottom: 60, right: 200 };
+    '#wv-notif-panel.wvn-panel{position:fixed;z-index:9999;width:400px;display:flex;flex-direction:column;overflow:hidden;background:var(--elevated);border-radius:14px;padding:0;box-shadow:0 24px 64px rgba(0,0,0,.55),0 0 0 1px var(--hair);transform-origin:top right;animation:wvn-pop .16s var(--ease)}',
+    '.theme-light #wv-notif-panel.wvn-panel,.theme-apple #wv-notif-panel.wvn-panel{box-shadow:0 22px 56px rgba(20,20,40,.16),0 0 0 1px var(--hair)}',
+    '#wv-notif-panel:focus,#wv-acct-menu:focus{outline:none}',
+    '#wv-notif-panel.wvn-panel.is-sheet{border-radius:0 0 18px 18px;animation:wvn-sheet .2s var(--ease)}',
+    '.wvn-scrim{position:fixed;left:0;right:0;bottom:0;z-index:9998;background:rgba(0,0,0,.5);animation:wvn-fade .2s var(--ease)}',
+    '.wvn-head{display:flex;align-items:center;gap:8px;padding:14px 12px 10px 18px}',
+    '.wvn-title{flex:1;min-width:0;display:flex;align-items:center;gap:8px;margin:0;font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--text)}',
+    '.wvn-count{font-size:11.5px;font-weight:700;letter-spacing:0;padding:2px 8px;border-radius:999px;background:var(--brand-bg);color:var(--brand)}',
+    '.wvn-textbtn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--text-2);font:600 12.5px var(--font-sans);cursor:pointer;white-space:nowrap;text-decoration:none;transition:background .12s var(--ease),color .12s var(--ease)}',
+    '.wvn-textbtn svg{width:16px;height:16px}',
+    '.wvn-textbtn:hover:not(:disabled){background:var(--hair);color:var(--text)}',
+    '.wvn-textbtn:disabled{opacity:.4;cursor:default}',
+    '.wvn-tabs{display:flex;gap:6px;padding:0 18px 12px;border-bottom:1px solid var(--hair)}',
+    '.wvn-tab{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 13px;border:0;border-radius:999px;background:var(--hair);color:var(--text-2);font:600 12.5px var(--font-sans);cursor:pointer;transition:background .12s var(--ease),color .12s var(--ease)}',
+    '.wvn-tab:hover{color:var(--text)}',
+    '.wvn-tab.on{background:var(--text);color:var(--elevated)}',
+    '.wvn-tab .n{font-size:11px;font-weight:700;opacity:.65}',
+    '.wvn-list{flex:1;min-height:140px;overflow-y:auto;overscroll-behavior:contain;padding:0 0 8px;scrollbar-width:thin}',
+    '.wvn-day{position:sticky;top:0;z-index:1;background:var(--elevated);padding:12px 18px 6px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}',
+    '.wvn-row{--tone:var(--brand);position:relative;display:flex;align-items:flex-start;gap:12px;margin:0 8px 2px;padding:10px;border-radius:10px;color:inherit;text-decoration:none;cursor:pointer;transition:background .12s var(--ease)}',
+    '.wvn-row:hover{background:var(--hair)}',
+    '.wvn-row.unread{background:color-mix(in srgb,var(--brand) 7%,transparent)}',
+    '.wvn-row.unread:hover{background:color-mix(in srgb,var(--brand) 12%,transparent)}',
+    '.wvn-row:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}',
+    '.wvn-ic{--tone:var(--brand);width:38px;height:38px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--tone) 17%,transparent);color:var(--tone)}',
+    '.wvn-ic svg{width:18px;height:18px;display:block}',
+    '[data-wvn-tone=pink]{--tone:var(--pink)}[data-wvn-tone=yellow]{--tone:var(--yellow)}[data-wvn-tone=green]{--tone:var(--green)}[data-wvn-tone=blue]{--tone:var(--blue)}',
+    '[data-wvn-tone=orange]{--tone:var(--orange)}[data-wvn-tone=teal]{--tone:var(--teal)}[data-wvn-tone=red]{--tone:var(--red)}[data-wvn-tone=brand]{--tone:var(--brand)}[data-wvn-tone=discord]{--tone:#5865f2}',
+    '.wvn-main{flex:1;min-width:0;display:block}',
+    '.wvn-t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px;line-height:1.35;font-weight:500;color:var(--text-2)}',
+    '.wvn-row.unread .wvn-t{color:var(--text);font-weight:650}',
+    '.wvn-b{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.wvn-m{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11.5px;color:var(--text-3)}',
+    '.wvn-k{color:var(--tone);font-weight:600}',
+    '.wvn-dot{width:8px;height:8px;margin-top:6px;flex-shrink:0;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}',
+    '.wvn-sk{display:flex;align-items:center;gap:12px;padding:12px 18px}',
+    '.wvn-sk i{display:block;border-radius:6px;background:var(--hair-strong);animation:wvn-pulse 1.1s ease-in-out infinite alternate}',
+    '.wvn-sk .c{width:38px;height:38px;border-radius:50%;flex-shrink:0}',
+    '.wvn-sk .l{flex:1;display:grid;gap:7px}',
+    '.wvn-empty{padding:34px 28px 38px;text-align:center}',
+    '.wvn-empty-art{width:60px;height:60px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:var(--brand-bg);color:var(--brand)}',
+    '.wvn-empty-art svg{width:26px;height:26px}',
+    '.wvn-empty h4{margin:0 0 5px;font-size:15px;font-weight:750;color:var(--text)}',
+    '.wvn-empty p{margin:0 auto;max-width:280px;font-size:13px;line-height:1.5;color:var(--text-3)}',
+    '.wvn-empty .wvn-textbtn{margin-top:14px;background:var(--hair);color:var(--text)}',
+    '.wvn-foot{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-top:1px solid var(--hair);font-size:13px;font-weight:650;color:var(--text);text-decoration:none;transition:background .12s var(--ease)}',
+    '.wvn-foot:hover{background:var(--hair)}',
+    '.wvn-foot svg{width:15px;height:15px}',
 
-    var menu = document.createElement('div');
-    menu.id = 'wv-more-menu';
-    menu.className = '';
-    menu.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:14px;padding:6px 0;min-width:170px;z-index:9999;font-size:13px;';
+    '#wv-acct-menu{position:fixed;z-index:9999;width:284px;padding:6px;overflow-y:auto;overscroll-behavior:contain;background:var(--elevated);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.55),0 0 0 1px var(--hair);transform-origin:top right;animation:wvn-pop .15s var(--ease)}',
+    '.theme-light #wv-acct-menu,.theme-apple #wv-acct-menu{box-shadow:0 22px 56px rgba(20,20,40,.16),0 0 0 1px var(--hair)}',
+    '.wva-head{display:flex;align-items:center;gap:12px;padding:10px;margin-bottom:4px;border-radius:10px;color:inherit;text-decoration:none;transition:background .12s var(--ease)}',
+    '.wva-head:hover,.wva-head:focus-visible{background:var(--hair);outline:none}',
+    '.wva-av{position:relative;width:46px;height:46px;flex-shrink:0;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:var(--avatar-bg);font-size:18px;font-weight:800;color:var(--text)}',
+    '.wva-who{flex:1;min-width:0}',
+    '.wva-name{font-size:15px;font-weight:750;letter-spacing:-.01em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.wva-sub{margin-top:2px;font-size:12.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.wva-sub b{font-weight:650;color:var(--brand)}',
+    '.wva-sep{height:1px;margin:5px 6px;background:var(--hair)}',
+    '.wva-item{display:flex;align-items:center;gap:12px;width:100%;min-height:38px;padding:0 10px;border:0;border-radius:8px;background:transparent;color:var(--text);font:500 13.5px var(--font-sans);text-align:left;text-decoration:none;cursor:pointer;transition:background .1s var(--ease)}',
+    '.wva-item>svg{width:18px;height:18px;flex-shrink:0;color:var(--text-2)}',
+    '.wva-item:hover,.wva-item:focus-visible{background:var(--hair);outline:none}',
+    '.wva-item .r{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-3)}',
+    '.wva-item kbd{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:5px;background:var(--hair);font:600 11px/1 var(--font-sans);color:var(--text-2)}',
+    '.wva-badge{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--brand);color:var(--on-brand);font:700 11px/20px var(--font-sans);text-align:center}',
+    '.wva-danger,.wva-danger>svg{color:var(--red)}',
+    '.wva-theme{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 10px}',
+    '.wva-theme>.wva-item{flex:1;width:auto;padding:0;background:none;min-height:36px}',
+    '.wva-theme>.wva-item:hover,.wva-theme>.wva-item:focus-visible{background:none;text-decoration:underline;text-underline-offset:3px}',
+    '.wva-sws{display:flex;gap:4px}',
+    '.wva-sw{width:22px;height:22px;padding:0;border:0;border-radius:50%;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(127,127,127,.4);transition:transform .1s var(--ease),box-shadow .12s var(--ease)}',
+    '.wva-sw:hover{transform:scale(1.12)}',
+    '.wva-sw:focus-visible{outline:2px solid var(--text);outline-offset:2px}',
+    '.wva-sw.on{box-shadow:0 0 0 2px var(--elevated),0 0 0 4px var(--brand)}',
 
-    var items = [
-      ['Profile', function() { navigate('/dashboard'); }],
-      ['Upload', function() { navigate('/upload'); }],
-      ['New playlist', function() { if (window.wvNewPlaylist) window.wvNewPlaylist(); }],
-      ['Theme', function() { if (window.wvOpenThemePicker) window.wvOpenThemePicker(); }],
-      ['Settings', function() { navigate('/settings'); }],
-      ['Sign out', function() { logout(); }],
-    ];
-    items.forEach(function(item) {
-      var el = document.createElement('button');
-      el.textContent = item[0];
-      el.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 18px;background:transparent;border:none;cursor:pointer;color:var(--text);font-size:13px;font-family:inherit;';
-      el.onmouseenter = function() { el.style.background = 'var(--hair)'; };
-      el.onmouseleave = function() { el.style.background = 'transparent'; };
-      el.onclick = function() { menu.remove(); item[1](); };
-      menu.appendChild(el);
-    });
+    '.wv-toast.wv-toast-action{cursor:pointer}',
+    '.wv-toast.wv-toast-rich{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 14px 10px 10px}',
+    '.wv-toast.wv-toast-rich::before{display:none}',
+    '.wv-toast-rich .wvn-ic{width:34px;height:34px}',
+    '.wv-toast-rich .wvt-txt{min-width:0;flex:1;display:grid;gap:1px}',
+    '.wv-toast-rich .wvt-txt b{font-size:13.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.wv-toast-rich .wvt-txt span{font-size:12.5px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.wv-toast-rich .wvt-go{flex-shrink:0;font-size:12px;font-weight:700;color:var(--brand)}',
 
-    document.body.appendChild(menu);
-    setTimeout(function() {
-      document.addEventListener('click', function handler() {
-        menu.remove();
-        document.removeEventListener('click', handler);
-      });
-    }, 0);
+    '@media (max-width:768px){',
+    '.wvn-tab{height:38px;padding:0 16px;font-size:13px}',
+    '.wvn-textbtn{height:40px}',
+    '.wvn-row{padding:12px 10px}',
+    '.wvn-head{padding:12px 10px 8px 18px}',
+    '#wv-acct-menu{width:auto}',
+    '.wva-item{min-height:44px;font-size:14.5px}',
+    '.wva-theme{min-height:48px}',
+    '.wva-sw{width:28px;height:28px}',
+    '.wva-sws{gap:7px}',
+    '}',
+    '@media (prefers-reduced-motion:reduce){#wv-notif-btn.ring svg,#wv-notif-btn.ring #wv-notif-dot,#wv-notif-panel.wvn-panel,#wv-acct-menu,.wvn-scrim,.wvn-sk i{animation:none!important}}',
+  ].join('\n');
+  (function _shellStyles() {
+    if (document.getElementById('wv-shell-css')) return;
+    var st = document.createElement('style');
+    st.id = 'wv-shell-css';
+    st.textContent = SHELL_CSS;
+    (document.head || document.documentElement).appendChild(st);
+  })();
+
+  function _isPhone() {
+    try { return window.matchMedia('(max-width: 768px)').matches; } catch (_) { return false; }
+  }
+  function _closeShellOverlays() { _closeAcctMenu(false); _closeNotifPanel(false); }
+  window._wvCloseShellOverlays = _closeShellOverlays;
+
+  // Pin a popover under its trigger, right edges lined up, never off-screen.
+  function _placeUnder(el, anchor, width) {
+    var vw = document.documentElement.clientWidth || window.innerWidth;
+    var vh = window.innerHeight;
+    var r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+    if (!r || (!r.width && !r.height)) r = { bottom: 64, right: vw - 16 };
+    var w = Math.min(width, vw - 16);
+    var right = Math.max(8, vw - r.right - 4);
+    if (vw - right - w < 8) right = Math.max(8, vw - w - 8);
+    var top = r.bottom + 8;
+    el.style.width = w + 'px';
+    el.style.top = top + 'px';
+    el.style.right = right + 'px';
+    el.style.left = 'auto';
+    el.style.maxHeight = Math.max(240, vh - top - 16) + 'px';
+  }
+
+  // ── Account menu ─────────────────────────────────────────────
+  var _acct = null;
+  var ACCT_IC = {
+    keys: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4.6 5h14.8A2.6 2.6 0 0 1 22 7.6v8.8a2.6 2.6 0 0 1-2.6 2.6H4.6A2.6 2.6 0 0 1 2 16.4V7.6A2.6 2.6 0 0 1 4.6 5Zm1.9 3.4a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.7 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.6 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.7 0a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2ZM7.6 13.6a1.1 1.1 0 1 0 0 2.2h8.8a1.1 1.1 0 1 0 0-2.2Z"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.2 3.3c.3-.9 1.6-.9 1.9 0l1.2 3.7a4.6 4.6 0 0 0 2.9 2.9l3.7 1.2c.9.3.9 1.6 0 1.9l-3.7 1.2a4.6 4.6 0 0 0-2.9 2.9l-1.2 3.7c-.3.9-1.6.9-1.9 0L9 17a4.6 4.6 0 0 0-2.9-2.9l-3.7-1.2c-.9-.3-.9-1.6 0-1.9l3.7-1.2A4.6 4.6 0 0 0 9 7Z"/><path d="M18.6 1.9c.1-.3.6-.3.7 0l.4 1.2c.2.5.5.9 1 1l1.2.4c.3.1.3.6 0 .7l-1.2.4c-.5.2-.9.5-1 1l-.4 1.2c-.1.3-.6.3-.7 0l-.4-1.2c-.2-.5-.5-.9-1-1l-1.2-.4c-.3-.1-.3-.6 0-.7l1.2-.4c.5-.2.9-.5 1-1Z"/></svg>',
+    news: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 3.2a1.2 1.2 0 0 1 1.9 1v13.6a1.2 1.2 0 0 1-1.9 1L13.6 15H9.2l.9 4.2a1.5 1.5 0 0 1-1.46 1.8H7.5a1.5 1.5 0 0 1-1.46-1.17L5 15.02A4 4 0 0 1 5.4 7H13.6Z"/><path d="M21.6 9.4a.9.9 0 0 1 .9.9v1.4a.9.9 0 1 1-1.8 0v-1.4a.9.9 0 0 1 .9-.9Z"/></svg>',
+    out: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.6 3.2h6.2a1.2 1.2 0 1 1 0 2.4H5.6v12.8h6.2a1.2 1.2 0 1 1 0 2.4H5.6a2.4 2.4 0 0 1-2.4-2.4V5.6a2.4 2.4 0 0 1 2.4-2.4Z"/><path d="M15.55 7.35a1.2 1.2 0 0 1 1.7 0l3.8 3.8a1.2 1.2 0 0 1 0 1.7l-3.8 3.8a1.2 1.2 0 0 1-1.7-1.7l1.76-1.75H9.5a1.2 1.2 0 1 1 0-2.4h7.81l-1.76-1.75a1.2 1.2 0 0 1 0-1.7Z"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.4 5.4 16 12l-6.6 6.6"/></svg>',
   };
 
-  // ── Notification panel ────────────────────────────────────────
-  var _notifCache = null;
+  function _curUser() {
+    try { return JSON.parse(localStorage.getItem('user') || 'null') || {}; } catch (_) { return {}; }
+  }
+
+  function _acctItem(kind, target, label, ic, right, extraCls) {
+    var cls = 'wva-item' + (extraCls ? ' ' + extraCls : '');
+    var inner = ic + '<span>' + label + '</span>' + (right ? '<span class="r">' + right + '</span>' : '');
+    if (kind === 'a') return '<a class="' + cls + '" role="menuitem" tabindex="-1" href="' + target + '">' + inner + '</a>';
+    return '<button type="button" class="' + cls + '" role="menuitem" tabindex="-1" data-wva="' + target + '">' + inner + '</button>';
+  }
+
+  function _acctMenuHTML() {
+    var u = _curUser();
+    var name = u.display_name || u.username || 'your account';
+    var unread = NS.unread || 0;
+    var swatches = window.WV_THEME_SWATCH || {};
+    var order = (window.WV_THEME_ORDER || ['dark', 'light', 'spotify', 'apple', 'wave', 'system']);
+    var pref = typeof window.getThemePref === 'function' ? window.getThemePref() : 'dark';
+    var html = '';
+    html += '<a class="wva-head" role="menuitem" tabindex="-1" href="' + getProfileHref() + '">' +
+      '<span class="wva-av" aria-hidden="true">' + _avatarInner(u) + '</span>' +
+      '<span class="wva-who"><span class="wva-name" style="display:block">' + _escL(name) + '</span>' +
+      '<span class="wva-sub" style="display:block">' + (u.username ? '@' + _escL(u.username) + ' · ' : '') + '<b>View profile</b></span></span>' +
+      '</a>';
+    html += _acctItem('a', '/upload', 'Upload', icon('upload'));
+    html += _acctItem('btn', 'newpl', 'New playlist', icon('plus'));
+    html += _acctItem('a', '/library', 'Your library', icon('list'));
+    html += _acctItem('a', '/notifications', 'Notifications', icon('bell'),
+      unread ? '<span class="wva-badge" data-wva-badge>' + (unread > 99 ? '99+' : unread) + '</span>' : '');
+    html += _acctItem('a', '/wrapped', 'Your recap', ACCT_IC.spark);
+    html += '<div class="wva-sep" role="separator"></div>';
+    html += '<div class="wva-theme">' +
+      '<button type="button" class="wva-item" role="menuitem" tabindex="-1" data-wva="theme">' +
+        (typeof _themeIcon === 'function' ? _themeIcon() : icon('sun')) + '<span>Theme</span></button>' +
+      '<div class="wva-sws" role="group" aria-label="Themes">' +
+      order.map(function (t) {
+        var def = (window.WV_THEMES || {})[t];
+        if (!def) return '';
+        var sw = swatches[t] || ['#121212', '#a78bfa', '#242424'];
+        return '<button type="button" class="wva-sw' + (pref === t ? ' on' : '') + '" role="menuitemradio" tabindex="-1" aria-checked="' + (pref === t) + '" ' +
+          'data-wva-theme="' + t + '" title="' + _escL(def.label) + '" aria-label="' + _escL(def.label) + ' theme" ' +
+          'style="background:linear-gradient(135deg,' + sw[0] + ' 0 50%,' + sw[1] + ' 50% 100%)"></button>';
+      }).join('') +
+      '</div></div>';
+    html += _acctItem('btn', 'keys', 'Keyboard shortcuts', ACCT_IC.keys, '<kbd>?</kbd>');
+    html += _acctItem('a', '/whatsnew', 'What’s new', ACCT_IC.news);
+    html += _acctItem('a', '/settings', 'Settings', icon('settings'));
+    var roles = '';
+    try {
+      if (sessionStorage.getItem('wv_is_mod') === 'true') roles += _acctItem('a', '/modpanel', 'Mod panel', icon('shield'));
+      if (sessionStorage.getItem('wv_is_archiver') === 'true') roles += _acctItem('a', '/archivepanel', 'Archive panel', icon('archive'));
+      if (sessionStorage.getItem('wv_is_radio') === 'true') roles += _acctItem('a', '/radiopanel', 'Radio panel', icon('radio'));
+    } catch (_) {}
+    if (roles) html += '<div class="wva-sep" role="separator"></div>' + roles;
+    html += '<div class="wva-sep" role="separator"></div>';
+    html += _acctItem('btn', 'signout', 'Sign out', ACCT_IC.out, '', 'wva-danger');
+    return html;
+  }
+
+  // Arrow keys walk the rows; the theme swatches count as one stop and
+  // Left/Right move between them.
+  function _acctStops() {
+    var out = [];
+    if (!_acct) return out;
+    _acct.el.querySelectorAll('[role="menuitem"], .wva-sws').forEach(function (n) {
+      if (n.classList.contains('wva-sws')) {
+        var on = n.querySelector('.wva-sw.on') || n.querySelector('.wva-sw');
+        if (on) out.push(on);
+      } else out.push(n);
+    });
+    return out;
+  }
+
+  function _pickTheme(name) {
+    var def = (window.WV_THEMES || {})[name];
+    if (!def) return;
+    if (def.members && !window.wvIsVerified()) {
+      _closeAcctMenu(false);
+      if (typeof wvToast === 'function') wvToast('the Waverunners theme is only for discord verified members');
+      navigate('/settings#discord-verify');
+      return;
+    }
+    window.setTheme(name);
+    if (_acct) {
+      _acct.el.querySelectorAll('.wva-sw').forEach(function (b) {
+        var on = b.getAttribute('data-wva-theme') === name;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+    }
+  }
+
+  function _openAcctMenu(trigger, viaKeyboard) {
+    var el = document.createElement('div');
+    el.id = 'wv-acct-menu';
+    el.setAttribute('role', 'menu');
+    el.setAttribute('aria-label', 'Account');
+    el.innerHTML = _acctMenuHTML();
+    document.body.appendChild(el);
+    _placeUnder(el, trigger, _isPhone() ? 320 : 284);
+    _acct = { el: el, trigger: trigger };
+    document.querySelectorAll('#wv-avatar-btn, #wv-more-btn').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+
+    el.addEventListener('click', function (e) {
+      var sw = e.target.closest('[data-wva-theme]');
+      if (sw) { e.stopPropagation(); _pickTheme(sw.getAttribute('data-wva-theme')); return; }
+      var b = e.target.closest('[data-wva]');
+      if (b) {
+        var act = b.getAttribute('data-wva');
+        _closeAcctMenu(false);
+        if (act === 'newpl' && typeof window.wvNewPlaylist === 'function') window.wvNewPlaylist();
+        else if (act === 'keys' && typeof window.wvShortcutsHelp === 'function') window.wvShortcutsHelp();
+        else if (act === 'theme' && typeof window.wvOpenThemePicker === 'function') window.wvOpenThemePicker();
+        else if (act === 'signout' && typeof logout === 'function') logout();
+        return;
+      }
+      if (e.target.closest('a[href]')) setTimeout(function () { _closeAcctMenu(false); }, 0);
+    });
+    el.addEventListener('keydown', function (e) {
+      var stops = _acctStops();
+      var cur = document.activeElement;
+      var onSw = !!(cur && cur.classList && cur.classList.contains('wva-sw'));
+      var i = -1;
+      for (var q = 0; q < stops.length; q++) { if (stops[q] === cur || (onSw && stops[q].classList.contains('wva-sw'))) { i = q; break; } }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!stops.length) return;
+        var j = e.key === 'ArrowDown' ? (i < 0 ? 0 : (i + 1) % stops.length) : (i < 0 ? stops.length - 1 : (i - 1 + stops.length) % stops.length);
+        stops[j].focus();
+      } else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && onSw) {
+        e.preventDefault();
+        var sws = Array.prototype.slice.call(el.querySelectorAll('.wva-sw'));
+        var k = sws.indexOf(cur);
+        var nx = sws[(k + (e.key === 'ArrowRight' ? 1 : -1) + sws.length) % sws.length];
+        if (nx) nx.focus();
+      } else if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        var t = e.key === 'Home' ? stops[0] : stops[stops.length - 1];
+        if (t) t.focus();
+      } else if (e.key === 'Tab') {
+        _closeAcctMenu(false);
+      } else if (e.key === ' ' && cur && cur.tagName === 'A') {
+        e.preventDefault();
+        cur.click();
+      }
+    });
+    if (viaKeyboard) { var first = _acctStops()[0]; if (first) first.focus(); }
+    else { el.tabIndex = -1; try { el.focus({ preventScroll: true }); } catch (_) {} }
+  }
+
+  function _closeAcctMenu(restoreFocus) {
+    if (!_acct) return;
+    var t = _acct.trigger;
+    if (_acct.el.parentNode) _acct.el.parentNode.removeChild(_acct.el);
+    _acct = null;
+    document.querySelectorAll('#wv-avatar-btn, #wv-more-btn').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+    if (restoreFocus && t && document.body.contains(t)) { try { t.focus(); } catch (_) {} }
+  }
+
+  function _toggleAcctMenu(e, trigger) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (_acct) { var same = _acct.trigger === trigger; _closeAcctMenu(!!(e && e.detail === 0)); if (same) return; }
+    _closeNotifPanel(false);
+    _openAcctMenu(trigger || document.getElementById('wv-avatar-btn'), !!(e && e.detail === 0));
+  }
+  window._toggleMoreMenu = function (e) {
+    var btn = document.getElementById('wv-more-btn');
+    var visible = btn && btn.offsetParent !== null;
+    _toggleAcctMenu(e, visible ? btn : (document.getElementById('wv-avatar-btn') || btn));
+  };
+  window.wvOpenAccountMenu = function () { _toggleAcctMenu(null, document.getElementById('wv-avatar-btn')); };
+
+  // ── Notification centre ──────────────────────────────────────
+  // One store shared by the bell, the toast and the /notifications page.
+  // Works against the older API too: extra query params are ignored there,
+  // so everything is also filtered here, and the manage actions (delete,
+  // mark unread, clear) only switch on when /unread-count reports by_type.
+  var NIC = {
+    heart: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20.6c-.25 0-.5-.07-.72-.2C9.6 19.4 2.2 14.72 2.2 9.05A5.35 5.35 0 0 1 7.55 3.7c1.8 0 3.4.88 4.45 2.24A5.6 5.6 0 0 1 16.45 3.7a5.35 5.35 0 0 1 5.35 5.35c0 5.67-7.4 10.35-9.08 11.35-.22.13-.47.2-.72.2Z"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.2 2.8h9.6c.66 0 1.2.54 1.2 1.2v.6h2a1.2 1.2 0 0 1 1.2 1.2v1.3a4.9 4.9 0 0 1-4.1 4.83 6 6 0 0 1-3.9 3.5V18h2.4a1.2 1.2 0 0 1 1.2 1.2v.8a1.2 1.2 0 0 1-1.2 1.2H8.4A1.2 1.2 0 0 1 7.2 20v-.8A1.2 1.2 0 0 1 8.4 18h2.4v-2.57a6 6 0 0 1-3.9-3.5A4.9 4.9 0 0 1 2.8 7.1V5.8A1.2 1.2 0 0 1 4 4.6h2V4c0-.66.54-1.2 1.2-1.2ZM18 7v2.3a2.5 2.5 0 0 0 .8-1.84V7ZM5.2 7v.46c0 .72.3 1.37.8 1.84V7Z"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.6 4.55A1.4 1.4 0 0 1 9.72 3.4l10.4 7.4a1.47 1.47 0 0 1 0 2.4l-10.4 7.4a1.4 1.4 0 0 1-2.12-1.15Z"/></svg>',
+    userplus: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9.6" cy="7.6" r="4.1"/><path d="M9.6 13.3c-4.1 0-7.3 2.4-7.3 5.4 0 .86.7 1.55 1.55 1.55h11.5c.86 0 1.55-.7 1.55-1.55 0-3-3.2-5.4-7.3-5.4Z"/><path d="M18.9 6.6c.6 0 1.1.5 1.1 1.1v1.6h1.6a1.1 1.1 0 1 1 0 2.2H20v1.6a1.1 1.1 0 1 1-2.2 0v-1.6h-1.6a1.1 1.1 0 1 1 0-2.2h1.6V7.7c0-.6.5-1.1 1.1-1.1Z"/></svg>',
+    star: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.1 2.9a1 1 0 0 1 1.8 0l2.36 4.78 5.27.77a1 1 0 0 1 .56 1.7l-3.82 3.72.9 5.25a1 1 0 0 1-1.45 1.05L12 17.7l-4.72 2.48a1 1 0 0 1-1.45-1.05l.9-5.25-3.82-3.72a1 1 0 0 1 .56-1.7l5.27-.77Z"/></svg>',
+    bubble: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.8 3.4h8.4a4.9 4.9 0 0 1 4.9 4.9v4.4a4.9 4.9 0 0 1-4.9 4.9h-2.3l-3.75 3.1A1 1 0 0 1 8.5 19.9v-2.3h-.7a4.9 4.9 0 0 1-4.9-4.9V8.3a4.9 4.9 0 0 1 4.9-4.9Z"/></svg>',
+    clipboard: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9.2 2.6h5.6c.77 0 1.4.63 1.4 1.4V4.6h1.4a2.6 2.6 0 0 1 2.6 2.6v11.6a2.6 2.6 0 0 1-2.6 2.6H6.4a2.6 2.6 0 0 1-2.6-2.6V7.2a2.6 2.6 0 0 1 2.6-2.6h1.4V4c0-.77.63-1.4 1.4-1.4Zm.8 2.1v1.6h4V4.7ZM8.3 10.9a1.1 1.1 0 1 0 0 2.2h7.4a1.1 1.1 0 1 0 0-2.2Zm0 4a1.1 1.1 0 1 0 0 2.2h4.6a1.1 1.1 0 1 0 0-2.2Z"/></svg>',
+    drop: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.4c.36 0 .7.16.93.44 1.9 2.3 6.87 8.55 6.87 12.36a7.8 7.8 0 0 1-15.6 0c0-3.81 4.97-10.06 6.87-12.36.23-.28.57-.44.93-.44Z"/></svg>',
+    live: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.3" fill="currentColor" stroke="none"/><path d="M8.3 15.7a5.2 5.2 0 0 1 0-7.4M15.7 8.3a5.2 5.2 0 0 1 0 7.4M5.4 18.6a9.3 9.3 0 0 1 0-13.2M18.6 5.4a9.3 9.3 0 0 1 0 13.2"/></svg>',
+    people: ICONS.feed,
+    discord: ICONS.discord,
+    bell: ICONS.bell,
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12.8 9.5 17.8 19.5 6.6"/></svg>',
+    checks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12.6 7 17.1 16.2 7"/><path d="m12.3 16.4.7.7L22 7"/></svg>',
+  };
+  var NTYPE = {
+    like:               { label: 'Like',            group: 'likes',      tone: 'pink',    ic: 'heart' },
+    like_milestone:     { label: 'Milestone',       group: 'milestones', tone: 'yellow',  ic: 'trophy' },
+    stream_milestone:   { label: 'Milestone',       group: 'milestones', tone: 'green',   ic: 'play' },
+    follower:           { label: 'Follower',        group: 'followers',  tone: 'brand',   ic: 'userplus' },
+    follower_milestone: { label: 'Milestone',       group: 'milestones', tone: 'orange',  ic: 'star' },
+    comment:            { label: 'Comment',         group: 'community',  tone: 'teal',    ic: 'bubble' },
+    community_reply:    { label: 'Reply',           group: 'community',  tone: 'teal',    ic: 'bubble' },
+    community_comment:  { label: 'Comment',         group: 'community',  tone: 'teal',    ic: 'bubble' },
+    community_post:     { label: 'Community',       group: 'community',  tone: 'teal',    ic: 'bubble' },
+    community_mention:  { label: 'Mention',         group: 'community',  tone: 'teal',    ic: 'bubble' },
+    tracker_add:        { label: 'Tracker',         group: 'leaks',      tone: 'orange',  ic: 'clipboard' },
+    song_leak:          { label: 'Leak',            group: 'leaks',      tone: 'blue',    ic: 'drop' },
+    lp_live:            { label: 'Listening party', group: 'lp',         tone: 'red',     ic: 'live' },
+    discord_import:     { label: 'Discord',         group: 'other',      tone: 'discord', ic: 'discord' },
+    collab:             { label: 'Collab',          group: 'other',      tone: 'brand',   ic: 'people' },
+  };
+  var N_FILTERS = [
+    ['all', 'All'], ['unread', 'Unread'], ['likes', 'Likes'], ['followers', 'Followers'],
+    ['milestones', 'Milestones'], ['community', 'Community'], ['leaks', 'Leaks & trackers'], ['lp', 'Listening parties'],
+  ];
+  function _nMeta(type) {
+    var t = String(type || '');
+    if (NTYPE[t]) return NTYPE[t];
+    if (t.indexOf('community') === 0) return NTYPE.community_post;
+    return { label: 'Update', group: 'other', tone: 'brand', ic: 'bell' };
+  }
+  function _nTypesFor(group) {
+    return Object.keys(NTYPE).filter(function (k) { return NTYPE[k].group === group; });
+  }
+  function _nIconHTML(type) {
+    var m = _nMeta(type);
+    return '<span class="wvn-ic" data-wvn-tone="' + m.tone + '" aria-hidden="true">' + (NIC[m.ic] || NIC.bell) + '</span>';
+  }
 
   function _escN(s) {
     return String(s == null ? '' : s)
@@ -560,196 +981,567 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function _notifIcon(type) {
-    var icons = {
-      like:              '❤️',
-      like_milestone:    '🏆',
-      stream_milestone:  '🎵',
-      follower:          '👤',
-      follower_milestone:'🌟',
-      comment:           '💬',
-      tracker_add:       '📋',
-      song_leak:         '💧',
-    };
-    return icons[type] || '🔔';
+  function _nAgo(iso) {
+    var t = new Date(iso).getTime();
+    if (!t) return '';
+    var s = (Date.now() - t) / 1000;
+    if (s < 45) return 'now';
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm';
+    if (s < 86400) return Math.floor(s / 3600) + 'h';
+    if (s < 604800) return Math.floor(s / 86400) + 'd';
+    var d = new Date(t);
+    var o = { month: 'short', day: 'numeric' };
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    try { return d.toLocaleDateString(undefined, o); } catch (_) { return d.toDateString(); }
   }
-
-  function _notifTimeAgo(iso) {
-    var diff = (Date.now() - new Date(iso).getTime()) / 1000;
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-    return Math.floor(diff/86400) + 'd ago';
+  function _nAbs(iso) {
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    try { return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); } catch (_) { return d.toString(); }
+  }
+  function _nDay(iso) {
+    var t = new Date(iso).getTime();
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    if (!t || t >= start) return 'Today';
+    if (t >= start - 86400000) return 'Yesterday';
+    if (t >= start - 6 * 86400000) return 'This week';
+    return 'Earlier';
   }
 
   function _notifHref(n) {
-    if (n && n.type === 'song_leak' && n.title) return '/resources?view=song&t=' + encodeURIComponent(String(n.title).replace(/^new\s+/, '').replace(/\s+leaked$/, '')).replace(/'/g, '%27');
-    if (!n || !n.entity_id) return '';
-    if (n.entity_type === 'lp') return '/lp?id=' + n.entity_id;
-    if (n.entity_type === 'track') return '/track?id=' + n.entity_id;
-    if (n.entity_type === 'album') return '/album?id=' + n.entity_id;
-    if (n.entity_type === 'artist') return '/artist?id=' + n.entity_id;
+    if (!n) return '';
+    if (n.type === 'song_leak' && n.title) return '/resources?view=song&t=' + encodeURIComponent(String(n.title).replace(/^new\s+/, '').replace(/\s+leaked$/, '')).replace(/'/g, '%27');
+    if (!n.entity_id) return '';
+    var id = encodeURIComponent(n.entity_id);
+    var et = String(n.entity_type || '');
+    if (et === 'community_post' || et === 'community' || (String(n.type || '').indexOf('community') === 0 && !et)) return '/community?post=' + id;
+    if (et === 'lp') return '/lp?id=' + id;
+    if (et === 'track') return '/track?id=' + id;
+    if (et === 'album') return '/album?id=' + id;
+    if (et === 'artist') return '/artist?id=' + id;
+    if (et === 'playlist') return '/playlist?id=' + id;
     return '';
   }
 
-  window._openNotif = function (id, el, href) {
-    window._markNotifRead(id, el);
-    var panel = document.getElementById('wv-notif-panel');
-    if (panel) panel.classList.remove('open');
-    if (href && typeof navigate === 'function') navigate(href);
-  };
+  var NS = { items: null, unread: 0, byType: null, latestAt: null, manage: false, seen: {}, polledAt: 0, countKnown: false, error: false, loading: null };
 
-  function _renderNotifPanel(notifs) {
-    var panel = document.getElementById('wv-notif-panel');
-    if (!panel) return;
-    if (!notifs || !notifs.length) {
-      panel.querySelector('.wv-notif-list').innerHTML =
-        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px;">no notifications yet</div>';
-      return;
-    }
-    panel.querySelector('.wv-notif-list').innerHTML = notifs.map(function(n) {
-      var href = _notifHref(n);
-      return '<div class="wv-notif-item' + (n.read ? '' : ' unread') + (href ? ' wv-notif-link' : '') + '" onclick="window._openNotif(\'' + n.id + '\',this,\'' + href + '\')">' +
-        '<div class="wv-notif-icon">' + _notifIcon(n.type) + '</div>' +
-        '<div class="wv-notif-body">' +
-          '<div class="wv-notif-title">' + _escN(n.title || '') + '</div>' +
-          (n.body ? '<div class="wv-notif-desc">' + _escN(n.body) + '</div>' : '') +
-          '<div class="wv-notif-time">' + _notifTimeAgo(n.created_at) + '</div>' +
-        '</div>' +
-        (!n.read ? '<div class="wv-notif-unread-dot"></div>' : '') +
-      '</div>';
-    }).join('');
+  function _nReq(method, path, body) {
+    var token = localStorage.getItem('token');
+    if (!token) return Promise.reject(new Error('signed out'));
+    var h = { Authorization: 'Bearer ' + token };
+    if (body) h['Content-Type'] = 'application/json';
+    return fetch(API_BASE + path, { method: method || 'GET', headers: h, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok) { var e = new Error((d && d.error) || 'something went wrong'); e.status = r.status; throw e; }
+          return d;
+        });
+      });
   }
 
-  window._markNotifRead = function(id, el) {
-    var token = localStorage.getItem('token');
-    if (!token) return;
-    if (el) el.classList.remove('unread');
-    var dot = el ? el.querySelector('.wv-notif-unread-dot') : null;
-    if (dot) dot.remove();
-    fetch(API_BASE + '/notifications/' + id + '/read', {
-      method: 'PATCH',
-      headers: { 'Authorization': 'Bearer ' + token },
-    }).catch(function(){});
-    // Update cache
-    if (_notifCache) {
-      _notifCache.forEach(function(n) { if (n.id === id) n.read = true; });
-    }
-    _updateNotifDot();
-  };
-
-  window._markAllNotifsRead = function() {
-    var token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(API_BASE + '/notifications/read-all', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-    }).catch(function(){});
-    if (_notifCache) _notifCache.forEach(function(n) { n.read = true; });
-    _updateNotifDot();
-    var panel = document.getElementById('wv-notif-panel');
-    if (panel) {
-      panel.querySelectorAll('.wv-notif-item').forEach(function(el) {
-        el.classList.remove('unread');
-        var d = el.querySelector('.wv-notif-unread-dot');
-        if (d) d.remove();
+  // The newest page of notifications. `before` pages back through history.
+  function _nList(o) {
+    o = o || {};
+    var limit = Math.min(100, o.limit || 30);
+    var types = o.types && o.types.length ? o.types : null;
+    var qs = ['limit=' + limit];
+    if (o.before) qs.push('before=' + encodeURIComponent(o.before));
+    if (types) qs.push('type=' + encodeURIComponent(types.join(',')));
+    if (o.unread) qs.push('unread=1');
+    return _nReq('GET', '/notifications?' + qs.join('&')).then(function (data) {
+      if (!Array.isArray(data)) throw new Error('something went wrong');
+      var legacy = data.length > limit;
+      var cut = o.before ? new Date(o.before).getTime() : 0;
+      var items = data.filter(function (n) {
+        if (!n || !n.id) return false;
+        if (cut && !(new Date(n.created_at).getTime() < cut)) return false;
+        if (types && types.indexOf(n.type) < 0) return false;
+        if (o.unread && n.read) return false;
+        return true;
       });
-    }
-  };
+      return { items: items, legacy: legacy, more: !legacy && data.length === limit };
+    });
+  }
 
-  function _updateNotifDot() {
+  function _nEmit(op, extra) {
+    _nPaintBadge();
+    var detail = { op: op, state: NS };
+    if (extra) for (var k in extra) detail[k] = extra[k];
+    try { window.dispatchEvent(new CustomEvent('wv-notif', { detail: detail })); } catch (_) {}
+  }
+
+  function _nPaintBadge() {
+    var unread = NS.unread || 0;
     var dot = document.getElementById('wv-notif-dot');
-    if (!dot) return;
-    var unread = _notifCache ? _notifCache.filter(function(n) { return !n.read; }).length : 0;
-    dot.style.display = unread ? 'block' : 'none';
-    dot.textContent = unread > 9 ? '9+' : (unread || '');
-    dot.classList.toggle('wv-notif-count', unread > 0);
+    if (dot) {
+      dot.style.display = unread ? 'block' : 'none';
+      dot.textContent = unread > 9 ? '9+' : (unread || '');
+      dot.classList.toggle('wv-notif-count', unread > 0);
+    }
     var bell = document.getElementById('wv-notif-btn');
     if (bell) bell.setAttribute('aria-label', unread ? unread + ' unread notification' + (unread === 1 ? '' : 's') : 'Notifications');
+    var b = document.querySelector('[data-wva-badge]');
+    if (b) { if (unread) b.textContent = unread > 99 ? '99+' : unread; else b.remove(); }
+    if (_np.el) _nPaintPanelHead();
   }
 
-  function _loadNotifications() {
-    var token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(API_BASE + '/notifications', {
-      headers: { 'Authorization': 'Bearer ' + token },
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (Array.isArray(data)) {
-          _notifCache = data;
-          _updateNotifDot();
-          var panel = document.getElementById('wv-notif-panel');
-          if (panel) _renderNotifPanel(data);
-        }
-      })
-      .catch(function(){});
+  function _nRing() {
+    var bell = document.getElementById('wv-notif-btn');
+    if (!bell) return;
+    bell.classList.remove('ring');
+    void bell.offsetWidth;
+    bell.classList.add('ring');
+    setTimeout(function () { bell.classList.remove('ring'); }, 1100);
   }
 
-  window._toggleNotifPanel = function(e) {
-    e.stopPropagation();
-    var existing = document.getElementById('wv-notif-panel');
-    if (existing) { existing.remove(); return; }
+  function _nOnInbox() { return /\/notifications(\.html)?$/.test(location.pathname); }
 
-    var btn = document.getElementById('wv-notif-btn');
-    var r = btn ? btn.getBoundingClientRect() : { bottom: 60, right: 260 };
-
-    var panel = document.createElement('div');
-    panel.id = 'wv-notif-panel';
-    panel.className = '';
-    panel.style.cssText = 'position:fixed;top:' + (r.bottom + 6) + 'px;right:' + (window.innerWidth - r.right) + 'px;border-radius:16px;width:340px;max-height:480px;z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
-
-    panel.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--hair);">' +
-        '<div style="font-size:14px;font-weight:700;letter-spacing:-0.01em;">Notifications</div>' +
-        '<button onclick="window._markAllNotifsRead()" style="font-size:11.5px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 0;">Mark all read</button>' +
-      '</div>' +
-      '<div class="wv-notif-list" style="overflow-y:auto;flex:1;padding:6px 0;">' +
-        '<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px);">Loading…</div>' +
-      '</div>';
-
-    document.body.appendChild(panel);
-
-    // Load / show cached
-    if (_notifCache) {
-      _renderNotifPanel(_notifCache);
-    }
-    _loadNotifications();
-
-    setTimeout(function() {
-      document.addEventListener('click', function handler(ev) {
-        if (!panel.contains(ev.target)) {
-          panel.remove();
-          document.removeEventListener('click', handler);
-        }
+  function _nAnnounce(fresh) {
+    _nRing();
+    _nEmit('new', { items: fresh });
+    if (_nOnInbox() || _np.el || typeof window.wvToast !== 'function') return;
+    if (fresh.length === 1) {
+      var n = fresh[0];
+      var m = _nMeta(n.type);
+      window.wvToast(n.title || m.label, '', 6500, {
+        icon: _nIconHTML(n.type), title: n.title || m.label, body: n.body || '', action: 'View',
+        onClick: function () { _nOpenItem(n, _notifHref(n)); },
       });
-    }, 0);
+    } else {
+      window.wvToast(fresh.length + ' new notifications', '', 6500, {
+        icon: _nIconHTML('bell'), title: fresh.length + ' new notifications', body: fresh[0].title || '', action: 'Open',
+        onClick: function () { setTimeout(function () { if (!_np.el) _openNotifPanel(false); }, 0); },
+      });
+    }
+  }
+
+  function _nRefresh(silent) {
+    if (NS.loading) return NS.loading;
+    var hadBaseline = NS.items !== null;
+    NS.loading = _nList({ limit: 30 }).then(function (res) {
+      var fresh = [];
+      res.items.forEach(function (n) {
+        if (!NS.seen[n.id]) { NS.seen[n.id] = 1; if (hadBaseline && !n.read) fresh.push(n); }
+      });
+      NS.items = res.items;
+      NS.error = false;
+      NS.loading = null;
+      if (!NS.countKnown) NS.unread = res.items.filter(function (n) { return !n.read; }).length;
+      _nEmit('list');
+      _nRenderPanel();
+      if (!silent && fresh.length) _nAnnounce(fresh);
+    }).catch(function () {
+      NS.loading = null;
+      NS.error = true;
+      _nRenderPanel();
+    });
+    return NS.loading;
+  }
+
+  var _nPollBusy = false, _nPollTimer = null;
+  function _nPoll(force) {
+    if (!localStorage.getItem('token')) return;
+    if (!force && document.hidden) return;
+    if (_nPollBusy) return;
+    _nPollBusy = true;
+    NS.polledAt = Date.now();
+    _nReq('GET', '/notifications/unread-count').then(function (d) {
+      _nPollBusy = false;
+      var prev = NS.unread, prevLatest = NS.latestAt;
+      NS.unread = Math.max(0, parseInt(d.count, 10) || 0);
+      NS.countKnown = true;
+      NS.byType = d.by_type && typeof d.by_type === 'object' ? d.by_type : null;
+      NS.manage = !!NS.byType;
+      NS.latestAt = d.latest_at || null;
+      _nEmit('count');
+      if (NS.items === null) _nRefresh(true);
+      else if (NS.unread > prev || (NS.latestAt && NS.latestAt !== prevLatest)) _nRefresh(false);
+    }).catch(function (e) {
+      _nPollBusy = false;
+      if (e && e.status === 401) { if (_nPollTimer) { clearInterval(_nPollTimer); _nPollTimer = null; } return; }
+      if (NS.items === null) _nRefresh(true);
+    });
+  }
+
+  function _nFind(id) {
+    if (!NS.items) return null;
+    for (var i = 0; i < NS.items.length; i++) if (NS.items[i].id === id) return NS.items[i];
+    return null;
+  }
+  function _nDec(type, by) {
+    NS.unread = Math.max(0, NS.unread - by);
+    if (NS.byType && type && NS.byType[type]) NS.byType[type] = Math.max(0, NS.byType[type] - by);
+  }
+  function _nArg(x) { return x && typeof x === 'object' ? x : { id: x }; }
+
+  function _nMarkRead(x) {
+    var o = _nArg(x);
+    if (!o.id) return Promise.resolve();
+    var mine = _nFind(o.id);
+    var wasUnread = (mine && !mine.read) || (o !== mine && o.read === false);
+    if (mine) mine.read = true;
+    if (o !== mine && 'read' in o) o.read = true;
+    if (wasUnread) _nDec((mine || o).type, 1);
+    _nEmit('read', { ids: [o.id] });
+    _nRenderPanel();
+    if (!wasUnread) return Promise.resolve();
+    return _nReq('PATCH', '/notifications/' + encodeURIComponent(o.id) + '/read').catch(function () {});
+  }
+  function _nMarkUnread(x) {
+    var o = _nArg(x);
+    var mine = _nFind(o.id);
+    var wasRead = (mine && mine.read) || (o !== mine && o.read === true);
+    if (mine) mine.read = false;
+    if (o !== mine && 'read' in o) o.read = false;
+    if (wasRead) {
+      NS.unread++;
+      var t = (mine || o).type;
+      if (NS.byType && t) NS.byType[t] = (NS.byType[t] || 0) + 1;
+    }
+    _nEmit('unread', { ids: [o.id] });
+    _nRenderPanel();
+    return _nReq('PATCH', '/notifications/' + encodeURIComponent(o.id) + '/unread');
+  }
+  function _nMarkAll(types) {
+    var scoped = !!(NS.manage && types && types.length);
+    (NS.items || []).forEach(function (n) { if (!scoped || types.indexOf(n.type) >= 0) n.read = true; });
+    if (scoped) {
+      types.forEach(function (t) { if (NS.byType && NS.byType[t]) _nDec(t, NS.byType[t]); });
+    } else {
+      NS.unread = 0;
+      if (NS.byType) for (var k in NS.byType) NS.byType[k] = 0;
+    }
+    _nEmit('readall', { types: scoped ? types : null });
+    _nRenderPanel();
+    return _nReq('POST', '/notifications/read-all', scoped ? { types: types } : null);
+  }
+  function _nRemove(x) {
+    var o = _nArg(x);
+    var mine = _nFind(o.id);
+    var wasUnread = (mine && !mine.read) || (o !== mine && o.read === false);
+    return _nReq('DELETE', '/notifications/' + encodeURIComponent(o.id)).then(function (d) {
+      if (NS.items) NS.items = NS.items.filter(function (n) { return n.id !== o.id; });
+      if (wasUnread) _nDec((mine || o).type, 1);
+      _nEmit('remove', { ids: [o.id] });
+      _nRenderPanel();
+      return d;
+    });
+  }
+  function _nClearRead() {
+    return _nReq('DELETE', '/notifications').then(function (d) {
+      if (NS.items) NS.items = NS.items.filter(function (n) { return !n.read; });
+      _nEmit('clear');
+      _nRenderPanel();
+      return d;
+    });
+  }
+
+  function _nOpenItem(n, href) {
+    if (n) _nMarkRead(n);
+    _closeNotifPanel(false);
+    if (href && typeof navigate === 'function') navigate(href);
+  }
+
+  // Older markup and pages call these by name.
+  window._openNotif = function (id, el, href) { _nOpenItem(_nFind(id) || { id: id }, href); };
+  window._markNotifRead = function (id) { _nMarkRead(_nFind(id) || { id: id }); };
+  window._markAllNotifsRead = function () { _nMarkAll(); };
+
+  // ── The bell's panel ─────────────────────────────────────────
+  var _np = { el: null, scrim: null, filter: 'all' };
+
+  function _nSkeleton(n) {
+    var h = '';
+    for (var i = 0; i < n; i++) {
+      h += '<div class="wvn-sk" aria-hidden="true"><i class="c"></i><span class="l">' +
+        '<i style="height:12px;width:' + (78 - (i % 3) * 14) + '%"></i><i style="height:10px;width:' + (46 + (i % 2) * 18) + '%"></i></span></div>';
+    }
+    return h;
+  }
+
+  function _nRowHTML(n) {
+    var m = _nMeta(n.type);
+    var href = _notifHref(n);
+    var tag = href ? 'a' : 'div';
+    return '<' + tag + ' class="wvn-row' + (n.read ? '' : ' unread') + '" data-wvn-tone="' + m.tone + '" data-id="' + _escN(n.id) + '"' +
+      (href ? ' href="' + _escN(href) + '"' : ' role="button" tabindex="0"') + '>' +
+      _nIconHTML(n.type) +
+      '<span class="wvn-main"><span class="wvn-t">' + _escN(n.title || m.label) + '</span>' +
+      (n.body ? '<span class="wvn-b">' + _escN(n.body) + '</span>' : '') +
+      '<span class="wvn-m"><span class="wvn-k">' + _escN(m.label) + '</span><span aria-hidden="true">·</span>' +
+      '<time datetime="' + _escN(n.created_at) + '" title="' + _escN(_nAbs(n.created_at)) + '">' + _escN(_nAgo(n.created_at)) + '</time></span></span>' +
+      (n.read ? '' : '<span class="wvn-dot" role="img" aria-label="unread"></span>') +
+      '</' + tag + '>';
+  }
+
+  function _nGroupedHTML(items, rowFn) {
+    var html = '', last = '';
+    items.forEach(function (n) {
+      var d = _nDay(n.created_at);
+      if (d !== last) { html += '<div class="wvn-day" role="presentation">' + d + '</div>'; last = d; }
+      html += rowFn(n);
+    });
+    return html;
+  }
+
+  function _nPaintPanelHead() {
+    var el = _np.el;
+    if (!el) return;
+    var c = el.querySelector('.wvn-count');
+    if (c) { c.textContent = NS.unread > 99 ? '99+' : String(NS.unread); c.hidden = !NS.unread; }
+    var all = el.querySelector('[data-wvn-act="readall"]');
+    if (all) all.disabled = !NS.unread;
+    var un = el.querySelector('.wvn-tab[data-f="unread"] .n');
+    if (un) un.textContent = NS.unread ? String(NS.unread > 99 ? '99+' : NS.unread) : '';
+  }
+
+  function _nRenderPanel() {
+    var el = _np.el;
+    if (!el) return;
+    _nPaintPanelHead();
+    el.querySelectorAll('.wvn-tab').forEach(function (t) {
+      var on = t.getAttribute('data-f') === _np.filter;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var list = el.querySelector('.wvn-list');
+    var keep = list.scrollTop;
+    if (NS.items === null) {
+      list.innerHTML = NS.error
+        ? '<div class="wvn-empty"><div class="wvn-empty-art">' + NIC.bell + '</div><h4>Couldn’t load notifications</h4>' +
+          '<p>check your connection and try again</p><button type="button" class="wvn-textbtn" data-wvn-act="retry">Try again</button></div>'
+        : _nSkeleton(5);
+      return;
+    }
+    var items = _np.filter === 'unread' ? NS.items.filter(function (n) { return !n.read; }) : NS.items;
+    if (!items.length) {
+      list.innerHTML = _np.filter === 'unread'
+        ? '<div class="wvn-empty"><div class="wvn-empty-art">' + NIC.check + '</div><h4>You’re all caught up</h4><p>nothing new since you last checked</p></div>'
+        : '<div class="wvn-empty"><div class="wvn-empty-art">' + NIC.bell + '</div><h4>No notifications yet</h4>' +
+          '<p>likes, new followers, milestones and leaks of songs you follow show up here</p></div>';
+      return;
+    }
+    list.innerHTML = _nGroupedHTML(items.slice(0, 30), _nRowHTML);
+    list.scrollTop = keep;
+  }
+
+  function _nPlacePanel() {
+    var el = _np.el;
+    if (!el) return;
+    var vh = window.innerHeight;
+    if (_isPhone()) {
+      var bar = document.getElementById('wv-topbar');
+      var top = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 56;
+      el.classList.add('is-sheet');
+      el.style.left = '0'; el.style.right = '0'; el.style.width = 'auto';
+      el.style.top = top + 'px';
+      el.style.maxHeight = Math.max(280, vh - top - 64) + 'px';
+      if (_np.scrim) _np.scrim.style.top = top + 'px';
+    } else {
+      el.classList.remove('is-sheet');
+      _placeUnder(el, document.getElementById('wv-notif-btn'), 400);
+      el.style.maxHeight = Math.min(620, Math.max(280, vh - parseFloat(el.style.top) - 16)) + 'px';
+    }
+  }
+
+  function _openNotifPanel(viaKeyboard) {
+    if (_np.el) return;
+    var el = document.createElement('div');
+    el.id = 'wv-notif-panel';
+    el.className = 'wvn-panel';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Notifications');
+    el.tabIndex = -1;
+    el.innerHTML =
+      '<div class="wvn-head"><h2 class="wvn-title">Notifications <span class="wvn-count" hidden></span></h2>' +
+        '<button type="button" class="wvn-textbtn" data-wvn-act="readall" disabled>' + NIC.checks + 'Mark all read</button></div>' +
+      '<div class="wvn-tabs" role="tablist" aria-label="Show">' +
+        '<button type="button" class="wvn-tab on" role="tab" aria-selected="true" data-f="all">All</button>' +
+        '<button type="button" class="wvn-tab" role="tab" aria-selected="false" data-f="unread">Unread <span class="n"></span></button>' +
+      '</div>' +
+      '<div class="wvn-list" role="list"></div>' +
+      '<a class="wvn-foot" href="/notifications">See all notifications ' + ACCT_IC.chev + '</a>';
+    if (_isPhone()) {
+      var scrim = document.createElement('div');
+      scrim.className = 'wvn-scrim';
+      scrim.addEventListener('click', function () { _closeNotifPanel(false); });
+      document.body.appendChild(scrim);
+      _np.scrim = scrim;
+    }
+    document.body.appendChild(el);
+    _np.el = el;
+    _np.filter = 'all';
+    _nPlacePanel();
+    var bell = document.getElementById('wv-notif-btn');
+    if (bell) bell.setAttribute('aria-expanded', 'true');
+
+    el.addEventListener('click', function (e) {
+      var act = e.target.closest('[data-wvn-act]');
+      if (act) {
+        var a = act.getAttribute('data-wvn-act');
+        if (a === 'readall') _nMarkAll();
+        if (a === 'retry') { NS.error = false; _nRenderPanel(); _nRefresh(true); }
+        return;
+      }
+      var tab = e.target.closest('.wvn-tab');
+      if (tab) { _np.filter = tab.getAttribute('data-f'); _nRenderPanel(); return; }
+      if (e.target.closest('.wvn-foot')) { setTimeout(function () { _closeNotifPanel(false); }, 0); return; }
+      var row = e.target.closest('.wvn-row');
+      if (!row) return;
+      var n = _nFind(row.getAttribute('data-id'));
+      var href = row.getAttribute('href');
+      if (href && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1)) { if (n) _nMarkRead(n); return; }
+      e.preventDefault();
+      _nOpenItem(n, href);
+    });
+    el.addEventListener('keydown', function (e) {
+      var row = e.target.closest && e.target.closest('.wvn-row');
+      if (row && !row.getAttribute('href') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); row.click(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        var rows = Array.prototype.slice.call(el.querySelectorAll('.wvn-row'));
+        if (!rows.length) return;
+        e.preventDefault();
+        var i = rows.indexOf(row);
+        var next = e.key === 'ArrowDown' ? rows[Math.min(rows.length - 1, i + 1)] : rows[Math.max(0, i - 1)];
+        if (i < 0) next = rows[0];
+        next.focus();
+      }
+    });
+
+    _nRenderPanel();
+    _nRefresh(false);
+    try { (viaKeyboard ? (el.querySelector('.wvn-tab.on') || el) : el).focus({ preventScroll: true }); } catch (_) {}
+  }
+
+  function _closeNotifPanel(restoreFocus) {
+    if (!_np.el) return;
+    if (_np.el.parentNode) _np.el.parentNode.removeChild(_np.el);
+    if (_np.scrim && _np.scrim.parentNode) _np.scrim.parentNode.removeChild(_np.scrim);
+    _np.el = null; _np.scrim = null;
+    var bell = document.getElementById('wv-notif-btn');
+    if (bell) {
+      bell.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) { try { bell.focus(); } catch (_) {} }
+    }
+  }
+
+  window._toggleNotifPanel = function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (_np.el) { _closeNotifPanel(!!(e && e.detail === 0)); return; }
+    _closeAcctMenu(false);
+    _openNotifPanel(!!(e && e.detail === 0));
   };
 
-  // Poll for new notifications every 60s while logged in
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (_np.el && !_np.el.contains(t) && !(t.closest && t.closest('#wv-notif-btn, .wv-toast'))) _closeNotifPanel(false);
+    if (_acct && !_acct.el.contains(t) && !(t.closest && t.closest('#wv-avatar-btn, #wv-more-btn'))) _closeAcctMenu(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (_acct) { _closeAcctMenu(true); return; }
+    if (_np.el) { _closeNotifPanel(true); return; }
+    var drawer = document.getElementById('wv-drawer');
+    if (drawer && drawer.classList.contains('open') && typeof window.closeMobileDrawer === 'function') window.closeMobileDrawer();
+  });
+  var _shellVW = window.innerWidth;
+  window.addEventListener('resize', function () {
+    if (window.innerWidth === _shellVW) { if (_np.el) _nPlacePanel(); return; }
+    _shellVW = window.innerWidth;
+    _closeShellOverlays();
+  });
+  window.addEventListener('popstate', function () { _closeShellOverlays(); });
+
+  window.wvNotif = {
+    state: NS,
+    filters: N_FILTERS,
+    typesFor: _nTypesFor,
+    meta: _nMeta,
+    iconHTML: _nIconHTML,
+    icons: NIC,
+    href: _notifHref,
+    ago: _nAgo,
+    abs: _nAbs,
+    day: _nDay,
+    esc: _escN,
+    list: _nList,
+    refresh: function () { return _nRefresh(true); },
+    poll: function () { _nPoll(true); },
+    markRead: _nMarkRead,
+    markUnread: _nMarkUnread,
+    markAll: _nMarkAll,
+    remove: _nRemove,
+    clearRead: _nClearRead,
+    openPanel: function () { if (!_np.el) _openNotifPanel(false); },
+    closePanel: function () { _closeNotifPanel(false); },
+  };
+
+  // Poll the cheap unread count once a minute while the tab is visible;
+  // the list itself is only fetched when the count moves or the panel opens.
   (function _startNotifPolling() {
     if (!localStorage.getItem('token')) return;
-    _loadNotifications();
-    setInterval(function() {
-      if (localStorage.getItem('token')) _loadNotifications();
-    }, 180000);
+    _nPoll(true);
+    _nPollTimer = setInterval(function () { if (localStorage.getItem('token')) _nPoll(false); }, 60000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && Date.now() - NS.polledAt > 15000) _nPoll(false);
+    });
   })();
 
   // ── Mobile drawer ─────────────────────────────────────────────
   window.openMobileDrawer = function() {
     var drawer = document.getElementById('wv-drawer');
     var overlay = document.getElementById('wv-drawer-overlay');
-    if (drawer) drawer.classList.add('open');
+    _closeShellOverlays();
+    if (drawer) { drawer.classList.add('open'); drawer.style.transform = ''; }
     if (overlay) overlay.classList.add('show');
+    var mb = document.getElementById('wv-menu-btn');
+    if (mb) mb.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
   };
   window.closeMobileDrawer = function() {
     var drawer = document.getElementById('wv-drawer');
     var overlay = document.getElementById('wv-drawer-overlay');
-    if (drawer) drawer.classList.remove('open');
-    if (overlay) overlay.classList.remove('show');
+    if (drawer) { drawer.classList.remove('open'); drawer.style.transform = ''; drawer.style.transition = ''; }
+    if (overlay) { overlay.classList.remove('show'); overlay.style.opacity = ''; }
+    var mb = document.getElementById('wv-menu-btn');
+    if (mb) mb.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
   };
+  // Swipe the drawer back toward the edge to close it, the way native side
+  // menus work. Vertical scrolls inside the drawer are left alone.
+  function _wireDrawerSwipe(drawer) {
+    if (!drawer || drawer._wvSwipe) return;
+    drawer._wvSwipe = true;
+    var x0 = 0, y0 = 0, dx = 0, mode = '';
+    drawer.addEventListener('touchstart', function (e) {
+      if (!drawer.classList.contains('open') || e.touches.length !== 1) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; mode = 'wait';
+    }, { passive: true });
+    drawer.addEventListener('touchmove', function (e) {
+      if (!mode) return;
+      var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (mode === 'wait') {
+        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+        mode = (mx < 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? 'swipe' : '';
+        if (mode !== 'swipe') return;
+        drawer.style.transition = 'none';
+      }
+      dx = Math.min(0, mx);
+      drawer.style.transform = 'translate3d(' + dx + 'px,0,0)';
+      var ov = document.getElementById('wv-drawer-overlay');
+      if (ov) ov.style.opacity = String(Math.max(0, 1 + dx / (drawer.offsetWidth || 300)));
+    }, { passive: true });
+    drawer.addEventListener('touchend', function () {
+      if (mode !== 'swipe') { mode = ''; return; }
+      mode = '';
+      drawer.style.transition = '';
+      var ov = document.getElementById('wv-drawer-overlay');
+      if (ov) ov.style.opacity = '';
+      if (dx < -Math.min(90, (drawer.offsetWidth || 300) * 0.3)) window.closeMobileDrawer();
+      else drawer.style.transform = '';
+    });
+  }
 
   // Set the fixed page background to an image, blurred + darkened — the same
   // Spotify/Apple-Music look the home hero uses. Pass a falsy url to clear it
@@ -781,12 +1573,12 @@
   // Two of them are full skins that restyle the shell, not just recolour it.
   // Applied to body + app root without a reload, and available logged out.
   var THEMES = {
-    dark:    { label: 'Default',      base: 'dark',  meta: '#0d0d15' },
-    light:   { label: 'White',        base: 'light', meta: '#f7f7fb' },
-    spotify: { label: 'Spotify',      base: 'dark',  meta: '#000000' },
-    apple:   { label: 'Apple Music',  base: 'light', meta: '#fafafa' },
+    dark:    { label: 'Default',      base: 'dark',  meta: '#121212' },
+    light:   { label: 'White',        base: 'light', meta: '#f6f6f6' },
+    spotify: { label: 'Spotify',      base: 'dark',  meta: '#121212' },
+    apple:   { label: 'Apple Music',  base: 'light', meta: '#ffffff' },
     wave:    { label: 'Waverunners',  base: 'dark',  meta: '#04111f', members: true },
-    system:  { label: 'Match device', base: 'dark',  meta: '#0d0d15' },
+    system:  { label: 'Match device', base: 'dark',  meta: '#121212' },
   };
   var SKINS = ['spotify', 'apple', 'wave'];
   var THEME_ORDER = ['dark', 'light', 'spotify', 'apple', 'wave', 'system'];
@@ -914,8 +1706,9 @@
     _applyPlayerSkin();
     if (now === _lastSkin) return;
     _lastSkin = now;
+    _closeShellOverlays();
     var top = document.getElementById('wv-topbar');
-    if (top) top.innerHTML = buildTopbarHTML();
+    if (top) { top.innerHTML = buildTopbarHTML(); _navBtnsState(); }
     var side = document.getElementById('wv-sidebar');
     if (side) side.innerHTML = buildSidebarHTML();
     var drawer = document.getElementById('wv-drawer');
@@ -958,6 +1751,15 @@
 
     var themePref = _storedTheme();
     var theme = themePref === 'system' ? _systemTheme() : themePref;
+
+    // The mobile browser chrome follows the theme; _paintTheme keeps it in step.
+    if (!document.querySelector('meta[name="theme-color"]')) {
+      var tc = document.createElement('meta');
+      tc.name = 'theme-color';
+      document.head.appendChild(tc);
+    }
+    var tcm = document.querySelector('meta[name="theme-color"]');
+    if (tcm) tcm.setAttribute('content', (THEMES[theme] || THEMES.dark).meta);
 
     var isAuthPage = location.pathname.endsWith('/login') || location.pathname.endsWith('/register');
 
@@ -1040,6 +1842,8 @@
     // drawer level: its contents are rebuilt on login/logout and after
     // library loads, which used to drop per-link handlers and leave the
     // drawer sitting open over the new page.
+    _wireDrawerSwipe(document.getElementById('wv-drawer'));
+    _navBtnsState();
     ['wv-drawer', 'wv-mobile-tabs'].forEach(function(id) {
       var host = document.getElementById(id);
       if (!host) return;
@@ -1143,11 +1947,12 @@
   // ── updateNav — called after auth state changes ───────────────
   window.updateNav = function() {
     var topbar = document.getElementById('wv-topbar');
-    if (topbar) { topbar.innerHTML = buildTopbarHTML(); if (window._checkMobileTopbar) window._checkMobileTopbar(); }
+    _closeShellOverlays();
+    if (topbar) { topbar.innerHTML = buildTopbarHTML(); if (window._checkMobileTopbar) window._checkMobileTopbar(); _navBtnsState(); }
     var sidebar = document.getElementById('wv-sidebar');
     if (sidebar) sidebar.innerHTML = buildSidebarHTML();
     var drawer = document.getElementById('wv-drawer');
-    if (drawer) drawer.innerHTML = buildSidebarHTML();
+    if (drawer) drawer.innerHTML = buildSidebarHTML(true);
     var tabs = document.getElementById('wv-mobile-tabs');
     if (tabs) tabs.innerHTML = buildMobileTabsHTML();
     _renderLib();
@@ -1224,7 +2029,7 @@
         var sidebar = document.getElementById('wv-sidebar');
         if (sidebar) sidebar.innerHTML = buildSidebarHTML();
         var drawer = document.getElementById('wv-drawer');
-        if (drawer) drawer.innerHTML = buildSidebarHTML();
+        if (drawer) drawer.innerHTML = buildSidebarHTML(true);
         _renderLib();
       }
     });
@@ -1256,15 +2061,19 @@
     }
     return (px || 320) * DPR;
   }
+  // Hosts that already failed through the CDN go straight to their origin.
+  var badHosts = {};
+  var cdnOk = 0;
   function apply(img) {
-    if (img._wvCdn) return;
+    if (img._wvCdn || img._wvFallback) return;
     var src = img.getAttribute('src') || '';
     if (!/^https?:\/\//i.test(src) || /^https?:\/\/wsrv\.nl\//i.test(src)) return;
-    try { var su = new URL(src); if (su.origin === location.origin) return; if (NO_CDN.test(su.hostname)) return; } catch (_) { return; }
+    var host = '';
+    try { var su = new URL(src); if (su.origin === location.origin) return; host = su.hostname; if (NO_CDN.test(host)) return; } catch (_) { return; }
     if (img.hasAttribute('data-nocdn')) return;
     img._wvCdn = true;
     img.dataset.wvOrig = src;
-    if (cdnOff) {
+    if (cdnOff || badHosts[host] >= 2) {
       if (!img.getAttribute('loading')) img.loading = 'lazy';
       if (!img.getAttribute('decoding')) img.decoding = 'async';
       return;
@@ -1272,22 +2081,41 @@
     img.src = window.wvImg(src, sizeFor(img));
     if (!img.getAttribute('loading')) img.loading = 'lazy';
     if (!img.getAttribute('decoding')) img.decoding = 'async';
-    img.addEventListener('error', function onErr() {
-      img.removeEventListener('error', onErr);
-      if (img.dataset.wvOrig && img.src !== img.dataset.wvOrig) {
-        cdnFails++;
-        if (cdnFails >= 4 && !cdnOff) {
-          cdnOff = true;
-          try { sessionStorage.setItem('wv_cdn_off', '1'); } catch (_) {}
-        }
-        img.src = img.dataset.wvOrig;
-      }
-    });
   }
+  // A CDN miss falls back to the original once. This runs in the capture
+  // phase, ahead of any inline onerror="this.remove()", so a cover the CDN
+  // could not fetch still shows instead of disappearing. If the original
+  // fails too, the inline handler gets its turn as before.
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    if (!img || img.tagName !== 'IMG' || img._wvFallback) return;
+    var orig = img.dataset && img.dataset.wvOrig;
+    var cur = img.getAttribute('src') || '';
+    if (!orig || cur === orig || !/^https?:\/\/wsrv\.nl\//i.test(cur)) return;
+    e.stopImmediatePropagation();
+    img._wvFallback = true;
+    try { var bh = new URL(orig).hostname; badHosts[bh] = (badHosts[bh] || 0) + 1; } catch (_) {}
+    cdnFails++;
+    if (cdnFails >= 4 && !cdnOk && !cdnOff) {
+      cdnOff = true;
+      try { sessionStorage.setItem('wv_cdn_off', '1'); } catch (_) {}
+    }
+    img.src = orig;
+  }, true);
+  document.addEventListener('load', function (e) {
+    var img = e.target;
+    if (img && img.tagName === 'IMG' && !cdnOk && /^https?:\/\/wsrv\.nl\//i.test(img.currentSrc || img.src || '')) cdnOk++;
+  }, true);
   function scan(root) { (root.querySelectorAll ? root.querySelectorAll('img[src]') : []).forEach(apply); if (root.tagName === 'IMG') apply(root); }
   new MutationObserver(function (ms) {
     ms.forEach(function (m) {
-      if (m.type === 'attributes') { m.target._wvCdn = false; apply(m.target); return; }
+      if (m.type === 'attributes') {
+        if (m.target._wvFallback) {
+          if ((m.target.getAttribute('src') || '') === m.target.dataset.wvOrig) return;
+          m.target._wvFallback = false;
+        }
+        m.target._wvCdn = false; apply(m.target); return;
+      }
       m.addedNodes.forEach(function (n) { if (n.nodeType === 1) scan(n); });
     });
   }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
@@ -1740,20 +2568,45 @@ window.wvShowError = function (el, err, retryAttr) {
     document.body.appendChild(host);
     return host;
   }
-  window.wvToast = function (message, kind, ms) {
+  // opts (optional): { onClick, icon (trusted svg markup), title, body, action }.
+  // Title and body are set as text, never as markup.
+  window.wvToast = function (message, kind, ms, opts) {
     if (!message) return;
+    opts = opts || {};
     var h = ensureHost();
     var t = document.createElement('div');
-    t.className = 'wv-toast' + (kind ? ' wv-toast-' + kind : '');
-    t.textContent = String(message);
+    t.className = 'wv-toast' + (kind ? ' wv-toast-' + kind : '') + (opts.onClick ? ' wv-toast-action' : '');
+    if (opts.icon || opts.title) {
+      t.classList.add('wv-toast-rich');
+      if (opts.icon) {
+        var ic = document.createElement('span');
+        ic.innerHTML = opts.icon;
+        while (ic.firstChild) t.appendChild(ic.firstChild);
+      }
+      var tx = document.createElement('span');
+      tx.className = 'wvt-txt';
+      var b = document.createElement('b');
+      b.textContent = String(opts.title || message);
+      tx.appendChild(b);
+      if (opts.body) { var sb = document.createElement('span'); sb.textContent = String(opts.body); tx.appendChild(sb); }
+      t.appendChild(tx);
+      if (opts.action) { var go = document.createElement('span'); go.className = 'wvt-go'; go.textContent = String(opts.action); t.appendChild(go); }
+    } else {
+      t.textContent = String(message);
+    }
+    if (opts.onClick) { t.setAttribute('role', 'button'); t.tabIndex = 0; }
     h.appendChild(t);
     requestAnimationFrame(function () { t.classList.add('in'); });
     var life = ms || (kind === 'error' ? 5200 : 3200);
+    var dead = false;
     var kill = function () {
+      if (dead) return;
+      dead = true;
       t.classList.remove('in');
       setTimeout(function () { t.remove(); if (host && !host.childElementCount) { host.remove(); host = null; } }, 220);
     };
-    t.addEventListener('click', kill);
+    t.addEventListener('click', function () { kill(); if (opts.onClick) { try { opts.onClick(); } catch (_) {} } });
+    t.addEventListener('keydown', function (e) { if (opts.onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.click(); } });
     setTimeout(kill, life);
     while (h.childElementCount > 4) h.firstElementChild.remove();
   };
@@ -1794,7 +2647,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key !== 't' && e.key !== 'T') return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   var t = e.target;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
   if (typeof window.wvOpenThemePicker !== 'function') return;
   e.preventDefault();
   window.wvOpenThemePicker();
@@ -1962,6 +2815,10 @@ document.addEventListener('DOMContentLoaded', function () {
       _people = (d.online || []).filter(function (p) {
         return p && p.username && p.id !== d.me;
       });
+      if (d.me && typeof window._wvSetMyAvatar === 'function') {
+        var mine = (d.online || []).filter(function (p) { return p && p.id === d.me; })[0];
+        if (mine) window._wvSetMyAvatar(d.me, mine.avatar || '');
+      }
       render();
     } catch (_) {}
   }

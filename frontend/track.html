@@ -7,13 +7,241 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style>
+    .trk-page { padding-bottom: 56px; }
+    .trk-sk { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
+    .trk-sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--hair-strong), transparent); animation: trk-shine 1.4s ease-in-out infinite; }
+    @keyframes trk-shine { to { transform: translateX(100%); } }
+
+    .trk-top { position: relative; isolation: isolate; }
+    .trk-glow { position: absolute; z-index: -1; inset: -30px -16px -40px; pointer-events: none; opacity: 1; transition: opacity .6s ease;
+      background:
+        radial-gradient(46% 62% at 16% 38%, hsla(var(--trk-h, 262), 72%, 56%, .34), transparent 72%),
+        radial-gradient(38% 52% at 62% 12%, hsla(var(--trk-h2, 300), 72%, 52%, .16), transparent 72%); }
+    .theme-light .trk-glow { opacity: .6; }
+    .trk-hero { display: flex; gap: 32px; align-items: flex-end; padding: 40px 0 22px; }
+    .trk-cover { width: 240px; height: 240px; flex-shrink: 0; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface-2);
+      box-shadow: 0 30px 60px -20px hsla(var(--trk-h, 262), 65%, 32%, .75), 0 12px 28px rgba(0,0,0,.34); }
+    .theme-light .trk-cover { box-shadow: 0 28px 54px -20px hsla(var(--trk-h, 262), 60%, 42%, .5), 0 8px 22px rgba(0,0,0,.12); }
+    .trk-cover > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .trk-cover-play { position: absolute; right: 12px; bottom: 12px; width: 54px; height: 54px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+      background: var(--brand); color: var(--on-brand, #fff); box-shadow: 0 10px 24px rgba(0,0,0,.4); opacity: 0; transform: translateY(8px) scale(.94); transition: opacity .2s ease, transform .25s cubic-bezier(.16,1,.3,1); }
+    .trk-cover-play svg { width: 22px; height: 22px; }
+    .trk-cover:hover .trk-cover-play, .trk-cover-play:focus-visible, .trk-cover.is-cur .trk-cover-play { opacity: 1; transform: none; }
+    .trk-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; }
+    .trk-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-2); }
+    .trk-eyebrow .badge { text-transform: none; letter-spacing: .01em; }
+    .trk-eq { display: none; align-items: flex-end; gap: 2px; height: 12px; color: var(--brand); }
+    .trk-eq i { width: 3px; border-radius: 1px; background: currentColor; animation: trk-eq 1s ease-in-out infinite; }
+    .trk-eq i:nth-child(1) { height: 60%; } .trk-eq i:nth-child(2) { height: 100%; animation-delay: -.35s; } .trk-eq i:nth-child(3) { height: 45%; animation-delay: -.7s; }
+    @keyframes trk-eq { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+    .trk-eq i { transform-origin: bottom; }
+    .trk-top.is-playing .trk-eq { display: inline-flex; }
+    .trk-now { display: none; color: var(--brand); }
+    .trk-top.is-playing .trk-now { display: inline; }
+    .trk-title { margin: 0; font-size: clamp(30px, 4.6vw, 60px); font-weight: 900; letter-spacing: -.045em; line-height: 1.02; color: var(--text); text-wrap: balance; overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; padding-bottom: .04em; }
+    .trk-byline { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 14.5px; color: var(--text-2); }
+    .trk-byline a { color: var(--text); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+    .trk-byline a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .trk-byline .trk-comp-a { color: var(--text-2); font-weight: 600; }
+    .trk-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,.92); }
+    .trk-dot { color: var(--text-3); }
+    .trk-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; font-size: 13.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .trk-stats > span + span::before { content: "•"; margin: 0 9px; color: var(--text-3); opacity: .7; }
+    .trk-stats b { color: var(--text-2); font-weight: 700; }
+    .trk-rate { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 32px; }
+    .trk-rate #rating-widget button { min-width: 32px; min-height: 32px; }
+    .trk-deep { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px 0 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--brand) 55%, transparent); background: var(--brand-bg); color: var(--brand); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; transition: transform .15s ease, background .15s ease; }
+    .trk-deep:hover { transform: translateY(-1px); }
+    .trk-deep svg { width: 18px; height: 18px; }
+    .trk-deep small { font-weight: 600; color: var(--text-2); font-size: 12.5px; }
+
+    .trk-sentinel { height: 1px; margin-bottom: -1px; }
+    .trk-bar { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 10px; margin: 0 -16px; padding: 12px 16px; transition: background .2s ease, box-shadow .2s ease; }
+    .trk-bar.is-stuck { background: var(--page-bg); background: color-mix(in srgb, var(--page-bg) 86%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); box-shadow: 0 1px 0 var(--hair), 0 10px 30px -18px rgba(0,0,0,.5); }
+    .trk-play { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 48px; min-width: 116px; padding: 0 24px 0 18px; border-radius: 999px; border: 0; cursor: pointer; flex-shrink: 0;
+      background: var(--brand); color: var(--on-brand, #fff); font: inherit; font-size: 15px; font-weight: 800; letter-spacing: -.01em;
+      box-shadow: 0 10px 26px -10px color-mix(in srgb, var(--brand) 80%, transparent); transition: transform .18s cubic-bezier(.16,1,.3,1), filter .15s ease; }
+    .trk-play:hover { filter: brightness(1.07); transform: scale(1.03); }
+    .trk-play:active { transform: scale(.97); }
+    .trk-play svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .trk-mini { display: none; align-items: center; gap: 10px; min-width: 0; flex: 1; opacity: 0; transition: opacity .2s ease; }
+    .trk-bar.is-stuck .trk-mini { display: flex; opacity: 1; }
+    .trk-mini img, .trk-mini .trk-mini-c { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+    .trk-mini span { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em; }
+    .trk-ib { width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); display: inline-grid; place-items: center; cursor: pointer; text-decoration: none; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    .trk-ib:hover { background: var(--glass-pill-bg-hover, var(--surface-hover)); border-color: transparent; }
+    .trk-ib:active { transform: scale(.94); }
+    .trk-ib svg { width: 19px; height: 19px; }
+    .trk-pill { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; flex-shrink: 0; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s ease, border-color .15s ease, transform .15s ease; font-variant-numeric: tabular-nums; }
+    .trk-pill:hover { background: var(--glass-pill-bg-hover, var(--surface-hover)); border-color: transparent; }
+    .trk-pill:active { transform: scale(.97); }
+    .trk-pill svg { width: 17px; height: 17px; }
+    .trk-like.on { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 45%, transparent); background: var(--brand-bg); }
+    .trk-like.on svg { animation: trk-pop .4s cubic-bezier(.16,1,.3,1); }
+    @keyframes trk-pop { 0% { transform: scale(.6); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+    .trk-bar.is-stuck .trk-hide-stuck { display: none; }
+    .trk-more-wrap { position: relative; flex-shrink: 0; }
+    .trk-menu { position: absolute; z-index: 40; top: calc(100% + 8px); left: 0; min-width: 240px; padding: 6px; border-radius: 14px; background: var(--elevated, var(--surface-2)); border: 1px solid var(--hair-strong);
+      box-shadow: 0 22px 60px rgba(0,0,0,.42), 0 2px 8px rgba(0,0,0,.18); animation: trk-menu-in .16s ease-out; }
+    .trk-menu.right { left: auto; right: 0; }
+    .trk-menu.up { top: auto; bottom: calc(100% + 8px); }
+    @keyframes trk-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+    .trk-menu button, .trk-menu a { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 0 12px; border-radius: 9px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; text-decoration: none; white-space: nowrap; }
+    .trk-menu button:hover, .trk-menu a:hover, .trk-menu button:focus-visible, .trk-menu a:focus-visible { background: var(--surface-hover, var(--hair)); outline: none; }
+    .trk-menu svg { width: 18px; height: 18px; color: var(--text-2); flex-shrink: 0; }
+    .trk-menu hr { border: 0; border-top: 1px solid var(--hair); margin: 5px 8px; }
+    .trk-menu-ov { position: fixed; inset: 0; z-index: 9398; background: rgba(0,0,0,.5); animation: trk-fade .2s ease; }
+    @keyframes trk-fade { from { opacity: 0; } }
+    .trk-menu.sheet { position: fixed; z-index: 9399; left: 8px; right: 8px; top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); min-width: 0; max-height: calc(100dvh - 80px); overflow-y: auto; padding: 8px; border-radius: 20px; animation: trk-sheet-in .28s cubic-bezier(.16,1,.3,1); }
+    @keyframes trk-sheet-in { from { transform: translateY(40px); opacity: 0; } }
+    .trk-menu.sheet button, .trk-menu.sheet a { min-height: 48px; font-size: 15px; }
+    .trk-menu-head { display: flex; align-items: center; gap: 12px; padding: 8px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--hair); }
+    .trk-menu-head img, .trk-menu-head span { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+    .trk-menu-head div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .trk-menu-head b { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .trk-menu-head small { font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .trk-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; margin-top: 18px; align-items: start; }
+    .trk-main { display: flex; flex-direction: column; gap: 36px; min-width: 0; }
+    .trk-aside { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 84px; min-width: 0; }
+    .trk-h2 { font-size: 20px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--text); display: flex; align-items: baseline; gap: 8px; }
+    .trk-h2 .trk-count { font-size: 14px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+    .trk-lyr { position: relative; border-radius: 18px; padding: 20px 22px 8px; overflow: hidden; isolation: isolate; border: 1px solid var(--hair);
+      background: linear-gradient(165deg, hsla(var(--trk-h, 262), 48%, 34%, .5), hsla(var(--trk-h2, 300), 40%, 16%, .28) 70%), var(--surface); }
+    .theme-light .trk-lyr { background: linear-gradient(165deg, hsla(var(--trk-h, 262), 70%, 88%, .9), hsla(var(--trk-h2, 300), 60%, 94%, .6) 70%), var(--surface); }
+    .trk-lyr-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .trk-lyr-src { font-size: 12px; font-weight: 700; color: var(--text-2); padding: 3px 9px; border-radius: 999px; background: var(--hair); }
+    .trk-lyr-tools { margin-left: auto; display: flex; gap: 6px; }
+    .trk-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: background .15s ease; white-space: nowrap; }
+    .trk-chip:hover { background: var(--hair); }
+    .trk-chip[aria-pressed="true"] { background: var(--text); color: var(--page-bg); border-color: transparent; }
+    .trk-chip svg { width: 15px; height: 15px; }
+    .trk-lyr-hint { font-size: 12.5px; color: var(--text-2); margin: -2px 0 8px; display: none; }
+    .trk-lyr.is-sharing .trk-lyr-hint { display: block; }
+    .trk-lyr-scroll { position: relative; max-height: 440px; overflow-y: auto; overscroll-behavior: contain; margin: 0 -22px; padding: 18px 22px 150px; scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 90px), transparent); mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 90px), transparent); }
+    .trk-lyr-scroll::-webkit-scrollbar { display: none; }
+    .trk-lyr-scroll.static { padding-bottom: 60px; }
+    .trk-ll { display: block; width: calc(100% + 20px); margin: 0 -10px; padding: 7px 10px; border: 0; border-radius: 10px; background: transparent; text-align: left; cursor: pointer;
+      font: inherit; font-size: 23px; font-weight: 800; letter-spacing: -.022em; line-height: 1.3; color: var(--text); opacity: .82; transition: opacity .3s ease, transform .3s ease, background .15s ease; overflow-wrap: anywhere; }
+    .trk-ll:hover { background: var(--hair); }
+    .trk-lyr.is-live .trk-ll { opacity: .38; }
+    .trk-lyr.is-live .trk-ll.is-past { opacity: .55; }
+    .trk-lyr.is-live .trk-ll.is-on { opacity: 1; }
+    .trk-lyr.is-live .trk-ll.is-on .trk-w { opacity: .5; transition: opacity .18s ease; }
+    .trk-lyr.is-live .trk-ll.is-on .trk-w.on { opacity: 1; }
+    .trk-ll.is-target { background: var(--brand-bg); }
+    .trk-lyr.is-sharing .trk-ll { opacity: 1; }
+    .trk-lyr.is-sharing .trk-ll:hover { background: var(--brand-bg); }
+    .trk-lyr-static .trk-ll { cursor: default; }
+    .trk-lyr-static .trk-ll:hover { background: transparent; }
+    .trk-lyr-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 0 18px; }
+    .trk-lyr-empty b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .trk-lyr-empty span { font-size: 14px; color: var(--text-2); line-height: 1.5; max-width: 420px; }
+    .trk-lyr-empty .trk-pill { margin-top: 8px; }
+    .trk-lyr-sk { display: flex; flex-direction: column; gap: 14px; padding: 12px 0 26px; }
+
+    .trk-tl { margin: 4px 0 20px; padding: 14px 16px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--hair); }
+    .trk-tl-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--text-3); margin-bottom: 12px; }
+    .trk-tl-top b { color: var(--text-2); font-weight: 700; }
+    .trk-tl-rel { position: relative; }
+    .trk-tl-bar { position: relative; height: 26px; cursor: pointer; touch-action: manipulation; }
+    .trk-tl-bar::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--hair-strong); }
+    .trk-tl-fill { position: absolute; left: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; background: var(--brand); width: 0; pointer-events: none; }
+    .trk-tl-knob { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; display: none; }
+    .trk-tl.is-cur .trk-tl-knob { display: block; }
+    .trk-tl-dot { position: absolute; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; z-index: 2; }
+    .trk-tl-dot::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px var(--surface); transition: transform .15s ease; }
+    .trk-tl-dot:hover::after, .trk-tl-dot:focus-visible::after { transform: scale(1.5); }
+    .trk-tl-times { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-3); margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .trk-bubble { display: none; position: absolute; bottom: 30px; transform: translateX(-50%); max-width: 240px; z-index: 5; pointer-events: none;
+      background: var(--elevated, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--brand) 60%, transparent); border-radius: 12px; padding: 8px 11px; box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+
+    .trk-card { background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; padding: 16px; }
+    .trk-comp { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; transition: background .15s ease, transform .15s ease; }
+    .trk-comp:hover { background: var(--surface-hover, var(--surface-2)); }
+    .trk-comp-cover { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+    .trk-k { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+    .trk-comp-t { font-size: 15.5px; font-weight: 800; color: var(--text); letter-spacing: -.01em; line-height: 1.25; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+    .trk-comp-s { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+    .trk-chev { margin-left: auto; color: var(--text-3); flex-shrink: 0; }
+    .trk-about { display: flex; flex-direction: column; gap: 14px; }
+    .trk-creator { display: flex; align-items: center; gap: 12px; }
+    .trk-creator .trk-avatar { width: 48px; height: 48px; font-size: 18px; }
+    .trk-creator-n { font-size: 15.5px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trk-desc { font-size: 14px; color: var(--text-2); line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; margin: 0; }
+    .trk-facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 13.5px; margin: 0; }
+    .trk-facts dt { color: var(--text-3); }
+    .trk-facts dd { margin: 0; color: var(--text); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trk-below { margin-top: 12px; }
+
+    .trk-err { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 80px 16px; }
+    .trk-err-ic { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); margin-bottom: 6px; }
+    .trk-err b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+    .trk-err span { font-size: 14.5px; color: var(--text-2); max-width: 380px; line-height: 1.5; }
+    .trk-err .trk-err-a { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+
+    .trk-page :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    .trk-page [hidden] { display: none !important; }
+    .trk-mob-only { display: none !important; }
+    .trk-desc.trk-clamp { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+    .trk-desc.trk-clamp.is-open { display: block; -webkit-line-clamp: unset; overflow: visible; }
+
+    @media (max-width: 960px) {
+      .trk-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+      .trk-aside { position: static; order: -1; }
+      .trk-about .trk-creator, .trk-about .trk-facts { display: none; }
+      .trk-about.trk-about-nodesc { display: none; }
+    }
+    @media (max-width: 768px) {
+      .trk-page.container { padding: 0; }
+      .trk-glow { inset: -40px -16px -20px; }
+      .trk-hero { flex-direction: column; align-items: stretch; gap: 20px; padding: 16px 0 10px; }
+      .trk-cover { width: 100%; height: auto; aspect-ratio: 1 / 1; border-radius: 10px; }
+      .trk-cover-play { opacity: 1; transform: none; width: 56px; height: 56px; }
+      .trk-title { font-size: clamp(26px, 8vw, 36px); }
+      .trk-bar { gap: 8px; padding: 10px 16px; }
+      .trk-desk-only { display: none !important; }
+      .trk-mob-only { display: inline-grid !important; }
+      .trk-play { min-width: 104px; padding: 0 20px 0 16px; }
+      .trk-lyr { padding: 16px 16px 6px; }
+      .trk-lyr-scroll { margin: 0 -16px; padding: 14px 16px 120px; max-height: 380px; }
+      .trk-ll { font-size: 20px; }
+      .trk-lyr-tools .trk-chip span { display: none; }
+      .trk-lyr-tools .trk-chip { width: 40px; height: 40px; padding: 0; justify-content: center; }
+      .trk-bar.is-stuck .trk-play { min-width: 48px; width: 48px; padding: 0; }
+      .trk-bar.is-stuck .trk-play span { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .trk-sk::after, .trk-eq i, .trk-like.on svg, .trk-menu, .trk-menu-ov { animation: none !important; }
+      .trk-ll, .trk-play, .trk-cover-play, .trk-bar, .trk-glow { transition: none !important; }
+    }
+  </style>
 </head>
 <body>
 
 <div id="view">
-<div class="container" style="max-width:1100px;">
-  <div id="track-container">
-    <div class="loading"><div class="spinner"></div></div>
+<div class="container trk-page" style="max-width:1100px;">
+  <div id="track-container" aria-busy="true">
+    <div class="trk-skel" aria-hidden="true">
+      <div class="trk-hero">
+        <div class="trk-cover trk-sk"></div>
+        <div class="trk-info">
+          <div class="trk-sk" style="width:90px;height:12px"></div>
+          <div class="trk-sk" style="width:min(520px,86%);height:46px;border-radius:10px"></div>
+          <div class="trk-sk" style="width:230px;height:16px"></div>
+          <div class="trk-sk" style="width:280px;height:14px"></div>
+        </div>
+      </div>
+      <div class="trk-bar"><div class="trk-sk" style="width:118px;height:48px;border-radius:999px"></div><div class="trk-sk" style="width:76px;height:42px;border-radius:999px"></div><div class="trk-sk" style="width:42px;height:42px;border-radius:50%"></div><div class="trk-sk" style="width:42px;height:42px;border-radius:50%"></div></div>
+      <div class="trk-grid">
+        <div class="trk-main"><div class="trk-sk" style="height:320px;border-radius:18px"></div></div>
+        <div class="trk-aside"><div class="trk-sk" style="height:98px;border-radius:16px"></div></div>
+      </div>
+    </div>
   </div>
 </div>
 </div><!-- /view -->
@@ -26,12 +254,24 @@
 <script src="/js/ratings.js?v=6288d60cd337"></script>
 <script>
   initPlayer();
+  if (!Array.isArray(window._pageCleanup)) window._pageCleanup = [];
 
   var trackId = new URLSearchParams(location.search).get('id');
   var track = null;
   var liked = false;
   // Map commentId -> user's vote (1 or -1 or 0)
   var myVotes = {};
+  var _trkGen = window._wvNavGen || 0;
+  var _trk = {
+    dur: 0, lyr: null, lyrIdx: -1, shareMode: false, userScrollAt: 0, stuck: false,
+    commentsN: null, cards: {}, menuDoc: null,
+    deepT: _trkParseT(new URLSearchParams(location.search).get('t')),
+  };
+
+  // Anything a previous visit to this page left running goes first: the
+  // router re-runs this script on every track-to-track navigation.
+  if (window._trkTicker) { clearInterval(window._trkTicker); window._trkTicker = null; }
+  if (window._trkProbeEl) { try { window._trkProbeEl.removeAttribute('src'); window._trkProbeEl.load(); } catch (_) {} window._trkProbeEl = null; }
 
   // Without an id there is nothing to load; go home instead of asking the
   // server for a record that cannot exist.
@@ -41,38 +281,106 @@
   function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function _te(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function _trkParseT(v) {
+    if (v == null || v === '') return 0;
+    var s = String(v).trim().toLowerCase(), n = NaN;
+    if (/^\d+(\.\d+)?$/.test(s)) n = parseFloat(s);
+    else if (/^\d+(:\d{1,2}){1,2}$/.test(s)) n = s.split(':').reduce(function (a, p) { return a * 60 + parseInt(p, 10); }, 0);
+    else {
+      var m = s.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+      if (m && (m[1] || m[2] || m[3])) n = (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
+    }
+    return isFinite(n) && n > 0 && n < 36000 ? n : 0;
+  }
+  function _trkAlive() { return (window._wvNavGen || 0) === _trkGen && !!document.getElementById('track-container'); }
+  function _trkIsCur() { return !!(track && typeof currentTrack !== 'undefined' && currentTrack && currentTrack.id === track.id && typeof audio !== 'undefined' && audio); }
+  function _trkCover() { return (track && (track.cover_url || (track.albums && track.albums.cover_url))) || ''; }
+  function _trkImg(url, px) { return url ? (typeof wvImg === 'function' ? wvImg(url, px) : url) : ''; }
+
+  var _TI = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.6v14.8a1 1 0 0 0 1.53.85l11.6-7.4a1 1 0 0 0 0-1.7L9.03 3.75A1 1 0 0 0 7.5 4.6Z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4.2" height="15" rx="1.3"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.3"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 20.3 4.6 12.9a4.6 4.6 0 0 1 6.5-6.5l.9.9.9-.9a4.6 4.6 0 0 1 6.5 6.5Z"/></svg>',
+    heartOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.1 3.9 13a5.2 5.2 0 0 1 7.35-7.35l.75.75.75-.75A5.2 5.2 0 0 1 20.1 13Z"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>',
+    more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M5 20h14"/></svg>',
+    next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M4 11h11M4 16h7"/><path d="M16 14.5v6l5-3z" fill="currentColor"/></svg>',
+    queue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h12M4 11h12M4 16h8"/><path d="M18 14v6M15 17h6"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    quote: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.6 6C6.5 7.3 4.5 10 4.5 13.4 4.5 16 6 18 8.3 18c1.9 0 3.3-1.4 3.3-3.2 0-1.8-1.3-3.1-3-3.1h-.5c.3-1.7 1.6-3.2 3.3-4.1L9.6 6Zm9 0c-3.1 1.3-5.1 4-5.1 7.4 0 2.6 1.5 4.6 3.8 4.6 1.9 0 3.3-1.4 3.3-3.2 0-1.8-1.3-3.1-3-3.1h-.5c.3-1.7 1.6-3.2 3.3-4.1L18.6 6Z"/></svg>',
+    expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>',
+    disc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.5-3.6 4.2-5.5 7.5-5.5s6 1.9 7.5 5.5"/></svg>',
+    chev: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+    warn: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+    search: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  };
+
+  function _trkSkeleton() {
+    return '<div class="trk-skel" aria-hidden="true"><div class="trk-hero"><div class="trk-cover trk-sk"></div><div class="trk-info">' +
+      '<div class="trk-sk" style="width:90px;height:12px"></div><div class="trk-sk" style="width:min(520px,86%);height:46px;border-radius:10px"></div>' +
+      '<div class="trk-sk" style="width:230px;height:16px"></div><div class="trk-sk" style="width:280px;height:14px"></div></div></div>' +
+      '<div class="trk-bar"><div class="trk-sk" style="width:118px;height:48px;border-radius:999px"></div><div class="trk-sk" style="width:76px;height:42px;border-radius:999px"></div>' +
+      '<div class="trk-sk" style="width:42px;height:42px;border-radius:50%"></div><div class="trk-sk" style="width:42px;height:42px;border-radius:50%"></div></div>' +
+      '<div class="trk-grid"><div class="trk-main"><div class="trk-sk" style="height:320px;border-radius:18px"></div></div>' +
+      '<div class="trk-aside"><div class="trk-sk" style="height:98px;border-radius:16px"></div></div></div></div>';
+  }
 
   async function loadTrack() {
-    // Only a failed fetch should show "not found". Everything after is
+    var box = document.getElementById('track-container');
+    if (!box) return;
+    if (!box.querySelector('.trk-skel')) box.innerHTML = _trkSkeleton();
+    box.setAttribute('aria-busy', 'true');
+    // Only a failed fetch should show an error. Everything after is
     // best-effort so a hiccup in a secondary call can't blank the page.
     try {
       track = await api(`/tracks/${trackId}`);
     } catch (err) {
-      document.getElementById('track-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">couldnt find this edit</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+      if (err && err.navAborted) return;
+      if (!_trkAlive()) return;
+      var gone = err && (err.status === 404 || err.status === 400);
+      box.setAttribute('aria-busy', 'false');
+      box.innerHTML = '<div class="trk-err" role="alert"><div class="trk-err-ic">' + (gone ? _TI.search : _TI.warn) + '</div>' +
+        '<b>' + (gone ? 'couldnt find this edit' : 'this edit didnt load') + '</b>' +
+        '<span>' + (gone ? 'it may have been taken down, or the link is off by a character or two.' : 'wavernrs might be busy right now. give it a second and try again.') + '</span>' +
+        '<div class="trk-err-a">' + (gone ? '' : '<button class="trk-play" onclick="loadTrack()">Retry</button>') +
+        '<a href="/index" class="trk-pill">Go home</a></div></div>';
       return;
     }
+    if (!_trkAlive()) return;
     try {
-      liked = track.user_liked;
+      liked = !!track.user_liked;
       document.title = `${track.title} — wavernrs stream`;
-      if (typeof window.setPageBgImage === 'function') window.setPageBgImage(track.cover_url || '');
-      await renderTrack();
-      renderTracklist();
+      if (typeof window.setPageBgImage === 'function') window.setPageBgImage(_trkCover());
+      renderTrack();
+      box.setAttribute('aria-busy', 'false');
+      _trkWire();
+      loadLyrics();
       loadComments();
       loadMoreLikeThis();
       loadAlsoOn();
       loadYeOriginals();
       loadYeOfficial();
       if (typeof loadRatings === 'function') loadRatings('track', track.id);
+      _trkBadges();
+      setTimeout(_trkProbe, 700);
     } catch (err) {
       console.error('track render error', err);
     }
   }
 
   function copyLink() {
-    var url = window.location.href;
+    if (!track) return;
+    if (typeof window.wvShare === 'function') { window.wvShare(_trkShareOpts(false)); return; }
+    var url = location.origin + '/track?id=' + encodeURIComponent(track.id);
     if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-      navigator.share({ title: track ? track.title : 'wavernrs', url: url }).catch(function() {});
+      navigator.share({ title: track.title, url: url }).catch(function() {});
       return;
     }
     navigator.clipboard.writeText(url).then(function() {
@@ -81,10 +389,32 @@
       if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error');
     });
   }
+  function _trkNow() { return _trkIsCur() && isFinite(audio.currentTime) ? audio.currentTime : 0; }
+  function _trkShareOpts(atTime) {
+    var t = _trkNow() || _trk.deepT || 0;
+    return { kind: 'track', id: track.id, title: track.title, artist: trackCreator().name, cover: _trkCover(), time: t >= 1 ? t : 0, atTime: !!atTime && t >= 1 };
+  }
+  function trkCopyAt() {
+    if (!track) return;
+    var t = Math.floor(_trkNow() || _trk.deepT || 0);
+    var url = location.origin + '/track?id=' + encodeURIComponent(track.id) + (t >= 1 ? '&t=' + t : '');
+    var msg = t >= 1 ? 'link copied · starts at ' + fmtT(t) : 'link copied';
+    if (window.wvShare && typeof window.wvShare.copy === 'function') { window.wvShare.copy(url, msg); return; }
+    navigator.clipboard.writeText(url).then(function () { if (typeof wvToast === 'function') wvToast(msg); }).catch(function () { if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error'); });
+  }
 
   function playThisTrack() {
     if (!track) return;
     playTrack(_playable());
+  }
+  function trkPlayMain() {
+    if (!track) return;
+    if (_trkIsCur() && audio.src) { togglePlay(); return; }
+    playThisTrack();
+  }
+  function trkPlayFrom() {
+    if (!_trk.deepT) return;
+    trkSeekTo(_trk.deepT);
   }
 
   // Edits inside archived comps carry the importer account as their artist row,
@@ -97,7 +427,7 @@
       return { name: archiveName, href: '/archive-artist?a=' + encodeURIComponent(typeof archiveArtistSlug === 'function' ? archiveArtistSlug(archiveName) : archiveName), archive: true };
     }
     const a = track.artists || {};
-    return { name: a.display_name || 'Unknown', href: a.id ? '/artist?id=' + a.id : '', archive: false };
+    return { name: track.display_artist || a.display_name || 'Unknown', href: a.id ? '/artist?id=' + a.id : '', archive: false };
   }
 
   function _playable() {
@@ -111,171 +441,646 @@
     });
   }
 
-  async function renderTrack() {
-    const artist = track.artists || {};
-    const creator = trackCreator();
+  function _trkHues(cb) {
+    var cover = _trkCover();
+    var seed = (track && track.title) || '';
+    if (!cover || typeof extractCoverHues !== 'function') { cb(typeof coverHues === 'function' ? coverHues(seed) : null); return; }
+    extractCoverHues(cover, seed, function (c) { cb(c); });
+  }
 
-    const starEmpty = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-    const starPlaceholder = [1,2,3,4,5].map(i =>
-      `<button type="button" data-s="${i}" style="background:none;border:none;cursor:pointer;padding:2px;line-height:0;">${starEmpty}</button>`
-    ).join('');
-    const ratingPlaceholder = `<div style="display:flex;align-items:center;gap:6px;"><div id="wv-rating-stars" style="display:flex;align-items:center;">${starPlaceholder}</div><span style="font-size:13px;color:var(--text-3);">no ratings yet</span></div>`;
+  function renderTrack() {
+    var creator = trackCreator();
+    var cover = _trkCover();
+    var album = track.albums && track.albums.id ? track.albums : null;
+    var era = (track.era_tag && track.era_tag.name) || track.genre || '';
+    var seedHues = typeof coverHues === 'function' ? coverHues(track.title || '') : { h1: 262, h2: 300 };
+    var avatarUrl = !creator.archive && track.artists && track.artists.profile_image_url ? _trkImg(track.artists.profile_image_url, 64) : '';
+    var avatar = avatarUrl
+      ? '<img class="trk-avatar" src="' + _te(avatarUrl) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+      : '<span class="trk-avatar" style="background:' + _te(typeof coverGradient === 'function' ? coverGradient(creator.name) : 'var(--surface-3)') + '">' + _te((creator.name || '?').charAt(0).toUpperCase()) + '</span>';
+    var added = '';
+    try { if (track.created_at) added = new Date(track.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch (_) {}
+    var year = '';
+    try { if (track.created_at) year = String(new Date(track.created_at).getFullYear()); } catch (_) {}
+    var desc = track.description ? (typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(track.description) : String(track.description)) : '';
+    desc = desc.replace(/^[ \t]*(-#|#{1,3})[ \t]+/gm, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
+    var coverImg = cover
+      ? '<img src="' + _te(_trkImg(cover, 480)) + '" srcset="' + _te(_trkImg(cover, 320)) + ' 320w, ' + _te(_trkImg(cover, 640)) + ' 640w, ' + _te(_trkImg(cover, 960)) + ' 960w" sizes="(max-width: 768px) 100vw, 240px" alt="' + _te('cover art for ' + track.title) + '" decoding="async" fetchpriority="high" onerror="this.remove()">'
+      : '';
+    var miniCover = cover ? '<img src="' + _te(_trkImg(cover, 96)) + '" alt="" loading="lazy">' : '<span class="trk-mini-c" style="background:' + _te(coverGradient(track.title || '')) + '"></span>';
+    var creatorLink = creator.href
+      ? '<a href="' + _te(creator.href) + '">' + avatar + '<span>' + _te(creator.name) + '</span></a>'
+      : '<span style="display:inline-flex;align-items:center;gap:8px;color:var(--text);font-weight:700;">' + avatar + _te(creator.name) + '</span>';
+    var dl = (typeof API_BASE !== 'undefined' ? API_BASE : '') + '/tracks/' + encodeURIComponent(track.id) + '/download';
 
-    const coverSrc = track.cover_url || (track.albums && track.albums.cover_url) || '';
-    const cover = coverSrc
-      ? `<img src="${escHtml(coverSrc)}" alt="cover" style="width:100%;height:100%;object-fit:cover;">`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:80px;">🎵</div>`;
+    document.getElementById('track-container').innerHTML =
+      '<div class="trk-top" id="trk-top" style="--trk-h:' + (seedHues.h1 | 0) + ';--trk-h2:' + (seedHues.h2 | 0) + ';">' +
+        '<div class="trk-glow" aria-hidden="true"></div>' +
+        '<section class="trk-hero" id="trk-hero" aria-label="edit">' +
+          '<div class="trk-cover" id="trk-cover" style="background:' + _te(coverGradient(track.title || '')) + '">' + coverImg +
+            '<button type="button" class="trk-cover-play" id="trk-cover-play" onclick="trkPlayMain()" aria-label="Play">' + _TI.play + '</button>' +
+          '</div>' +
+          '<div class="trk-info">' +
+            '<div class="trk-eyebrow"><span class="trk-eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="trk-now">now playing ·</span><span>' + (creator.archive ? 'archive edit' : 'edit') + '</span>' +
+              (era ? '<span class="badge">' + _te(era) + '</span>' : '') + '<span id="trk-badges" style="display:contents"></span></div>' +
+            '<h1 class="trk-title">' + _te(track.title) + '</h1>' +
+            '<div class="trk-byline">' + creatorLink +
+              (album && String(album.title || '').trim().toLowerCase() !== String(track.title || '').trim().toLowerCase() ? '<span class="trk-dot">•</span><a class="trk-comp-a" href="/album?id=' + _te(album.id) + '">' + _te(album.title) + '</a>' : '') +
+              (year ? '<span class="trk-dot">•</span><span>' + _te(year) + '</span>' : '') +
+            '</div>' +
+            '<div class="trk-stats" id="trk-stats"></div>' +
+            '<div class="trk-rate"><div id="rating-widget"><div style="display:flex;align-items:center;gap:6px;opacity:.55;">' + [1,2,3,4,5].map(function () { return '<span style="padding:4px;line-height:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>'; }).join('') + '</div></div></div>' +
+            (_trk.deepT ? '<button type="button" class="trk-deep" id="trk-deep" onclick="trkPlayFrom()">' + _TI.play + '<span>Play from ' + fmtT(_trk.deepT) + '</span> <small>shared moment</small></button>' : '') +
+          '</div>' +
+        '</section>' +
+      '</div>' +
+      '<div class="trk-sentinel" id="trk-sentinel"></div>' +
+      '<div class="trk-bar" id="trk-bar">' +
+        '<button type="button" class="trk-play" id="main-play-btn" onclick="trkPlayMain()">' + _TI.play + '<span>Play</span></button>' +
+        '<div class="trk-mini" aria-hidden="true">' + miniCover + '<span>' + _te(track.title) + '</span></div>' +
+        '<button type="button" class="trk-pill trk-like" id="like-btn" onclick="toggleLike()"></button>' +
+        '<button type="button" class="trk-ib trk-desk-only trk-hide-stuck" onclick="trkSave()" aria-label="Save to a playlist" title="save to a playlist">' + _TI.plus + '</button>' +
+        '<a class="trk-ib trk-desk-only trk-hide-stuck" href="' + _te(dl) + '" download aria-label="Download" title="download">' + _TI.download + '</a>' +
+        '<button type="button" class="trk-ib trk-desk-only trk-hide-stuck" onclick="playNextInQueue(_playable())" aria-label="Play next" title="play it right after whats playing now">' + _TI.next + '</button>' +
+        '<button type="button" class="trk-ib trk-desk-only trk-hide-stuck" onclick="addToQueue(_playable())" aria-label="Add to queue" title="add it to the end of the queue">' + _TI.queue + '</button>' +
+        '<button type="button" class="trk-pill trk-desk-only" id="share-btn" onclick="copyLink()">' + _TI.share + '<span>Share</span></button>' +
+        '<button type="button" class="trk-ib trk-mob-only" id="share-btn-m" onclick="copyLink()" aria-label="Share">' + _TI.share + '</button>' +
+        '<button type="button" class="trk-pill trk-desk-only trk-hide-stuck" id="trk-copy-at" onclick="trkCopyAt()" hidden>' + _TI.link + '<span>Copy at 0:00</span></button>' +
+        '<div class="trk-more-wrap"><button type="button" class="trk-ib" id="trk-more" onclick="trkMenu(this)" aria-haspopup="menu" aria-expanded="false" aria-label="More options">' + _TI.more + '</button></div>' +
+      '</div>' +
+      '<div class="trk-grid">' +
+        '<div class="trk-main">' +
+          '<section class="trk-lyr is-idle" id="trk-lyr" aria-label="Lyrics">' +
+            '<div class="trk-lyr-head"><h2 class="trk-h2">Lyrics</h2><span class="trk-lyr-src" id="trk-lyr-src" hidden></span>' +
+              '<div class="trk-lyr-tools" id="trk-lyr-tools" hidden>' +
+                '<button type="button" class="trk-chip" id="trk-lyr-sharebtn" aria-pressed="false" aria-label="Make a lyric card" title="make a lyric card" onclick="trkLyrShareMode()">' + _TI.quote + '<span>Lyric card</span></button>' +
+                '<button type="button" class="trk-chip" onclick="trkOpenFull()" aria-label="Open in the full player" title="open in the full player">' + _TI.expand + '<span>Full screen</span></button>' +
+              '</div></div>' +
+            '<div class="trk-lyr-hint">tap a line to turn it into a lyric card</div>' +
+            '<div id="trk-lyr-body"><div class="trk-lyr-sk"><div class="trk-sk" style="height:22px;width:62%"></div><div class="trk-sk" style="height:22px;width:78%"></div><div class="trk-sk" style="height:22px;width:54%"></div><div class="trk-sk" style="height:22px;width:70%"></div></div></div>' +
+          '</section>' +
+          '<section id="trk-comments" aria-label="Comments">' +
+            '<h2 class="trk-h2" style="margin-bottom:14px;">Comments <span class="trk-count" id="trk-ccount"></span></h2>' +
+            '<div id="ts-timeline-wrap" class="trk-tl" hidden>' +
+              '<div class="trk-tl-top"><span id="trk-tl-note">comments on the timeline · tap a dot to jump there</span><span id="trk-tl-now"></span></div>' +
+              '<div class="trk-tl-rel">' +
+                '<div id="ts-bubble" class="trk-bubble">' +
+                  '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;"><span id="ts-bubble-user" style="font-size:11.5px;font-weight:700;color:var(--brand);"></span><span id="ts-bubble-time" style="font-size:10.5px;color:var(--text-3);"></span></div>' +
+                  '<div id="ts-bubble-text" style="font-size:12.5px;color:var(--text);line-height:1.4;word-break:break-word;"></div>' +
+                '</div>' +
+                '<div id="ts-timeline" class="trk-tl-bar" role="slider" tabindex="0" aria-label="Song position" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" onclick="trkTlClick(event)" onkeydown="trkTlKey(event)"></div>' +
+              '</div>' +
+              '<div class="trk-tl-times"><span id="trk-tl-cur">0:00</span><span id="trk-tl-dur">0:00</span></div>' +
+            '</div>' +
+            '<div id="comment-form" style="margin-bottom:24px;">' +
+              (isLoggedIn()
+                ? '<div style="display:flex;flex-direction:column;gap:10px;">' +
+                    '<textarea id="comment-input" class="wv-input" placeholder="add a comment..." aria-label="Add a comment" style="min-height:72px;resize:vertical;line-height:1.5;" onkeydown="if(event.key===\'Enter\'&&(event.metaKey||event.ctrlKey))postComment()"></textarea>' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+                      '<button id="ts-toggle" onclick="toggleTsComment()" title="pin your comment to this exact part of the song" style="display:none;align-items:center;gap:5px;min-height:34px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>' +
+                      '<button class="btn btn-primary btn-sm" onclick="postComment()" style="margin-left:auto;">Post</button>' +
+                    '</div></div>'
+                : '<p style="font-size:14px;color:var(--text-2);"><a href="/login" style="color:var(--brand);font-weight:600;">Log in</a> to leave a comment</p>') +
+            '</div>' +
+            '<div id="comments-list"><div style="display:flex;flex-direction:column;gap:14px;">' +
+              '<div style="display:flex;gap:12px;"><div class="trk-sk" style="width:34px;height:34px;border-radius:50%;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="trk-sk" style="width:120px;height:12px"></div><div class="trk-sk" style="width:70%;height:14px"></div></div></div>' +
+              '<div style="display:flex;gap:12px;"><div class="trk-sk" style="width:34px;height:34px;border-radius:50%;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="trk-sk" style="width:90px;height:12px"></div><div class="trk-sk" style="width:52%;height:14px"></div></div></div>' +
+            '</div></div>' +
+          '</section>' +
+        '</div>' +
+        '<aside class="trk-aside" aria-label="About this edit">' +
+          (album
+            ? '<a class="trk-card trk-comp" href="/album?id=' + _te(album.id) + '">' +
+                (album.cover_url ? '<img class="trk-comp-cover" src="' + _te(_trkImg(album.cover_url, 128)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="trk-comp-cover" style="background:' + _te(coverGradient(album.title || '')) + '"></span>') +
+                '<div style="min-width:0"><div class="trk-k">From the comp</div><div class="trk-comp-t">' + _te(album.title) + '</div>' +
+                (track.track_position ? '<div class="trk-comp-s">track ' + _te(track.track_position) + '</div>' : '') + '</div>' +
+                '<span class="trk-chev">' + _TI.chev + '</span></a>'
+            : '') +
+          '<div class="trk-card trk-about' + (desc ? '' : ' trk-about-nodesc') + '">' +
+            '<div class="trk-creator">' + avatar +
+              '<div style="min-width:0;flex:1"><div class="trk-k">' + (creator.archive ? 'archive creator' : 'made by') + '</div><div class="trk-creator-n">' + _te(creator.name) + '</div></div>' +
+              (creator.href ? '<a class="trk-chip" href="' + _te(creator.href) + '">View</a>' : '') +
+            '</div>' +
+            (desc ? '<div><p class="trk-desc trk-clamp" id="trk-desc">' + _te(desc) + '</p></div>' : '') +
+            '<dl class="trk-facts">' +
+              (added ? '<dt>Added</dt><dd>' + _te(added) + '</dd>' : '') +
+              '<dt>Plays</dt><dd>' + _te(fmtNum(track.play_count || 0)) + '</dd>' +
+              '<dt id="trk-f-dur-k" hidden>Length</dt><dd id="trk-f-dur" hidden></dd>' +
+              (era ? '<dt>Era</dt><dd>' + _te(era) + '</dd>' : '') +
+            '</dl>' +
+          '</div>' +
+        '</aside>' +
+      '</div>' +
+      '<div class="trk-below">' +
+        '<div id="ye-official" style="margin-top:44px;"></div>' +
+        '<div id="ye-originals" style="margin-top:44px;"></div>' +
+        '<div id="also-on" style="margin-top:44px;"></div>' +
+        '<div id="more-like-this" style="margin-top:48px;"></div>' +
+      '</div>';
 
-    const eraName = track.era_tag?.name || track.genre || '';
-    const coverBg = (typeof coverGradient === 'function') ? coverGradient(track.title || '') : 'linear-gradient(135deg,#1a0a2e,#2d1b6e)';
-    const gloss = '';
-
-    let badgePills = '';
-    try {
-      const b = await (typeof getBadgeData === 'function' ? getBadgeData() : Promise.resolve({ highlighted_tracks: [], exclusive_tracks: [], verified_artists: [] }));
-      if (b.highlighted_tracks && b.highlighted_tracks.indexOf(track.id) !== -1)
-        badgePills += '<span class="wv-badge-highlight">★ Highlighted by wavernrs</span>';
-      if (b.exclusive_tracks && b.exclusive_tracks.indexOf(track.id) !== -1)
-        badgePills += '<span class="wv-badge-exclusive">◆ wavernrs exclusive</span>';
-    } catch (e) {}
-
-    document.getElementById('track-container').innerHTML = `
-      <div style="padding:32px 0;">
-        <div class="wv-media-header" style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
-          <div class="wv-media-header-cover" style="width:200px;height:200px;border-radius:16px;overflow:hidden;background:${coverBg};flex-shrink:0;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.22);">
-            ${gloss}
-            ${cover}
-          </div>
-          <div class="wv-media-header-info" style="flex:1;min-width:0;">
-            ${badgePills ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">${badgePills}</div>` : ''}
-            <div class="wv-title" style="font-size:28px;font-weight:800;letter-spacing:-0.04em;margin-bottom:6px;line-height:1.15;color:var(--text);">${escHtml(track.title)}</div>
-            ${creator.href
-              ? `<a href="${creator.href}" style="font-size:15px;color:var(--text-2);font-weight:500;text-decoration:none;">${escHtml(creator.name)}</a>`
-              : `<span style="font-size:15px;color:var(--text-2);font-weight:500;">${escHtml(creator.name)}</span>`}
-            ${eraName ? `<div style="margin-top:10px;"><span class="badge">${escHtml(eraName)}</span></div>` : ''}
-            ${track.description ? `<p style="margin-top:12px;font-size:14px;color:var(--text-2);line-height:1.65;">${escHtml(track.description)}</p>` : ''}
-            <div style="display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap;">
-              <button class="btn btn-secondary" id="like-btn" onclick="toggleLike()">
-                ${liked ? '♥' : '♡'} ${fmtNum(track.like_count)}
-              </button>
-            </div>
-            <div id="rating-widget" style="margin-top:10px;">${ratingPlaceholder}</div>
-            ${track.albums && track.albums.id ? `<a href="/album?id=${track.albums.id}" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:12px;margin-top:16px;padding:10px 16px 10px 10px;font-weight:700;">${track.albums.cover_url ? `<img src="${escHtml(track.albums.cover_url)}" alt="" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : ''}<span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase;">From the comp</span><span style="font-size:15px;">${escHtml(track.albums.title)} →</span></span></a>` : ''}
-            <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
-              <button class="btn btn-primary" onclick="playThisTrack()" id="main-play-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                Play
-              </button>
-              <a href="${API_BASE}/tracks/${track.id}/download" class="btn btn-secondary" download>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zm-8 2V5h2v6h1.17L12 13.17 9.83 11H11zm-6 8h14v2H5z"/></svg>
-                Download
-              </a>
-              <button class="btn btn-secondary" onclick="playNextInQueue(_playable())" title="play it right after whats playing now">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm13-8v6.2a2.8 2.8 0 1 0 2 2.7V8h3V6z"/></svg>
-                Play next
-              </button>
-              <button class="btn btn-secondary" onclick="addToQueue(_playable())" title="add it to the end of the queue">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
-                Queue
-              </button>
-              <button class="btn btn-secondary" id="share-btn" onclick="copyLink()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
-                Share
-              </button>
-              <span style="font-size:13px;color:var(--text-3);">${fmtNum(track.play_count)} plays</span>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:32px;">
-          <h2 class="section-title">Tracklist</h2>
-          <div class="track-list" id="track-tracklist"></div>
-        </div>
-
-        <div style="margin-top:40px;">
-          <h2 class="section-title">Comments</h2>
-          <div id="ts-timeline-wrap" style="display:none;margin-bottom:18px;">
-            <div style="font-size:11.5px;color:var(--text-3);margin-bottom:6px;">comments on the timeline...tap a dot to jump to that part</div>
-            <div style="position:relative;">
-              <div id="ts-bubble" style="display:none;position:absolute;bottom:30px;transform:translateX(-50%);max-width:240px;z-index:5;background:var(--surface-2,#1a1a1a);border:1px solid var(--brand);border-radius:12px;padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,0.4);pointer-events:none;">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
-                  <span id="ts-bubble-user" style="font-size:11.5px;font-weight:700;color:var(--brand);"></span>
-                  <span id="ts-bubble-time" style="font-size:10.5px;color:var(--text-3);"></span>
-                </div>
-                <div id="ts-bubble-text" style="font-size:12.5px;color:var(--text);line-height:1.4;word-break:break-word;"></div>
-              </div>
-              <div id="ts-timeline" style="position:relative;height:22px;background:var(--hair);border-radius:11px;"></div>
-            </div>
-          </div>
-          <div id="comment-form" style="margin-bottom:24px;">
-            ${isLoggedIn() ? `
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <textarea id="comment-input" class="wv-input" placeholder="add a comment..."
-                  style="min-height:72px;resize:vertical;line-height:1.5;"
-                  onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))postComment()"></textarea>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-                  <button id="ts-toggle" onclick="toggleTsComment()" title="pin your comment to this exact part of the song"
-                    style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>
-                  <button class="btn btn-primary btn-sm" onclick="postComment()" style="margin-left:auto;">Post</button>
-                </div>
-              </div>
-            ` : `<p style="font-size:14px;color:var(--text-2);">
-              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment
-            </p>`}
-          </div>
-          <div id="comments-list"><div class="loading"><div class="spinner"></div></div></div>
-        </div>
-
-        <div id="ye-official" style="margin-top:44px;"></div>
-        <div id="ye-originals" style="margin-top:44px;"></div>
-
-        <div id="also-on" style="margin-top:44px;"></div>
-
-        <div id="more-like-this" style="margin-top:48px;"></div>
-      </div>`;
-
-    // Wire IA CDN retry on cover images
     if (typeof wireIACoverRetry === 'function') {
-      document.querySelectorAll('#track-container img').forEach(wireIACoverRetry);
+      document.querySelectorAll('#track-container .trk-cover > img').forEach(wireIACoverRetry);
+    }
+    var d = document.getElementById('trk-desc');
+    if (d && typeof wvClampDesc === 'function') wvClampDesc(d);
+    _trkPaintLike();
+    _trkPaintStats();
+    _trkSyncPlay();
+    _trkHues(function (c) {
+      var top = document.getElementById('trk-top');
+      if (!top || !c) return;
+      top.style.setProperty('--trk-h', String(c.h1 | 0));
+      top.style.setProperty('--trk-h2', String(c.h2 | 0));
+      var lyr = document.getElementById('trk-lyr');
+      if (lyr) { lyr.style.setProperty('--trk-h', String(c.h1 | 0)); lyr.style.setProperty('--trk-h2', String(c.h2 | 0)); }
+    });
+    var lyrEl = document.getElementById('trk-lyr');
+    if (lyrEl) { lyrEl.style.setProperty('--trk-h', String(seedHues.h1 | 0)); lyrEl.style.setProperty('--trk-h2', String(seedHues.h2 | 0)); }
+  }
+
+  function _trkBadges() {
+    if (typeof getBadgeData !== 'function') return;
+    Promise.resolve(getBadgeData()).then(function (b) {
+      var el = document.getElementById('trk-badges');
+      if (!el || !b || !track) return;
+      var h = '';
+      if (b.highlighted_tracks && b.highlighted_tracks.indexOf(track.id) !== -1) h += '<span class="wv-badge-highlight">★ Highlighted by wavernrs</span>';
+      if (b.exclusive_tracks && b.exclusive_tracks.indexOf(track.id) !== -1) h += '<span class="wv-badge-exclusive">◆ wavernrs exclusive</span>';
+      el.innerHTML = h;
+    }).catch(function () {});
+  }
+
+  function _trkPaintStats() {
+    var el = document.getElementById('trk-stats');
+    if (!el || !track) return;
+    var n = function (v, one, many) { return '<span><b>' + _te(fmtNum(v || 0)) + '</b>&nbsp;' + ((v || 0) === 1 ? one : many) + '</span>'; };
+    var parts = [n(track.play_count, 'play', 'plays'), n(track.like_count, 'like', 'likes')];
+    if (_trk.commentsN != null) parts.push(n(_trk.commentsN, 'comment', 'comments'));
+    if (_trk.dur) parts.push('<span><b>' + _te(fmtT(_trk.dur)) + '</b></span>');
+    el.innerHTML = parts.join('');
+    var fk = document.getElementById('trk-f-dur-k'), fd = document.getElementById('trk-f-dur');
+    if (fk && fd && _trk.dur) { fk.hidden = false; fd.hidden = false; fd.textContent = fmtT(_trk.dur); }
+  }
+
+  function _trkPaintLike() {
+    var b = document.getElementById('like-btn');
+    if (!b || !track) return;
+    b.classList.toggle('on', !!liked);
+    b.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    b.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ' · ' + (track.like_count || 0) + ' likes');
+    b.innerHTML = (liked ? _TI.heartOn : _TI.heart) + '<span>' + _te(fmtNum(track.like_count || 0)) + '</span>';
+  }
+
+  // The page follows the global player: Play turns into Pause while this
+  // edit is playing and Resume once it has been paused part-way through.
+  function _trkSyncPlay() {
+    var btn = document.getElementById('main-play-btn');
+    if (!btn) return;
+    var cur = _trkIsCur() && !!audio.src;
+    var playing = cur && !audio.paused;
+    var label = playing ? 'Pause' : (cur && audio.currentTime > 0.5 ? 'Resume' : 'Play');
+    var icon = playing ? _TI.pause : _TI.play;
+    if (btn.getAttribute('data-state') !== label) {
+      btn.setAttribute('data-state', label);
+      btn.innerHTML = icon + '<span>' + label + '</span>';
+      btn.setAttribute('aria-label', label + ' ' + (track ? track.title : ''));
+      var cp = document.getElementById('trk-cover-play');
+      if (cp) { cp.innerHTML = icon; cp.setAttribute('aria-label', label); }
+    }
+    var top = document.getElementById('trk-top');
+    if (top) top.classList.toggle('is-playing', playing);
+    var cov = document.getElementById('trk-cover');
+    if (cov) cov.classList.toggle('is-cur', playing);
+    var deep = document.getElementById('trk-deep');
+    if (deep) deep.hidden = cur;
+    var at = document.getElementById('trk-copy-at');
+    if (at) {
+      var t = cur ? Math.floor(audio.currentTime || 0) : 0;
+      at.hidden = !(t >= 1);
+      if (t >= 1) { var s = at.querySelector('span'); var lbl = 'Copy at ' + fmtT(t); if (s && s.textContent !== lbl) s.textContent = lbl; }
     }
   }
 
-  function renderTracklist() {
-    var el = document.getElementById('track-tracklist');
-    if (!el || !track) return;
-    var cover = track.cover_url
-      ? '<img src="' + escHtml(track.cover_url) + '" alt="">'
-      : '🎵';
-    var trackObjStr = JSON.stringify({
-      id: track.id,
-      title: track.title,
-      cover_url: track.cover_url || '',
-      ia_url: track.ia_url || '',
-      artist_name: trackCreator().name,
-    }).replace(/"/g, '&quot;');
-    el.innerHTML =
-      '<div class="track-row playing" onclick="playThisTrack()">' +
-        '<div class="track-row-num">1</div>' +
-        '<div class="track-row-cover">' + cover + '</div>' +
-        '<div class="track-row-info">' +
-          '<div class="track-row-title">' + escHtml(track.title) + '</div>' +
-          '<div class="track-row-artist">' + escHtml(trackCreator().name) + '</div>' +
-        '</div>' +
-        '<span class="track-row-plays">' + fmtNum(track.play_count) + ' plays</span>' +
-        '<button onclick="event.stopPropagation();openAddToPlaylist(' + trackObjStr + ')" ' +
-          'style="background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;color:var(--text-2);flex-shrink:0;" title="save to a playlist">＋</button>' +
-      '</div>';
+  function trkSave() {
+    if (!track || typeof openAddToPlaylist !== 'function') return;
+    openAddToPlaylist({ id: track.id, title: track.title, cover_url: _trkCover(), ia_url: track.ia_url || '', artist_name: trackCreator().name });
+  }
+  function trkOpenFull() {
+    if (!track) return;
+    if (!_trkIsCur()) playThisTrack();
+    if (typeof openFullPlayer === 'function') openFullPlayer(true);
+  }
+
+  // ── More menu ─────────────────────────────────────────────────────────
+  function trkMenu(btn) {
+    var wrap = btn && btn.parentNode;
+    if (!wrap) return;
+    var open = wrap.querySelector('.trk-menu');
+    if (open) { _trkCloseMenu(); return; }
+    var creator = trackCreator();
+    var album = track && track.albums && track.albums.id ? track.albums : null;
+    var t = Math.floor(_trkNow());
+    var dl = (typeof API_BASE !== 'undefined' ? API_BASE : '') + '/tracks/' + encodeURIComponent(track.id) + '/download';
+    var items = [
+      '<button type="button" role="menuitem" data-m="next">' + _TI.next + 'Play next</button>',
+      '<button type="button" role="menuitem" data-m="queue">' + _TI.queue + 'Add to queue</button>',
+      '<button type="button" role="menuitem" data-m="save">' + _TI.plus + 'Save to a playlist</button>',
+      '<a role="menuitem" href="' + _te(dl) + '" download>' + _TI.download + 'Download</a>',
+      '<hr>',
+      '<button type="button" role="menuitem" data-m="share">' + _TI.share + 'Share…</button>',
+      '<button type="button" role="menuitem" data-m="copy">' + _TI.link + 'Copy link</button>',
+      t >= 1 ? '<button type="button" role="menuitem" data-m="copyat">' + _TI.clock + 'Copy link at ' + fmtT(t) + '</button>' : '',
+      _trk.lyr && _trk.lyr.lines.length ? '<button type="button" role="menuitem" data-m="lyric">' + _TI.quote + 'Make a lyric card</button>' : '',
+      '<hr>',
+      album ? '<a role="menuitem" href="/album?id=' + _te(album.id) + '">' + _TI.disc + 'Go to comp</a>' : '',
+      creator.href ? '<a role="menuitem" href="' + _te(creator.href) + '">' + _TI.user + 'Go to ' + _te(creator.name) + '</a>' : '',
+    ].filter(Boolean);
+    while (items.length && items[items.length - 1] === '<hr>') items.pop();
+    var asSheet = window.innerWidth <= 768;
+    var m = document.createElement('div');
+    m.className = 'trk-menu' + (asSheet ? ' sheet' : '');
+    m.setAttribute('role', 'menu');
+    m.setAttribute('aria-label', 'More options for ' + track.title);
+    var cov = _trkCover();
+    m.innerHTML = (asSheet ? '<div class="trk-menu-head" aria-hidden="true">' +
+        (cov ? '<img src="' + _te(_trkImg(cov, 96)) + '" alt="">' : '<span style="background:' + _te(coverGradient(track.title || '')) + '"></span>') +
+        '<div><b>' + _te(track.title) + '</b><small>' + _te(creator.name) + '</small></div></div>' : '') + items.join('');
+    if (asSheet) {
+      var ov = document.createElement('div');
+      ov.className = 'trk-menu-ov';
+      document.body.appendChild(ov);
+      document.body.appendChild(m);
+    } else {
+      wrap.appendChild(m);
+      var r = m.getBoundingClientRect();
+      if (r.right > window.innerWidth - 8) m.classList.add('right');
+      var br = btn.getBoundingClientRect();
+      if (r.bottom > window.innerHeight - 96 && br.top - r.height - 16 > 56) m.classList.add('up');
+    }
+    btn.setAttribute('aria-expanded', 'true');
+    m.addEventListener('click', function (e) {
+      var it = e.target.closest('[data-m], a');
+      if (!it) return;
+      var k = it.getAttribute('data-m');
+      _trkCloseMenu();
+      if (k === 'next') playNextInQueue(_playable());
+      else if (k === 'queue') addToQueue(_playable());
+      else if (k === 'save') trkSave();
+      else if (k === 'share') copyLink();
+      else if (k === 'copy') {
+        var u = location.origin + '/track?id=' + encodeURIComponent(track.id);
+        if (window.wvShare && window.wvShare.copy) window.wvShare.copy(u, 'link copied');
+        else navigator.clipboard.writeText(u).then(function () { if (typeof wvToast === 'function') wvToast('link copied'); }).catch(function () {});
+      }
+      else if (k === 'copyat') trkCopyAt();
+      else if (k === 'lyric') {
+        if (!_trk.shareMode) trkLyrShareMode();
+        var ly = document.getElementById('trk-lyr');
+        if (ly) ly.scrollIntoView({ behavior: _trkReduce() ? 'auto' : 'smooth', block: 'start' });
+      }
+    });
+    var first = m.querySelector('button, a');
+    if (first) { try { first.focus({ preventScroll: true }); } catch (_) {} }
+    _trk.menuDoc = function (e) {
+      if (e.type === 'keydown') {
+        if (e.key === 'Escape') { _trkCloseMenu(); btn.focus(); return; }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          var list = Array.prototype.slice.call(m.querySelectorAll('button, a'));
+          var i = list.indexOf(document.activeElement);
+          var n = e.key === 'ArrowDown' ? (i + 1) % list.length : (i - 1 + list.length) % list.length;
+          if (list[n]) { e.preventDefault(); list[n].focus(); }
+        }
+        return;
+      }
+      if (!wrap.contains(e.target) && !m.contains(e.target)) _trkCloseMenu();
+    };
+    setTimeout(function () {
+      if (!_trk.menuDoc) return;
+      document.addEventListener('click', _trk.menuDoc, true);
+      document.addEventListener('keydown', _trk.menuDoc, true);
+    }, 0);
+  }
+  function _trkCloseMenu() {
+    document.querySelectorAll('.trk-menu, .trk-menu-ov').forEach(function (m) { m.remove(); });
+    var b = document.getElementById('trk-more');
+    if (b) b.setAttribute('aria-expanded', 'false');
+    if (_trk.menuDoc) {
+      document.removeEventListener('click', _trk.menuDoc, true);
+      document.removeEventListener('keydown', _trk.menuDoc, true);
+      _trk.menuDoc = null;
+    }
+  }
+  function _trkReduce() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
+
+  // ── Live wiring: player events, sticky bar, like sync ───────────────────
+  function _trkWire() {
+    var cleanups = [];
+    if (typeof audio !== 'undefined' && audio && audio.addEventListener) {
+      var evs = ['play', 'pause', 'ended', 'loadstart', 'emptied', 'seeked', 'loadedmetadata', 'durationchange'];
+      var onAudio = function (e) {
+        if (!_trkAlive()) return;
+        _trkSyncPlay();
+        if (_trkIsCur() && (e.type === 'loadedmetadata' || e.type === 'durationchange') && isFinite(audio.duration) && audio.duration > 0) _trkSetDur(audio.duration);
+        if (_trkIsCur() && !audio.paused) _trkStartTicker();
+        else { _trkStopTicker(); _trkTick(); }
+      };
+      evs.forEach(function (ev) { audio.addEventListener(ev, onAudio); });
+      cleanups.push(function () { evs.forEach(function (ev) { audio.removeEventListener(ev, onAudio); }); });
+      if (_trkIsCur() && !audio.paused) _trkStartTicker();
+      if (_trkIsCur() && isFinite(audio.duration) && audio.duration > 0) _trkSetDur(audio.duration);
+      if (_trkIsCur() && typeof _setLikeUI === 'function') _setLikeUI(liked);
+    }
+    var onLikeClick = function (e) {
+      if (!e.target || !e.target.closest || !e.target.closest('#player-like-btn, #pfs-like-btn')) return;
+      setTimeout(_trkPullLike, 60);
+      setTimeout(_trkPullLike, 1800);
+    };
+    document.addEventListener('click', onLikeClick, true);
+    cleanups.push(function () { document.removeEventListener('click', onLikeClick, true); });
+
+    var sentinel = document.getElementById('trk-sentinel');
+    var bar = document.getElementById('trk-bar');
+    if (sentinel && bar && typeof IntersectionObserver === 'function') {
+      var root = document.getElementById('wv-content');
+      var io = new IntersectionObserver(function (entries) {
+        var e = entries[0];
+        if (!e) return;
+        var top = e.rootBounds ? e.rootBounds.top : 0;
+        var stuck = !e.isIntersecting && e.boundingClientRect.top < top + 1;
+        bar.classList.toggle('is-stuck', stuck);
+      }, { root: root && root.contains(sentinel) ? root : null, threshold: 0 });
+      io.observe(sentinel);
+      cleanups.push(function () { io.disconnect(); });
+    }
+    cleanups.push(_trkStopTicker, _trkCloseMenu, function () {
+      if (window._trkProbeEl) { try { window._trkProbeEl.removeAttribute('src'); window._trkProbeEl.load(); } catch (_) {} window._trkProbeEl = null; }
+    });
+    window._pageCleanup.push(function () { cleanups.forEach(function (fn) { try { fn(); } catch (_) {} }); });
+  }
+  function _trkPullLike() {
+    if (!track || !_trkIsCur() || typeof _liked === 'undefined') return;
+    if (!!_liked === !!liked) return;
+    liked = !!_liked;
+    track.like_count = Math.max(0, (track.like_count || 0) + (liked ? 1 : -1));
+    _trkPaintLike();
+    _trkPaintStats();
+  }
+
+  function _trkStartTicker() {
+    if (window._trkTicker) return;
+    window._trkTicker = setInterval(_trkTick, 250);
+  }
+  function _trkStopTicker() {
+    if (window._trkTicker) { clearInterval(window._trkTicker); window._trkTicker = null; }
+  }
+  function _trkTick() {
+    if (!document.getElementById('trk-top')) { _trkStopTicker(); return; }
+    _trkSyncPlay();
+    _trkLyrSync();
+    _trkTlProgress();
+    _updateTsChip();
+    _tsCheckCrossing();
+    var bub = document.getElementById('ts-bubble');
+    if (bub && bub.style.display === 'block' && Date.now() > _tsBubbleUntil) bub.style.display = 'none';
+  }
+
+  function _trkDur() {
+    if (_trkIsCur() && isFinite(audio.duration) && audio.duration > 0) return audio.duration;
+    return _trk.dur || 0;
+  }
+  function _trkSetDur(d) {
+    if (!(d > 0) || !isFinite(d)) return;
+    if (_trk.dur && Math.abs(_trk.dur - d) < 1) return;
+    _trk.dur = d;
+    _trkPaintStats();
+    renderTsTimeline();
+  }
+  // Length is not stored anywhere, so read it off the file's header. Only
+  // metadata is fetched, and nothing plays.
+  function _trkProbe() {
+    if (!_trkAlive() || !track || !track.ia_url || _trk.dur) return;
+    if (_trkIsCur() && isFinite(audio.duration) && audio.duration > 0) { _trkSetDur(audio.duration); return; }
+    try {
+      var a = document.createElement('audio');
+      var tid = track.id;
+      a.preload = 'metadata';
+      a.muted = true;
+      var done = function () { try { a.removeAttribute('src'); a.load(); } catch (_) {} if (window._trkProbeEl === a) window._trkProbeEl = null; };
+      a.addEventListener('loadedmetadata', function () {
+        if (_trkAlive() && track && track.id === tid && isFinite(a.duration) && a.duration > 0) _trkSetDur(a.duration);
+        done();
+      }, { once: true });
+      a.addEventListener('error', done, { once: true });
+      window._trkProbeEl = a;
+      a.src = track.ia_url;
+    } catch (_) {}
   }
 
   async function toggleLike() {
     if (!isLoggedIn()) return navigate('/login');
+    if (!track) return;
+    var before = liked;
+    liked = !liked;
+    track.like_count = Math.max(0, (track.like_count || 0) + (liked ? 1 : -1));
+    _trkPaintLike(); _trkPaintStats();
     try {
       const res = await api(`/tracks/${trackId}/like`, { method: 'POST' });
-      liked = res.liked;
-      const count = liked ? track.like_count + 1 : track.like_count - 1;
-      track.like_count = count;
-      document.getElementById('like-btn').innerHTML = `${liked ? '♥' : '♡'} ${fmtNum(count)}`;
-    } catch (_) {}
+      if (res && typeof res.liked === 'boolean' && res.liked !== liked) {
+        liked = res.liked;
+        track.like_count = Math.max(0, (track.like_count || 0) + (liked ? 1 : -1));
+        _trkPaintLike(); _trkPaintStats();
+      }
+      if (_trkIsCur() && typeof _setLikeUI === 'function') _setLikeUI(liked);
+      if (typeof window.refreshSidebarLibrary === 'function') window.refreshSidebarLibrary();
+    } catch (e) {
+      if (e && e.navAborted) return;
+      liked = before;
+      track.like_count = Math.max(0, (track.like_count || 0) + (liked ? 1 : -1));
+      _trkPaintLike(); _trkPaintStats();
+      if (typeof wvToast === 'function') wvToast('couldnt save that like', 'error');
+    }
+  }
+
+  // ── Lyrics ───────────────────────────────────────────────────────────────
+  function loadLyrics() {
+    var body = document.getElementById('trk-lyr-body');
+    if (!body || !track) return;
+    var tid = track.id;
+    var headers = {};
+    var tok = localStorage.getItem('token');
+    if (tok) headers['Authorization'] = 'Bearer ' + tok;
+    fetch(API_BASE + '/lyrics/' + encodeURIComponent(tid), { headers: headers })
+      .then(function (r) { if (!r.ok) throw new Error('lyrics ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!_trkAlive() || !track || track.id !== tid) return;
+        var lines = ((d && d.lines) || []).filter(function (l) { return l && String(l.x || '').trim(); });
+        var synced = lines.some(function (l) { return Number(l.t) > 0; });
+        if (!lines.length && d && d.plain) {
+          lines = String(d.plain).split(/\n/).map(function (x) { return { t: 0, x: x.trim() }; }).filter(function (l) { return l.x; });
+          synced = false;
+        }
+        _trk.lyr = { lines: lines, synced: synced, source: d && d.source };
+        _trkRenderLyrics();
+      })
+      .catch(function () {
+        if (!_trkAlive()) return;
+        var b = document.getElementById('trk-lyr-body');
+        if (!b) return;
+        b.innerHTML = '<div class="trk-lyr-empty"><b>lyrics didnt load</b><span>that one is on us. try again in a sec.</span><button type="button" class="trk-pill" onclick="trkRetryLyrics()">Try again</button></div>';
+      });
+  }
+  function trkRetryLyrics() {
+    var b = document.getElementById('trk-lyr-body');
+    if (b) b.innerHTML = '<div class="trk-lyr-sk"><div class="trk-sk" style="height:22px;width:62%"></div><div class="trk-sk" style="height:22px;width:78%"></div><div class="trk-sk" style="height:22px;width:54%"></div></div>';
+    loadLyrics();
+  }
+  function _trkRenderLyrics() {
+    var box = document.getElementById('trk-lyr');
+    var body = document.getElementById('trk-lyr-body');
+    if (!box || !body || !_trk.lyr) return;
+    var L = _trk.lyr;
+    var tools = document.getElementById('trk-lyr-tools');
+    var src = document.getElementById('trk-lyr-src');
+    if (!L.lines.length) {
+      if (tools) tools.hidden = true;
+      if (src) src.hidden = true;
+      body.innerHTML = '<div class="trk-lyr-empty"><b>no lyrics yet</b>' +
+        '<span>open it in the full player to pull them in, or check back once the creator adds them.</span>' +
+        '<button type="button" class="trk-pill" onclick="trkOpenFull()">' + _TI.expand + '<span>Open full player</span></button></div>';
+      return;
+    }
+    if (tools) tools.hidden = false;
+    if (src) {
+      var label = L.synced ? (L.source === 'manual' ? 'synced by the creator' : L.source === 'embedded' ? 'synced · from the file' : 'synced') : 'not synced';
+      src.textContent = label;
+      src.hidden = false;
+    }
+    box.classList.toggle('trk-lyr-static', !L.synced);
+    var target = -1;
+    if (_trk.deepT && L.synced) target = _trkLyrIndexAt(_trk.deepT + 0.2);
+    body.innerHTML = '<div class="trk-lyr-scroll' + (L.synced ? '' : ' static') + '" id="trk-lyr-scroll">' +
+      L.lines.map(function (l, i) {
+        return '<button type="button" class="trk-ll' + (i === target ? ' is-target' : '') + '" data-i="' + i + '" onclick="trkLyrTap(' + i + ')"' +
+          (L.synced ? ' aria-label="' + _te(l.x) + ', at ' + fmtT(l.t) + '"' : '') + '>' + _te(l.x) + '</button>';
+      }).join('') + '</div>';
+    _trk.lyrIdx = -1;
+    var sc = document.getElementById('trk-lyr-scroll');
+    if (sc) {
+      var mark = function () { _trk.userScrollAt = Date.now(); };
+      sc.addEventListener('wheel', mark, { passive: true });
+      sc.addEventListener('touchmove', mark, { passive: true });
+      if (target > 0) {
+        var el = sc.querySelector('[data-i="' + target + '"]');
+        if (el) sc.scrollTop = Math.max(0, el.offsetTop - sc.clientHeight * 0.3);
+      }
+    }
+    _trkLyrSync(true);
+  }
+  function _trkLyrIndexAt(t) {
+    var lines = _trk.lyr ? _trk.lyr.lines : [];
+    var lo = 0, hi = lines.length - 1, ans = -1;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      if (Number(lines[mid].t) <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return ans;
+  }
+  function _trkLyrSync(force) {
+    var box = document.getElementById('trk-lyr');
+    var sc = document.getElementById('trk-lyr-scroll');
+    if (!box || !sc || !_trk.lyr || !_trk.lyr.synced) return;
+    var live = _trkIsCur() && !!audio.src && (audio.currentTime > 0.2 || !audio.paused) && !_trk.shareMode;
+    box.classList.toggle('is-live', live);
+    box.classList.toggle('is-idle', !live);
+    if (live && !_trk.targetCleared) { _trk.targetCleared = true; sc.querySelectorAll('.is-target').forEach(function (el) { el.classList.remove('is-target'); }); }
+    if (!live) {
+      if (_trk.lyrIdx !== -1) {
+        sc.querySelectorAll('.is-on, .is-past').forEach(function (el) { el.classList.remove('is-on', 'is-past'); });
+        var prevEl = sc.querySelector('[data-i="' + _trk.lyrIdx + '"]');
+        if (prevEl && _trk.lyr.lines[_trk.lyrIdx]) prevEl.textContent = _trk.lyr.lines[_trk.lyrIdx].x;
+        _trk.lyrIdx = -1;
+      }
+      return;
+    }
+    var t = audio.currentTime + 0.15;
+    var idx = _trkLyrIndexAt(t);
+    var lines = _trk.lyr.lines;
+    if (idx !== _trk.lyrIdx || force) {
+      var old = _trk.lyrIdx;
+      if (old >= 0) {
+        var oe = sc.querySelector('[data-i="' + old + '"]');
+        if (oe && lines[old]) { oe.classList.remove('is-on'); oe.textContent = lines[old].x; }
+      }
+      var btns = sc.children;
+      for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('is-past', i < idx);
+      var ne = idx >= 0 ? sc.querySelector('[data-i="' + idx + '"]') : null;
+      if (ne) {
+        ne.classList.add('is-on');
+        var w = lines[idx].w;
+        if (Array.isArray(w) && w.length) ne.innerHTML = w.map(function (x, k) { return '<span class="trk-w" data-k="' + k + '">' + _te(x.x) + '</span>'; }).join(' ');
+        if (Date.now() - _trk.userScrollAt > 4000) {
+          var top = Math.max(0, ne.offsetTop - sc.clientHeight * 0.32);
+          if (Math.abs(sc.scrollTop - top) > 4) sc.scrollTo({ top: top, behavior: _trkReduce() ? 'auto' : 'smooth' });
+        }
+      }
+      _trk.lyrIdx = idx;
+    }
+    if (idx >= 0 && Array.isArray(lines[idx].w)) {
+      var cur = sc.querySelector('[data-i="' + idx + '"]');
+      if (cur) {
+        var spans = cur.querySelectorAll('.trk-w');
+        for (var k = 0; k < spans.length; k++) {
+          var wt = lines[idx].w[k] ? Number(lines[idx].w[k].t) : Infinity;
+          spans[k].classList.toggle('on', wt <= t);
+        }
+      }
+    }
+  }
+  function trkLyrTap(i) {
+    if (!_trk.lyr || !track) return;
+    var l = _trk.lyr.lines[i];
+    if (!l) return;
+    if (_trk.shareMode) {
+      trkLyrShareMode();
+      if (typeof window.wvShareLyric === 'function') {
+        window.wvShareLyric({ line: l.x, time: l.t, track: { id: track.id, title: track.title, artist: trackCreator().name, cover: _trkCover() } });
+      }
+      return;
+    }
+    if (!_trk.lyr.synced) return;
+    _trk.userScrollAt = 0;
+    trkSeekTo(Number(l.t) || 0);
+  }
+  function trkLyrShareMode() {
+    _trk.shareMode = !_trk.shareMode;
+    var box = document.getElementById('trk-lyr');
+    var b = document.getElementById('trk-lyr-sharebtn');
+    if (box) box.classList.toggle('is-sharing', _trk.shareMode);
+    if (b) b.setAttribute('aria-pressed', _trk.shareMode ? 'true' : 'false');
+    if (box && _trk.lyr && !_trk.lyr.synced) box.classList.toggle('trk-lyr-static', !_trk.shareMode);
+    _trkLyrSync(true);
+  }
+
+  // Seek this edit to t, starting it first when something else is playing.
+  function trkSeekTo(t) {
+    t = Math.max(0, Number(t) || 0);
+    if (_trkIsCur() && audio.src) {
+      try { audio.currentTime = t; } catch (_) {}
+      if (audio.paused) togglePlay();
+      return;
+    }
+    playThisTrack();
+    if (!t) return;
+    var fired = false;
+    var apply = function () {
+      if (fired) return;
+      fired = true;
+      audio.removeEventListener('loadedmetadata', apply);
+      audio.removeEventListener('canplay', apply);
+      if (_trkIsCur()) { try { audio.currentTime = t; } catch (_) {} }
+    };
+    audio.addEventListener('loadedmetadata', apply);
+    audio.addEventListener('canplay', apply);
   }
 
   function _avatarGrad(name) {
@@ -290,9 +1095,13 @@
       if (!el) return;
       comments.forEach(c => { if (c.user_vote) myVotes[c.id] = c.user_vote; });
       _tsComments = comments.filter(c => c.track_time != null);
+      _trk.commentsN = comments.length;
+      _trkPaintStats();
+      var cc = document.getElementById('trk-ccount');
+      if (cc) cc.textContent = comments.length ? fmtNum(comments.length) : '';
       renderTsTimeline();
       if (!comments.length) {
-        el.innerHTML = `<div class="empty-state" style="padding:24px 0;"><div class="empty-icon">💬</div><div class="empty-title" style="font-size:14px;">no comments yet...be the first!!</div></div>`;
+        el.innerHTML = `<div style="padding:18px 0 8px;"><div style="font-size:15px;font-weight:700;color:var(--text);">no comments yet</div><div style="font-size:13.5px;color:var(--text-2);margin-top:4px;">be the first to say something about this one.</div></div>`;
         return;
       }
       el.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;">' +
@@ -307,7 +1116,7 @@
           const upActive = myVote === 1;
           const downActive = myVote === -1;
 
-          return `<div id="comment-${escHtml(c.id)}" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background='var(--hair)'" onmouseleave="this.style.background='transparent'">
+          return `<div id="comment-${escHtml(c.id)}" style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;margin:0 -14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background='var(--hair)'" onmouseleave="this.style.background='transparent'">
             <div style="width:34px;height:34px;border-radius:50%;background:${avatarBg};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);">${escHtml(initial)}</div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
@@ -316,11 +1125,11 @@
               </div>
               <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="jump to this part" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
               <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
-                <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)"
+                <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)" aria-label="Upvote"
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${upActive ? 'var(--brand)' : 'var(--hair-strong)'};background:${upActive ? 'var(--brand-bg)' : 'transparent'};color:${upActive ? 'var(--brand)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
                   ▲ <span id="vote-up-${escHtml(c.id)}">${upvotes}</span>
                 </button>
-                <button id="vote-down-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', -1)"
+                <button id="vote-down-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', -1)" aria-label="Downvote"
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${downActive ? 'var(--red)' : 'var(--hair-strong)'};background:${downActive ? 'rgba(248,113,113,0.12)' : 'transparent'};color:${downActive ? 'var(--red)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
                   ▼ <span id="vote-down-${escHtml(c.id)}">${downvotes}</span>
                 </button>
@@ -330,12 +1139,13 @@
         }).join('') +
       '</div>';
     } catch (err) {
+      if (err && err.navAborted) return;
       // A failed load used to leave the spinner spinning for good.
       const el = document.getElementById('comments-list');
       if (el) {
-        el.innerHTML = '<div class="empty-state" style="padding:24px 0;">' +
-          '<div class="empty-title" style="font-size:14px;">comments didnt load</div>' +
-          '<button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="loadComments()">Try again</button></div>';
+        el.innerHTML = '<div style="padding:18px 0 8px;">' +
+          '<div style="font-size:14.5px;font-weight:700;color:var(--text);">comments didnt load</div>' +
+          '<button class="trk-pill" style="margin-top:10px;" onclick="loadComments()">Try again</button></div>';
       }
     }
   }
@@ -399,7 +1209,8 @@
       tsCapturedTime = null;
       loadComments();
     } catch (err) {
-      alert(err.message);
+      if (err && err.navAborted) return;
+      if (typeof wvToast === 'function') wvToast(err.message || 'couldnt post that', 'error');
     }
   }
 
@@ -410,7 +1221,8 @@
 
   function fmtT(s) {
     s = Math.max(0, Math.floor(Number(s) || 0));
-    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s % 60).padStart(2, '0');
   }
 
   // Is THIS track the one loaded in the global player?
@@ -455,36 +1267,75 @@
     }
   }
 
-  function seekToComment(t) {
-    if (_isThisTrackLoaded()) {
-      audio.currentTime = t;
-      audio.play().catch(function(){});
-    } else {
-      playThisTrack();
-      var onCan = function() {
-        audio.removeEventListener('canplay', onCan);
-        audio.currentTime = t;
-      };
-      audio.addEventListener('canplay', onCan);
-    }
-  }
+  function seekToComment(t) { trkSeekTo(t); }
 
   function renderTsTimeline() {
     var wrap = document.getElementById('ts-timeline-wrap');
     var bar = document.getElementById('ts-timeline');
     if (!wrap || !bar) return;
-    // Need the track loaded so we know the duration to position markers.
-    var dur = _isThisTrackLoaded() && audio.duration && isFinite(audio.duration) ? audio.duration : 0;
-    if (!_tsComments.length || !dur) { wrap.style.display = 'none'; return; }
-    wrap.style.display = '';
-    bar.innerHTML = _tsComments.map(function(c) {
-      var pct = Math.min(98, Math.max(1, (c.track_time / dur) * 100));
-      var who = (c.users && c.users.username) || 'unknown';
-      var snippet = String(c.content || '').slice(0, 60);
-      return '<button onclick="seekToComment(' + Number(c.track_time) + ')" ' +
-        'title="' + escHtml(who + ' @ ' + fmtT(c.track_time) + ': ' + snippet) + '" ' +
-        'style="position:absolute;left:' + pct + '%;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:var(--brand);border:2px solid var(--page-bg-base,#000);cursor:pointer;padding:0;"></button>';
-    }).join('');
+    var dur = _trkDur();
+    if (!dur) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    bar.setAttribute('aria-valuemax', String(Math.round(dur)));
+    var durEl = document.getElementById('trk-tl-dur');
+    if (durEl) durEl.textContent = fmtT(dur);
+    var note = document.getElementById('trk-tl-note');
+    if (note) note.innerHTML = _tsComments.length
+      ? '<b>' + _tsComments.length + '</b> ' + (_tsComments.length === 1 ? 'moment' : 'moments') + ' people commented on · tap one to jump there'
+      : 'no timed comments yet · play it and pin yours to a moment';
+    if (window.wvWaveform && typeof window.wvWaveform.mount === 'function') {
+      if (!_trk.wfMounted) {
+        _trk.wfMounted = true;
+        try {
+          window.wvWaveform.mount('#ts-timeline', trackId, { markers: _tsComments.map(function (c) { return { t: Number(c.track_time), label: ((c.users && c.users.username) || 'unknown') + ': ' + String(c.content || '').slice(0, 60) }; }) });
+          return;
+        } catch (_) { _trk.wfMounted = false; }
+      } else return;
+    }
+    bar.innerHTML = '<div class="trk-tl-fill" id="trk-tl-fill"></div><div class="trk-tl-knob" id="trk-tl-knob"></div>' +
+      _tsComments.map(function(c) {
+        var pct = Math.min(99, Math.max(1, (c.track_time / dur) * 100));
+        var who = (c.users && c.users.username) || 'unknown';
+        var snippet = String(c.content || '').slice(0, 60);
+        return '<button type="button" class="trk-tl-dot" onclick="event.stopPropagation();seekToComment(' + Number(c.track_time) + ')" ' +
+          'title="' + _te(who + ' @ ' + fmtT(c.track_time) + ': ' + snippet) + '" aria-label="' + _te(who + ' at ' + fmtT(c.track_time) + ': ' + snippet) + '" ' +
+          'style="left:' + pct + '%"></button>';
+      }).join('');
+    _trkTlProgress();
+  }
+  function _trkTlProgress() {
+    var wrap = document.getElementById('ts-timeline-wrap');
+    if (!wrap || wrap.hidden) {
+      if (wrap && _trkDur()) renderTsTimeline();
+      return;
+    }
+    var cur = _trkIsCur() && !!audio.src;
+    var dur = _trkDur();
+    var t = cur ? (audio.currentTime || 0) : 0;
+    var pct = dur ? Math.min(100, Math.max(0, t / dur * 100)) : 0;
+    wrap.classList.toggle('is-cur', cur);
+    var f = document.getElementById('trk-tl-fill'); if (f) f.style.width = pct + '%';
+    var k = document.getElementById('trk-tl-knob'); if (k) k.style.left = pct + '%';
+    var c = document.getElementById('trk-tl-cur'); if (c) c.textContent = fmtT(t);
+    var bar = document.getElementById('ts-timeline'); if (bar) bar.setAttribute('aria-valuenow', String(Math.round(t)));
+  }
+  function trkTlClick(e) {
+    var bar = document.getElementById('ts-timeline');
+    var dur = _trkDur();
+    if (!bar || !dur) return;
+    var r = bar.getBoundingClientRect();
+    var frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    trkSeekTo(frac * dur);
+  }
+  function trkTlKey(e) {
+    var dur = _trkDur();
+    if (!dur) return;
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+    e.preventDefault();
+    e.stopPropagation();
+    var t = _trkIsCur() ? audio.currentTime : 0;
+    if (e.key === 'ArrowRight') t += 5; else if (e.key === 'ArrowLeft') t -= 5; else if (e.key === 'Home') t = 0; else t = dur - 1;
+    trkSeekTo(Math.min(dur - 0.5, Math.max(0, t)));
   }
 
   // ── Live surfacing: pop a comment up when playback reaches its moment ──────
@@ -494,9 +1345,9 @@
   function _tsShowBubble(c) {
     var bub = document.getElementById('ts-bubble');
     if (!bub) return;
-    var dur = (_isThisTrackLoaded() && audio.duration && isFinite(audio.duration)) ? audio.duration : 0;
+    var dur = _trkDur();
     if (!dur) return;
-    var pct = Math.min(96, Math.max(2, (c.track_time / dur) * 100));
+    var pct = Math.min(90, Math.max(10, (c.track_time / dur) * 100));
     document.getElementById('ts-bubble-user').textContent = (c.users && c.users.username) || 'unknown';
     document.getElementById('ts-bubble-time').textContent = '@ ' + fmtT(c.track_time);
     document.getElementById('ts-bubble-text').textContent = c.content || '';
@@ -513,28 +1364,13 @@
     var crossed = null;
     for (var i = 0; i < _tsComments.length; i++) {
       var t = Number(_tsComments[i].track_time);
-      if (t > _tsLastTime && t <= now) {
+      if (t > _tsLastTime && t <= now && now - t < 2) {
         if (!crossed || t > Number(crossed.track_time)) crossed = _tsComments[i];
       }
     }
     if (crossed) _tsShowBubble(crossed);
     _tsLastTime = now;
   }
-
-  // Keep the chip label and timeline fresh while this page is open. The
-  // interval kills itself once the SPA swaps the page (elements disappear).
-  var _tsTimer = setInterval(function() {
-    var chip = document.getElementById('ts-toggle');
-    var wrap = document.getElementById('ts-timeline-wrap');
-    if (!chip && !wrap) { clearInterval(_tsTimer); return; }
-    _updateTsChip();
-    // Re-render markers when duration becomes known (first play)
-    if (wrap && wrap.style.display === 'none' && _tsComments.length) renderTsTimeline();
-    _tsCheckCrossing();
-    // Auto-hide the bubble after its window elapses.
-    var bub = document.getElementById('ts-bubble');
-    if (bub && bub.style.display !== 'none' && Date.now() > _tsBubbleUntil) bub.style.display = 'none';
-  }, 300);
 
   // The same song often sits on a dozen different comps under slightly
   // different spellings. Show where else it turns up.
@@ -634,17 +1470,23 @@
           'this song is also on ' + d.total + (d.total === 1 ? ' other comp' : ' other comps') +
           (d.capped ? ' or more' : '') + more +
         '</p>' +
-        '<div class="wv-comp-grid wv-comp-grid-4">' +
-          list.map(function(a) {
+        '<div class="wv-comp-grid wv-comp-grid-4" id="trk-also-grid">' +
+          list.map(function(a, i) {
             return renderMoreCard(Object.assign({}, a, {
               _type: 'album',
               artists: { display_name: a.creator },
-            }));
+            })).replace('<div class="wv-comp-card"', '<div class="wv-comp-card"' + (i >= 8 ? ' hidden' : ''));
           }).join('') +
-        '</div>';
+        '</div>' +
+        (list.length > 8 ? '<button type="button" class="trk-pill" style="margin-top:14px;" onclick="trkAlsoAll(this)">Show all ' + list.length + '</button>' : '');
     } catch (_) {
       if (el) el.remove();
     }
+  }
+
+  function trkAlsoAll(btn) {
+    document.querySelectorAll('#trk-also-grid > [hidden]').forEach(function (el) { el.hidden = false; });
+    if (btn) btn.remove();
   }
 
   async function loadMoreLikeThis() {
@@ -655,6 +1497,7 @@
       var artist = track.artists || {};
       var artistId = artist.id;
       var eraTagId = track.era_tag ? track.era_tag.id : track.era_tag_id;
+      var creator = trackCreator();
 
       // Fetch more by same artist + same era tag in parallel
       var results = await Promise.all([
@@ -662,14 +1505,15 @@
         artistId ? api('/albums/by-artist/' + artistId).catch(function() { return []; }) : Promise.resolve([]),
         eraTagId ? api('/discover/era/' + eraTagId).catch(function() { return []; }) : Promise.resolve([]),
       ]);
-      var artistTracks = results[0];
-      var artistAlbums = results[1];
-      var eraTracks = results[2];
+      var artistTracks = Array.isArray(results[0]) ? results[0] : [];
+      var artistAlbums = Array.isArray(results[1]) ? results[1] : [];
+      var eraTracks = Array.isArray(results[2]) ? results[2] : [];
+      var byName = creator.archive ? '' : (artist.display_name || '');
 
       // Filter out current track, limit to 4 each
       var byArtist = [].concat(
-        artistTracks.filter(function(t) { return t.id !== track.id; }).slice(0, 2).map(function(t) { return Object.assign({}, t, {_type:'track'}); }),
-        artistAlbums.slice(0, 2).map(function(a) { return Object.assign({}, a, {_type:'album'}); })
+        artistTracks.filter(function(t) { return t.id !== track.id; }).slice(0, 2).map(function(t) { return Object.assign({ artists: { display_name: byName } }, t, {_type:'track'}); }),
+        artistAlbums.slice(0, 2).map(function(a) { return Object.assign({ artists: { display_name: byName } }, a, {_type:'album'}); })
       ).slice(0, 4);
 
       var byEra = eraTagId
@@ -681,7 +1525,7 @@
       var html = '';
 
       if (byArtist.length) {
-        html += '<h2 class="section-title" style="margin-top:0;">More by ' + escHtml(artist.display_name || 'this artist') + '</h2>';
+        html += '<h2 class="section-title" style="margin-top:0;">' + (creator.archive ? 'More from the archive' : 'More by ' + escHtml(artist.display_name || 'this artist')) + '</h2>';
         html += '<div class="wv-comp-grid wv-comp-grid-4">' + byArtist.map(function(item) { return renderMoreCard(item); }).join('') + '</div>';
       }
 
@@ -691,28 +1535,29 @@
         html += '<div class="wv-comp-grid wv-comp-grid-4">' + byEra.map(function(item) { return renderMoreCard(item); }).join('') + '</div>';
       }
 
-      el.innerHTML = html;
+      if (document.getElementById('more-like-this')) el.innerHTML = html;
     } catch (_) {}
   }
 
   function renderMoreCard(item) {
     var isAlbum = item._type === 'album';
     var bg = (typeof coverGradient === 'function') ? coverGradient(item.title || '') : '#333';
-    var coverImg = item.cover_url
-      ? '<img src="' + escHtml(item.cover_url) + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
+    var src = item.cover_url ? _trkImg(item.cover_url, 320) : '';
+    var coverImg = src
+      ? '<img src="' + escHtml(src) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">'
       : '';
+    var safeId = String(item.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+    if (!isAlbum) _trk.cards[safeId] = item;
     var clickAction = isAlbum
-      ? "navigate('/album?id=" + item.id + "')"
-      : "navigate('/track?id=" + item.id + "')";
+      ? "navigate('/album?id=" + safeId + "')"
+      : "navigate('/track?id=" + safeId + "')";
     var artistName = item.artists ? (item.artists.display_name || '') : '';
 
     return '<div class="wv-comp-card" onclick="' + clickAction + '">' +
       '<div class="wv-comp-card-cover">' +
         '<div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-          '' +
-          (isAlbum ? '' : '') +
           coverImg +
-          (!isAlbum ? '<button class="wv-cover-play-btn" onclick="event.stopPropagation();navigate(\'/track?id=' + item.id + '\')">' +
+          (!isAlbum ? '<button class="wv-cover-play-btn" aria-label="Play ' + _te(item.title || '') + '" onclick="event.stopPropagation();trkPlayCard(\'' + safeId + '\')">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
           '</button>' : '') +
         '</div>' +
@@ -720,6 +1565,27 @@
       '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
       '<div class="wv-comp-card-artist">' + escHtml(artistName) + '</div>' +
     '</div>';
+  }
+
+  // The round play button on a card plays the edit in place; the card
+  // itself still opens its page.
+  function trkPlayCard(id) {
+    var it = _trk.cards[id];
+    var go = function (t) {
+      if (!t || !t.ia_url || typeof playTrack !== 'function') { navigate('/track?id=' + id); return; }
+      var archive = t.is_archive || (t.albums && t.albums.is_archive);
+      var name = t.display_artist || (archive && (t.archive_artist_name || (t.albums && t.albums.archive_artist_name))) || (t.artists && t.artists.display_name) || (it && it.artists && it.artists.display_name) || '';
+      var alb = t.albums && t.albums.id ? t.albums : null;
+      playTrack(Object.assign({}, t, {
+        artist_name: name,
+        _archive_artist: archive && name ? name : null,
+        _album_id: alb ? alb.id : null,
+        _album_title: alb ? alb.title : null,
+        _album_cover: alb ? alb.cover_url : null,
+      }));
+    };
+    if (it && it.ia_url && it.artists && it.artists.display_name) { go(it); return; }
+    api('/tracks/' + encodeURIComponent(id)).then(go).catch(function (e) { if (!e || !e.navAborted) navigate('/track?id=' + id); });
   }
 
   if (!_missingId) loadTrack();

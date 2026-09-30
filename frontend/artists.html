@@ -7,13 +7,70 @@
   <link rel="stylesheet" href="/css/style.css?v=6288d60cd337">
   <script src="/js/status-card.js?v=6288d60cd337"></script>
   <script src="/js/down.js?v=6288d60cd337"></script>
+  <style id="ed-css">
+    .ed-sub { font-size: 14px; color: var(--text-2); margin: -6px 0 22px; }
+    .ed-podium { display: grid; grid-template-columns: 1fr 1.12fr 1fr; gap: 14px; align-items: end; margin-bottom: 30px; }
+    .ed-pod { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 22px 14px 18px; border-radius: 16px; background: var(--surface); text-decoration: none; color: inherit; overflow: hidden; isolation: isolate; transition: transform .2s var(--ease), background .2s; min-width: 0; }
+    .ed-pod::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--ed-tint); opacity: .22; }
+    .ed-pod:hover { transform: translateY(-3px); }
+    .ed-pod:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+    .ed-pod.r1 { padding-top: 30px; padding-bottom: 24px; }
+    .ed-av { width: 104px; height: 104px; border-radius: 50%; position: relative; overflow: hidden; box-shadow: 0 0 0 3px var(--ed-ring), 0 12px 30px rgba(0,0,0,.3); display: grid; place-items: center; font-size: 38px; font-weight: 900; color: rgba(255,255,255,.92); flex: none; }
+    .ed-pod.r1 .ed-av { width: 132px; height: 132px; font-size: 48px; }
+    .ed-av img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .ed-rank { position: absolute; top: 12px; left: 12px; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 900; background: var(--ed-ring); color: #1b1405; }
+    .ed-crown { position: absolute; top: 10px; right: 12px; color: var(--ed-ring); }
+    .ed-name { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; margin-top: 14px; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 4px; justify-content: center; }
+    .ed-pod.r1 .ed-name { font-size: 19px; }
+    .ed-meta { font-size: 12.5px; color: var(--text-2); margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .ed-meta b { color: var(--text); }
+    .ed-label { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+    .ed-empty { grid-column: 1 / -1; text-align: center; padding: 56px 16px; }
+    .ed-empty-ic { width: 56px; height: 56px; border-radius: 50%; background: var(--surface-2); color: var(--text-2); display: grid; place-items: center; margin: 0 auto 14px; }
+    .ed-empty-t { font-size: 17px; font-weight: 800; color: var(--text); }
+    .ed-empty-d { font-size: 13.5px; color: var(--text-2); margin-top: 4px; }
+    .ed-btn { margin-top: 16px; min-height: 40px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--hair-strong); background: transparent; color: var(--text); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+    .ed-btn:hover { border-color: var(--text); }
+    .ed-skel { background: var(--surface-2); border-radius: 16px; position: relative; overflow: hidden; }
+    .ed-skel::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 6%, transparent), transparent); animation: ed-shine 1.3s infinite; }
+    @keyframes ed-shine { to { transform: translateX(100%); } }
+    #ar-sort button { min-height: 34px; }
+    @media (max-width: 640px) {
+      .ed-podium { gap: 8px; grid-template-columns: 1fr 1.08fr 1fr; margin-bottom: 22px; }
+      .ed-pod { padding: 18px 6px 12px; border-radius: 12px; }
+      .ed-pod.r1 { padding-top: 22px; }
+      .ed-av { width: 68px; height: 68px; font-size: 26px; }
+      .ed-pod.r1 .ed-av { width: 84px; height: 84px; font-size: 32px; }
+      .ed-rank { top: 7px; left: 7px; min-width: 24px; height: 24px; font-size: 11.5px; padding: 0 6px; }
+      .ed-crown { display: none; }
+      .ed-name, .ed-pod.r1 .ed-name { font-size: 13.5px; margin-top: 10px; }
+      .ed-meta { font-size: 11.5px; }
+      .ed-meta .ed-f { display: none; }
+      #ar-sort { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+      #ar-sort::-webkit-scrollbar { display: none; }
+      #ar-sort button { flex: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ed-pod { transition: none; }
+      .ed-pod:hover { transform: none; }
+      .ed-skel::after { animation: none; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
   <h1 class="wv-page-title">Editors</h1>
+  <p class="ed-sub">the people making the edits and comps on wavernrs</p>
+  <div id="ed-podium-wrap">
+    <div class="ed-podium" aria-hidden="true">
+      <div class="ed-skel" style="height:210px;"></div>
+      <div class="ed-skel" style="height:250px;"></div>
+      <div class="ed-skel" style="height:210px;"></div>
+    </div>
+  </div>
   <div class="wv-toolbar">
-    <input class="wv-input" id="ar-q" placeholder="search for an editor" oninput="renderArtists()">
-    <div class="wv-seg" id="ar-sort">
+    <input class="wv-input" id="ar-q" placeholder="search for an editor" aria-label="search editors" oninput="renderArtists()">
+    <div class="wv-seg" id="ar-sort" role="group" aria-label="sort editors">
       <button class="on" data-s="plays" onclick="setArtistSort('plays')">Most played</button>
       <button data-s="followers" onclick="setArtistSort('followers')">Most followed</button>
       <button data-s="uploads" onclick="setArtistSort('uploads')">Most uploads</button>
@@ -37,50 +94,120 @@
 <script>
 initPlayer();
 var _artists = [];
-var _arSort = 'plays';
+var _arLoaded = false;
+var _arSort = (function () {
+  try { var s = localStorage.getItem('wv_editors_sort'); return ['plays', 'followers', 'uploads', 'latest'].indexOf(s) !== -1 ? s : 'plays'; } catch (_) { return 'plays'; }
+})();
 var _badges = {};
-getBadgeData().then(function(b) { _badges = b || {}; renderArtists(); }).catch(function() {});
+getBadgeData().then(function(b) { _badges = b || {}; renderArtists(); renderPodium(); }).catch(function() {});
 if (typeof window.setPageWash === 'function') window.setPageWash('artists');
+
+function arImg(url, px) {
+  return typeof wvImg === 'function' ? wvImg(url, px) : url;
+}
+
+function arSyncSortButtons() {
+  document.querySelectorAll('#ar-sort button').forEach(function(b) {
+    var on = b.dataset.s === _arSort;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+arSyncSortButtons();
 
 window.setArtistSort = function(s) {
   _arSort = s;
-  document.querySelectorAll('#ar-sort button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); });
+  try { localStorage.setItem('wv_editors_sort', s); } catch (_) {}
+  arSyncSortButtons();
+  renderArtists();
+};
+
+window.clearArtistSearch = function() {
+  var q = document.getElementById('ar-q');
+  if (q) { q.value = ''; q.focus(); }
   renderArtists();
 };
 
 async function loadArtists() {
   try {
     var d = await api('/stats/artists');
-    _artists = d.items || [];
+    _artists = (d && d.items) || [];
+    _arLoaded = true;
+    renderPodium();
     renderArtists();
   } catch (e) {
-    document.getElementById('ar-grid').innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">couldnt load editors...' + escHtml(e.message) + '</div>';
+    var wrap = document.getElementById('ed-podium-wrap');
+    if (wrap) { wrap.innerHTML = ''; wrap.setAttribute('data-k', 'off'); }
+    var grid = document.getElementById('ar-grid');
+    if (grid) grid.innerHTML = '<div class="ed-empty"><div class="ed-empty-t">couldnt load editors</div><div class="ed-empty-d">' + escHtml(e.message || 'something went wrong') + '</div><button class="ed-btn" onclick="loadArtists()">Try again</button></div>';
   }
 }
 
+var ED_RINGS = { 1: '#f5c451', 2: '#c9ced6', 3: '#d9955b' };
+
+function renderPodium() {
+  var wrap = document.getElementById('ed-podium-wrap');
+  if (!wrap || !_arLoaded) return;
+  var q = (document.getElementById('ar-q') || {}).value || '';
+  var top = _artists.filter(function(a) { return (a.plays || 0) > 0; }).slice().sort(function(a, b) { return (b.plays || 0) - (a.plays || 0); }).slice(0, 3);
+  var ver = _badges.verified_artists || [];
+  var key = (q.trim() || top.length < 3) ? 'off' : top.map(function(a) { return a.id; }).join(',') + '|' + ver.length;
+  if (wrap.getAttribute('data-k') === key) return;
+  wrap.setAttribute('data-k', key);
+  if (key === 'off') { wrap.innerHTML = ''; return; }
+  var crown = '<svg class="ed-crown" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>';
+  var card = function(a, rank) {
+    var n = a.display_name || 'Unknown';
+    var img = a.profile_image_url || a.cover;
+    return '<a class="ed-pod r' + rank + '" href="/artist?id=' + encodeURIComponent(a.id) + '" style="--ed-ring:' + ED_RINGS[rank] + ';--ed-tint:' + coverGradient(n) + ';" aria-label="#' + rank + ' ' + escHtml(n) + '">' +
+      '<span class="ed-rank">' + rank + '</span>' + (rank === 1 ? crown : '') +
+      '<div class="ed-av" style="background:' + coverGradient(n) + ';">' + escHtml((n[0] || '?').toUpperCase()) + (img ? '<img src="' + escHtml(arImg(img, 320)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div class="ed-name"><span style="overflow:hidden;text-overflow:ellipsis;">' + escHtml(n) + '</span>' + (ver.indexOf(a.id) !== -1 ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +
+      '<div class="ed-meta"><b>' + fmtNum(a.plays || 0) + '</b> plays<span class="ed-f"> · ' + fmtNum(a.followers || 0) + ' followers</span></div>' +
+    '</a>';
+  };
+  wrap.innerHTML = '<div class="ed-label">Most played editors</div><div class="ed-podium">' + card(top[1], 2) + card(top[0], 1) + card(top[2], 3) + '</div>';
+}
+
 window.renderArtists = function() {
-  var grid = document.getElementById('ar-grid'); if (!grid || !_artists.length) return;
-  var q = (document.getElementById('ar-q').value || '').trim().toLowerCase();
+  var grid = document.getElementById('ar-grid');
+  if (!grid || !_arLoaded) return;
+  var qEl = document.getElementById('ar-q');
+  var q = ((qEl && qEl.value) || '').trim().toLowerCase();
+  renderPodium();
+  if (!_artists.length) {
+    document.getElementById('ar-count').textContent = '';
+    grid.innerHTML = '<div class="ed-empty"><div class="ed-empty-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>' +
+      '<div class="ed-empty-t">no editors yet</div><div class="ed-empty-d">upload an edit or a comp and youll be the first one here</div>' +
+      '<a class="ed-btn" href="/upload" style="display:inline-flex;align-items:center;text-decoration:none;">Upload</a></div>';
+    return;
+  }
   var list = _artists.filter(function(a) { return !q || String(a.display_name || '').toLowerCase().indexOf(q) !== -1; });
   list.sort(function(a, b) {
     if (_arSort === 'latest') return String(b.latest || b.created_at || '').localeCompare(String(a.latest || a.created_at || ''));
     return (b[_arSort] || 0) - (a[_arSort] || 0) || (b.plays || 0) - (a.plays || 0);
   });
   document.getElementById('ar-count').textContent = list.length + ' editor' + (list.length === 1 ? '' : 's');
-  if (!list.length) { grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">no editors match that</div>'; return; }
+  if (!list.length) {
+    grid.innerHTML = '<div class="ed-empty"><div class="ed-empty-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>' +
+      '<div class="ed-empty-t">no editors match "' + escHtml(q) + '"</div><div class="ed-empty-d">check the spelling or try part of the name</div>' +
+      '<button class="ed-btn" onclick="clearArtistSearch()">Clear search</button></div>';
+    return;
+  }
   var ver = (_badges.verified_artists || []);
   grid.innerHTML = list.map(function(a) {
     var img = a.profile_image_url || a.cover;
-    var meta = _arSort === 'followers' ? fmtNum(a.followers || 0) + ' followers'
+    var meta = _arSort === 'followers' ? fmtNum(a.followers || 0) + ' follower' + (a.followers === 1 ? '' : 's')
              : _arSort === 'uploads' ? (a.uploads || 0) + ' upload' + (a.uploads === 1 ? '' : 's')
+             : _arSort === 'latest' && a.latest ? 'new ' + timeAgo(a.latest)
              : fmtNum(a.plays || 0) + ' plays';
-    return '<div class="wv-artist-tile" onclick="navigate(\'/artist?id=' + escHtml(a.id) + '\')">' +
+    return '<a class="wv-artist-tile" href="/artist?id=' + encodeURIComponent(a.id) + '" style="text-decoration:none;color:inherit;display:block;">' +
       '<div class="av" style="background:' + coverGradient(a.display_name || '') + ';">' +
-        (img ? '<img src="' + escHtml(img) + '" loading="lazy" onerror="this.remove()">' : '') +
+        (img ? '<img src="' + escHtml(arImg(img, 240)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
       '</div>' +
       '<div class="wv-artist-name">' + escHtml(a.display_name || 'Unknown') + (ver.indexOf(a.id) !== -1 ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +
-      '<div class="wv-artist-meta">' + meta + '</div>' +
-    '</div>';
+      '<div class="wv-artist-meta">' + escHtml(meta) + '</div>' +
+    '</a>';
   }).join('');
 };
 loadArtists();
