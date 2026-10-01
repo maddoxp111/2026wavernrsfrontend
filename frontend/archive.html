@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=6543ad2c1959">
-  <script src="/js/status-card.js?v=6543ad2c1959"></script>
-  <script src="/js/down.js?v=6543ad2c1959"></script>
+  <link rel="stylesheet" href="/css/style.css?v=5404192596e3">
+  <script src="/js/status-card.js?v=5404192596e3"></script>
+  <script src="/js/down.js?v=5404192596e3"></script>
   <style>
     .arc-top { display: flex; flex-direction: column; gap: 10px; }
     .arc-sub { margin: 0; font-size: 14px; color: var(--text-2); max-width: 560px; line-height: 1.55; }
@@ -281,10 +281,10 @@
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=6543ad2c1959"></script>
-<script src="/js/layout.js?v=6543ad2c1959"></script>
-<script src="/js/player.js?v=6543ad2c1959"></script>
-<script src="/js/router.js?v=6543ad2c1959"></script>
+<script src="/js/api.js?v=5404192596e3"></script>
+<script src="/js/layout.js?v=5404192596e3"></script>
+<script src="/js/player.js?v=5404192596e3"></script>
+<script src="/js/router.js?v=5404192596e3"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -377,6 +377,11 @@ async function initArchive() {
     '<div id="archive-loading-more" style="display:none;font-size:12px;color:var(--text-3);text-align:center;padding:6px 0;">loading more...</div>' +
     '</div>' +
     '<button class="arc-top-btn" id="arc-top-btn" onclick="arcToTop()" aria-label="Back to top"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button>';
+  window._arcRestoreN = 0;
+  var _backNav = !!window._wvPopNav;
+  try { if (!_backNav && !window._arcBootDone && performance.getEntriesByType('navigation')[0].type === 'back_forward') _backNav = true; } catch (_) {}
+  window._arcBootDone = true;
+  if (_backNav) { try { window._arcRestoreN = +sessionStorage.getItem('wv_arc_n:' + location.search) || 0; } catch (_) {} }
   var _p0 = new URLSearchParams(location.search);
   var _q0 = _p0.get('q');
   if (_q0) {
@@ -434,7 +439,10 @@ async function arcLoadMore() {
   var more = document.getElementById('archive-loading-more');
   if (more && _arcItems.length) more.style.display = '';
   try {
-    var url = '/archive?limit=' + _ARC_PAGE + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
+    var lim = _ARC_PAGE;
+    if (!_arcItems.length && window._arcRestoreN > _ARC_PAGE) lim = Math.min(window._arcRestoreN, 600);
+    window._arcRestoreN = 0;
+    var url = '/archive?limit=' + lim + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
       (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '') +
       (_arcEra ? '&era=' + encodeURIComponent(_arcEra) : '') +
       (_arcSource ? '&source=' + encodeURIComponent(_arcSource) : '');
@@ -456,7 +464,8 @@ async function arcLoadMore() {
     _arcItems = _arcItems.concat(items);
     // A short page means the end. Only trust a total the server actually knows;
     // it counts in the background and reports null until that lands.
-    _arcDone = !items.length || items.length < _ARC_PAGE ||
+    try { sessionStorage.setItem('wv_arc_n:' + location.search, String(_arcItems.length)); } catch (_) {}
+    _arcDone = !items.length || items.length < lim ||
       (typeof knownTotal === 'number' && _arcItems.length >= knownTotal);
     var grid = document.getElementById('archive-grid');
     if (!grid) return;
@@ -514,7 +523,7 @@ function arcSourceChange(v) {
   if (next === _arcSource) return;
   _arcSource = next;
   _arcSourceMark();
-  arcSyncUrl();
+  arcSyncUrl(true);
   arcReload();
 }
 var _arcEras = [];
@@ -552,7 +561,7 @@ function arcEraChange() {
   // Wash the page in the era's own cover while you are filtered to it.
   var era = _arcEras.find(function (e) { return e.id === _arcEra; });
   if (typeof window.setPageBgImage === 'function' && era && era.cover) window.setPageBgImage(era.cover, era.name);
-  arcSyncUrl();
+  arcSyncUrl(true);
   arcEraHero();
   arcReload();
 }
@@ -624,7 +633,7 @@ window.arcClearEra = function () {
   _arcEra = '';
   var sel = document.getElementById('arc-era');
   if (sel) sel.value = '';
-  arcSyncUrl();
+  arcSyncUrl(true);
   arcEraHero();
   arcReload();
 };
@@ -735,7 +744,7 @@ function arcLoadStats() {
   }).catch(function () { _arcTopReq = null; });
 }
 
-function arcSyncUrl() {
+function arcSyncUrl(push) {
   try {
     var u = new URL(location.href);
     var set = function (k, v) { if (v) u.searchParams.set(k, v); else u.searchParams.delete(k); };
@@ -748,7 +757,9 @@ function arcSyncUrl() {
     set('q', _arcView !== 'top' && _arcView !== 'trackers' && !home ? _arcQuery : '');
     set('source', listView ? _arcSource : '');
     var next = u.pathname + u.search;
-    if (next !== location.pathname + location.search) history.replaceState(history.state, '', next);
+    if (next !== location.pathname + location.search) {
+      if (push) history.pushState({}, '', next); else history.replaceState(history.state, '', next);
+    }
   } catch (_) {}
 }
 
@@ -1053,7 +1064,7 @@ function arcSetView(view) {
   _arcLoading = false;
   _arcView = view;
   arcApplyView();
-  arcSyncUrl();
+  arcSyncUrl(true);
   if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
   if (view === 'top') return loadTopComps();
   if (view === 'trackers') return renderTrackerCards();

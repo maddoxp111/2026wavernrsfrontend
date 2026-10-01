@@ -369,7 +369,7 @@ window._pageCleanup = [];
       if (stopped || gen !== (window._wvNavGen || 0) || !c.isConnected) { off(); return; }
       var max = c.scrollHeight - c.clientHeight;
       if (max >= y - 1) { c.scrollTop = y; off(); return; }
-      if (now() - t0 > 3000) { if (max > 0) c.scrollTop = Math.min(y, max); off(); return; }
+      if (now() - t0 > 6000) { if (max > 0) c.scrollTop = Math.min(y, max); off(); return; }
       requestAnimationFrame(tick);
     })();
   }
@@ -635,6 +635,7 @@ window._pageCleanup = [];
     // teardown or the swap can shrink it and clamp scrollTop.
     if (!fromPopstate) rememberScroll();
 
+    window._wvPopNav = fromPopstate;
     emit('wv-navigate-start', { url: target.href, path: path, popstate: fromPopstate });
     closeOverlays();
 
