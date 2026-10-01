@@ -202,6 +202,7 @@
   function snoozed() { var s = +ls(SNOOZE_KEY) || 0; return s > Date.now(); }
   function onAppPage() { return !/^\/(login|register|auth-callback|status|offline)(\.html)?$/.test(location.pathname); }
   function maybeOffer() {
+    return;
     if (card || installed || isStandalone() || snoozed() || !onAppPage()) return;
     if (!eligibleAt || Date.now() < eligibleAt) return;
     if (!deferred && !isIOSSafari) return;
