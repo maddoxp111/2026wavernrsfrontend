@@ -3,161 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>What’s new — wavernrs</title>
-  <meta name="description" content="Every new feature and fix on wavernrs, as it ships.">
+  <title>what's new - wavernrs</title>
+  <meta name="description" content="everything added to wavernrs lately">
   <link rel="stylesheet" href="/css/style.css?v=baeb5e83aa10">
   <script src="/js/status-card.js?v=baeb5e83aa10"></script>
   <script src="/js/down.js?v=baeb5e83aa10"></script>
   <style>
-    .wn { max-width: 920px; margin: 0 auto; }
-    .wn a { color: inherit; text-decoration: none; }
-
-    .wn-hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 24px; border: 1px solid var(--hair); background: var(--surface); padding: 44px 36px 36px; }
-    .wn-hero::before { content: ''; position: absolute; inset: -30% -10% auto auto; width: 560px; height: 420px; z-index: -1; pointer-events: none;
-      background: radial-gradient(closest-side, color-mix(in srgb, var(--brand) 32%, transparent), transparent),
-                  radial-gradient(closest-side at 30% 70%, color-mix(in srgb, var(--pink) 16%, transparent), transparent); filter: blur(6px); }
-    .theme-light .wn-hero::before { opacity: .6; }
-    .wn-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
-      background-image: radial-gradient(color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1.2px); background-size: 22px 22px;
-      -webkit-mask-image: linear-gradient(120deg, transparent 35%, #000 100%); mask-image: linear-gradient(120deg, transparent 35%, #000 100%); }
-    .wn-kick { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--brand-bg); color: var(--brand); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .wn-h1 { font-size: 52px; font-weight: 900; letter-spacing: -.05em; line-height: 1; margin: 18px 0 0; color: var(--text); }
-    .wn-h1 em { font-style: normal; background: linear-gradient(90deg, var(--brand), var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .wn-lede { font-size: 16.5px; line-height: 1.6; color: var(--text-2); margin: 14px 0 0; max-width: 520px; }
-    .wn-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; align-items: center; }
-    .wn-chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--hair); background: color-mix(in srgb, var(--surface-2) 70%, transparent); font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
-    .wn-chip b { color: var(--text); font-weight: 800; font-variant-numeric: tabular-nums; }
-    .wn-chip .d { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
-    .wn-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 700; border: 1px solid #5865f2; background: #5865f2; color: #fff !important; cursor: pointer; transition: background .15s, transform .15s var(--ease); }
-    .wn-btn:hover { background: #4f5ae0; transform: translateY(-1px); }
-
-    .wn-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 28px -8px 8px; padding: 10px 8px; background: color-mix(in srgb, var(--page-bg) 86%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-    .wn-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--hair); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-    .wn-seg::-webkit-scrollbar { display: none; }
-    .wn-seg button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
-    .wn-seg button:hover { color: var(--text); }
-    .wn-seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--text); }
-    .wn-seg button small { font-size: 11.5px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
-    .wn-count { font-size: 13px; color: var(--text-3); font-weight: 600; white-space: nowrap; }
-
-    .wn-month { display: flex; align-items: center; gap: 14px; margin: 34px 0 14px; font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
-    .wn-month::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
-    .wn-month:first-child { margin-top: 18px; }
-
-    .wn-day { display: grid; grid-template-columns: 92px 1fr; gap: 0 22px; position: relative; }
-    .wn-day + .wn-day { margin-top: 6px; }
-    .wn-date { position: sticky; top: 72px; align-self: start; text-align: right; padding-top: 16px; }
-    .wn-date b { display: block; font-size: 30px; font-weight: 900; letter-spacing: -.04em; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
-    .wn-date span { display: block; font-size: 12px; font-weight: 700; color: var(--text-3); margin-top: 4px; text-transform: lowercase; }
-    .wn-list { position: relative; padding-left: 26px; padding-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
-    .wn-list::before { content: ''; position: absolute; left: 5px; top: 22px; bottom: -14px; width: 2px; border-radius: 2px; background: linear-gradient(180deg, var(--hair-strong), var(--hair)); }
-    .wn-day:last-child .wn-list::before { bottom: 16px; background: linear-gradient(180deg, var(--hair-strong), transparent); }
-
-    .wn-e { position: relative; border-radius: 16px; border: 1px solid var(--hair); background: var(--surface); padding: 18px 20px 16px; scroll-margin-top: 100px; transition: border-color .2s, transform .2s var(--ease), box-shadow .2s; }
-    .wn-e::before { content: ''; position: absolute; left: -26px; top: 20px; width: 12px; height: 12px; border-radius: 50%; background: var(--page-bg); border: 2px solid var(--text-3); box-sizing: border-box; }
-    .wn-e.tag-new::before { border-color: var(--brand); }
-    .wn-e.tag-improved::before { border-color: var(--blue); }
-    .wn-e.tag-fixed::before { border-color: var(--green); }
-    .wn-e.unread::before { background: var(--brand); border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent); }
-    .wn-e:hover { border-color: var(--hair-strong); }
-    .wn-e.flash { animation: wn-flash 1.8s var(--ease); }
-    @keyframes wn-flash { 0%, 30% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 55%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
-    .wn-e.feat { padding: 24px 24px 20px; border-color: color-mix(in srgb, var(--brand) 38%, var(--hair)); background: linear-gradient(155deg, color-mix(in srgb, var(--brand) 16%, var(--surface)) 0%, var(--surface) 62%); }
-    .wn-e.feat .wn-t { font-size: 23px; }
-    .wn-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-    .wn-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; background: var(--surface-3); color: var(--text-2); }
-    .wn-tag.new { background: var(--brand-bg); color: var(--brand); }
-    .wn-tag.improved { background: color-mix(in srgb, var(--blue) 16%, transparent); color: var(--blue); }
-    .wn-tag.fixed { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
-    .wn-latest { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; background: linear-gradient(90deg, var(--brand), var(--pink)); color: var(--on-brand); }
-    .wn-unread { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--brand); margin-left: 2px; }
-    .wn-unread .d { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
-    .wn-t { font-size: 18.5px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; margin: 0; color: var(--text); text-wrap: balance; }
-    .wn-b { font-size: 14.5px; line-height: 1.65; color: var(--text-2); margin: 8px 0 0; max-width: 640px; }
-    .wn-acts { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
-    .wn-go { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--hair); font-size: 13px; font-weight: 700; color: var(--text) !important; transition: background .15s, border-color .15s; }
-    .wn-go:hover { background: var(--surface-hover); border-color: var(--hair-strong); }
-    .wn-go svg { transition: transform .15s var(--ease); }
-    .wn-go:hover svg { transform: translateX(2px); }
-    .wn-e.feat .wn-go { background: var(--brand); border-color: var(--brand); color: var(--on-brand) !important; }
-    .wn-e.feat .wn-go:hover { filter: brightness(1.08); }
-    .wn-link { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 999px; border: 0; background: transparent; color: var(--text-3); cursor: pointer; transition: background .15s, color .15s; }
-    .wn-link:hover { background: var(--surface-2); color: var(--text); }
-    .wn-btn:focus-visible, .wn-seg button:focus-visible, .wn-go:focus-visible, .wn-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-
-    .wn-sk { height: 132px; border-radius: 16px; background: var(--surface); border: 1px solid var(--hair); margin: 12px 0 0 140px; animation: wn-sk 1.3s ease-in-out infinite; }
-    @keyframes wn-sk { 50% { opacity: .55; } }
-    .wn-empty { text-align: center; padding: 48px 20px; border-radius: 16px; border: 1px dashed var(--hair-strong); color: var(--text-2); margin-top: 18px; }
-    .wn-empty b { display: block; color: var(--text); font-size: 16px; margin-bottom: 6px; }
-    .wn-empty button { margin-top: 14px; }
-
-    .wn-reveal { opacity: 0; transform: translateY(10px); transition: opacity .5s var(--ease), transform .5s var(--ease); }
-    .wn-reveal.on { opacity: 1; transform: none; }
-
-    .wn-foot { margin-top: 36px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 16px; border: 1px solid var(--hair); background: var(--surface); }
-    .wn-foot p { margin: 0; font-size: 14px; color: var(--text-2); line-height: 1.55; }
-    .wn-foot b { color: var(--text); }
-
-    @media (max-width: 768px) {
-      .wn-hero { padding: 30px 20px 24px; border-radius: 20px; }
-      .wn-h1 { font-size: 38px; }
-      .wn-lede { font-size: 15px; }
-      .wn-bar { margin: 20px -16px 4px; padding: 8px 16px; }
-      .wn-meta { gap: 6px; }
-      .wn-lg { display: none; }
-      .wn-meta .wn-btn { width: 100%; justify-content: center; margin-bottom: 4px; }
-      .wn-chip { height: 30px; padding: 0 11px; font-size: 12.5px; }
-      .wn-count { display: none; }
-      .wn-day { grid-template-columns: 1fr; }
-      .wn-date { position: static; text-align: left; padding: 6px 0 10px; display: flex; align-items: baseline; gap: 8px; }
-      .wn-date b { font-size: 20px; }
-      .wn-date span { margin: 0; }
-      .wn-list { padding-left: 22px; }
-      .wn-list::before { left: 4px; top: 16px; }
-      .wn-e { padding: 16px 16px 14px; }
-      .wn-e::before { left: -22px; top: 18px; }
-      .wn-e.feat { padding: 18px 16px 16px; }
-      .wn-e.feat .wn-t { font-size: 20px; }
-      .wn-t { font-size: 17px; }
-      .wn-go { min-height: 40px; }
-      .wn-link { width: 40px; height: 40px; }
-      .wn-sk { margin-left: 22px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .wn-reveal { opacity: 1; transform: none; transition: none; }
-      .wn-e, .wn-go svg { transition: none; }
-      .wn-e.flash, .wn-sk { animation: none; }
-    }
+    .wn { max-width: 760px; }
+    .wn h1 { font-size: 28px; font-weight: 800; margin: 8px 0 4px; }
+    .wn > p { color: var(--text-3); font-size: 14px; margin: 0 0 24px; }
+    .wn-day { margin: 0 0 22px; }
+    .wn-day h2 { font-size: 13px; font-weight: 700; color: var(--text-3); text-transform: lowercase; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border, var(--hair)); }
+    .wn-day ul { list-style: none; margin: 0; padding: 0; }
+    .wn-day li { font-size: 14.5px; line-height: 1.5; color: var(--text-2); padding: 4px 0; }
+    .wn-day li b { color: var(--text); font-weight: 700; }
+    .wn-day li a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-3); }
+    .wn-msg { color: var(--text-3); font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div id="view">
 <div class="wn">
-  <section class="wn-hero" aria-labelledby="wn-title">
-    <span class="wn-kick"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1c.4 4.2 1.5 6.9 3.2 8.7C17 11.5 19.8 12.6 24 13c-4.2.4-7 1.5-8.8 3.3C13.5 18.1 12.4 20.8 12 25c-.4-4.2-1.5-6.9-3.2-8.7C7 14.5 4.2 13.4 0 13c4.2-.4 7-1.5 8.8-3.3C10.5 7.9 11.6 5.2 12 1Z" transform="scale(.92) translate(1 -.5)"/></svg>changelog</span>
-    <h1 class="wn-h1" id="wn-title" tabindex="-1">What’s new on <em>wavernrs</em></h1>
-    <p class="wn-lede">every new feature, improvement and fix, as it ships. the newest stuff is at the top.</p>
-    <div class="wn-meta" id="wn-meta">
-      <a class="wn-btn" href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener external"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.6 5.3A17.6 17.6 0 0 0 15.2 4l-.6 1.1a16.3 16.3 0 0 0-5 0L9 4a17.5 17.5 0 0 0-4.4 1.3C1.8 9.4 1.1 13.4 1.4 17.3a17.8 17.8 0 0 0 5.4 2.7l1.2-1.8c-.7-.2-1.3-.5-1.9-.9l.5-.3a12.6 12.6 0 0 0 10.8 0l.5.3c-.6.4-1.2.7-1.9.9l1.2 1.8a17.7 17.7 0 0 0 5.4-2.7c.4-4.5-.7-8.5-3-12Zm-11 9.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1c1 0 1.9 1 1.9 2.1s-.8 2.1-1.9 2.1Zm6.8 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1c1 0 1.9 1 1.9 2.1s-.8 2.1-1.9 2.1Z"/></svg>get updates in the discord</a>
-    </div>
-  </section>
-
-  <div class="wn-main">
-  <div class="wn-bar" id="wn-bar" hidden>
-    <div class="wn-seg" id="wn-seg" role="group" aria-label="Filter updates"></div>
-    <span class="wn-count" id="wn-count" aria-live="polite"></span>
-  </div>
-
-  <div id="wn-feed" aria-busy="true">
-    <div class="wn-sk"></div><div class="wn-sk"></div><div class="wn-sk"></div>
-  </div>
-  </div>
-
-  <div class="wn-foot">
-    <p><b>got an idea or found a bug?</b><br>tell us in the discord, or check the <a href="/status" style="text-decoration:underline;text-underline-offset:3px">status page</a> if something’s down.</p>
-    <a class="wn-go" href="/about">about wavernrs <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-  </div>
+  <h1>what's new</h1>
+  <p>everything we've added lately, newest first.</p>
+  <div id="wn-feed"><div class="wn-msg">loading...</div></div>
 </div>
 </div>
 
@@ -167,194 +37,22 @@
 <script src="/js/router.js?v=baeb5e83aa10"></script>
 <script>
 (function () {
-  window._pageCleanup = window._pageCleanup || [];
-  var root = document.querySelector('#view .wn');
-  if (!root) { if (typeof initPlayer === 'function') initPlayer(); return; }
-  var RM = false;
-  try { RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
-  var SEEN_KEY = 'wv_whatsnew_seen';
-  var TAGS = { new: 'New', improved: 'Improved', fixed: 'Fixed' };
-  var ARROW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
-  var LINK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>';
+  var feed = document.getElementById('wn-feed');
+  if (!feed) { if (typeof initPlayer === 'function') initPlayer(); return; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function $(id) { return document.getElementById(id); }
-  function alive() { return root.isConnected; }
-  function lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
-  function d(iso) { var p = String(iso).split('-'); return new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, 12); }
-  function monthLabel(iso) { try { return d(iso).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }); } catch (_) { return iso.slice(0, 7); } }
-  function dayNum(iso) { try { return d(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch (_) { return iso; } }
-  function weekday(iso) {
-    try {
-      var x = d(iso), t = new Date(); t.setHours(12, 0, 0, 0);
-      var diff = Math.round((t - x) / 864e5);
-      if (diff === 0) return 'today';
-      if (diff === 1) return 'yesterday';
-      return x.toLocaleDateString('en-US', { weekday: 'long' });
-    } catch (_) { return ''; }
-  }
-  function slug(e, i) {
-    return 'u-' + String(e.date).replace(/[^0-9]/g, '') + '-' + (String(e.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || i);
-  }
-  function safeHref(h) {
-    h = String(h || '');
-    if (/^\/(?!\/)/.test(h)) return h;
-    if (/^https:\/\//i.test(h)) return h;
-    return '';
-  }
-
-  var state = { all: [], filter: 'all', seen: lsGet(SEEN_KEY) || '' };
-  var io = null;
-  window._pageCleanup.push(function () { if (io) { io.disconnect(); io = null; } });
-
-  function load() {
-    var p = (window.wvFooter && typeof window.wvFooter.news === 'function') ? window.wvFooter.news() :
-      fetch('/whatsnew.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (x) {
-        var l = (x && Array.isArray(x.entries)) ? x.entries.filter(function (e) { return e && e.title && e.date; }) : [];
-        l.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
-        return l;
-      });
-    return p;
-  }
-
-  function render() {
-    var feed = $('wn-feed');
-    var list = state.all.filter(function (e) { return state.filter === 'all' || String(e.tag || '').toLowerCase() === state.filter; });
-    $('wn-count').textContent = list.length + (list.length === 1 ? ' update' : ' updates');
-    if (!list.length) {
-      feed.innerHTML = '<div class="wn-empty"><b>nothing here yet</b>no updates with this tag so far.</div>';
-      return;
-    }
-    var latestSlug = state.all.length ? state.all[0]._id : '';
-    var html = '', month = '', day = '', open = false;
+  function label(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase(); }
+  fetch('/whatsnew.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (d) {
+    var list = (d.entries || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+    var html = '', cur = '';
     list.forEach(function (e) {
-      var m = e.date.slice(0, 7);
-      if (m !== month) {
-        if (open) { html += '</div></div>'; open = false; }
-        month = m; day = '';
-        html += '<h2 class="wn-month">' + esc(monthLabel(e.date)) + '</h2>';
-      }
-      if (e.date !== day) {
-        if (open) html += '</div></div>';
-        day = e.date;
-        html += '<div class="wn-day wn-reveal"><div class="wn-date"><b>' + esc(dayNum(e.date)) + '</b><span>' + esc(weekday(e.date)) + '</span></div><div class="wn-list">';
-        open = true;
-      }
-      var tag = String(e.tag || '').toLowerCase();
-      var feat = e._id === latestSlug;
-      var unread = !!(state.seen && e.date > state.seen);
-      var href = safeHref(e.href);
-      var ext = /^https:/i.test(href);
-      html += '<article class="wn-e' + (TAGS[tag] ? ' tag-' + tag : '') + (feat ? ' feat' : '') + (unread ? ' unread' : '') + '" id="' + esc(e._id) + '" aria-labelledby="' + esc(e._id) + '-t">' +
-        '<div class="wn-top">' + (feat ? '<span class="wn-latest">latest</span>' : '') +
-          (TAGS[tag] ? '<span class="wn-tag ' + tag + '">' + TAGS[tag] + '</span>' : '') +
-          (unread ? '<span class="wn-unread"><span class="d" aria-hidden="true"></span>unread</span>' : '') + '</div>' +
-        '<h3 class="wn-t" id="' + esc(e._id) + '-t">' + esc(e.title) + '</h3>' +
-        (e.body ? '<p class="wn-b">' + esc(e.body) + '</p>' : '') +
-        '<div class="wn-acts">' +
-          (href ? '<a class="wn-go" href="' + esc(href) + '"' + (ext ? ' target="_blank" rel="noopener external"' : '') + '>' + (feat ? 'try it now' : 'take a look') + ARROW + '</a>' : '') +
-          '<button type="button" class="wn-link" data-copy="' + esc(e._id) + '" aria-label="Copy link to this update" title="Copy link">' + LINK + '</button>' +
-        '</div></article>';
+      if (e.date !== cur) { if (cur) html += '</ul></div>'; cur = e.date; html += '<div class="wn-day"><h2>' + esc(label(e.date)) + '</h2><ul>'; }
+      var t = e.href && /^\/(?!\/)/.test(e.href) ? '<a href="' + esc(e.href) + '">' + esc(e.title) + '</a>' : '<b>' + esc(e.title) + '</b>';
+      html += '<li>' + t + ' - ' + esc(e.body) + '</li>';
     });
-    if (open) html += '</div></div>';
-    feed.innerHTML = html;
-    arm();
-  }
-
-  function arm() {
-    var els = root.querySelectorAll('.wn-reveal:not(.on)');
-    if (RM || !('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('on'); }); return; }
-    if (!io) {
-      io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (en) { if (en.isIntersecting) { io.unobserve(en.target); en.target.classList.add('on'); } });
-      }, { root: null, rootMargin: '0px 0px -6% 0px', threshold: 0.05 });
-    }
-    els.forEach(function (el) { io.observe(el); });
-  }
-
-  function paintSeg() {
-    var counts = { all: state.all.length };
-    state.all.forEach(function (e) { var t = String(e.tag || '').toLowerCase(); if (TAGS[t]) counts[t] = (counts[t] || 0) + 1; });
-    var keys = ['all'].concat(Object.keys(TAGS).filter(function (k) { return counts[k]; }));
-    $('wn-seg').innerHTML = keys.map(function (k) {
-      return '<button type="button" data-f="' + k + '" aria-pressed="' + (state.filter === k) + '">' + (k === 'all' ? 'All' : TAGS[k]) + ' <small>' + counts[k] + '</small></button>';
-    }).join('');
-    $('wn-bar').hidden = keys.length < 2 && state.all.length < 4;
-  }
-
-  function paintMeta() {
-    var meta = $('wn-meta');
-    var latest = state.all[0];
-    var chips = '';
-    var unread = state.seen ? state.all.filter(function (e) { return e.date > state.seen; }).length : 0;
-    if (unread) chips += '<span class="wn-chip"><span class="d" aria-hidden="true"></span><span><b>' + unread + '</b> new<span class="wn-lg"> since your last visit</span></span></span>';
-    if (latest) {
-      var mo = latest.date.slice(0, 7);
-      var n = state.all.filter(function (e) { return e.date.slice(0, 7) === mo; }).length;
-      chips += '<span class="wn-chip"><span><b>' + n + '</b> ' + (n === 1 ? 'update' : 'updates') + ' in ' + esc(monthLabel(latest.date).split(' ')[0]) + '</span></span>';
-      chips += '<span class="wn-chip">last update ' + esc(weekday(latest.date) === 'today' || weekday(latest.date) === 'yesterday' ? weekday(latest.date) : dayNum(latest.date)) + '</span>';
-    }
-    meta.insertAdjacentHTML('beforeend', chips);
-  }
-
-  function flash(id) {
-    var t = document.getElementById(id);
-    if (!t || !root.contains(t)) return;
-    var day = t.closest('.wn-reveal');
-    if (day) day.classList.add('on');
-    try { t.scrollIntoView({ block: 'start', behavior: RM ? 'auto' : 'smooth' }); } catch (_) { t.scrollIntoView(); }
-    t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
-  }
-
-  root.addEventListener('click', function (e) {
-    var f = e.target.closest('[data-f]');
-    if (f) {
-      state.filter = f.getAttribute('data-f');
-      root.querySelectorAll('#wn-seg [data-f]').forEach(function (b) { b.setAttribute('aria-pressed', String(b === f)); });
-      render();
-      return;
-    }
-    var c = e.target.closest('[data-copy]');
-    if (c) {
-      var id = c.getAttribute('data-copy');
-      var url = location.origin + '/whatsnew#' + id;
-      try { history.replaceState(history.state, '', '/whatsnew#' + id); } catch (_) {}
-      var done = function () { if (typeof window.wvToast === 'function') window.wvToast('link copied', 'success'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { if (typeof window.wvToast === 'function') window.wvToast(url); });
-      else if (typeof window.wvToast === 'function') window.wvToast(url);
-    }
-  });
-
-  load().then(function (list) {
-    if (!alive()) return;
-    $('wn-feed').removeAttribute('aria-busy');
-    state.all = (list || []).map(function (e, i) {
-      var o = {}; for (var k in e) o[k] = e[k];
-      o.date = String(o.date).slice(0, 10);
-      o._id = slug(o, i);
-      return o;
-    });
-    var seenIds = {};
-    state.all.forEach(function (e) { if (seenIds[e._id]) e._id += '-' + Math.random().toString(36).slice(2, 5); seenIds[e._id] = 1; });
-    if (!state.all.length) {
-      $('wn-feed').innerHTML = '<div class="wn-empty"><b>couldn’t load updates</b>check your connection and try again.<br><button type="button" class="wn-go" onclick="location.reload()">try again</button></div>';
-      return;
-    }
-    paintSeg();
-    paintMeta();
-    render();
-    if (window.wvFooter && typeof window.wvFooter.markSeen === 'function') window.wvFooter.markSeen(state.all[0].date);
-    else { try { localStorage.setItem(SEEN_KEY, state.all[0].date); } catch (_) {} }
-    if (location.hash && location.hash.length > 1) {
-      var h = location.hash.slice(1);
-      try { h = decodeURIComponent(h); } catch (_) {}
-      setTimeout(function () { if (alive()) flash(h); }, 150);
-    }
-  }).catch(function () {
-    if (!alive()) return;
-    $('wn-feed').removeAttribute('aria-busy');
-    $('wn-feed').innerHTML = '<div class="wn-empty"><b>couldn’t load updates</b>check your connection and try again.</div>';
-  });
-
+    if (cur) html += '</ul></div>';
+    feed.innerHTML = html || '<div class="wn-msg">nothing here yet</div>';
+  }).catch(function () { feed.innerHTML = '<div class="wn-msg">couldnt load this rn, try again in a sec</div>'; });
+  try { localStorage.setItem('wv_whatsnew_seen', new Date().toISOString().slice(0, 10)); } catch (_) {}
   if (typeof initPlayer === 'function') initPlayer();
 })();
 </script>
