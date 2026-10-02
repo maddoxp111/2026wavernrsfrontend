@@ -436,7 +436,14 @@
         var more = [].concat(d.trending || [], d.recent || []).filter(function (x) { return x && x.id && x.title && x.cover_url && !have[x.id] && (have[x.id] = 1); });
         if (!more.length) return;
         var cur = F.i;
-        S.hl = S.hl.concat(more);
+        var shuf = function (a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+        var bk = { staff: [], top: [], tc: [], te: [], more: shuf(more) };
+        S.hl.slice(1).forEach(function (x) { var w = x._why; (w && w.kind === 'top150' ? bk.top : w && w.kind === 'tracker' ? (w.type === 'edit' ? bk.te : bk.tc) : bk.staff).push(x); });
+        var mixed = [S.hl[0]], ks = Object.keys(bk), g = 0;
+        ks.forEach(function (k) { shuf(bk[k]); });
+        while (ks.some(function (k) { return bk[k].length; }) && g++ < 500) shuf(ks.slice()).forEach(function (k) { var x = bk[k].shift(); if (x) mixed.push(x); });
+        S.hl = mixed;
+        cur = 0;
         renderFeatured();
         if (cur) featGo(cur);
       }).catch(function () {});

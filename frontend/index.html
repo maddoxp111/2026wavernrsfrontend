@@ -703,22 +703,28 @@ function _hlLabel(it) {
 function _heroPick() {
   var out = [], seen = {};
   function add(item, kind, label) {
-    if (!item || !item.id || !item.cover_url || seen[item.id] || out.length >= 80) return;
+    if (!item || !item.id || !item.cover_url || seen[item.id] || out.length >= 120) return;
     seen[item.id] = 1;
     out.push({ item: item, kind: kind, label: label });
   }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   (_home.awards || []).forEach(function (p) {
     if (p && p.album && out.length < 2) add(Object.assign({ _type: 'album' }, p.album, { _award: p }), 'award', p.label || 'Pick of the week');
   });
-  var hl = (_home.highlighted || []).filter(function (i) { return i && i.cover_url; }).slice();
-  for (var i = hl.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = hl[i]; hl[i] = hl[j]; hl[j] = t; }
-  var fresh = (_home.recent || []).filter(function (i) { return i._type === 'album' && i.cover_url; });
-  var room = Math.max(1, 5 - out.length - Math.min(2, fresh.length));
-  hl.slice(0, room).forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
-  fresh.forEach(function (it) { add(it, 'new', 'New comp'); });
-  hl.forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
-  (_home.trending || []).forEach(function (it) { if (it && it.cover_url) add(it, 'new', it._type === 'album' ? 'Trending comp' : 'Trending edit'); });
-  (_home.recent || []).forEach(function (it) { if (it && it.cover_url) add(it, 'new', it._type === 'album' ? 'New comp' : 'New edit'); });
+  var buckets = { staff: [], top: [], tcomp: [], tedit: [], trend: [], fresh: [] };
+  (_home.highlighted || []).forEach(function (it) {
+    if (!it || !it.cover_url) return;
+    var w = it._why;
+    (w && w.kind === 'top150' ? buckets.top : w && w.kind === 'tracker' ? (w.type === 'edit' ? buckets.tedit : buckets.tcomp) : buckets.staff).push({ it: it, kind: 'hl', label: _hlLabel(it) });
+  });
+  (_home.trending || []).forEach(function (it) { if (it && it.cover_url) buckets.trend.push({ it: it, kind: 'new', label: it._type === 'album' ? 'Trending comp' : 'Trending edit' }); });
+  (_home.recent || []).forEach(function (it) { if (it && it.cover_url) buckets.fresh.push({ it: it, kind: 'new', label: it._type === 'album' ? 'New comp' : 'New edit' }); });
+  var keys = Object.keys(buckets);
+  keys.forEach(function (k) { shuffle(buckets[k]); });
+  var guard = 0;
+  while (keys.some(function (k) { return buckets[k].length; }) && guard++ < 500) {
+    shuffle(keys.slice()).forEach(function (k) { var x = buckets[k].shift(); if (x) add(x.it, x.kind, x.label); });
+  }
   return out;
 }
 function _heroWho(it) {
