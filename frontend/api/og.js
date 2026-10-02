@@ -34,7 +34,7 @@ async function getJSON(path) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 6000);
   try {
-    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json' } });
+    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json', 'x-wv-edge': 'og', 'user-agent': 'wavernrs-preview' } });
     if (!r.ok) return null;
     return await r.json();
   } catch (_) {
