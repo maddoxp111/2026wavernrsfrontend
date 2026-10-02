@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — browse</title>
-  <link rel="stylesheet" href="/css/style.css?v=baeb5e83aa10">
-  <script src="/js/status-card.js?v=baeb5e83aa10"></script>
-  <script src="/js/down.js?v=baeb5e83aa10"></script>
+  <link rel="stylesheet" href="/css/style.css?v=7e529adad8f3">
+  <script src="/js/status-card.js?v=7e529adad8f3"></script>
+  <script src="/js/down.js?v=7e529adad8f3"></script>
   <style>
     #view .br-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:6px 0 0; }
     #view .br-head h1 { margin:0; font-size:clamp(30px,4vw,44px); font-weight:900; letter-spacing:-.04em; line-height:1.02; }
@@ -181,11 +181,11 @@
 </head>
 <body>
 <div id="view"><div class="loading"><div class="spinner"></div></div></div>
-<script src="/js/api.js?v=baeb5e83aa10"></script>
-<script src="/js/layout.js?v=baeb5e83aa10"></script>
-<script src="/js/player.js?v=baeb5e83aa10"></script>
-<script src="/js/router.js?v=baeb5e83aa10"></script>
-<script src="/js/playlists.js?v=baeb5e83aa10"></script>
+<script src="/js/api.js?v=7e529adad8f3"></script>
+<script src="/js/layout.js?v=7e529adad8f3"></script>
+<script src="/js/player.js?v=7e529adad8f3"></script>
+<script src="/js/router.js?v=7e529adad8f3"></script>
+<script src="/js/playlists.js?v=7e529adad8f3"></script>
 <script>
 (function () {
   if (typeof initPlayer === 'function') initPlayer();
@@ -430,6 +430,16 @@
       if (!S.alive) return;
       S.hl = (Array.isArray(items) ? items : []).filter(function (x) { return x && x.id && x.title; });
       renderFeatured();
+      api('/discover').then(function (d) {
+        if (!S.alive || !d) return;
+        var have = {}; S.hl.forEach(function (x) { have[x.id] = 1; });
+        var more = [].concat(d.trending || [], d.recent || []).filter(function (x) { return x && x.id && x.title && x.cover_url && !have[x.id] && (have[x.id] = 1); });
+        if (!more.length) return;
+        var cur = F.i;
+        S.hl = S.hl.concat(more);
+        renderFeatured();
+        if (cur) featGo(cur);
+      }).catch(function () {});
       if (S.hl.length) setTileCover('highlighted', S.hl[0].cover_url);
     }).catch(function (err) {
       if (err && err.navAborted) return;
@@ -440,7 +450,8 @@
   function renderFeatured() {
     var box = document.getElementById('br-feat-box');
     if (!box) return;
-    var list = S.hl.slice(0, 8);
+    var list = S.hl.slice(0, 80);
+    if (F.iv) { clearInterval(F.iv); F.iv = null; }
     if (!list.length) { box.innerHTML = ''; return; }
     F.n = list.length; F.i = 0; F.t = 0;
     var slides = list.map(function (it, i) {
@@ -469,25 +480,29 @@
         '</div>' +
       '</article>';
     }).join('');
-    var dots = list.map(function (it, i) { return '<button type="button" class="br-dot' + (i === 0 ? ' on' : '') + '" data-dot="' + i + '" aria-label="Show ' + esc(it.title) + '"' + (i === 0 ? ' aria-current="true"' : '') + '><i><b></b></i></button>'; }).join('');
+    var dots = '<span class="br-dot on" aria-hidden="true"><i><b></b></i></span>';
     box.innerHTML =
       '<section class="br-feat" id="br-feat" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Featured">' + slides + '</section>' +
       '<div class="br-feat-ui' + (reduced() ? ' still' : '') + '" id="br-feat-ui"><div class="br-dots" role="group" aria-label="Featured slides">' + (list.length > 1 ? dots : '') + '</div>' +
         (list.length > 1 ? '<div class="br-arrows"><button type="button" data-feat-step="-1" aria-label="Previous featured">' + ICON.left + '</button><button type="button" data-feat-step="1" aria-label="Next featured">' + ICON.right + '</button></div>' : '') +
       '</div>';
-    list.forEach(function (it, i) {
-      if (!it.cover_url || typeof window.extractCoverHues !== 'function') return;
-      window.extractCoverHues(it.cover_url, it.title, function (h, ok) {
-        if (!ok || !S.alive) return;
-        var s = document.querySelectorAll('#br-feat .br-slide')[i];
-        if (s) { s.style.setProperty('--h1', h.h1); s.style.setProperty('--h2', h.h2); }
-      });
-    });
+    featHue(0); featHue(1);
     wireFeatured();
+  }
+  function featHue(i) {
+    var list = S.hl || [], it = list[i];
+    var s = document.querySelectorAll('#br-feat .br-slide')[i];
+    if (!it || !s || s._hue || !it.cover_url || typeof window.extractCoverHues !== 'function') return;
+    s._hue = true;
+    window.extractCoverHues(it.cover_url, it.title, function (h, ok) {
+      if (!ok || !S.alive || !s.isConnected) return;
+      s.style.setProperty('--h1', h.h1); s.style.setProperty('--h2', h.h2);
+    });
   }
   function featGo(i, fromTimer) {
     if (!F.n) return;
     F.i = (i + F.n) % F.n;
+    featHue(F.i); featHue((F.i + 1) % F.n);
     F.t = 0;
     document.querySelectorAll('#br-feat .br-slide').forEach(function (s, k) {
       var on = k === F.i;
@@ -495,8 +510,8 @@
       if (on) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
       s.querySelectorAll('button, a.op').forEach(function (b) { if (on) b.removeAttribute('tabindex'); else b.setAttribute('tabindex', '-1'); });
     });
-    document.querySelectorAll('#br-feat-ui .br-dot').forEach(function (d, k) {
-      var on = k === F.i;
+    document.querySelectorAll('#br-feat-ui .br-dot').forEach(function (d) {
+      var on = true;
       d.classList.toggle('on', on);
       if (on) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
       var b = d.querySelector('b'); if (b) { b.style.transition = 'none'; b.style.transform = 'scaleX(0)'; }
@@ -545,7 +560,7 @@
     onGone(function () { if (F.iv) clearInterval(F.iv); F.iv = null; });
   }
   function playFeatured(i) {
-    var list = (S.hl || []).slice(0, 8);
+    var list = (S.hl || []).slice(0, 80);
     var it = list[i];
     if (!it) return;
     if (it._type === 'album') { if (window.playCompById) window.playCompById(it.id, { album: it }); return; }

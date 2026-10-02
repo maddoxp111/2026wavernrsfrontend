@@ -3,7 +3,7 @@
 // normal single-page app is untouched.
 const API = process.env.WAVERNRS_API || 'https://2026wavernrs-production.up.railway.app/api';
 const SITE = 'https://www.wavernrs.com';
-const FALLBACK_IMAGE = SITE + '/og-default.png';
+const FALLBACK_IMAGE = SITE + '/og-image.jpg';
 const TAGLINE = 'Where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and catch every leak as it lands.';
 
 function bigImage(url) {
@@ -341,7 +341,7 @@ function page(meta, url) {
 <meta property="og:description" content="${esc(meta.description)}">
 <meta property="og:image" content="${esc(image)}">
 <meta property="og:image:secure_url" content="${esc(image)}">
-<meta property="og:image:type" content="${image === FALLBACK_IMAGE ? 'image/png' : 'image/jpeg'}">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${esc(alt)}">

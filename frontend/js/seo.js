@@ -13,7 +13,7 @@
 
   var SITE = 'https://www.wavernrs.com';
   var LOGO = SITE + '/icons/icon-512.png';
-  var OG_DEFAULT = SITE + '/og-default.png';
+  var OG_DEFAULT = SITE + '/og-image.jpg';
   var DISCORD = 'https://discord.gg/j2jGmw5CZH';
   var HOME_DESC = 'wavernrs is where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and keep up with every leak on the tracker.';
 

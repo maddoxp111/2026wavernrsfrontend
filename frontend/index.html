@@ -11,15 +11,15 @@
   <meta property="og:url" content="https://www.wavernrs.com/">
   <meta property="og:title" content="wavernrs: Ye comps, edits and the archive">
   <meta property="og:description" content="Where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and catch every leak as it lands.">
-  <meta property="og:image" content="https://www.wavernrs.com/og-default.png">
+  <meta property="og:image" content="https://www.wavernrs.com/og-image.jpg">
   <meta property="og:image:alt" content="wavernrs">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="wavernrs: Ye comps, edits and the archive">
   <meta name="twitter:description" content="Where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and catch every leak as it lands.">
-  <meta name="twitter:image" content="https://www.wavernrs.com/og-default.png">
-  <link rel="stylesheet" href="/css/style.css?v=baeb5e83aa10">
-  <script src="/js/status-card.js?v=baeb5e83aa10"></script>
-  <script src="/js/down.js?v=baeb5e83aa10"></script>
+  <meta name="twitter:image" content="https://www.wavernrs.com/og-image.jpg">
+  <link rel="stylesheet" href="/css/style.css?v=7e529adad8f3">
+  <script src="/js/status-card.js?v=7e529adad8f3"></script>
+  <script src="/js/down.js?v=7e529adad8f3"></script>
   <style>
     /* ── Home: motion ───────────────────────────────────────── */
     .hm-in { animation: hmIn 220ms var(--ease) both; }
@@ -259,11 +259,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=baeb5e83aa10"></script>
-<script src="/js/layout.js?v=baeb5e83aa10"></script>
-<script src="/js/player.js?v=baeb5e83aa10"></script>
-<script src="/js/router.js?v=baeb5e83aa10"></script>
-<script src="/js/playlists.js?v=baeb5e83aa10"></script>
+<script src="/js/api.js?v=7e529adad8f3"></script>
+<script src="/js/layout.js?v=7e529adad8f3"></script>
+<script src="/js/player.js?v=7e529adad8f3"></script>
+<script src="/js/router.js?v=7e529adad8f3"></script>
+<script src="/js/playlists.js?v=7e529adad8f3"></script>
 <script>
 initPlayer();
 
@@ -703,7 +703,7 @@ function _hlLabel(it) {
 function _heroPick() {
   var out = [], seen = {};
   function add(item, kind, label) {
-    if (!item || !item.id || !item.cover_url || seen[item.id] || out.length >= 5) return;
+    if (!item || !item.id || !item.cover_url || seen[item.id] || out.length >= 80) return;
     seen[item.id] = 1;
     out.push({ item: item, kind: kind, label: label });
   }
@@ -717,6 +717,8 @@ function _heroPick() {
   hl.slice(0, room).forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
   fresh.forEach(function (it) { add(it, 'new', 'New comp'); });
   hl.forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
+  (_home.trending || []).forEach(function (it) { if (it && it.cover_url) add(it, 'new', it._type === 'album' ? 'Trending comp' : 'Trending edit'); });
+  (_home.recent || []).forEach(function (it) { if (it && it.cover_url) add(it, 'new', it._type === 'album' ? 'New comp' : 'New edit'); });
   return out;
 }
 function _heroWho(it) {
@@ -773,9 +775,7 @@ function renderHero() {
   var n = items.length;
   host.innerHTML = '<section class="hx' + (_hReduce || n < 2 ? ' no-auto' : '') + '" id="hx" tabindex="0" aria-roledescription="carousel" aria-label="Spotlight">' +
     '<div class="hx-stage" aria-live="off">' + items.map(function (s, i) { return _heroSlide(s, i, n); }).join('') + '</div>' +
-    (n > 1 ? '<div class="hx-ctl"><div class="hx-dots" role="group" aria-label="Choose a slide">' + items.map(function (s, i) {
-      return '<button type="button" class="hx-dot' + (i === 0 ? ' on' : '') + '" data-go="' + i + '" aria-label="Show ' + _hEsc(s.item.title) + '"' + (i === 0 ? ' aria-current="true"' : '') + '><i><b></b></i></button>';
-    }).join('') + '</div>' +
+    (n > 1 ? '<div class="hx-ctl"><div class="hx-dots" aria-hidden="true"><span class="hx-dot on" id="hx-prog"><i><b></b></i></span></div>' +
     '<button type="button" class="hx-arrow" data-step="-1" aria-label="Previous">' + HM_ICON.prev + '</button>' +
     '<button type="button" class="hx-arrow" data-step="1" aria-label="Next">' + HM_ICON.next + '</button></div>' : '') +
     '<span class="hx-sr" aria-live="polite" id="hx-live"></span>' +
@@ -804,7 +804,7 @@ function _heroHydrate(i) {
 }
 function _heroWire(hx, n) {
   if (n < 2) return;
-  var slides = hx.querySelectorAll('.hx-slide'), dots = hx.querySelectorAll('.hx-dot');
+  var slides = hx.querySelectorAll('.hx-slide'), prog = hx.querySelector('#hx-prog');
   var flags = { hover: false, focus: false, off: false, hidden: !!document.hidden, touch: false };
   function sync() {
     var p = _hReduce || flags.hover || flags.focus || flags.off || flags.hidden || flags.touch;
@@ -815,13 +815,11 @@ function _heroWire(hx, n) {
     var cur = _hero.idx;
     if (i !== cur) {
       slides[cur].classList.remove('on'); slides[cur].setAttribute('aria-hidden', 'true');
-      dots[cur].classList.remove('on'); dots[cur].removeAttribute('aria-current');
     }
     _hero.idx = i;
     _heroHydrate(i); _heroHydrate((i + 1) % n);
     slides[i].classList.add('on'); slides[i].removeAttribute('aria-hidden');
-    dots[i].classList.remove('on'); void dots[i].offsetWidth; dots[i].classList.add('on');
-    dots[i].setAttribute('aria-current', 'true');
+    if (prog) { prog.classList.remove('on'); void prog.offsetWidth; prog.classList.add('on'); }
     if (announce) { var live = document.getElementById('hx-live'); if (live) live.textContent = slides[i].getAttribute('aria-label') || ''; }
   }
   hx.addEventListener('animationend', function (e) {
