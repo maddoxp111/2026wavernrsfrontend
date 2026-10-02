@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=7e529adad8f3">
-  <script src="/js/status-card.js?v=7e529adad8f3"></script>
-  <script src="/js/down.js?v=7e529adad8f3"></script>
+  <link rel="stylesheet" href="/css/style.css?v=30f4b61d2d06">
+  <script src="/js/status-card.js?v=30f4b61d2d06"></script>
+  <script src="/js/down.js?v=30f4b61d2d06"></script>
 </head>
 <body>
 
@@ -270,6 +270,24 @@
   .tr-kind.soon { color:var(--brand); background:color-mix(in srgb, var(--brand) 14%, transparent); }
   @media (max-width:640px) { .tr-tour ol { columns:1; } .tr-d { grid-template-columns:38px minmax(0,1fr) auto; gap:10px; padding:8px 6px; } }
   .tr-song span { color:var(--text-3); font-variant-numeric:tabular-nums; min-width:38px; }
+  .tr-srow { display:flex; gap:4px; min-width:0; }
+  .tr-srow .tr-song { flex:1; min-width:0; align-items:center; }
+  .tr-srow .tr-song em { font-style:normal; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tr-srow.on .tr-song { background:color-mix(in srgb, var(--brand) 18%, var(--surface-2)); box-shadow:inset 3px 0 0 var(--brand); }
+  .tr-srow.on .tr-song span { color:var(--brand); font-weight:800; }
+  .tr-add { flex:none; width:40px; min-height:36px; border:0; border-radius:8px; background:var(--surface-2); color:var(--text-2); display:grid; place-items:center; cursor:pointer; padding:0; }
+  .tr-add:hover { background:var(--surface-3); color:var(--text); }
+  .tr-add svg { width:16px; height:16px; }
+  .tr-song:focus-visible, .tr-add:focus-visible, .tr-dock-play:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+  .tr-dock { position:relative; aspect-ratio:16/9; border-radius:12px; overflow:hidden; background:#000; }
+  .tr-dock-ph { position:absolute; inset:0; background:#000 center/cover no-repeat; display:flex; align-items:center; justify-content:center; }
+  .tr-dock-ph::before { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55)); }
+  .tr-dock-play { position:relative; display:inline-flex; align-items:center; gap:10px; border:0; border-radius:999px; padding:12px 20px 12px 16px; min-height:44px; background:var(--brand); color:var(--on-brand, #14121c); font:inherit; font-weight:800; font-size:14px; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,.4); }
+  .tr-dock-play svg { width:20px; height:20px; }
+  .tr-dock.is-live { background:transparent; }
+  .tr-dock.is-live .tr-dock-ph { display:none; }
+  .tr-dock-note { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-3); margin-top:8px; }
+  .tr-dock-note svg { width:14px; height:14px; flex:none; }
   .tr-mbox { background:transparent; width:auto; max-width:100%; padding:0; }
   .tr-media { position:relative; display:flex; flex-direction:column; align-items:center; }
   .tr-media img, .tr-media video { max-width:min(1100px,92vw); max-height:82vh; border-radius:10px; background:#000; }
@@ -777,10 +795,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=7e529adad8f3"></script>
-<script src="/js/layout.js?v=7e529adad8f3"></script>
-<script src="/js/player.js?v=7e529adad8f3"></script>
-<script src="/js/router.js?v=7e529adad8f3"></script>
+<script src="/js/api.js?v=30f4b61d2d06"></script>
+<script src="/js/layout.js?v=30f4b61d2d06"></script>
+<script src="/js/player.js?v=30f4b61d2d06"></script>
+<script src="/js/router.js?v=30f4b61d2d06"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -2584,7 +2602,8 @@ window._ytBooted = false;
       if (st.pending) {
         var pd = st.pending; st.pending = null;
         var x = st.d.shows.find(function (s) { return String(s.id) === String(pd.id); });
-        if (x) { var w = videoModal(x); var v = w && w.querySelector('video'); var fr = w && w.querySelector('iframe');
+        if (x && window.wvShow) { videoModal(x, pd.time ? { start: Math.max(0, toSec(pd.time) + (x.youtube ? (+x.yt_offset || 0) : 0)) } : null); }
+        else if (x) { var w = videoModal(x); var v = w && w.querySelector('video'); var fr = w && w.querySelector('iframe');
           if (fr && pd.time) { var at = Math.max(0, toSec(pd.time) + (+x.yt_offset || 0)); fr.addEventListener('load', function () { setTimeout(function () { try { fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [at, true] }), '*'); fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'); } catch (_) {} }, 600); }, { once: true }); }
           if (v && pd.time) { var go = function () { try { v.currentTime = toSec(pd.time); } catch (_) {} }; if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true }); } }
       }
@@ -2716,7 +2735,7 @@ window._ytBooted = false;
     function modal(html) {
       var wrap = document.createElement('div'); wrap.className = 'yz-modal'; wrap.innerHTML = '<div class="yz-box tr-box">' + html + '<button class="yz-x" title="close">✕</button></div>';
       document.body.appendChild(wrap);
-      var closeIt = function () { wrap.querySelectorAll('video').forEach(function (v) { try { v.pause(); } catch (_) {} }); wrap.remove(); document.removeEventListener('keydown', onKey); };
+      var closeIt = function () { wrap.querySelectorAll('video').forEach(function (v) { try { v.pause(); } catch (_) {} }); if (wrap._onClose) { try { wrap._onClose(); } catch (_) {} } wrap.remove(); document.removeEventListener('keydown', onKey); };
       var onKey = function (e) { if (e.key === 'Escape') closeIt(); if (wrap._key) wrap._key(e); };
       document.addEventListener('keydown', onKey);
       wrap.addEventListener('click', function (e) { if (e.target === wrap) closeIt(); });
@@ -2724,8 +2743,107 @@ window._ytBooted = false;
       wrap.querySelectorAll('video').forEach(function (v) { v.addEventListener('play', pauseSite); });
       return wrap;
     }
-    function videoModal(x) {
+    function isShow(x) { return !!(st.d && st.d.shows && st.d.shows.indexOf(x) >= 0 && (x.youtube || x.video)); }
+    function showYt(x) { return x.youtube && /^[A-Za-z0-9_-]{6,20}$/.test(x.youtube) ? x.youtube : null; }
+    function showOff(x) { return showYt(x) ? (+x.yt_offset || 0) : 0; }
+    function showCfg(x, start, auto) {
+      var yt = showYt(x);
+      return { show: { id: String(x.id), year: String(st.year || ''), name: x.name }, youtube: yt, video: yt ? null : x.video, offset: showOff(x), cover: x.image || null, setlist: x.setlist || [], start: start || 0, autoplay: auto !== false };
+    }
+    function playingShow(x) {
+      if (!window.wvShow || !wvShow.active()) return false;
+      var s = wvShow.state();
+      return s.show && s.show.id === String(x.id) && s.show.year === String(st.year || '') && s.end == null;
+    }
+    function showClips(x) {
+      var off = showOff(x), yt = showYt(x);
+      var timed = (x.setlist || []).map(function (t, i) { return { i: i, t: t, at: t && t.time ? toSec(t.time) : null }; }).filter(function (r) { return r.at != null && r.t.song; });
+      var out = {};
+      timed.forEach(function (r) {
+        var nx = null;
+        timed.forEach(function (o) { if (o.at > r.at && (nx == null || o.at < nx)) nx = o.at; });
+        out[r.i] = { show_id: String(x.id), year: String(st.year || ''), show_name: x.name, song: r.t.song, by: r.t.by || null, start: Math.max(0, r.at + off), end: nx != null ? nx + off : null, youtube: yt, video: yt ? null : x.video, cover: x.image || null };
+      });
+      return out;
+    }
+    var PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    function showModal(x, opts) {
+      var poster = x.image || (showYt(x) ? 'https://i.ytimg.com/vi/' + showYt(x) + '/hqdefault.jpg' : '');
+      var clips = showClips(x);
+      var sub = [x.date ? new Date(x.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : st.year, x.venue, x.city].filter(Boolean).join(' · ') || [st.year, x.spec].filter(Boolean).join(' · ');
+      var yt = showYt(x);
+      var w = modal('<div class="tr-dock" id="tr-dock"><div class="tr-dock-ph"' + (poster ? ' style="background-image:url(&quot;' + esc(poster) + '&quot;)"' : '') + '><button type="button" class="tr-dock-play">' + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' + 'play show</button></div></div>' +
+        '<div class="tr-dock-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><rect x="12" y="11" width="7" height="5" rx="1" fill="currentColor"/></svg>keeps playing in the corner while you browse the site</div>' +
+        '<div class="tr-vinfo"><h3>' + esc(x.name) + '</h3><div class="yz-sub">' + esc(sub) + '</div>' +
+        (x.with && x.with.length ? '<div class="yz-sub" style="margin-top:4px;">with ' + esc(x.with.join(', ')) + '</div>' : '') +
+        (x.about ? '<div class="yz-desc" style="margin-top:10px;">' + esc(x.about) + (x.source && /^https:\/\/en\.wikipedia\.org\//.test(x.source) ? ' <a href="' + esc(x.source) + '" target="_blank" rel="noopener" style="color:var(--brand);">wikipedia ↗</a>' : '') + '</div>' : '') +
+        (x.setlist && x.setlist.length ? '<div class="yz-k" style="margin-top:14px;">SETLIST</div><div class="tr-set">' + x.setlist.map(function (t, i) {
+          var c = clips[i];
+          return '<div class="tr-srow" data-si="' + i + '"><button class="tr-song" data-t="' + (c ? c.start : toSec(t.time)) + '"' + (c ? '' : ' disabled') + '><span>' + esc(t.time || '') + '</span><em>' + esc(t.song) + '</em>' + (t.by ? ' <i class="tr-by">' + esc(t.by) + '</i>' : '') + '</button>' +
+            (c ? '<button type="button" class="tr-add" data-ci="' + i + '" title="Add to a playlist" aria-label="Add ' + esc(t.song) + ' (live) to a playlist">' + PLUS + '</button>' : '') + '</div>';
+        }).join('') + '</div>' : '') +
+        (x.comps && x.comps.length ? '<div class="yz-k" style="margin-top:16px;">ARCHIVED COMPS OF THIS SHOW</div><div class="tr-comps" id="tr-comps"><div class="loading"><div class="spinner"></div></div></div>' : '') +
+        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
+      var slot = w.querySelector('#tr-dock');
+      var live = function () { slot.classList.add('is-live'); wvShow.dock(slot); };
+      var start = function (at) {
+        if (playingShow(x)) { if (at != null) wvShow.playSong(at); else wvShow.resume(); }
+        else wvShow.play(showCfg(x, at || 0, true));
+        live(); sync();
+      };
+      var sync = function () {
+        var on = playingShow(x) ? wvShow.state().songIndex : -1;
+        var rows = w.querySelectorAll('.tr-srow');
+        var sorted = Object.keys(clips).map(Number).sort(function (a, b) { return clips[a].start - clips[b].start; });
+        var cur = on >= 0 && sorted[on] != null ? sorted[on] : -1;
+        rows.forEach(function (r) { var hit = +r.getAttribute('data-si') === cur; r.classList.toggle('on', hit); var b = r.querySelector('.tr-song'); if (b) b.setAttribute('aria-current', hit ? 'true' : 'false'); });
+        if (!playingShow(x) && slot.classList.contains('is-live')) { slot.classList.remove('is-live'); wvShow.undock(); }
+      };
+      w.querySelector('.tr-dock-play').onclick = function () { start(null); };
+      w.querySelectorAll('.tr-song[data-t]').forEach(function (b) { b.onclick = function () { start(+b.getAttribute('data-t')); }; });
+      w.querySelectorAll('.tr-add').forEach(function (b) {
+        b.onclick = function () {
+          var c = clips[+b.getAttribute('data-ci')];
+          if (!c) return;
+          if (typeof window.openAddToPlaylist !== 'function') { if (typeof wvToast === 'function') wvToast('playlists are still loading...try again in a sec'); return; }
+          window.openAddToPlaylist({ clip: c, title: c.song + ' · live at ' + c.show_name, cover_url: c.cover });
+        };
+      });
+      var onChange = function () { sync(); };
+      document.addEventListener('wv-show-change', onChange);
+      var iv = setInterval(sync, 1000);
+      w._onClose = function () { clearInterval(iv); document.removeEventListener('wv-show-change', onChange); if (window.wvShow) wvShow.undock(); };
+      var busy = (window.wvShow && wvShow.state().playing) || (typeof audio !== 'undefined' && audio && !audio.paused);
+      if (opts && opts.start != null) start(opts.start);
+      else if (playingShow(x)) live();
+      else if (!busy) start(null);
+      sync();
+      loadComps(x, w);
+      return w;
+    }
+    function loadComps(x, w) {
+      if (!(x.comps && x.comps.length)) return;
+      Promise.all(x.comps.slice(0, 8).map(function (id) { return api('/albums/' + encodeURIComponent(id)).then(function (d) { return d.album || d; }).catch(function () { return null; }); })).then(function (list) {
+        var box = w.querySelector('#tr-comps'); if (!box) return;
+        list = list.filter(function (a) { return a && a.id && a.title; });
+        box.innerHTML = list.length ? list.map(function (a) {
+          var by = a.is_archive ? (a.archive_artist_name || '') : ((a.artists && a.artists.display_name) || '');
+          return '<a class="tr-comp" href="/album?id=' + encodeURIComponent(a.id) + '"><span class="tr-comp-art" style="background:' + (window.coverGradient ? coverGradient(a.title) : 'var(--surface-3)') + ';">' + (a.cover_url ? '<img src="' + esc(thumb(a.cover_url, 120)) + '" alt="" onerror="this.remove()">' : '') + '</span><span style="min-width:0;"><b>' + esc(a.title) + '</b><i>' + esc(by) + (a.track_count ? ' · ' + a.track_count + ' tracks' : '') + '</i></span><span class="tr-comp-go">play ›</span></a>';
+        }).join('') : '<div class="yz-sub">couldnt load the comps</div>';
+        box.querySelectorAll('a.tr-comp').forEach(function (el) { el.onclick = function (e) { e.preventDefault(); w.querySelector('.yz-x').click(); navigate(el.getAttribute('href')); }; });
+      });
+    }
+    window.wvTourOpenShow = function (id, year) {
+      if (!document.body.contains(root) || !st.d || String(st.d.year) !== String(year)) return false;
+      var x = st.d.shows.find(function (s) { return String(s.id) === String(id); });
+      if (!x) return false;
+      document.querySelectorAll('.yz-modal').forEach(function (m) { var b = m.querySelector('.yz-x'); if (b) b.click(); else m.remove(); });
+      videoModal(x);
+      return true;
+    };
+    function videoModal(x, opts) {
       if (!x) return;
+      if (window.wvShow && isShow(x)) return showModal(x, opts);
       var yt = x.youtube && /^[A-Za-z0-9_-]{6,20}$/.test(x.youtube) ? x.youtube : null;
       var player = yt ? '<div class="tr-vid tr-yt"><iframe src="https://www.youtube-nocookie.com/embed/' + yt + '?enablejsapi=1&rel=0&playsinline=1" title="' + esc(x.name) + '" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>'
         : '<div class="tr-vid"><video controls autoplay playsinline preload="metadata" poster="' + esc(x.image || '') + '" src="' + esc(x.video) + '"></video></div>';

@@ -174,8 +174,30 @@ window.moveQueueItem = function (from, to) {
   _saveQueue();
 };
 
+// A queue item can be a live clip ({ _clip: wvShow.play options }): it plays
+// through the show player and hands back to the queue when its range ends.
+function _playQueueClip(it, idx) {
+  if (!window.wvShow) return false;
+  const opts = Object.assign({}, it._clip, { title: it._clip.title || it.title, ctx: Object.assign({}, it._clip.ctx || {}, { queue: true }) });
+  opts.onEnd = function () {
+    if (_pq[_pqIdx] !== it) return;
+    const n = _nextQueueIndex();
+    if (n >= 0) window.playQueueIndex(n);
+    else _continueAfterQueue();
+  };
+  return window.wvShow.play(opts);
+}
 window.playQueueIndex = function (idx) {
   if (idx < 0 || idx >= _pq.length) return false;
+  if (_pq[idx] && _pq[idx]._clip) {
+    _pqIdx = idx;
+    if (_radio) window.radioStop();
+    _playQueueClip(_pq[idx], idx);
+    _fireOnChange(idx);
+    _renderQueuePanel();
+    _saveQueue();
+    return true;
+  }
   _pqIdx = idx;
   _fromQueue = true;
   playTrack(_pq[idx]);
@@ -234,16 +256,20 @@ function _refreshLike() {
   api('/tracks/' + id).then(t => { if (currentTrack && currentTrack.id === id) _setLikeUI(t && t.user_liked); }).catch(() => {});
 }
 function toggleCurrentLike() {
+  if (_showOn()) return;
   if (!currentTrack || !currentTrack.id) return;
   if (!localStorage.getItem('token')) { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; }
   _setLikeUI(!_liked);
   api('/tracks/' + currentTrack.id + '/like', { method: 'POST' }).then(r => { _setLikeUI(r && r.liked); if (typeof window.refreshSidebarLibrary === 'function') window.refreshSidebarLibrary(); }).catch(() => _setLikeUI(!_liked));
 }
+function _showOn() { return !!(window.wvShow && typeof window.wvShow.active === 'function' && window.wvShow.active()); }
 function addCurrentToPlaylist() {
+  if (_showOn()) { window.wvShow.addCurrent(); return; }
   if (!currentTrack || !currentTrack.id) return;
   if (typeof openAddToPlaylist === 'function') openAddToPlaylist(currentTrack);
 }
 function goToCurrentTrack() {
+  if (_showOn()) { window.wvShow.openShow(); return; }
   if (!currentTrack || !currentTrack.id) return;
   closeFullPlayer();
   navigate(currentTrack._album_id ? '/album?id=' + currentTrack._album_id : '/track?id=' + currentTrack.id);
@@ -1196,6 +1222,12 @@ function _nextQueueIndex() {
 }
 
 function skipPrev() {
+  if (_showOn()) {
+    const s = window.wvShow.state();
+    if (s.ctx && s.ctx.queue && s.time - s.rangeStart < 3 && _pqIdx > 0) { window.playQueueIndex(_pqIdx - 1); return; }
+    window.wvShow.prev();
+    return;
+  }
   if (_radio) return;
   if (audio && audio.currentTime > 3) { audio.currentTime = 0; return; }
   if (_pq.length && _pqIdx >= 0) {
@@ -1208,6 +1240,7 @@ function skipPrev() {
 }
 
 function skipNext() {
+  if (_showOn()) { window.wvShow.next(); return; }
   if (_radio) return;
   if (_pq.length && _pqIdx >= 0) {
     const nxt = _nextQueueIndex();
@@ -1221,6 +1254,7 @@ function skipNext() {
 }
 
 function openFullPlayer(withLyrics) {
+  if (_showOn()) { window.wvShow.expand(); return; }
   if (_radio && _radio.lp) {
     if (typeof navigate === 'function') return navigate('/lp?id=' + encodeURIComponent(_radio.slug));
     location.assign('/lp?id=' + encodeURIComponent(_radio.slug)); return;
@@ -1354,11 +1388,12 @@ function initPlayer() {
       const fill = bar.querySelector('.progress-fill, .pfs-fill, [id$="-fill"]');
       if (fill) fill.style.width = pct;
       const label = document.getElementById(id === 'progress-bar' ? 'time-elapsed' : 'pfs-elapsed');
+      if (_showOn()) return;
       if (label && audio.duration) label.textContent = fmtTime(r * audio.duration);
     };
-    const commit = r => { if (audio.duration && !_radio) audio.currentTime = r * audio.duration; };
+    const commit = r => { if (_showOn()) { window.wvShow.seekRatio(r); return; } if (audio.duration && !_radio) audio.currentTime = r * audio.duration; };
     bar.addEventListener('pointerdown', e => {
-      if (!audio.duration || _radio) return;
+      if (!_showOn() && (!audio.duration || _radio)) return;
       dragging = true;
       bar.setPointerCapture && bar.setPointerCapture(e.pointerId);
       preview(ratioAt(e.clientX));
@@ -1371,10 +1406,16 @@ function initPlayer() {
       commit(ratioAt(e.clientX));
     };
     bar.addEventListener('pointerup', end);
-    bar.addEventListener('pointercancel', () => { dragging = false; _onTimeUpdate(); });
+    bar.addEventListener('pointercancel', () => { dragging = false; if (!_showOn()) _onTimeUpdate(); });
     bar.addEventListener('keydown', e => {
-      if (!audio.duration || _radio) return;
       const step = e.shiftKey ? 30 : 5;
+      if (_showOn()) {
+        if (e.key === 'ArrowRight') { window.wvShow.seekBy(step); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft') { window.wvShow.seekBy(-step); e.preventDefault(); }
+        else if (e.key === 'Home') { window.wvShow.seekRatio(0); e.preventDefault(); }
+        return;
+      }
+      if (!audio.duration || _radio) return;
       if (e.key === 'ArrowRight') { audio.currentTime = Math.min(audio.duration, audio.currentTime + step); e.preventDefault(); }
       else if (e.key === 'ArrowLeft') { audio.currentTime = Math.max(0, audio.currentTime - step); e.preventDefault(); }
       else if (e.key === 'Home') { audio.currentTime = 0; e.preventDefault(); }
@@ -1467,6 +1508,12 @@ function initPlayer() {
       setTimeout(() => { if (_autoplayTicket === before && audio.paused && audio.ended) window.skipNextOrAutoplay(); }, 900);
     }
   });
+  audio.addEventListener('play', () => {
+    if (_showOn() && audio.src && audio.src.indexOf('data:') !== 0 && !_iosUnlockPending) {
+      window.wvShow.stop({ silent: true });
+      if (currentTrack) { _renderAll(currentTrack); _setMediaMeta(currentTrack); }
+    }
+  });
   audio.addEventListener('play', () => { _setPlayBtns(true); _lfmOnPlay(); if (_radio) _radioSync(false); _msState('playing'); });
   audio.addEventListener('timeupdate', _lfmOnTick);
   audio.addEventListener('pause', () => { _setPlayBtns(false); if (_baseTitle) document.title = _baseTitle; _msState('paused'); });
@@ -1517,6 +1564,7 @@ function _prewarmTick() {
   } catch (_) {}
 }
 function _onTimeUpdate() {
+  if (_showOn()) return;
   const pct = audio.duration ? (audio.currentTime / audio.duration * 100) + '%' : '0%';
   const el = document.getElementById('time-elapsed');
   const tot = document.getElementById('time-total');
@@ -1885,6 +1933,7 @@ window.skipNextOrAutoplay = async function () {
 function playTrack(track) {
   const playerEl = document.getElementById('player');
   if (!playerEl || !audio) return;
+  if (_showOn()) window.wvShow.stop({ silent: true });
   if (!track._radio && _radio) window.radioStop();
   try { const h = JSON.parse(localStorage.getItem('wv_autoplay_heard') || '[]'); if (track.id && h.indexOf(track.id) === -1) { h.push(track.id); if (track._album_id && h.indexOf(track._album_id) === -1) h.push(track._album_id); localStorage.setItem('wv_autoplay_heard', JSON.stringify(h.slice(-800))); } } catch (_) {}
   // Seeding costs a pool lookup plus a fetch per candidate comp. Wait until the
@@ -2063,6 +2112,7 @@ function _renderAll(track) {
 // still true but the element is paused, playback picks up where it stopped.
 let _wantPlaying = false;
 function togglePlay() {
+  if (_showOn()) { window.wvShow.toggle(); return; }
   if (!audio) return;
   if (_radio) {
     if (audio.paused) {
@@ -2135,6 +2185,15 @@ function _setPlayBtns(playing) {
 
 // Stubs for pages that need skip prev/next (album.html overrides these)
 function renderPlayerTrack(track) { _renderAll(track); }
+window._wvSetPlayBtns = function (playing) { _setPlayBtns(!!playing); };
+window._wvPlayerRestore = function () {
+  const bar = document.getElementById('player');
+  if (!currentTrack) { if (bar) bar.classList.add('hidden'); return; }
+  _renderAll(currentTrack);
+  _setMediaMeta(currentTrack);
+  _setPlayBtns(!!(audio && !audio.paused));
+  if (audio) _onTimeUpdate();
+};
 function setPlayBtn(playing) { _setPlayBtns(playing); }
 function playIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`; }
 function pauseIcon() { return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`; }
@@ -2155,10 +2214,12 @@ document.addEventListener('keydown', function(e) {
     togglePlay();
   } else if ((e.key === 'ArrowRight' || e.key === 'l') && !e.shiftKey && !onControl) {
     e.preventDefault();
+    if (_showOn()) { window.wvShow.seekBy(10); return; }
     if (_radio) return;
     audio.currentTime = Math.min((audio.duration || 0), audio.currentTime + 10);
   } else if ((e.key === 'ArrowLeft' || e.key === 'j') && !e.shiftKey && !onControl) {
     e.preventDefault();
+    if (_showOn()) { window.wvShow.seekBy(-10); return; }
     if (_radio) return;
     audio.currentTime = Math.max(0, audio.currentTime - 10);
   } else if (e.key === 'ArrowRight' && e.shiftKey) {

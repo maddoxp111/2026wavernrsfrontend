@@ -20,7 +20,9 @@
       '.atp-meta{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px}' +
       '.atp-meta b{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
       '.atp-meta span{font-size:12px;color:var(--text-2)}' +
-      '.atp-lock{display:inline-block;vertical-align:-1px;margin-left:4px;opacity:.75}';
+      '.atp-lock{display:inline-block;vertical-align:-1px;margin-left:4px;opacity:.75}' +
+      '#atp-modal{z-index:9800}' +
+      '.atp-live{display:inline-flex;align-items:center;gap:4px;margin-right:6px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);background:color-mix(in srgb,var(--brand) 14%,transparent);vertical-align:1px}';
     document.head.appendChild(st);
   }
 
@@ -92,7 +94,15 @@
     document.getElementById('atp-status').className = '';
     document.getElementById('atp-new-form').style.display = 'none';
     document.getElementById('atp-new-title').value = '';
-    document.getElementById('atp-track-name').textContent = track.title || 'Track';
+    var nameEl = document.getElementById('atp-track-name');
+    if (track.clip) {
+      var c = track.clip;
+      var len = c.end != null ? Math.max(0, Math.round(c.end - c.start)) : null;
+      nameEl.innerHTML = '<span class="atp-live">live</span>' + _esc(c.song) + ' · ' + _esc(c.show_name) +
+        (len ? ' · ' + Math.floor(len / 60) + ':' + String(len % 60).padStart(2, '0') : '');
+    } else {
+      nameEl.textContent = track.title || 'Track';
+    }
     modal.classList.add('open');
     _loadList();
   }
@@ -154,15 +164,21 @@
     statusEl.textContent = 'Adding…';
     statusEl.className = '';
 
-    api('/playlists/' + playlistId + '/tracks', {
+    var clip = _pending.clip || null;
+    var body = clip ? {
+      show_id: clip.show_id, year: clip.year, show_name: clip.show_name, song: clip.song, by: clip.by || null,
+      start: clip.start, end: clip.end == null ? null : clip.end, youtube: clip.youtube || null,
+      video: clip.youtube ? null : (clip.video || null), cover: clip.cover || null
+    } : { track_id: _pending.id };
+    api('/playlists/' + playlistId + (clip ? '/clips' : '/tracks'), {
       method: 'POST',
-      body: JSON.stringify({ track_id: _pending.id }),
+      body: JSON.stringify(body),
     }).then(function () {
       var name = 'your playlist';
       if (_cache) {
         for (var i = 0; i < _cache.length; i++) {
           if (_cache[i] && _cache[i].id === playlistId) {
-            _cache[i].track_count = (_cache[i].track_count || 0) + 1;
+            if (!clip) _cache[i].track_count = (_cache[i].track_count || 0) + 1;
             if (_pending && _pending.cover_url && Array.isArray(_cache[i].mosaic) && _cache[i].mosaic.length < 4 && _cache[i].mosaic.indexOf(_pending.cover_url) < 0) {
               _cache[i].mosaic.push(_pending.cover_url);
             }
@@ -177,6 +193,13 @@
       if (typeof wvToast === 'function') wvToast('added to ' + name, 'success');
       else { statusEl.textContent = 'Added'; statusEl.className = 'playlist-modal-status success'; }
     }).catch(function (err) {
+      if (clip && err && err.status === 404 && !/playlist/i.test(String(err.message || ''))) {
+        statusEl.textContent = '';
+        _close();
+        if (typeof wvToast === 'function') wvToast('saving live clips to playlists isnt switched on yet...check back soon');
+        else alert('saving live clips to playlists isnt switched on yet');
+        return;
+      }
       if (err && (err.status === 409 || /already in/i.test(String(err.message || '')))) {
         statusEl.textContent = 'its already in this playlist';
       } else {

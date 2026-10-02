@@ -2194,6 +2194,7 @@
   ensure('share.js', 'wvShare');
   ensure('rails.js', 'wvRails');
   ensure('a11y.js', 'wvA11y');
+  ensure('showplayer.js', 'wvShow');
   ensure('pwa.js', 'wvPwa');
   ensure('footer.js', 'wvFooter');
   ensure('seo.js', 'wvSeo');
