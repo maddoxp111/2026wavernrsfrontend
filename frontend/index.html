@@ -694,6 +694,12 @@ function heroSkelHTML() {
     '<div class="hx-head"><div class="wv-skel l" style="width:120px;"></div><div class="wv-skel l" style="width:72%;height:36px;border-radius:8px;"></div><div class="wv-skel l" style="width:42%;"></div></div>' +
     '<div class="hx-act"><div class="wv-skel" style="width:112px;height:44px;border-radius:99px;"></div><div class="wv-skel" style="width:96px;height:44px;border-radius:99px;"></div></div></div></div>';
 }
+function _hlLabel(it) {
+  var w = it._why;
+  if (w && w.kind === 'top150') return 'Top 150 · #' + w.rank;
+  if (w && w.kind === 'tracker') return 'Tracker ' + (w.type === 'edit' ? 'edit' : 'comp') + (w.trackers && w.trackers.length ? ' · ' + w.trackers.slice(0, 2).join(', ') : '');
+  return it._type === 'album' ? 'Highlighted comp' : 'Highlighted edit';
+}
 function _heroPick() {
   var out = [], seen = {};
   function add(item, kind, label) {
@@ -708,9 +714,9 @@ function _heroPick() {
   for (var i = hl.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = hl[i]; hl[i] = hl[j]; hl[j] = t; }
   var fresh = (_home.recent || []).filter(function (i) { return i._type === 'album' && i.cover_url; });
   var room = Math.max(1, 5 - out.length - Math.min(2, fresh.length));
-  hl.slice(0, room).forEach(function (it) { add(it, 'hl', it._type === 'album' ? 'Highlighted comp' : 'Highlighted edit'); });
+  hl.slice(0, room).forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
   fresh.forEach(function (it) { add(it, 'new', 'New comp'); });
-  hl.forEach(function (it) { add(it, 'hl', it._type === 'album' ? 'Highlighted comp' : 'Highlighted edit'); });
+  hl.forEach(function (it) { add(it, 'hl', _hlLabel(it)); });
   return out;
 }
 function _heroWho(it) {

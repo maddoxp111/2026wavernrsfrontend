@@ -2295,6 +2295,7 @@
           '<div style="font-size:12px;color:var(--text-2);">Profile: <b>' + escHtml(a.archive_artist_name || 'Unknown') + '</b> · <button class="wv-see-all" onclick="mgMoveProfile(\'' + a.id + '\')">Move to another profile</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="mgSave(\'' + a.id + '\')">Save changes</button>' +
+            '<button class="wv-pill" id="mg-hl-btn" style="font-size:12px;padding:5px 12px;' + (a.highlighted ? 'color:var(--brand);' : '') + '" onclick="mgHighlight(\'' + a.id + '\', ' + (a.highlighted ? 'false' : 'true') + ')">' + (a.highlighted ? '★ Highlighted (remove)' : '☆ Highlight on wavernrs') + '</button>' +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\')">Merge this into another comp…</button>' +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="mgDelete(\'' + a.id + '\')">Delete comp</button>' +
           '</div>' +
@@ -2330,6 +2331,11 @@
   window.mgMoveProfile = async function(id) { var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ archive_artist_name: name }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgBulkProfile = async function() { var ids = Object.keys(_mg.sel); if (!ids.length) return; var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: 'set_artist', value: name }) }); _mg.sel = {}; mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgMoveAccount = async function(id) { var acc = await _mgPickAccount(); if (!acc) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ artist_id: acc.id }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgHighlight = async function(id, on) {
+    var b = document.getElementById('mg-hl-btn'); if (b) b.disabled = true;
+    try { await api('/archive-manage/comps/' + id + '/highlight', { method: 'POST', body: JSON.stringify({ value: on }) }); mgOpen(id); }
+    catch (e) { if (b) b.disabled = false; alert(e.message || 'Failed'); }
+  };
   window.mgDelete = async function(id) { if (!confirm('delete this comp and all its tracks? you cant undo this')) return; try { await api('/archive-manage/comps/' + id, { method: 'DELETE' }); mgCloseEditor(); mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   async function _mgPickComp(label) {
     var q = prompt(label + ' type part of the comp title'); if (!q) return null;
