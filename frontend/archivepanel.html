@@ -2409,17 +2409,64 @@
         '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
           (k.status === 'open' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clAiReview(\'' + k.id + '\')">✨ AI resolve</button>' : '') +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clChatOpen(\'' + k.id + '\')">💬 Talk to AI</button>' +
           '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clOpenComps(\'' + k.id + '\')">Open these comps in the manager</button>' +
           (k.claim_type === 'transfer' || k.claim_type === 'stolen' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="clTransfer(\'' + k.id + '\')">Move comps to their account</button>' : '') +
           (k.status !== 'approved' ? '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clSet(\'' + k.id + '\',\'approved\')">Approve</button>' : '') +
           (k.status !== 'rejected' ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="clSet(\'' + k.id + '\',\'rejected\')">Decline</button>' : '') +
           (k.status !== 'open' ? '<button class="wv-see-all" onclick="clSet(\'' + k.id + '\',\'open\')">Reopen</button>' : '') +
-        '</div><div id="cl-ai-' + k.id + '"></div></div>';
+        '</div><div id="cl-ai-' + k.id + '"></div><div id="cl-chat-' + k.id + '"></div></div>';
     }).join('');
+    d.claims.forEach(function(k) { if (_clRev[k.id]) _clAiRender(k.id, _clRev[k.id]); if (_clChat[k.id]) _clChatPaint(k.id); });
   };
-  var CL_ACT = { move_to_account: 'Move to their account', move_to_archive: 'Take it off their account and credit as', set_creator_name: 'Credit as', set_title: 'Rename to', take_down: 'Take down' };
+  var _clRev = window._clRev = window._clRev || {};
+  var _clChat = window._clChat = window._clChat || {};
+  function _clDone(id, msg) {
+    delete _clRev[id]; delete _clChat[id];
+    var card = document.getElementById('cl-' + id);
+    if (card) { card.style.transition = 'opacity .25s'; card.style.opacity = '0'; setTimeout(function() { card.remove(); var left = document.querySelectorAll('#cl-list > [id^="cl-"]').length; var ob = document.getElementById('cl-tab-open'); if (ob && document.getElementById('cl-tab-open').classList.contains('on')) ob.textContent = 'Open' + (left ? ' (' + left + ')' : ''); }, 260); }
+    if (msg && typeof wvToast === 'function') wvToast(msg);
+    if (typeof mgLoad === 'function') mgLoad();
+  }
+  function _clChatPaint(id) {
+    var st = _clChat[id]; var box = document.getElementById('cl-chat-' + id); if (!box || !st) return;
+    var msgs = st.msgs.map(function(m) { return '<div style="align-self:' + (m.role === 'staff' ? 'flex-end' : 'flex-start') + ';max-width:85%;padding:8px 11px;border-radius:12px;font-size:12.5px;line-height:1.45;white-space:pre-wrap;background:' + (m.role === 'staff' ? 'var(--brand);color:var(--on-brand,#111)' : 'var(--surface);color:var(--text)') + ';">' + escHtml(m.text) + '</div>'; }).join('');
+    var plan = st.plan && ((st.plan.actions || []).length || st.plan.claim_status !== 'none') ? '<div style="margin-top:6px;padding:10px 12px;border-radius:10px;background:var(--surface);font-size:12.5px;">' +
+      '<div style="color:var(--text-3);margin-bottom:4px;">ready to do (' + st.plan.expanded_count + ' comp change' + (st.plan.expanded_count === 1 ? '' : 's') + (st.plan.claim_status !== 'none' ? ', then ' + st.plan.claim_status + ' the claim' : '') + '):</div>' +
+      '<ul style="margin:0 0 8px 18px;padding:0;">' + (st.plan.actions || []).map(function(a) { return '<li>' + escHtml(CL_ACT[a.type] || a.type) + (a.value ? ' <b>' + escHtml(a.value) + '</b>' : '') + ' · ' + (a.album_id ? '<a href="/album?id=' + encodeURIComponent(a.album_id) + '" target="_blank" style="color:var(--brand);">' + escHtml(a.album_id.slice(0, 8)) + '</a>' : 'every comp by <b>' + escHtml(a.creator) + '</b>') + '</li>'; }).join('') + '</ul>' +
+      '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clChatDo(\'' + id + '\', this)">Do it</button></div>' : '';
+    box.innerHTML = '<div style="margin-top:10px;padding:12px 14px;border-radius:12px;background:var(--surface-3);border:1px solid var(--hair);">' +
+      '<div style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;" id="cl-chat-log-' + id + '">' + (msgs || '<div style="font-size:12px;color:var(--text-3);">tell it what to do, like "merge everything credited to knvtrs onto their account" or "credit these to Unknown and decline"</div>') + (st.busy ? '<div style="font-size:12px;color:var(--text-3);">thinking...</div>' : '') + '</div>' + plan +
+      '<div style="display:flex;gap:6px;margin-top:8px;"><input id="cl-chat-in-' + id + '" class="wv-input" style="flex:1;padding:8px 10px;font-size:12.5px;" placeholder="tell the AI what to do..." onkeydown="if(event.key===\'Enter\')clChatSend(\'' + id + '\')"' + (st.busy ? ' disabled' : '') + '><button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="clChatSend(\'' + id + '\')"' + (st.busy ? ' disabled' : '') + '>Send</button></div></div>';
+    var log = document.getElementById('cl-chat-log-' + id); if (log) log.scrollTop = log.scrollHeight;
+  }
+  window.clChatOpen = function(id) { if (!_clChat[id]) _clChat[id] = { msgs: [], plan: null, busy: false }; _clChatPaint(id); var i = document.getElementById('cl-chat-in-' + id); if (i) i.focus(); };
+  window.clChatSend = async function(id) {
+    var st = _clChat[id]; var inp = document.getElementById('cl-chat-in-' + id); if (!st || !inp) return;
+    var t = inp.value.trim(); if (!t || st.busy) return;
+    st.msgs.push({ role: 'staff', text: t }); st.busy = true; st.plan = null; _clChatPaint(id);
+    try {
+      var r = await api('/claims/' + id + '/chat', { method: 'POST', body: JSON.stringify({ messages: st.msgs }) });
+      st.msgs.push({ role: 'ai', text: r.reply || '(no reply)' }); st.plan = r;
+    } catch (e) { st.msgs.push({ role: 'ai', text: 'error: ' + (e.message || 'failed') }); }
+    st.busy = false; _clChatPaint(id);
+    var i2 = document.getElementById('cl-chat-in-' + id); if (i2) i2.focus();
+  };
+  window.clChatDo = async function(id, btn) {
+    var st = _clChat[id]; if (!st || !st.plan) return;
+    if (!confirm('make these changes' + (st.plan.claim_status !== 'none' ? ' and ' + st.plan.claim_status + ' the claim' : '') + '? (' + st.plan.expanded_count + ' comp changes)')) return;
+    btn.disabled = true; btn.textContent = 'doing it...';
+    try {
+      var r = await api('/claims/' + id + '/chat-apply', { method: 'POST', body: JSON.stringify({ actions: st.plan.actions, claim_status: st.plan.claim_status, user_note: st.plan.user_note }) });
+      var msg = 'done: ' + (r.changed || 0) + ' change(s)' + (r.done && r.done.length ? '\n' + r.done.join('\n') : '');
+      if (st.plan.claim_status !== 'none') { _clDone(id, msg.split('\n')[0]); return; }
+      st.msgs.push({ role: 'ai', text: msg }); st.plan = null; _clChatPaint(id); if (typeof mgLoad === 'function') mgLoad();
+    } catch (e) { btn.disabled = false; btn.textContent = 'Do it'; alert(e.message || 'Failed'); }
+  };
+  var CL_ACT = { move_to_account: 'Move to their account', move_to_user: 'Move to the account of', set_description: 'Set description to', move_to_archive: 'Take it off their account and credit as', set_creator_name: 'Credit as', set_title: 'Rename to', take_down: 'Take down' };
   function _clAiBox(id, html) { var b = document.getElementById('cl-ai-' + id); if (b) b.innerHTML = html; return b; }
   function _clAiRender(id, rv) {
+    _clRev[id] = rv;
     var dec = rv.decision === 'approve' ? '<span class="wv-chip acc">AI: approve</span>' : rv.decision === 'decline' ? '<span class="wv-chip bad">AI: decline</span>' : '<span class="wv-chip warn">AI: needs a person</span>';
     var titles = {}; (rv.comps || []).forEach(function(c) { titles[c.id] = c.title + (c.credited_as ? ' (' + c.credited_as + ')' : ''); });
     var acts = (rv.actions || []).map(function(a) {
@@ -2450,8 +2497,7 @@
     if (!confirm(label)) return;
     try {
       var r = await api('/claims/' + id + '/ai-apply', { method: 'POST', body: JSON.stringify({ mode: mode, note: noteEl ? noteEl.value : '' }) });
-      if (typeof wvToast === 'function') wvToast((r.decision === 'approve' ? 'Approved' : 'Declined') + (r.done && r.done.length ? ' · ' + r.done.length + ' change(s) made' : ''));
-      clLoad('open'); if (typeof mgLoad === 'function') mgLoad();
+      _clDone(id, (r.decision === 'approve' ? 'Approved' : 'Declined') + (r.done && r.done.length ? ' · ' + r.done.length + ' change(s) made' : ''));
     } catch (e) { alert(e.message || 'Failed'); }
   };
   window.clAiAll = async function() {
@@ -2468,8 +2514,7 @@
     if (status === 'approved') {
       try {
         var r = await api('/claims/' + id + '/ai-apply', { method: 'POST', body: JSON.stringify({ mode: 'approve', note: note }) });
-        if (r && r.done && r.done.length) alert('done: ' + r.done.join(', '));
-        clLoad('open'); if (typeof mgLoad === 'function') mgLoad(); return;
+        _clDone(id, 'Approved' + (r && r.done && r.done.length ? ' · ' + r.done.length + ' change(s) made' : '')); return;
       } catch (e) { if (!confirm((e.message || 'couldnt apply the changes') + '\n\nmark it approved anyway without changing any comps?')) return; }
     }
     try { await api('/claims/' + id, { method: 'PATCH', body: JSON.stringify({ status: status, staff_note: note }) }); clLoad(status === 'open' ? 'open' : 'open'); } catch (e) { alert(e.message || 'Failed'); }
