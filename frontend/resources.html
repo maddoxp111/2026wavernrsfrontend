@@ -2589,7 +2589,12 @@ window._ytBooted = false;
     function pauseSite() { if (typeof pausePlayer === 'function') pausePlayer(); }
     async function load() {
       var my = st.lseq = (st.lseq || 0) + 1;
-      root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      var tb = document.getElementById('tr-body');
+      if (tb && st.d && root.contains(tb)) {
+        root.querySelectorAll('[data-y]').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-y') === st.year); });
+        tb.style.minHeight = Math.max(tb.offsetHeight, 240) + 'px';
+        tb.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      } else root.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       var got;
       try { got = await api('/ye/tour' + (st.year ? '?year=' + st.year : '')); }
       catch (e) { if (my === st.lseq) root.innerHTML = '<div class="yt-empty"><b>couldnt load the tour archive</b>' + esc(e.message || 'try again in a sec') + '</div>'; return; }
@@ -2626,9 +2631,14 @@ window._ytBooted = false;
     }
     function paint() {
       var d = st.d;
+      var oldYears = document.getElementById('tr-years'), yl = oldYears ? oldYears.scrollLeft : 0;
+      var scEl = document.getElementById('wv-content'), keepTop = scEl ? scEl.scrollTop : 0;
       root.innerHTML = '<div class="yt-tabs" id="tr-years">' + d.years.map(function (y) { return '<button class="yt-tab' + (y.year === st.year ? ' on' : '') + '" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div>' +
         '<div class="ye-chips" id="tr-secs">' + secs(d).map(function (x) { return '<button class="ye-chip' + (st.sec === x[0] ? ' on' : '') + '" data-s="' + x[0] + '">' + x[1] + ' · ' + x[2] + '</button>'; }).join('') + '</div>' +
         '<div id="tr-body"></div><div class="ye-credit">' + (d.shows.length || d.merch.length ? 'shows and media from the <a href="https://yetour.xyz" target="_blank" rel="noopener">YE TOUR ARCHIVE</a> ❤️ · ' : '') + 'dates from wikipedia</div>';
+      var restoreYl = function () { var ny = document.getElementById('tr-years'); if (ny && yl) ny.scrollLeft = yl; };
+      restoreYl(); [0, 120, 350, 700].forEach(function (ms) { setTimeout(restoreYl, ms); });
+      if (scEl && keepTop) scEl.scrollTop = keepTop;
       root.querySelectorAll('[data-y]').forEach(function (b) { b.onclick = function () { st.year = b.getAttribute('data-y'); st.venue = ''; st.yshow = ''; url(); load(); }; });
       root.querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { st.sec = b.getAttribute('data-s'); url(); paint(); }; });
       body();
