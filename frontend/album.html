@@ -1021,7 +1021,8 @@
       var info = row.querySelector('.track-row-artist'); if (!info || info.querySelector('.wv-tt')) return;
       var rel = m.tab === 'Released';
       var yr = m.leak ? m.leak.slice(-4) : '';
-      var label = rel ? 'released' + (yr ? ' ' + yr : '') : m.leak ? 'leaked ' + m.leak.replace(/ \d{1,2},/, '') : (m.avail && /snippet/i.test(m.avail) ? 'snippet' : 'unreleased');
+      var label = rel ? 'released' + (yr ? ' ' + yr : '') : m.leak ? 'leaked ' + m.leak.replace(/ \d{1,2},/, '') : (m.avail && /snippet/i.test(m.avail) ? 'snippet' : '');
+      if (!label) return;
       if (rel) counts.rel++; else counts.leak++;
       var tip = m.title + ' · ' + m.era + ' · ' + (rel ? 'released' : 'on the tracker') + (m.quality ? ' · ' + m.quality : '') + (m.avail ? ' · ' + m.avail : '');
       var hub = String(m.title || '').replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
@@ -1033,7 +1034,7 @@
     if (tl && (counts.rel || counts.leak) && !document.getElementById('wv-tt-sum')) {
       var bits = [];
       if (counts.rel) bits.push(counts.rel + ' released');
-      if (counts.leak) bits.push(counts.leak + ' unreleased');
+      if (counts.leak) bits.push(counts.leak + ' leaked');
       tl.insertAdjacentHTML('beforebegin', '<div id="wv-tt-sum" class="wv-tt-sum">per the Ye tracker: ' + bits.join(' · ') + (items.length - counts.rel - counts.leak > 0 ? ' · ' + (items.length - counts.rel - counts.leak) + ' not on it' : '') + '</div>');
     }
   }
