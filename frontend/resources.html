@@ -2584,7 +2584,9 @@ window._ytBooted = false;
       if (st.pending) {
         var pd = st.pending; st.pending = null;
         var x = st.d.shows.find(function (s) { return String(s.id) === String(pd.id); });
-        if (x) { var w = videoModal(x); var v = w && w.querySelector('video'); if (v && pd.time) { var go = function () { try { v.currentTime = toSec(pd.time); } catch (_) {} }; if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true }); } }
+        if (x) { var w = videoModal(x); var v = w && w.querySelector('video'); var fr = w && w.querySelector('iframe');
+          if (fr && pd.time) { var at = Math.max(0, toSec(pd.time) + (+x.yt_offset || 0)); fr.addEventListener('load', function () { setTimeout(function () { try { fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [at, true] }), '*'); fr.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'); } catch (_) {} }, 600); }, { once: true }); }
+          if (v && pd.time) { var go = function () { try { v.currentTime = toSec(pd.time); } catch (_) {} }; if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true }); } }
       }
     }
     async function songsSec(el) {
@@ -2739,6 +2741,7 @@ window._ytBooted = false;
       w.querySelectorAll('.tr-song').forEach(function (b) {
         b.onclick = function () {
           var t = +b.getAttribute('data-t');
+          if (f) t = Math.max(0, t + (+x.yt_offset || 0));
           if (f) { try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [t, true] }), '*'); f.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'); } catch (_) {} f.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
           try { v.currentTime = t; v.play(); } catch (_) {}
         };

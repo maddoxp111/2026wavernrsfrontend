@@ -81,6 +81,7 @@
     <button class="wv-admin-tab"        id="atab-archivers"  onclick="showAdminTab('archivers')">Archivers</button>
     <button class="wv-admin-tab"        id="atab-radio"      onclick="showAdminTab('radio')">Radio</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
+    <button class="wv-admin-tab"        id="atab-tourvideos" onclick="showAdminTab('tourvideos')">Tour Videos</button>
     <button class="wv-admin-tab"        id="atab-aivoices" onclick="showAdminTab('aivoices')">AI Voices</button>
     <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
   </div>
@@ -276,6 +277,20 @@
     </div>
   </div>
 
+  <!-- ── Tour videos tab ─────────────────────────────────── -->
+  <div id="tab-tourvideos" style="display:none;">
+    <div style="max-width:900px;">
+      <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Ye Archive › Tour Videos</h2>
+        <p style="font-size:14px;color:var(--text-2);margin:0 0 16px;line-height:1.6;">
+          swap the video on any show for a YouTube video. the setlist, timestamps, date, venue, notes and comps all stay. if the YouTube upload starts earlier or later than the original, set an offset in seconds so the setlist timestamps still line up (positive if the YouTube video has extra time at the start). changes go live right away.
+        </p>
+        <input id="tv-q" class="wv-input" style="width:100%;padding:10px 14px;margin-bottom:14px;" placeholder="filter shows..." oninput="renderTourVideos()">
+        <div id="tv-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── AI Voices tab ─────────────────────────────────────── -->
   <div id="tab-aivoices" style="display:none;">
     <div style="max-width:700px;">
@@ -451,9 +466,56 @@
 
   // ── Tab navigation ────────────────────────────────────────────
 
+
+  var _tvShows = [];
+  function _tvEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  async function loadTourVideos() {
+    var box = document.getElementById('tv-list');
+    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try { _tvShows = (await adminApi('/admin/tour-videos')).shows || []; }
+    catch (e) { box.innerHTML = '<div style="color:var(--red,#e5484d);font-size:13px;">' + _tvEsc(e.message) + '</div>'; return; }
+    renderTourVideos();
+  }
+  function renderTourVideos() {
+    var box = document.getElementById('tv-list'); if (!box) return;
+    var q = ((document.getElementById('tv-q') || {}).value || '').toLowerCase().trim();
+    var list = _tvShows.filter(function (s) { return !q || (s.name + ' ' + s.year + ' ' + (s.venue || '') + ' ' + (s.city || '')).toLowerCase().indexOf(q) >= 0; });
+    var lastY = '';
+    box.innerHTML = list.map(function (s) {
+      var head = s.year !== lastY ? '<div style="font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--text-3);margin:18px 0 6px;">' + _tvEsc(s.year) + '</div>' : '';
+      lastY = s.year;
+      var o = s.override;
+      var src = o ? 'YouTube override · ' + _tvEsc(o.youtube) + (o.offset ? ' · offset ' + o.offset + 's' : '') : s.has_file ? 'original video file' : s.base_youtube ? 'YouTube · ' + _tvEsc(s.base_youtube) : 'no video';
+      return head + '<div style="display:grid;grid-template-columns:72px 1fr;gap:12px;padding:10px;border-radius:12px;background:var(--surface);margin-bottom:6px;">' +
+        '<div style="width:72px;height:48px;border-radius:6px;overflow:hidden;background:var(--surface-3);">' + (s.image ? '<img src="' + _tvEsc(s.image) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+        '<div style="min-width:0;"><div style="font-weight:700;font-size:14px;">' + _tvEsc(s.name) + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);margin:2px 0 8px;">' + _tvEsc([s.date, s.venue, s.city].filter(Boolean).join(' · ')) + ' · ' + s.setlist + ' setlist entries · <b style="color:' + (o ? 'var(--brand)' : 'var(--text-2)') + ';">' + src + '</b></div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          '<input class="wv-input" data-tv-yt="' + _tvEsc(s.id) + '" style="flex:1;min-width:200px;padding:8px 12px;" placeholder="youtube link or id" value="' + _tvEsc(o ? 'https://youtu.be/' + o.youtube : '') + '">' +
+          '<input class="wv-input" data-tv-off="' + _tvEsc(s.id) + '" type="number" style="width:110px;padding:8px 12px;" placeholder="offset (s)" value="' + (o && o.offset ? o.offset : '') + '">' +
+          '<button class="btn btn-primary btn-sm" onclick="saveTourVideo(\'' + _tvEsc(s.id) + '\', this)">Save</button>' +
+          (o ? '<button class="btn btn-secondary btn-sm" onclick="resetTourVideo(\'' + _tvEsc(s.id) + '\', this)">Reset</button>' : '') +
+          (o ? '<a class="btn btn-secondary btn-sm" href="/resources?view=tours&year=' + encodeURIComponent(s.year) + '&show=' + encodeURIComponent(s.id) + '" target="_blank">View</a>' : '') +
+        '</div></div></div>';
+    }).join('') || '<div style="font-size:13px;color:var(--text-3);">no shows match</div>';
+  }
+  async function saveTourVideo(id, btn) {
+    var yt = document.querySelector('[data-tv-yt="' + CSS.escape(id) + '"]').value.trim();
+    var off = document.querySelector('[data-tv-off="' + CSS.escape(id) + '"]').value;
+    btn.disabled = true; btn.textContent = 'Saving...';
+    try { await adminApi('/admin/tour-videos', { method: 'POST', body: JSON.stringify({ id: id, youtube: yt, offset: +off || 0 }) }); await loadTourVideos(); }
+    catch (e) { btn.disabled = false; btn.textContent = 'Save'; alert(e.message); }
+  }
+  async function resetTourVideo(id, btn) {
+    if (!confirm('Go back to the original video for this show?')) return;
+    btn.disabled = true;
+    try { await adminApi('/admin/tour-videos/' + encodeURIComponent(id), { method: 'DELETE' }); await loadTourVideos(); }
+    catch (e) { btn.disabled = false; alert(e.message); }
+  }
+
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','archivers','radio','tracker','aivoices','badges'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','archivers','radio','tracker','tourvideos','aivoices','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -468,6 +530,7 @@
     if (tab === 'archivers')  loadArchivers();
     if (tab === 'radio')      loadRadioHosts();
     if (tab === 'tracker')    loadTrackerSheet();
+    if (tab === 'tourvideos') loadTourVideos();
     if (tab === 'aivoices')   loadRvcModels();
     if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
   }
