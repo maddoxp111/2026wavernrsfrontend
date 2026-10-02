@@ -289,10 +289,8 @@
 <script src="/js/playlists.js?v=baeb5e83aa10"></script>
 <script>
 var AW_LISTS = [
-  { key: 'yedits', badge: 'yedits_eotw_albums', label: 'Yedits Edit of the Week', tab: 'Yedits EOTW', mob: 'Yedits EOTW', short: 'EOTW', src: 'yedits',
+  { key: 'yedits', badge: 'yedits_eotw_albums', label: 'Edit of the Week', tab: 'Edit of the Week', mob: 'EOTW', also: 'onyx_week_albums', short: 'EOTW', src: 'yedits',
     about: 'the weekly community vote from the yedits discord. every winner, with the share of the vote it took home.' },
-  { key: 'onyx', badge: 'onyx_week_albums', label: 'Onyx Yedit of the Week', tab: 'Onyx Yedit of the Week', mob: 'Onyx YOTW', short: 'Onyx YOTW', src: 'onyx',
-    about: 'onyx’s pick of the week: one yedit, every week, hand chosen.' },
   { key: 'highlights', badge: 'onyx_highlight_albums', label: 'Onyx Highlights', tab: 'Onyx Highlights', mob: 'Highlights', short: 'Highlight', src: 'hl',
     about: 'the onyx highlight reel: standout yedits flagged over the years, going back to the early days.' }
 ];
@@ -421,7 +419,7 @@ function awFmtDate(d, withDay) {
 function awReadUrl() {
   var q = new URLSearchParams(location.search);
   var t = (q.get('tab') || '').toLowerCase();
-  if (t === 'eotw') t = 'yedits';
+  if (t === 'eotw' || t === 'onyx') t = 'yedits';
   if (t === 'highlight') t = 'highlights';
   if (['yedits', 'onyx', 'highlights', 'staff'].indexOf(t) >= 0) _aw.tab = t;
   _aw.q = (q.get('q') || '').slice(0, 80);
@@ -457,7 +455,7 @@ function initAwards() {
         '<div style="min-width:0;">' +
           '<div class="aw-eyebrow">' + awIcon('trophy', 15) + 'wavernrs honors</div>' +
           '<h1 class="aw-title" id="aw-h1">Hall of Fame</h1>' +
-          '<p class="aw-sub">every edit that took the crown. edit of the week winners from the yedits discord, onyx’s weekly picks and the highlight reel, all in one place.</p>' +
+          '<p class="aw-sub">every edit that took the crown. every edit of the week winner and the onyx highlight reel, all in one place.</p>' +
           '<div class="aw-stats" id="aw-stats">' +
             '<div class="aw-stat gold"><b data-stat="wins"><i class="aw-sk aw-sk-num"></i></b><span>award-winning edits</span></div>' +
             '<div class="aw-stat"><b data-stat="eds"><i class="aw-sk aw-sk-num"></i></b><span>yeditors honored</span></div>' +
@@ -505,7 +503,11 @@ async function awLoad() {
   try { badges = await api('/badges'); } catch (e) { if (e && e.navAborted) return; badges = null; }
   if (!awLive(st)) return;
   if (!badges) { awFailStats(); _aw.state = 'error'; awRenderPanel(); awRenderLb(); return; }
-  AW_LISTS.forEach(function (L) { _aw.lists[L.key] = { ids: Array.isArray(badges[L.badge]) ? badges[L.badge].slice() : [], items: null }; });
+  AW_LISTS.forEach(function (L) {
+    var ids = Array.isArray(badges[L.badge]) ? badges[L.badge].slice() : [];
+    if (L.also && Array.isArray(badges[L.also])) badges[L.also].forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+    _aw.lists[L.key] = { ids: ids, items: null };
+  });
   AW_LISTS.forEach(function (L) { var el = document.querySelector('[data-count="' + L.key + '"]'); if (el) el.textContent = awNum(_aw.lists[L.key].ids.length); });
   var order = AW_LISTS.slice().sort(function (a, b) { return (a.key === _aw.tab ? -1 : 0) - (b.key === _aw.tab ? -1 : 0); });
   await Promise.all(order.map(function (L) { return awHydrate(L); }));
