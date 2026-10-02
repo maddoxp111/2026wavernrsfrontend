@@ -248,7 +248,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Comp claims</div>' +
             '<div style="font-size:12px;color:var(--text-3);">these come from the Claim your comps page. check the proof, fix the comps with the manager below, then approve or decline with a note they can see.</div></div>' +
-            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button class="wv-pill" id="cl-ai-all" style="font-size:12px;padding:6px 12px;" onclick="clAiAll()" title="has GPT look at every open claim and show what it would do on each one">✨ AI review all open</button>' +
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button class="wv-pill" id="cl-ai-all" style="font-size:12px;padding:6px 12px;" onclick="clAiAll()" title="has GPT look at every open claim and show what it would do on each one">✨ AI review all open</button><button class="wv-pill" id="cl-recheck" style="font-size:12px;padding:6px 12px;" onclick="clRecheck()" title="re-checks your last 10 approved claims against the current rules and shows what still needs fixing">Re-check last 10 approved</button>' +
             '<div class="wv-seg"><button class="on" id="cl-tab-open" onclick="clLoad(\'open\')">Open</button><button id="cl-tab-approved" onclick="clLoad(\'approved\')">Approved</button><button id="cl-tab-rejected" onclick="clLoad(\'rejected\')">Declined</button></div></div>' +
           '</div>' +
           '<div id="cl-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
@@ -2465,6 +2465,13 @@
   window.clSet = async function(id, status) {
     var note = prompt(status === 'approved' ? 'note for them (what you did)' : status === 'rejected' ? 'why it got declined (they will see this)' : 'note', '');
     if (note === null) return;
+    if (status === 'approved') {
+      try {
+        var r = await api('/claims/' + id + '/ai-apply', { method: 'POST', body: JSON.stringify({ mode: 'approve', note: note }) });
+        if (r && r.done && r.done.length) alert('done: ' + r.done.join(', '));
+        clLoad('open'); if (typeof mgLoad === 'function') mgLoad(); return;
+      } catch (e) { if (!confirm((e.message || 'couldnt apply the changes') + '\n\nmark it approved anyway without changing any comps?')) return; }
+    }
     try { await api('/claims/' + id, { method: 'PATCH', body: JSON.stringify({ status: status, staff_note: note }) }); clLoad(status === 'open' ? 'open' : 'open'); } catch (e) { alert(e.message || 'Failed'); }
   };
   window.clOpenComps = async function(id) {
@@ -2482,6 +2489,40 @@
       for (var i = 0; i < d.comps.length; i++) await api('/archive-manage/comps/' + d.comps[i].id, { method: 'PATCH', body: JSON.stringify({ is_archive: false, archive_artist_name: d.claimant_artist.display_name }) });
       alert('moved...now approve the claim with a note'); mgLoad();
     } catch (e) { alert(e.message || 'Failed'); }
+  };
+  window.clRecheck = async function() {
+    var list = document.getElementById('cl-list'), btn = document.getElementById('cl-recheck');
+    if (!list) return;
+    btn.disabled = true; btn.textContent = 'checking (takes a minute)...';
+    list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    var d;
+    try { d = await api('/claims/recheck?limit=10'); }
+    catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message || 'Failed') + '</div>'; btn.disabled = false; btn.textContent = 'Re-check last 10 approved'; return; }
+    btn.disabled = false; btn.textContent = 'Re-check last 10 approved';
+    var need = d.claims.filter(function(c) { return c.pending; }).length;
+    list.innerHTML = '<div style="font-size:13px;color:var(--text-2);margin-bottom:4px;">' + d.claims.length + ' approved claims checked · <b>' + need + '</b> still need fixing' + (need ? ' <button class="wv-pill brand" style="font-size:12px;padding:4px 12px;margin-left:8px;" onclick="clRefixAll()">Fix all ' + need + '</button>' : '') + '</div>' +
+      d.claims.map(function(c) {
+        var acts = (c.actions || []).map(function(a) {
+          var cur = a.current ? ' <span style="color:var(--text-3);">(now: ' + escHtml(a.current.credited_as || '?') + (a.current.on_claimant ? ', on their account' : '') + ')</span>' : ' <span style="color:var(--text-3);">(comp not found)</span>';
+          return '<div style="font-size:12.5px;">' + (a.pending ? '⚠️ ' : '✅ ') + escHtml(CL_ACT[a.type] || a.type) + (a.value ? ' <b>' + escHtml(a.value) + '</b>' : '') + ' · <a href="/album?id=' + a.album_id + '" target="_blank" style="color:var(--brand);">comp</a>' + cur + '</div>';
+        }).join('') || '<div style="font-size:12.5px;color:var(--text-3);">no changes to comps</div>';
+        return '<div id="clr-' + c.id + '" style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
+          '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;"><b>' + escHtml(c.claim_type || '') + '</b><span style="font-size:12.5px;color:var(--text-2);">' + escHtml(c.username || '') + '</span><span style="font-size:12px;color:var(--text-3);">' + (c.resolved_at ? new Date(c.resolved_at).toLocaleString() : '') + '</span>' +
+          (c.error ? '<span style="color:var(--red);font-size:12px;">' + escHtml(c.error) + '</span>' : c.pending ? '<span style="color:var(--orange,#f5a524);font-size:12px;font-weight:700;">needs fixing</span>' : c.decision !== 'approve' ? '<span style="color:var(--orange,#f5a524);font-size:12px;font-weight:700;">AI now says: ' + escHtml(c.decision || '') + '</span>' : '<span style="color:var(--green);font-size:12px;font-weight:700;">correct</span>') + '</div>' +
+          (c.summary ? '<div style="font-size:12.5px;color:var(--text-2);margin:6px 0;">' + escHtml(c.summary) + '</div>' : '') + acts +
+          (c.pending ? '<button class="wv-pill brand" style="font-size:12px;padding:4px 12px;margin-top:8px;" data-refix="' + c.id + '" onclick="clRefix(\'' + c.id + '\', this)">Fix this one</button>' : '') +
+        '</div>';
+      }).join('');
+  };
+  window.clRefix = async function(id, btn) {
+    if (btn) { btn.disabled = true; btn.textContent = 'fixing...'; }
+    try { var r = await api('/claims/' + id + '/refix', { method: 'POST', body: '{}' }); if (btn) btn.outerHTML = '<div style="font-size:12.5px;color:var(--green);margin-top:8px;">fixed: ' + escHtml((r.done || []).join(', ') || 'nothing left to change') + '</div>'; return true; }
+    catch (e) { if (btn) { btn.disabled = false; btn.textContent = 'Fix this one'; } alert(e.message || 'Failed'); return false; }
+  };
+  window.clRefixAll = async function() {
+    var btns = document.querySelectorAll('[data-refix]');
+    for (var i = 0; i < btns.length; i++) await clRefix(btns[i].getAttribute('data-refix'), btns[i]);
+    if (typeof mgLoad === 'function') mgLoad();
   };
   clLoad('open');
 </script>
