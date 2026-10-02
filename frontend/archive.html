@@ -688,7 +688,7 @@ function arcStatsHTML() {
     tile('rel', 'releases saved', "arcSetView('all')") +
     tile('art', 'creators', "arcSetView('artists')") +
     tile('era', 'eras', "navigate('/eras')") +
-    tile('top', 'of the top 150 here', "arcSetView('top')") +
+    tile('plays', 'plays', "arcSetView('all')") +
     '<a class="arc-stat hof" href="/awards"><span class="ic">' + ARC_TROPHY.replace('width="13" height="13"', 'width="18" height="18"') + '</span><span class="tx"><b>Hall of Fame</b><span>every award winner</span></span></a>' +
   '</div>';
 }
@@ -729,6 +729,8 @@ function arcLoadStats() {
   api('/stats').then(function (d) {
     var n = d && d.totals && d.totals.archive_comps;
     if (typeof n === 'number') arcSetStat('rel', n);
+    var pl = d && d.totals && d.totals.plays;
+    if (typeof pl === 'number') arcSetStat('plays', pl);
   }).catch(function () {});
   api('/archive/artists?limit=1').then(function (d) {
     if (d && typeof d.total === 'number') arcSetStat('art', d.total);
@@ -737,10 +739,6 @@ function arcLoadStats() {
   _arcTopReq.then(function (d) {
     if (!_topComps && d && d.items) _topComps = d;
     var items = (d && d.items) || [];
-    var on = d && typeof d.on_site === 'number' ? d.on_site : items.filter(function (i) { return i.on_site; }).length;
-    var lab = document.querySelector('#arc-st-top span');
-    if (lab && items.length) lab.textContent = 'of the top ' + items.length + ' here';
-    arcSetStat('top', on);
   }).catch(function () { _arcTopReq = null; });
 }
 
@@ -1202,9 +1200,9 @@ function renderTopComps() {
   var head = '<div class="wv-top150-head">' +
     '<h2>The ' + (items.length || 150) + ' best comps</h2>' +
     '<p>the yedits top ' + (items.length || 150) + ' comps ranking...made by 100greenmen and mp.</p>' +
-    '<div class="arc-top-meta"><span>' + onSite + ' of ' + items.length + ' on the site</span>' +
-      (upd && !isNaN(upd) ? '<span>·</span><span>updated ' + escHtml(upd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })) + '</span>' : '') +
-      '<span>·</span><a href="/awards">' + ARC_TROPHY + 'Hall of Fame</a></div>' +
+    '<div class="arc-top-meta">' +
+      (upd && !isNaN(upd) ? '<span>updated ' + escHtml(upd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })) + '</span>' : '') +
+      (upd && !isNaN(upd) ? '<span>·</span>' : '') + '<a href="/awards">' + ARC_TROPHY + 'Hall of Fame</a></div>' +
     '<div class="wv-top150-actions">' +
       '<button class="wv-pill" onclick="playTop(3)">Play Top 3</button>' +
       '<button class="wv-pill" onclick="playTop(10)">Play Top 10</button>' +
@@ -1281,7 +1279,7 @@ function podiumCard(i) {
 async function playTop(n) {
   if (!_topComps) return;
   var picks = (_topComps.items || []).filter(function (i) { return i.on_site && i.rank <= n; });
-  if (!picks.length) { if (typeof wvToast === 'function') wvToast('none of those are on the site yet'); return; }
+  if (!picks.length) { if (typeof wvToast === 'function') wvToast('nothing to play there yet'); return; }
   var whole = picks.length <= 10;
   if (typeof wvToast === 'function') {
     wvToast('loading ' + (whole ? 'the top ' + picks.length : 'one track from each of the top ' + picks.length) + '...');
@@ -1444,7 +1442,7 @@ function arcHomeOpen() {
         stat('edits', 'edits', '/archive?view=edits', 'edits') +
         stat('art', 'creators', '/archive?view=artists', 'artists') +
         stat('era', 'eras', '/eras', '') +
-        stat('top', 'of the top 150 here', '/archive?view=top', 'top') +
+        stat('plays', 'plays', '/charts', '') +
       '</div>' +
       '<div class="ah-acts"><button class="wv-btn-play" data-ah="surprise">' + AH_DICE + 'surprise me</button>' +
         '<form class="ah-q" role="search" id="ah-q-form"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
@@ -1574,6 +1572,7 @@ function arcHomeLoad(h) {
     ahStat('rel', typeof tot === 'number' && tot > 0 ? tot : (c && e ? c + e : 0));
     ahStat('comps', c);
     ahStat('edits', e);
+    ahStat('plays', r[0] && r[0].totals && r[0].totals.plays);
   });
 
   C.then(function (d) {
@@ -1654,7 +1653,6 @@ function arcHomeLoad(h) {
     var items = (d && d.items) || [];
     if (!_topComps && items.length) _topComps = d;
     var on = d && typeof d.on_site === 'number' ? d.on_site : items.filter(function (i) { return i.on_site; }).length;
-    ahStat('top', on, items.length ? 'of the top ' + items.length + ' here' : '');
     h.d.top = items;
     if (!items.length) return ahDrop('ah-top');
     ahSec('ah-top').innerHTML = ahHead('Top ' + items.length, 'the yedits ranking, by 100greenmen and mp', { href: '/archive?view=top', view: 'top', label: 'full list' }) +
