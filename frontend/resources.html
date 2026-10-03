@@ -276,6 +276,7 @@
   .tr-srow .tr-song em { font-style:normal; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tr-srow.on .tr-song { background:color-mix(in srgb, var(--brand) 18%, var(--surface-2)); box-shadow:inset 3px 0 0 var(--brand); }
   .tr-srow.on .tr-song span { color:var(--brand); font-weight:800; }
+  a.tr-add { text-decoration:none; }
   .tr-add { flex:none; width:40px; min-height:36px; border:0; border-radius:8px; background:var(--surface-2); color:var(--text-2); display:grid; place-items:center; cursor:pointer; padding:0; }
   .tr-add:hover { background:var(--surface-3); color:var(--text); }
   .tr-add svg { width:16px; height:16px; }
@@ -2778,6 +2779,7 @@ window._ytBooted = false;
       });
       return out;
     }
+    var DLI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
     var PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
     function showModal(x, opts) {
       var poster = x.image || (showYt(x) ? 'https://i.ytimg.com/vi/' + showYt(x) + '/hqdefault.jpg' : '');
@@ -2792,6 +2794,7 @@ window._ytBooted = false;
         (x.setlist && x.setlist.length ? '<div class="yz-k" style="margin-top:14px;">SETLIST</div><div class="tr-set">' + x.setlist.map(function (t, i) {
           var c = clips[i];
           return '<div class="tr-srow" data-si="' + i + '"><button class="tr-song" data-t="' + (c ? c.start : toSec(t.time)) + '"' + (c ? '' : ' disabled') + '><span>' + esc(t.time || '') + '</span><em>' + esc(t.song) + '</em>' + (t.by ? ' <i class="tr-by">' + esc(t.by) + '</i>' : '') + '</button>' +
+            (c && c.video && /^https:\/\/(media|submissions)\.yetour\.xyz\//i.test(c.video) ? '<a class="tr-add" href="' + esc(API_BASE + '/ye/tour/song?url=' + encodeURIComponent(c.video) + '&start=' + Math.floor(c.start) + (c.end != null ? '&end=' + Math.ceil(c.end) : '') + '&name=' + encodeURIComponent('Ye - ' + t.song + ' (' + String(x.name).replace(/\b\w/g, function (m) { return m; }).toLowerCase().replace(/(^|\s)\S/g, function (m) { return m.toUpperCase(); }) + ')')) + '" title="Download this song" aria-label="Download ' + esc(t.song) + ' (live)" onclick="if(window.wvToast)wvToast(\'cutting the song out of the show...\')">' + DLI + '</a>' : '') +
             (c ? '<button type="button" class="tr-add" data-ci="' + i + '" title="Add to a playlist" aria-label="Add ' + esc(t.song) + ' (live) to a playlist">' + PLUS + '</button>' : '') + '</div>';
         }).join('') + '</div>' : '') +
         (x.comps && x.comps.length ? '<div class="yz-k" style="margin-top:16px;">ARCHIVED COMPS OF THIS SHOW</div><div class="tr-comps" id="tr-comps"><div class="loading"><div class="spinner"></div></div></div>' : '') +
