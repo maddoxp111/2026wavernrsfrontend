@@ -223,6 +223,7 @@
   .tr-acov { width:52px; height:52px; border-radius:8px; overflow:hidden; background:var(--surface-3); flex:none; }
   .tr-acov img { width:100%; height:100%; object-fit:cover; }
   .tr-ai { flex:1; min-width:0; }
+  .tr-dl { display:flex; align-items:center; justify-content:center; text-decoration:none; margin-right:6px; }
   .tr-ap { flex:none; width:38px; height:38px; border-radius:50%; border:0; background:var(--surface-2); color:var(--text); cursor:pointer; font-size:13px; }
   .tr-arow:hover .tr-ap { background:var(--brand); color:#14121c; }
   .tr-ygrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:6px; }
@@ -2585,6 +2586,7 @@ window._ytBooted = false;
       var q = new URLSearchParams(); q.set('view', 'tours'); if (st.year) q.set('year', st.year); if (st.sec !== 'shows') q.set('sec', st.sec);
       try { history.replaceState(history.state, '', location.pathname + '?' + q.toString()); } catch (_) {}
     }
+    function trDl(u, name) { return /^https:\/\/(media|submissions)\.yetour\.xyz\//i.test(String(u || '')) ? API_BASE + '/ye/tour/download?url=' + encodeURIComponent(u) + '&name=' + encodeURIComponent('Ye - ' + (name || 'live')) : u; }
     function toSec(t) { var p = String(t || '').split(':').map(Number); return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : 0; }
     function pauseSite() { if (typeof pausePlayer === 'function') pausePlayer(); }
     async function load() {
@@ -2658,7 +2660,7 @@ window._ytBooted = false;
         if (!opts.some(function (x) { return x[0] === st.music; })) st.music = (opts[0] || [])[0];
         el.innerHTML = '<div class="ye-chips">' + opts.map(function (x) { return '<button class="ye-chip' + (st.music === x[0] ? ' on' : '') + '" data-m="' + x[0] + '">' + x[1] + ' · ' + x[2] + '</button>'; }).join('') + '</div>' +
           (st.music === 'audio'
-            ? '<div class="tr-audio">' + d.audio.map(function (x, i) { return '<div class="tr-arow" data-a="' + i + '"><div class="tr-acov">' + (x.image ? '<img src="' + esc(thumb(x.image, 120)) + '" alt="" onerror="this.remove()">' : '') + '</div><div class="tr-ai"><div class="tr-vt" style="margin:0;">' + esc(x.name) + '</div><div class="tr-vs">' + esc(x.spec || 'audio') + '</div></div><button class="lp-cbtn tr-ap" title="play">▶</button></div>'; }).join('') + '</div>'
+            ? '<div class="tr-audio">' + d.audio.map(function (x, i) { return '<div class="tr-arow" data-a="' + i + '"><div class="tr-acov">' + (x.image ? '<img src="' + esc(thumb(x.image, 120)) + '" alt="" onerror="this.remove()">' : '') + '</div><div class="tr-ai"><div class="tr-vt" style="margin:0;">' + esc(x.name) + '</div><div class="tr-vs">' + esc(x.spec || 'audio') + '</div></div><a class="lp-cbtn tr-ap tr-dl" href="' + esc(trDl(x.audio, x.name)) + '" title="download" aria-label="Download ' + esc(x.name) + '" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg></a><button class="lp-cbtn tr-ap" title="play">▶</button></div>'; }).join('') + '</div>'
             : '<div class="tr-grid">' + (st.music === 'videos' ? d.videos : d.visualizers).map(function (x, i) { return vcard(x, x.spec, i, st.music); }).join('') + '</div>');
         el.querySelectorAll('[data-m]').forEach(function (b) { b.onclick = function () { st.music = b.getAttribute('data-m'); body(); }; });
         el.querySelectorAll('[data-a]').forEach(function (r) {
@@ -2793,7 +2795,7 @@ window._ytBooted = false;
             (c ? '<button type="button" class="tr-add" data-ci="' + i + '" title="Add to a playlist" aria-label="Add ' + esc(t.song) + ' (live) to a playlist">' + PLUS + '</button>' : '') + '</div>';
         }).join('') + '</div>' : '') +
         (x.comps && x.comps.length ? '<div class="yz-k" style="margin-top:16px;">ARCHIVED COMPS OF THIS SHOW</div><div class="tr-comps" id="tr-comps"><div class="loading"><div class="spinner"></div></div></div>' : '') +
-        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
+        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(trDl(x.download, x.name)) + '">download ↓</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
       var slot = w.querySelector('#tr-dock');
       var live = function () { slot.classList.add('is-live'); wvShow.dock(slot); };
       var start = function (at) {
@@ -2864,7 +2866,7 @@ window._ytBooted = false;
         (x.about ? '<div class="yz-desc" style="margin-top:10px;">' + esc(x.about) + (x.source && /^https:\/\/en\.wikipedia\.org\//.test(x.source) ? ' <a href="' + esc(x.source) + '" target="_blank" rel="noopener" style="color:var(--brand);">wikipedia ↗</a>' : '') + '</div>' : '') +
         (x.setlist && x.setlist.length ? '<div class="yz-k" style="margin-top:14px;">SETLIST</div><div class="tr-set">' + x.setlist.map(function (t) { return '<button class="tr-song" data-t="' + toSec(t.time) + '"><span>' + esc(t.time) + '</span>' + esc(t.song) + (t.by ? ' <i class="tr-by">' + esc(t.by) + '</i>' : '') + '</button>'; }).join('') + '</div>' : '') +
         (x.comps && x.comps.length ? '<div class="yz-k" style="margin-top:16px;">ARCHIVED COMPS OF THIS SHOW</div><div class="tr-comps" id="tr-comps"><div class="loading"><div class="spinner"></div></div></div>' : '') +
-        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(x.download) + '" target="_blank" rel="noopener">download ↗</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
+        '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;">' + (x.download ? '<a class="yt-l" href="' + esc(trDl(x.download, x.name)) + '">download ↓</a>' : '') + (yt ? '<a class="yt-l" href="https://www.youtube.com/watch?v=' + yt + '" target="_blank" rel="noopener">watch on youtube ↗</a>' : '') + (x.credits && /^https?:/.test(x.credits) ? '<a class="yt-l" href="' + esc(x.credits) + '" target="_blank" rel="noopener">source ↗</a>' : '') + '</div></div>');
       var v = w.querySelector('video'), f = w.querySelector('iframe');
       w.querySelectorAll('.tr-song').forEach(function (b) {
         b.onclick = function () {
