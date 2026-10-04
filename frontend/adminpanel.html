@@ -297,11 +297,12 @@
       <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
         <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Trackers › Matching</h2>
         <p style="font-size:14px;color:var(--text-2);margin:0 0 16px;line-height:1.6;">
-          every tracker comp that isnt linked to a comp on the site yet. pick the right one from the suggestions or search for it. <b>not on the site</b> keeps it in the not available list and takes it off this one. matches that are a sure thing get linked on their own every few hours.
+          every tracker comp that isnt linked to a comp on the site yet. pick the right one from the suggestions or search for it, or import it from its link (reddit posts get checked for links in the post and comments, base64 too). imported comps get linked here once they finish. <b>not on the site</b> keeps it in the not available list and takes it off this one. matches that are a sure thing get linked on their own every few hours.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
           <input id="tm-q" class="wv-input" style="flex:1;min-width:200px;padding:10px 14px;" placeholder="filter..." oninput="renderTrackerMatch()">
           <button class="btn btn-primary btn-sm" id="tm-auto" onclick="autoTrackerMatch(this)">Match the sure ones</button>
+          <button class="btn btn-secondary btn-sm" onclick="importTrackerMatch(null, this)">Import everything with a link</button>
         </div>
         <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-2);margin-bottom:12px;"><input type="checkbox" id="tm-rename"> also rename the comp to the trackers title and creator</label>
         <div id="tm-count" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
@@ -532,12 +533,12 @@
     catch (e) { btn.disabled = false; alert(e.message); }
   }
 
-  var _tm = [], _tmT = {};
+  var _tm = [], _tmT = {}, _tmImp = {};
   async function loadTrackerMatch() {
     var box = document.getElementById('tm-list');
     box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('tm-count').textContent = 'finding matches...';
-    try { _tm = (await adminApi('/admin/tracker-match')).items || []; }
+    try { var r = await Promise.all([adminApi('/admin/tracker-match'), adminApi('/admin/tracker-match/imports').catch(function () { return {}; })]); _tm = r[0].items || []; _tmImp = r[1].pending || {}; }
     catch (e) { box.innerHTML = '<div style="color:var(--red,#e5484d);font-size:13px;">' + _tvEsc(e.message) + '</div>'; return; }
     renderTrackerMatch();
   }
@@ -564,7 +565,9 @@
         (links ? '<div style="margin-top:3px;">' + links + '</div>' : '') +
         '<div style="display:flex;flex-direction:column;gap:5px;margin-top:9px;">' + (e.suggestions.length ? e.suggestions.map(function (a) { return _tmCand(e.key, a); }).join('') : '<div style="font-size:12px;color:var(--text-3);">no suggestions, search for it below</div>') + '</div>' +
         '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;"><input class="wv-input" style="flex:1;min-width:200px;padding:7px 12px;font-size:13px;" placeholder="search the site for this comp..." oninput="searchTrackerMatch(this)">' +
+        '<button class="btn btn-secondary btn-sm" onclick="importTrackerMatch(\'' + _tvEsc(e.key) + '\', this)">' + (_tmImp[e.key] ? (_tmImp[e.key].failed ? 'Import failed, retry' : 'Importing...') : 'Import from link') + '</button>' +
         '<button class="btn btn-secondary btn-sm" onclick="skipTrackerMatch(\'' + _tvEsc(e.key) + '\', this)">Not on the site</button></div>' +
+        (_tmImp[e.key] && _tmImp[e.key].failed ? '<div style="font-size:11.5px;color:var(--red,#e5484d);margin-top:5px;">' + _tvEsc(String(_tmImp[e.key].failed).slice(0, 200)) + '</div>' : '') +
         '<div class="tm-res" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;"></div></div>';
     }).join('');
   }
@@ -588,6 +591,14 @@
     btn.disabled = true;
     try { await adminApi('/admin/tracker-match/skip', { method: 'POST', body: JSON.stringify({ key: key }) }); _tmDrop(key); }
     catch (e) { btn.disabled = false; alert(e.message); }
+  }
+  async function importTrackerMatch(key, btn) {
+    btn.disabled = true; var was = btn.textContent; btn.textContent = key ? 'Queuing...' : 'Finding links...';
+    try {
+      var d = await adminApi('/admin/tracker-match/import', { method: 'POST', body: JSON.stringify(key ? { keys: [key] } : {}) });
+      if (key) { var it = (d.items || [])[0]; if (!it || !it.url) { btn.textContent = 'No usable link'; return; } _tmImp[key] = { url: it.url }; btn.textContent = 'Importing...'; }
+      else { btn.textContent = 'Queued ' + (d.queued || 0) + (d.no_link ? ' · ' + d.no_link + ' had no usable link' : ''); (d.items || []).forEach(function (x) { if (x.url) _tmImp[x.key] = { url: x.url }; }); setTimeout(renderTrackerMatch, 1500); }
+    } catch (e) { btn.disabled = false; btn.textContent = was; alert(e.message); }
   }
   async function autoTrackerMatch(btn) {
     btn.disabled = true; btn.textContent = 'Matching...';
