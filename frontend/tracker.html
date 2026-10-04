@@ -118,24 +118,8 @@
     #view .tk-back { color:var(--text-2); display:inline-flex; align-items:center; gap:6px; min-height:32px; }
     #view .tk-era { display:block; border-radius:12px; outline-offset:4px; }
     #view .tk-era .cv { position:relative; background:var(--surface-2); }
-    #view .tk-era .cv .ok { position:absolute; right:7px; bottom:7px; width:22px; height:22px; border-radius:99px; display:grid; place-items:center;
       background:var(--brand); color:#14121c; box-shadow:0 2px 8px rgba(0,0,0,.35); }
     #view .tk-era .mt { display:flex; justify-content:space-between; gap:6px; white-space:nowrap; }
-    #view .tk-era .mt .hv { font-weight:700; color:var(--text-2); font-variant-numeric:tabular-nums; }
-    #view .tk-era .mt .hv.full { color:var(--brand-text); }
-    #view .tk-pb { height:3px; border-radius:99px; background:var(--surface-2); overflow:hidden; margin-top:7px; }
-    #view .tk-pb i { display:block; height:100%; border-radius:inherit; background:var(--brand); transform-origin:left center; animation:tk-grow .7s var(--ease) both; }
-    @keyframes tk-grow { from { transform:scaleX(0); } }
-    #view .tk-stat { display:flex; align-items:center; gap:12px; margin-top:14px; }
-    #view .tk-ring { width:46px; height:46px; flex:none; position:relative; }
-    #view .tk-ring svg { width:100%; height:100%; transform:rotate(-90deg); display:block; }
-    #view .tk-ring circle { fill:none; stroke-width:4.5; }
-    #view .tk-ring .bg { stroke:var(--surface-2); }
-    #view .tk-ring .fg { stroke:var(--brand); stroke-linecap:round; stroke-dasharray:113.1; animation:tk-ring 1s var(--ease) both; }
-    @keyframes tk-ring { from { stroke-dashoffset:113.1; } }
-    #view .tk-ring b { position:absolute; inset:0; display:grid; place-items:center; font-size:11.5px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-    #view .tk-stat .l1 { font-size:14px; font-weight:700; }
-    #view .tk-stat .l2 { font-size:12.5px; color:var(--text-3); margin-top:2px; }
     #view .tk-find { display:flex; align-items:center; gap:10px; height:48px; padding:0 4px 0 16px; margin:0 0 20px; border-radius:14px;
       background:var(--surface-2); border:1px solid transparent; color:var(--text-3); transition:border-color .15s, background .15s, box-shadow .15s; }
     #view .tk-find:focus-within { background:var(--surface); border-color:color-mix(in srgb, var(--brand) 55%, transparent); box-shadow:0 0 0 4px var(--brand-bg); }
@@ -162,7 +146,6 @@
     #view .tk-ib { width:40px; height:40px; border-radius:99px; display:grid; place-items:center; color:var(--text-2); background:var(--surface-2); text-decoration:none; flex:none; transition:background .15s,color .15s; }
     #view .tk-ib:hover { color:var(--text); background:var(--surface-3); }
     #view .tk-ib.off { opacity:.35; pointer-events:none; }
-    #view .tk-hero .tk-pb { max-width:300px; height:4px; margin-top:10px; }
     #view .tk-chips { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; margin:20px 0 10px; padding:2px 0; }
     #view .tk-chips::-webkit-scrollbar { display:none; }
     #view .tk-chip { flex:none; height:40px; padding:0 16px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--text-2);
@@ -205,7 +188,6 @@
       #view .tk-hero .art { width:84px; height:84px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      #view .tk-pb i, #view .tk-ring .fg { animation:none; }
       #view .tk-era .cv, #view .tk-art .cv { transition:none; }
     }
   </style>
@@ -253,7 +235,6 @@
   var ICON_X = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   var ICON_L = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
   var ICON_R = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
-  var ICON_OK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5 10 17l9-10"/></svg>';
 
   function trackerUrl(slug, kind, q) {
     return '/tracker?t=' + encodeURIComponent(slug) + (kind === 'comp' ? '' : '&kind=' + kind) + (q ? '&q=' + encodeURIComponent(q) : '');
@@ -261,14 +242,12 @@
   function eraUrl(slug, eraSlug, kind) {
     return '/tracker?t=' + encodeURIComponent(slug) + '&era=' + encodeURIComponent(eraSlug) + (kind === 'comp' || kind === 'edit' || kind === 'art' ? (kind === 'comp' ? '' : '&kind=' + kind) : '');
   }
-  function pct(h, n) { return n ? Math.round(h / n * 100) : 0; }
-  function pbar(h, n) { var p = n ? Math.min(100, h / n * 100) : 0; return '<div class="tk-pb" role="presentation"><i style="width:' + p.toFixed(1) + '%"></i></div>'; }
 
   function skHead() {
     return '<div class="tk-sk" aria-hidden="true"><div class="wv-skel ln" style="width:72px;"></div>' +
       '<div class="wv-skel" style="width:min(380px,74%);height:30px;margin-top:16px;"></div>' +
       '<div class="wv-skel ln" style="width:min(240px,55%);margin-top:10px;"></div>' +
-      '<div style="display:flex;gap:12px;align-items:center;margin:16px 0 22px;"><div class="wv-skel" style="width:46px;height:46px;border-radius:99px;"></div><div style="flex:1;"><div class="wv-skel ln" style="width:130px;margin:0;"></div><div class="wv-skel ln" style="width:190px;"></div></div></div>' +
+      '<div style="height:22px;"></div>' +
       '<div class="wv-skel" style="height:48px;border-radius:14px;margin-bottom:24px;"></div></div>';
   }
   function skGrid(n) {
@@ -299,23 +278,6 @@
       (off ? '<a class="tk-btn" href="/archive" style="display:inline-flex;align-items:center;text-decoration:none;">back to the archive</a>' : '<button type="button" class="tk-btn" data-act="retry">try again</button>') + '</div>';
   }
 
-  function totals(d) {
-    var n = 0, h = 0;
-    (d.groups || []).forEach(function (g) { g.eras.forEach(function (e) { n += e.n || 0; h += e.have || 0; }); });
-    return { n: n, h: h };
-  }
-
-  function statHtml(d, kind) {
-    if (kind === 'missing' || kind === 'sheet') kind = 'comp';
-    if (!d || (kind !== 'comp' && kind !== 'edit')) return '';
-    var t = totals(d);
-    if (!t.n || !t.h) return '';
-    var p = pct(t.h, t.n), off = (113.1 * (1 - t.h / t.n)).toFixed(1);
-    return '<div class="tk-stat"><div class="tk-ring" role="img" aria-label="' + p + '% on wavernrs"><svg viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" style="stroke-dashoffset:' + off + '"/></svg><b>' + p + '%</b></div>' +
-      '<div><div class="l1">' + (p >= 100 ? 'all of it is on wavernrs' : p + '% on wavernrs') + '</div>' +
-      '<div class="l2">' + t.h.toLocaleString() + ' of ' + t.n.toLocaleString() + ' ' + (d.tracker && d.tracker.combined ? 'era listings' : kindWord(kind, t.n)) + ' are playable here</div></div></div>';
-  }
-
   function tabBtn(k, label, kind, extra) {
     return '<button type="button" data-act="kind" data-kind="' + k + '" class="' + (kind === k ? 'on' : '') + '"' + (kind === k ? ' aria-current="page"' : '') + (extra || '') + '>' + label + '</button>';
   }
@@ -330,12 +292,11 @@
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
           (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">this mixes ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
             ' together. if a comp is on more than one it only shows once, with a badge for each tracker that has it.</div>' : '') +
-          statHtml(d, kind) +
         '</div>' +
         '<div class="tk-tabs" role="tablist" aria-label="tracker sections">' +
           tabBtn('comp', 'Comps', kind) + tabBtn('edit', 'Edits', kind) +
           (t.art ? tabBtn('art', 'Art', kind) : '') +
-          (t.comps && !t.combined ? tabBtn('missing', 'Not here yet', kind, ' title="comps on this tracker that are not on wavernrs yet"') : '') +
+          (t.comps && !t.combined ? tabBtn('missing', 'Not available', kind, ' title="comps on this tracker that are not available on wavernrs"') : '') +
           (hasSheet(t.slug) ? tabBtn('sheet', 'Full tracker', kind, ' data-sheet') : '') +
         '</div>' +
       '</div>';
@@ -350,16 +311,11 @@
   }
 
   function eraCard(e, kind, slug) {
-    var showHave = kind !== 'art' && e.n > 0, full = showHave && e.have >= e.n;
-    return '<a class="tk-era" href="' + esc(eraUrl(slug, e.slug, kind)) + '" data-act="era" data-era="' + esc(e.slug) + '" data-name="' + esc(String(e.name || '').toLowerCase()) + '"' +
-        (showHave ? ' aria-label="' + esc(e.name + ', ' + e.n + ' ' + kindWord(kind, e.n) + ', ' + e.have + ' on wavernrs') + '"' : '') + '>' +
+    return '<a class="tk-era" href="' + esc(eraUrl(slug, e.slug, kind)) + '" data-act="era" data-era="' + esc(e.slug) + '" data-name="' + esc(String(e.name || '').toLowerCase()) + '">' +
       '<div class="cv" style="background:' + grad(e.name) + ';">' +
-        (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" alt="" onerror="this.style.opacity=0">' : '') +
-        (full ? '<span class="ok" title="every one is on wavernrs">' + ICON_OK + '</span>' : '') + '</div>' +
+        (e.cover ? '<img src="' + esc(e.cover) + '" loading="lazy" alt="" onerror="this.style.opacity=0">' : '') + '</div>' +
       '<div class="nm">' + esc(e.name) + '</div>' +
-      '<div class="mt"><span>' + e.n + ' ' + kindWord(kind, e.n) + '</span>' +
-        (showHave ? '<span class="hv' + (full ? ' full' : '') + '" title="' + e.have + ' of ' + e.n + ' on wavernrs">' + e.have + ' here</span>' : '') + '</div>' +
-      (showHave ? pbar(e.have, e.n) : '') +
+      '<div class="mt"><span>' + e.n + ' ' + kindWord(kind, e.n) + '</span></div>' +
     '</a>';
   }
 
@@ -484,7 +440,7 @@
       if (seq !== _sseq || _slug !== slug || _kind !== kind) return;
       if (e && e.status === 404) {
         box.innerHTML = eraHits ? '' : '<div class="tk-none">no eras match “' + esc(q) + '”' +
-          (kind === 'comp' && slug !== 'all' ? '. try the <button type="button" class="tk-link" data-act="kind" data-kind="missing">not here yet</button> list' : '') + '</div>';
+          (kind === 'comp' && slug !== 'all' ? '. try the <button type="button" class="tk-link" data-act="kind" data-kind="missing">not available</button> list' : '') + '</div>';
         box.hidden = !!eraHits;
         return;
       }
@@ -710,8 +666,8 @@
     addSheetTab(slug, 'missing');
     history.replaceState(null, '', '/tracker?t=' + encodeURIComponent(slug) + '&kind=missing');
     var html = header(d.tracker, 'missing', d) +
-      '<div class="tk-sub" style="margin:-6px 0 14px;">' + m.total + ' comp' + (m.total === 1 ? '' : 's') + ' on this tracker are not on wavernrs yet. the links go to wherever the tracker has them</div>' +
-      '<label class="tk-find">' + ICON_SEARCH + '<input type="search" id="tk-mq" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="search these" aria-label="search the comps that are not here yet"></label>' +
+      '<div class="tk-sub" style="margin:-6px 0 14px;">' + m.total + ' comp' + (m.total === 1 ? '' : 's') + ' from this tracker that arent available on wavernrs. the links go to wherever the tracker has them</div>' +
+      '<label class="tk-find">' + ICON_SEARCH + '<input type="search" id="tk-mq" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="search these" aria-label="search the comps that are not available"></label>' +
       '<div id="tk-miss"></div>';
     b.innerHTML = html;
     function paint(q) {
@@ -812,8 +768,7 @@
           '<h1 style="margin:3px 0 4px;font-size:clamp(24px,5vw,30px);font-weight:800;letter-spacing:-.03em;overflow-wrap:anywhere;">' + esc(era.name) + '</h1>' +
           '<div class="tk-sub">' + items.length + ' ' + kindWord(kind, items.length) +
             (extraCount ? ' · ' + extraCount + ' additional' : '') +
-            (kind !== 'art' && items.length ? ' · ' + haveN + ' on wavernrs' : '') + '</div>' +
-          (kind !== 'art' && items.length ? pbar(haveN, items.length) : '') +
+            '</div>' +
         '</div></div>';
 
     if (kind === 'art') {
@@ -830,7 +785,7 @@
       }
       if (!items.length) html += '<div class="wv-empty">nothing in this era yet</div>';
     } else {
-      var chips = [['all', 'all', items.length], ['here', 'on wavernrs', haveN], ['missing', 'not here yet', items.length - haveN]];
+      var chips = [['all', 'all', items.length], ['here', 'on wavernrs', haveN], ['missing', 'not available', items.length - haveN]];
       if (starN) chips.push(['star', 'starred', starN]);
       html += '<div class="tk-chips" role="group" aria-label="filter">' + chips.map(function (c) {
         return '<button type="button" class="tk-chip' + (_eraF === c[0] ? ' on' : '') + '" data-act="filter" data-f="' + c[0] + '" aria-pressed="' + (_eraF === c[0]) + '"' + (c[2] || c[0] === 'all' ? '' : ' disabled') + '>' + c[1] + '<span>' + c[2] + '</span></button>';
@@ -852,7 +807,7 @@
         '<div class="tk-sec-note">these are on the trackers second list...they didnt make the main one.</div>' +
         '<div class="tk-list">' + extraItems.map(function (x) { return tkRow(x); }).join('') + '</div>';
     }
-    if (!items.length) html = '<div class="tk-none">' + (_eraF === 'here' ? 'none of these are on wavernrs yet' : _eraF === 'missing' ? 'every one of these is on wavernrs' : 'nothing here') + '</div>';
+    if (!items.length) html = '<div class="tk-none">' + (_eraF === 'here' ? 'none of these are on wavernrs' : _eraF === 'missing' ? 'nothing unavailable here' : 'nothing here') + '</div>';
     box.innerHTML = html;
   }
 
@@ -895,7 +850,7 @@
     }
     var searchUrl = '/archive?q=' + encodeURIComponent(x.name);
     return '<div class="tk-row hit tk-part" data-href="' + esc(searchUrl) + '">' + inner +
-      '<a class="tk-tag" href="' + esc(searchUrl) + '" title="not on wavernrs yet, search the archive for it">search →</a></div>';
+      '<a class="tk-tag" href="' + esc(searchUrl) + '" title="search the archive for it">search →</a></div>';
   }
 
   window.tkBack = function () { renderTracker(_slug, _kind); toTop(); };

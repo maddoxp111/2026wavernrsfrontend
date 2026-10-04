@@ -405,7 +405,7 @@
       if (s.tour_shows) out.push({ n: s.tour_shows, label: 'tour shows', sub: 'with setlists you can jump through', icon: 'pin', href: '/resources?view=tours' });
     }
     var tr = yeTiles.tr;
-    if (tr && tr.entries) out.unshift({ wide: true, n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: Math.round(tr.pct) + '% of them play right here on wavernrs', bar: tr.pct, icon: 'tracker', href: '/tracker' });
+    if (tr && tr.entries) out.unshift({ wide: true, n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: 'comps and edits, sorted by era and playable right here', icon: 'tracker', href: '/tracker' });
     if (yeTiles.eras) out.push({ n: yeTiles.eras, label: 'eras', sub: 'every comp sorted by the era it comes from', icon: 'grid', href: '/eras' });
     if (!out.length) { ye.remove(); return; }
     ye.innerHTML = out.map(tile).join('');
@@ -414,9 +414,9 @@
   get('/ye/status').then(function (d) { yeTiles.ye = d || null; }).catch(function () {}).then(yeDone);
   get('/trackers').then(function (d) {
     var list = (d && d.trackers) || [];
-    var entries = 0, have = 0;
-    list.forEach(function (t) { entries += +t.entries || 0; have += +t.have || 0; });
-    if (list.length && entries) yeTiles.tr = { count: list.length, entries: entries, pct: have / entries * 100 };
+    var entries = 0;
+    list.forEach(function (t) { entries += +t.entries || 0; });
+    if (list.length && entries) yeTiles.tr = { count: list.length, entries: entries };
   }).catch(function () {}).then(yeDone);
   get('/archive/eras').then(function (d) {
     var items = (d && (d.items || d.eras)) || (Array.isArray(d) ? d : []);

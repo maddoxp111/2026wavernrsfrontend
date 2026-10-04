@@ -81,6 +81,7 @@
     <button class="wv-admin-tab"        id="atab-archivers"  onclick="showAdminTab('archivers')">Archivers</button>
     <button class="wv-admin-tab"        id="atab-radio"      onclick="showAdminTab('radio')">Radio</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
+    <button class="wv-admin-tab"        id="atab-trackermatch" onclick="showAdminTab('trackermatch')">Tracker Matching</button>
     <button class="wv-admin-tab"        id="atab-tourvideos" onclick="showAdminTab('tourvideos')">Tour Videos</button>
     <button class="wv-admin-tab"        id="atab-aivoices" onclick="showAdminTab('aivoices')">AI Voices</button>
     <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
@@ -287,6 +288,24 @@
         </p>
         <input id="tv-q" class="wv-input" style="width:100%;padding:10px 14px;margin-bottom:14px;" placeholder="filter shows..." oninput="renderTourVideos()">
         <div id="tv-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-trackermatch" style="display:none;">
+    <div style="max-width:900px;">
+      <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Trackers › Matching</h2>
+        <p style="font-size:14px;color:var(--text-2);margin:0 0 16px;line-height:1.6;">
+          every tracker comp that isnt linked to a comp on the site yet. pick the right one from the suggestions or search for it. <b>not on the site</b> keeps it in the not available list and takes it off this one. matches that are a sure thing get linked on their own every few hours.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <input id="tm-q" class="wv-input" style="flex:1;min-width:200px;padding:10px 14px;" placeholder="filter..." oninput="renderTrackerMatch()">
+          <button class="btn btn-primary btn-sm" id="tm-auto" onclick="autoTrackerMatch(this)">Match the sure ones</button>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-2);margin-bottom:12px;"><input type="checkbox" id="tm-rename"> also rename the comp to the trackers title and creator</label>
+        <div id="tm-count" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
+        <div id="tm-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
   </div>
@@ -513,9 +532,73 @@
     catch (e) { btn.disabled = false; alert(e.message); }
   }
 
+  var _tm = [], _tmT = {};
+  async function loadTrackerMatch() {
+    var box = document.getElementById('tm-list');
+    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('tm-count').textContent = 'finding matches...';
+    try { _tm = (await adminApi('/admin/tracker-match')).items || []; }
+    catch (e) { box.innerHTML = '<div style="color:var(--red,#e5484d);font-size:13px;">' + _tvEsc(e.message) + '</div>'; return; }
+    renderTrackerMatch();
+  }
+  function _tmCand(key, a) {
+    return '<div style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--surface-2);">' +
+      '<div style="width:40px;height:40px;border-radius:6px;overflow:hidden;background:var(--surface-3);flex:none;">' + (a.cover_url ? '<img src="' + _tvEsc(a.cover_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
+      '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _tvEsc(a.title) + (a.sure ? ' <span style="font-size:10.5px;font-weight:800;color:var(--brand);letter-spacing:.04em;">SURE</span>' : '') + '</div>' +
+      '<div style="font-size:11.5px;color:var(--text-3);">' + _tvEsc(a.creator) + (a.owner ? ' · on ' + _tvEsc(a.owner) + 's profile' : '') + ' · ' + a.tracks + ' track' + (a.tracks === 1 ? '' : 's') + '</div></div>' +
+      '<a href="/album?id=' + _tvEsc(a.id) + '" target="_blank" style="font-size:12px;">open</a>' +
+      '<button class="btn btn-primary btn-sm" onclick="doTrackerMatch(\'' + _tvEsc(key) + '\', \'' + _tvEsc(a.id) + '\', this)">Match</button></div>';
+  }
+  function renderTrackerMatch() {
+    var box = document.getElementById('tm-list'); if (!box) return;
+    var q = ((document.getElementById('tm-q') || {}).value || '').toLowerCase().trim();
+    var list = _tm.filter(function (e) { return !q || (e.name + ' ' + (e.creator || '') + ' ' + (e.era || '') + ' ' + e.tracker_name).toLowerCase().indexOf(q) >= 0; });
+    var sure = _tm.filter(function (e) { return e.suggestions.some(function (a) { return a.sure; }); }).length;
+    document.getElementById('tm-count').textContent = _tm.length + ' unmatched · ' + _tm.filter(function (e) { return e.suggestions.length; }).length + ' with suggestions · ' + sure + ' sure';
+    if (!list.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">' + (_tm.length ? 'nothing matches that filter' : 'every tracker comp is matched') + '</div>'; return; }
+    box.innerHTML = list.map(function (e) {
+      var links = (e.links || []).map(function (u) { return '<a href="' + _tvEsc(u) + '" target="_blank" rel="noopener" style="font-size:11.5px;">' + _tvEsc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 34)) + '</a>'; }).join(' · ');
+      return '<div data-tm="' + _tvEsc(e.key) + '" style="padding:12px;border-radius:14px;background:var(--surface);margin-bottom:8px;">' +
+        '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;"><b style="font-size:14px;">' + (e.starred ? '⭐ ' : '') + _tvEsc(e.name) + '</b><span style="font-size:12.5px;color:var(--text-2);">' + _tvEsc(e.creator || 'no creator listed') + '</span>' +
+        '<span style="font-size:11.5px;color:var(--text-3);">' + _tvEsc(e.tracker_name) + ' · ' + _tvEsc(e.era || '') + '</span></div>' +
+        (links ? '<div style="margin-top:3px;">' + links + '</div>' : '') +
+        '<div style="display:flex;flex-direction:column;gap:5px;margin-top:9px;">' + (e.suggestions.length ? e.suggestions.map(function (a) { return _tmCand(e.key, a); }).join('') : '<div style="font-size:12px;color:var(--text-3);">no suggestions, search for it below</div>') + '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;"><input class="wv-input" style="flex:1;min-width:200px;padding:7px 12px;font-size:13px;" placeholder="search the site for this comp..." oninput="searchTrackerMatch(this)">' +
+        '<button class="btn btn-secondary btn-sm" onclick="skipTrackerMatch(\'' + _tvEsc(e.key) + '\', this)">Not on the site</button></div>' +
+        '<div class="tm-res" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;"></div></div>';
+    }).join('');
+  }
+  function searchTrackerMatch(inp) {
+    var row = inp.closest('[data-tm]'), key = row.getAttribute('data-tm'), out = row.querySelector('.tm-res');
+    clearTimeout(_tmT[key]);
+    _tmT[key] = setTimeout(async function () {
+      var q = inp.value.trim();
+      if (q.length < 2) { out.innerHTML = ''; return; }
+      var d; try { d = await adminApi('/admin/tracker-match/search?q=' + encodeURIComponent(q)); } catch (e) { out.innerHTML = '<div style="font-size:12px;color:var(--red,#e5484d);">' + _tvEsc(e.message) + '</div>'; return; }
+      out.innerHTML = (d.items || []).length ? d.items.map(function (a) { return _tmCand(key, a); }).join('') : '<div style="font-size:12px;color:var(--text-3);">nothing found</div>';
+    }, 250);
+  }
+  function _tmDrop(key) { _tm = _tm.filter(function (x) { return x.key !== key; }); renderTrackerMatch(); }
+  async function doTrackerMatch(key, id, btn) {
+    btn.disabled = true; btn.textContent = 'Matching...';
+    try { await adminApi('/admin/tracker-match', { method: 'POST', body: JSON.stringify({ key: key, album_id: id, rename: !!(document.getElementById('tm-rename') || {}).checked }) }); _tmDrop(key); }
+    catch (e) { btn.disabled = false; btn.textContent = 'Match'; alert(e.message); }
+  }
+  async function skipTrackerMatch(key, btn) {
+    btn.disabled = true;
+    try { await adminApi('/admin/tracker-match/skip', { method: 'POST', body: JSON.stringify({ key: key }) }); _tmDrop(key); }
+    catch (e) { btn.disabled = false; alert(e.message); }
+  }
+  async function autoTrackerMatch(btn) {
+    btn.disabled = true; btn.textContent = 'Matching...';
+    try { var d = await adminApi('/admin/tracker-match/auto', { method: 'POST' }); btn.textContent = d.matched ? 'Matched ' + d.matched : 'Nothing sure left'; await loadTrackerMatch(); }
+    catch (e) { btn.textContent = 'Match the sure ones'; alert(e.message); }
+    setTimeout(function () { btn.disabled = false; btn.textContent = 'Match the sure ones'; }, 2500);
+  }
+
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','archivers','radio','tracker','tourvideos','aivoices','badges'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','archivers','radio','tracker','trackermatch','tourvideos','aivoices','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -531,6 +614,7 @@
     if (tab === 'radio')      loadRadioHosts();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'tourvideos') loadTourVideos();
+    if (tab === 'trackermatch') loadTrackerMatch();
     if (tab === 'aivoices')   loadRvcModels();
     if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
   }
