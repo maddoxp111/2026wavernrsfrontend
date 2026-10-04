@@ -19,6 +19,47 @@
   </style>
   <script src="/js/status-card.js?v=30f4b61d2d06"></script>
   <script src="/js/down.js?v=30f4b61d2d06"></script>
+  <style id="cr-style">
+    #cr-card .cr-sub { font-size: 12px; color: var(--text-3); line-height: 1.55; }
+    #cr-card .cr-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 14px; }
+    #cr-card .cr-leg { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12px; color: var(--text-2); line-height: 1.45; }
+    #cr-card .cr-leg b { display: block; color: var(--text); font-size: 12.5px; margin-bottom: 2px; }
+    #cr-card .cr-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    #cr-card .cr-tools .wv-input { flex: 1; min-width: 180px; padding: 8px 12px; font-size: 13px; min-height: 40px; }
+    #cr-card .cr-check { white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--text-2); min-height: 40px; cursor: pointer; }
+    #cr-card .cr-status { font-size: 12px; color: var(--text-3); margin-bottom: 10px; }
+    #cr-card .cr-list { display: flex; flex-direction: column; gap: 8px; }
+    #cr-card .cr-row { border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); padding: 12px 14px; }
+    #cr-card .cr-row.cr-attn { border-color: color-mix(in srgb, var(--orange) 45%, var(--border)); }
+    #cr-card .cr-top { display: flex; gap: 12px; align-items: center; }
+    #cr-card .cr-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-2); }
+    #cr-card .cr-main { flex: 1; min-width: 0; }
+    #cr-card .cr-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #cr-card .cr-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+    #cr-card .cr-sel { width: auto; min-width: 210px; padding: 8px 10px; font-size: 13px; min-height: 40px; }
+    #cr-card .cr-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    #cr-card .cr-chips .wv-chip { font-size: 11.5px; padding: 3px 9px; }
+    #cr-card .cr-acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    #cr-card .cr-acts .wv-pill { font-size: 12.5px; padding: 8px 14px; min-height: 40px; }
+    #cr-card .cr-out { margin-top: 10px; font-size: 12.5px; color: var(--text-2); }
+    #cr-card .cr-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
+    #cr-card .cr-stats b { color: var(--text); }
+    #cr-card .cr-samples { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; border-top: 1px solid var(--border); padding-top: 8px; }
+    #cr-card .cr-sample { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+    #cr-card .cr-sample a { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); font-weight: 600; }
+    #cr-card .cr-sample span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); }
+    #cr-card .cr-sample s { color: var(--text-3); }
+    #cr-card .cr-sample em { font-style: normal; color: var(--text); font-weight: 600; }
+    #cr-card .cr-fb { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--text-2); margin-bottom: 12px; }
+    #cr-card .cr-more { display: block; margin: 10px auto 0; }
+    #cr-card select:focus-visible, #cr-card button:focus-visible, #cr-card input:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+    @media (max-width: 640px) {
+      #cr-card .cr-legend { grid-template-columns: 1fr; }
+      #cr-card .cr-top { flex-wrap: wrap; }
+      #cr-card .cr-sel { flex-basis: 100%; min-width: 0; width: 100%; }
+      #cr-card .cr-sample { grid-template-columns: 1fr; gap: 0; padding-bottom: 4px; }
+    }
+  </style>
 </head>
 <body>
 <div id="view">
@@ -382,6 +423,7 @@
       var first = claims && claims.parentNode && claims.parentNode.querySelector(':scope > .wv-card');
       if (claims && manage && first && first !== claims) { first.parentNode.insertBefore(claims, first); first.parentNode.insertBefore(manage, first); }
     })();
+    if (typeof window.crInit === 'function') window.crInit();
 
     arcBulkAddRow();
     arcBulkAddRow();
@@ -2575,6 +2617,207 @@
     if (typeof mgLoad === 'function') mgLoad();
   };
   clLoad('open');
+</script>
+<script>
+  (function () {
+    var esc = function (v) { return (typeof escHtml === 'function') ? escHtml(v == null ? '' : String(v)) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+    window._cr = window._cr || { data: null, q: '', only: false, open: {}, out: {}, busy: {}, shown: 30, poll: null };
+    var S = window._cr;
+    var RULE_LABEL = { poster: 'poster made it', title: 'creator from the title', unknown: 'always Unknown' };
+    var ICON_FORUM = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+    var ICON_TEXT = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>';
+    var ICON_Q = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg>';
+
+    window.crInit = function () {
+      if (document.getElementById('cr-card')) return;
+      var manage = document.getElementById('arc-manage-card');
+      if (!manage) return;
+      var card = document.createElement('div');
+      card.className = 'wv-card';
+      card.id = 'cr-card';
+      card.style.cssText = 'padding:20px 24px;margin-bottom:20px;';
+      card.innerHTML =
+        '<div style="font-size:14px;font-weight:700;">Discord credit rules</div>' +
+        '<div class="cr-sub">who gets credited for comps the bot pulls from Discord. lots of channels are for sharing other peoples comps, so the person who posted it isnt always the one who made it. every channel gets an <b>auto</b> rule from its name: comp / edit / showcase / release style channels credit the poster like before, worst-of / best-of / share / general / requests style channels dont...the post has to name the creator or it goes up as Unknown. pick a rule to override it.</div>' +
+        '<div class="cr-legend">' +
+          '<div class="cr-leg"><b>poster</b>the person who posted made it. still switches to someone else when the post says "not mine", "by X" or "credit to X".</div>' +
+          '<div class="cr-leg"><b>title</b>creator comes from the thread title or post ("Comp - Name", "by Name", "Name\'s comp"). nothing named = Unknown. never assumes the poster.</div>' +
+          '<div class="cr-leg"><b>unknown</b>every comp from here is credited to Unknown.</div>' +
+        '</div>' +
+        '<div class="cr-fb"><span>channels whose name doesnt say either way:</span><select id="cr-fallback" class="wv-input cr-sel" style="min-width:150px;" aria-label="rule for channels with unclear names" onchange="crSetFallback(this.value)"><option value="poster">poster</option><option value="title">title</option><option value="unknown">unknown</option></select></div>' +
+        '<div class="cr-tools"><input id="cr-q" class="wv-input" placeholder="filter channels..." aria-label="filter channels" oninput="crFilter(this.value)">' +
+          '<label class="cr-check"><input type="checkbox" id="cr-only" onchange="crOnly(this.checked)"> only ones that need fixing</label>' +
+          '<button class="wv-pill" style="font-size:12.5px;padding:8px 14px;min-height:40px;" onclick="crLoad(true)">Refresh</button></div>' +
+        '<div class="cr-status" id="cr-status"></div>' +
+        '<div class="cr-list" id="cr-list"><div class="loading"><div class="spinner"></div></div></div>';
+      manage.parentNode.insertBefore(card, manage.nextSibling);
+      window._pageCleanup = window._pageCleanup || [];
+      window._pageCleanup.push(function () { if (S.poll) { clearTimeout(S.poll); S.poll = null; } });
+      crLoad();
+    };
+
+    window.crLoad = async function (fresh) {
+      var card = document.getElementById('cr-card');
+      if (!card) return;
+      if (S.poll) { clearTimeout(S.poll); S.poll = null; }
+      var d;
+      try { d = await api('/archive-manage/discord-credit' + (fresh ? '?fresh=1' : '')); }
+      catch (e) {
+        if (!S.data) { card.style.display = 'none'; return; }
+        var st = document.getElementById('cr-status'); if (st) st.textContent = 'couldnt refresh: ' + (e.message || e);
+        return;
+      }
+      if (!d || !Array.isArray(d.channels)) { card.style.display = 'none'; return; }
+      S.data = d;
+      card.style.display = '';
+      crRender();
+      if (d.resolving && d.resolving.status === 'running') S.poll = setTimeout(function () { if (document.getElementById('cr-card')) crLoad(); }, 6000);
+    };
+
+    function statusLine(d) {
+      var parts = [];
+      var need = 0, comps = 0;
+      d.channels.forEach(function (c) { comps += c.comps; if (c.effective_rule !== 'poster') need += c.poster_credited; });
+      parts.push(d.channels.length + ' channels · ' + comps.toLocaleString() + ' imported comps');
+      if (need) parts.push('<span style="color:var(--orange);font-weight:600;">' + need.toLocaleString() + ' comps credited to their poster in channels that dont assume the poster made it</span>');
+      if (!d.bot_online) parts.push('the bot is offline so channel names show as ids');
+      if (d.resolving && d.resolving.status === 'running') parts.push('matching forum posts to their forums ' + d.resolving.done + '/' + d.resolving.total + '…');
+      else if (d.unresolved_comps) parts.push(d.unresolved_comps.toLocaleString() + ' comps are in threads the bot couldnt place yet');
+      return parts.join(' · ');
+    }
+
+    function visible() {
+      var q = S.q.toLowerCase();
+      return S.data.channels.filter(function (c) {
+        if (S.only && !(c.effective_rule !== 'poster' && c.poster_credited > 0)) return false;
+        if (!q) return true;
+        return [c.name, c.guild_name, c.category, c.channel_id].join(' ').toLowerCase().indexOf(q) >= 0;
+      });
+    }
+
+    function rowHtml(c) {
+      var title = c.kind === 'unresolved' ? 'threads not matched to a forum yet' : c.kind === 'unreadable' ? 'deleted or unreadable threads' : (c.name ? (c.type === 'forum' || c.type === 'media' ? '' : '#') + c.name : 'channel ' + c.channel_id);
+      var icon = c.kind !== 'channel' ? ICON_Q : (c.type === 'forum' || c.type === 'media' || c.threads ? ICON_FORUM : ICON_TEXT);
+      var attn = c.effective_rule !== 'poster' && c.poster_credited > 0;
+      var sel = '';
+      if (c.kind === 'channel') {
+        var autoTxt = 'auto: ' + c.auto_rule + ' (' + (c.auto_reason || 'from name') + ')';
+        sel = '<select class="wv-input cr-sel" aria-label="credit rule for ' + esc(title) + '" onchange="crSetRule(\'' + esc(c.key) + '\', this.value)">' +
+          '<option value=""' + (!c.rule ? ' selected' : '') + '>' + esc(autoTxt) + '</option>' +
+          ['poster', 'title', 'unknown'].map(function (r) { return '<option value="' + r + '"' + (c.rule === r ? ' selected' : '') + '>' + r + ' · ' + RULE_LABEL[r] + '</option>'; }).join('') +
+        '</select>';
+      } else {
+        sel = '<span class="wv-chip" style="font-size:11.5px;">uses the unclear-name rule: ' + esc(S.data.default) + '</span>';
+      }
+      var chips = '<span class="wv-chip ' + (c.effective_rule === 'poster' ? '' : 'acc') + '">' + (c.rule ? 'set' : 'auto') + ': ' + esc(c.effective_rule) + '</span>';
+      if (c.poster_credited) chips += '<span class="wv-chip ' + (attn ? 'warn' : '') + '">' + c.poster_credited.toLocaleString() + ' credited to their poster</span>';
+      else chips += '<span class="wv-chip ok">none credited to their poster</span>';
+      if (c.top_posters && c.top_posters.length && attn) chips += '<span style="font-size:11.5px;color:var(--text-3);">most: ' + c.top_posters.map(function (p) { return esc(p.name) + ' (' + p.comps + ')'; }).join(', ') + '</span>';
+      var acts = '';
+      if (c.effective_rule !== 'poster' && c.poster_credited > 0) {
+        acts = '<div class="cr-acts"><button class="wv-pill" onclick="crPreview(\'' + esc(c.key) + '\')"' + (S.busy[c.key] ? ' disabled' : '') + '>Preview fix</button></div>';
+      }
+      var out = S.out[c.key] ? '<div class="cr-out" id="cr-out-' + esc(c.key.replace(':', '-')) + '">' + S.out[c.key] + '</div>' : '';
+      return '<div class="cr-row' + (attn ? ' cr-attn' : '') + '" data-key="' + esc(c.key) + '">' +
+        '<div class="cr-top"><div class="cr-ico">' + icon + '</div>' +
+          '<div class="cr-main"><div class="cr-name" title="' + esc(title) + '">' + esc(title) + '</div>' +
+          '<div class="cr-meta"><span>' + esc(c.guild_name || c.guild_id) + (c.category ? ' · ' + esc(c.category) : '') + '</span><span>' + c.comps.toLocaleString() + ' comps' + (c.threads ? ' · ' + c.threads.toLocaleString() + ' threads' : '') + '</span></div></div>' +
+          sel + '</div>' +
+        '<div class="cr-chips">' + chips + '</div>' + acts + out + '</div>';
+    }
+
+    window.crRender = function () {
+      var d = S.data; if (!d) return;
+      var st = document.getElementById('cr-status'); if (st) st.innerHTML = statusLine(d);
+      var fb = document.getElementById('cr-fallback'); if (fb && document.activeElement !== fb) fb.value = d.default || 'poster';
+      var list = document.getElementById('cr-list'); if (!list) return;
+      var rows = visible();
+      if (!rows.length) { list.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:8px 2px;">' + (d.channels.length ? 'nothing matches' : 'no Discord imports yet') + '</div>'; return; }
+      list.innerHTML = rows.slice(0, S.shown).map(rowHtml).join('') +
+        (rows.length > S.shown ? '<button class="wv-see-all cr-more" onclick="crMore()">Show ' + Math.min(30, rows.length - S.shown) + ' more of ' + (rows.length - S.shown) + '</button>' : '');
+    };
+    window.crMore = function () { S.shown += 30; crRender(); };
+    window.crFilter = function (v) { S.q = v || ''; S.shown = 30; crRender(); };
+    window.crOnly = function (v) { S.only = !!v; S.shown = 30; crRender(); };
+
+    function findCh(key) { return (S.data && S.data.channels || []).filter(function (c) { return c.key === key; })[0]; }
+
+    window.crSetRule = async function (key, rule) {
+      try {
+        await api('/archive-manage/discord-credit/rule', { method: 'PUT', body: JSON.stringify({ key: key, rule: rule || null }) });
+        delete S.out[key];
+        await crLoad();
+        var c = findCh(key);
+        if (c && c.effective_rule !== 'poster' && c.poster_credited > 0) crPreview(key);
+      } catch (e) { alert(e.message || 'couldnt save that rule'); crRender(); }
+    };
+    window.crSetFallback = async function (rule) {
+      try { await api('/archive-manage/discord-credit/rule', { method: 'PUT', body: JSON.stringify({ key: 'default', rule: rule }) }); await crLoad(); }
+      catch (e) { alert(e.message || 'couldnt save that'); crRender(); }
+    };
+
+    function samplesHtml(list) {
+      if (!list || !list.length) return '';
+      return '<div class="cr-samples">' + list.map(function (x) {
+        return '<div class="cr-sample"><a href="/album?id=' + esc(x.id) + '" target="_blank" rel="noopener">' + esc(x.title || 'untitled') + '</a>' +
+          '<span><s>' + esc(x.from) + '</s> → <em>' + esc(x.to) + '</em></span></div>';
+      }).join('') + '</div>';
+    }
+
+    window.crPreview = async function (key) {
+      S.busy[key] = true;
+      S.out[key] = '<span style="color:var(--text-3);">checking which comps would change…</span>';
+      crRender();
+      try {
+        var p = await api('/archive-manage/discord-credit/preview', { method: 'POST', body: JSON.stringify({ key: key }) });
+        var sk = p.skipped || {};
+        var skipped = [];
+        if (sk.claimed) skipped.push(sk.claimed + ' claimed');
+        if (sk.on_account) skipped.push(sk.on_account + ' on someones profile');
+        if (sk.edited) skipped.push(sk.edited + ' edited by staff');
+        if (sk.credited_elsewhere) skipped.push(sk.credited_elsewhere + ' already credited to someone else');
+        var html = '<div class="cr-stats"><span>rule <b>' + esc(p.rule) + '</b></span><span><b>' + (p.will_change || 0).toLocaleString() + '</b> will change</span>' +
+          '<span><b>' + (p.to_named || 0).toLocaleString() + '</b> get a name from their title</span><span><b>' + (p.to_unknown || 0).toLocaleString() + '</b> go to Unknown</span>' +
+          (p.unchanged ? '<span>' + p.unchanged + ' stay (their title names the poster)</span>' : '') + '</div>' +
+          (skipped.length ? '<div style="color:var(--text-3);margin-bottom:8px;">left alone: ' + esc(skipped.join(', ')) + '</div>' : '') +
+          samplesHtml(p.samples) +
+          '<div class="cr-acts">' + (p.will_change ? '<button class="wv-pill brand" onclick="crFix(\'' + esc(key) + '\', ' + p.will_change + ')">Fix ' + p.will_change.toLocaleString() + ' comps</button>' : '<span style="color:var(--text-3);">nothing to change here</span>') +
+          (p.undo ? '<button class="wv-pill" onclick="crUndo(\'' + esc(key) + '\')">Undo last fix (' + p.undo.count + ')</button>' : '') + '</div>';
+        S.out[key] = html;
+      } catch (e) { S.out[key] = '<span style="color:var(--red);">' + esc(e.message || 'preview failed') + '</span>'; }
+      S.busy[key] = false;
+      crRender();
+    };
+
+    window.crFix = async function (key, n) {
+      var c = findCh(key);
+      if (!confirm('re-credit ' + n + ' comps from ' + ((c && c.name) || 'this channel') + '? you can undo it right after')) return;
+      S.busy[key] = true;
+      S.out[key] = '<span style="color:var(--text-3);">fixing ' + n + ' comps…</span>';
+      crRender();
+      try {
+        var r = await api('/archive-manage/discord-credit/fix', { method: 'POST', body: JSON.stringify({ key: key }) });
+        S.out[key] = '<div class="cr-stats"><span style="color:var(--green);font-weight:700;">re-credited ' + (r.updated || 0).toLocaleString() + ' comps</span>' + (r.failed ? '<span style="color:var(--red);">' + r.failed + ' failed</span>' : '') + (r.remaining ? '<span>' + r.remaining + ' left, run it again</span>' : '') + '</div>' +
+          (r.undo ? '<div class="cr-acts"><button class="wv-pill" onclick="crUndo(\'' + esc(key) + '\')">Undo (' + r.undo.count + ')</button></div>' : '');
+        var keep = S.out[key];
+        await crLoad();
+        S.out[key] = keep;
+      } catch (e) { S.out[key] = '<span style="color:var(--red);">' + esc(e.message || 'fix failed') + '</span>'; }
+      S.busy[key] = false;
+      crRender();
+    };
+
+    window.crUndo = async function (key) {
+      if (!confirm('put the old credits back on the comps from the last fix here?')) return;
+      try {
+        var r = await api('/archive-manage/discord-credit/undo', { method: 'POST', body: JSON.stringify({ key: key }) });
+        S.out[key] = '<span>put back ' + (r.restored || 0).toLocaleString() + ' credits</span>';
+        var keep = S.out[key];
+        await crLoad();
+        S.out[key] = keep; crRender();
+      } catch (e) { alert(e.message || 'undo failed'); }
+    };
+  })();
 </script>
 </body>
 </html>
