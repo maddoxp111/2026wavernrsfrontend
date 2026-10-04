@@ -348,6 +348,17 @@
   .tlm-ev li { display:grid; grid-template-columns:26px minmax(0,1fr); gap:8px; font-size:14px; line-height:1.5; color:var(--text); }
   .tlm-ev li b { font-size:12px; color:var(--brand); font-weight:800; text-align:right; padding-top:2px; font-variant-numeric:tabular-nums; }
   .tlm-ev li span { overflow-wrap:anywhere; }
+  .tlm-recap { margin:0 0 4px; font-size:14.5px; line-height:1.6; color:var(--text-2); max-width:760px; }
+  .tlm-kind { font-style:normal; font-size:10.5px; font-weight:800; letter-spacing:.04em; color:var(--text-3); background:var(--surface-2); border-radius:99px; padding:1px 7px; margin-left:4px; white-space:nowrap; vertical-align:1px; }
+  .tlm-shows { background:var(--surface); border-radius:12px; padding:8px 12px; }
+  .tlm-shows summary { cursor:pointer; list-style:none; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .tlm-shows summary::-webkit-details-marker { display:none; }
+  .tlm-shows summary .tl-k { margin:0; }
+  .tlm-range { font-size:12px; color:var(--text-3); font-weight:600; }
+  .tlm-shows ul { list-style:none; margin:8px 0 2px; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .tlm-shows li { display:grid; grid-template-columns:26px minmax(0,1fr); gap:8px; font-size:13px; line-height:1.45; }
+  .tlm-shows li b { font-size:12px; color:var(--brand); font-weight:800; text-align:right; font-variant-numeric:tabular-nums; }
+  .tlm-songs { font-style:normal; color:var(--text-3); font-size:12px; }
   .tlm-tw { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; }
   .tlm-t { background:var(--surface); border-radius:12px; padding:10px 12px; cursor:pointer; }
   .tlm-t:hover { background:var(--surface-2); }
@@ -1818,18 +1829,32 @@ window._ytBooted = false;
       var bits = [];
       if (mm.albums.length) bits.push(mm.albums.length + ' album' + (mm.albums.length === 1 ? '' : 's'));
       if (mm.events && mm.events.length) bits.push(mm.events.length + ' moment' + (mm.events.length === 1 ? '' : 's'));
+      if (mm.shows && mm.shows.length) bits.push(mm.shows.length + ' show' + (mm.shows.length === 1 ? '' : 's'));
       if (mm.leaks && mm.leaks.count) bits.push(mm.leaks.count.toLocaleString() + ' leak' + (mm.leaks.count === 1 ? '' : 's'));
       if (mm.tweets.count) bits.push(mm.tweets.count.toLocaleString() + ' tweet' + (mm.tweets.count === 1 ? '' : 's'));
       if (mm.yeezy.count) bits.push(mm.yeezy.count + ' yeezy');
       if (mm.credits.length) bits.push(mm.credits.length + ' with others');
       return bits;
     }
+    var TL_KIND = { release: 'album', single: 'single', video: 'video', feature: 'feature', production: 'production', tour: 'tour', show: 'show', award: 'award', tv: 'tv', fashion: 'fashion', business: 'business', personal: 'life', legal: 'legal', controversy: 'controversy', politics: 'politics' };
     function monthBlock(y, mm) {
       var h = '<div class="tlm" id="tl-' + y.year + '-' + String(mm.m + 1).padStart(2, '0') + '"><div class="tlm-h"><b>' + MONTHS[mm.m] + '</b><span>' + esc(bitsOf(mm).join(' · ')) + '</span></div><div class="tlm-b">';
       if (mm.albums.length) h += '<div class="tl-moments">' + mm.albums.map(function (a) {
         return '<div class="tl-moment" data-go="/resources?view=disco&album=' + encodeURIComponent(a.slug) + '" role="link" tabindex="0">' + yeCover(a.cover || a.cover_sm, a.title, 360) + '<div class="tl-moment-i"><div class="tl-k">ALBUM RELEASE' + (a.date && a.date.length === 10 ? ' · ' + esc(new Date(a.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' }).toUpperCase()) : '') + '</div><div class="tl-moment-t">' + esc(a.title) + '</div><div class="yt-sub">' + a.tracks + ' songs' + (a.artist !== 'Kanye West' && a.artist !== 'Ye' ? ' · ' + esc(a.artist) : '') + '</div><span class="tl-moment-go">open album ›</span></div></div>';
       }).join('') + '</div>';
-      if (mm.events && mm.events.length) h += '<ul class="tlm-ev">' + mm.events.map(function (e) { return '<li><b>' + (e.prec === 'day' ? (+e.date.slice(8, 10)) : '•') + '</b><span>' + esc(e.text) + '</span></li>'; }).join('') + '</ul>';
+      if (mm.recap) h += '<p class="tlm-recap">' + esc(mm.recap) + '</p>';
+      if (mm.events && mm.events.length) h += '<ul class="tlm-ev">' + mm.events.map(function (e) { return '<li><b>' + (e.prec === 'day' ? (+e.date.slice(8, 10)) : '•') + '</b><span>' + esc(e.text) + (e.kind && TL_KIND[e.kind] ? ' <i class="tlm-kind">' + TL_KIND[e.kind] + '</i>' : '') + '</span></li>'; }).join('') + '</ul>';
+      if (mm.shows && mm.shows.length) {
+        var byTour = {};
+        mm.shows.forEach(function (sh) { var k = sh.tour || 'Shows'; (byTour[k] = byTour[k] || []).push(sh); });
+        Object.keys(byTour).forEach(function (k) {
+          var list = byTour[k];
+          h += '<details class="tlm-shows"><summary><span class="tl-k">' + esc(k.toUpperCase()) + ' · ' + list.length + ' SHOW' + (list.length === 1 ? '' : 'S') + '</span><span class="tlm-range">' + esc(list[0].date.slice(8, 10).replace(/^0/, '') + (list.length > 1 ? '–' + list[list.length - 1].date.slice(8, 10).replace(/^0/, '') : '') + ' ' + MONTHS[mm.m].slice(0, 3).toLowerCase()) + '</span></summary><ul>' +
+            list.map(function (sh) { return '<li><b>' + (+sh.date.slice(8, 10)) + '</b><span>' + esc([sh.venue, sh.city].filter(Boolean).join(' · ')) + '</span></li>'; }).join('') + '</ul></details>';
+        });
+      }
+      if (mm.appearances && mm.appearances.length) h += '<details class="tlm-shows"><summary><span class="tl-k">TV, FESTIVALS &amp; ONE-OFFS · ' + mm.appearances.length + '</span></summary><ul>' +
+        mm.appearances.map(function (a) { return '<li><b>' + (+a.date.slice(8, 10)) + '</b><span>' + esc(a.event || '') + (a.kind ? ' <i class="tlm-kind">' + esc(a.kind) + '</i>' : '') + (a.songs && a.songs.length ? '<br><em class="tlm-songs">' + esc(a.songs.join(' · ')) + '</em>' : '') + '</span></li>'; }).join('') + '</ul></details>';
       if (mm.tweets.top.length) h += '<div class="tlm-tw">' + mm.tweets.top.map(function (t) {
         return '<div class="tlm-t" data-go="/resources?view=tweets&tweet=' + encodeURIComponent(t.id) + '"><div class="tlm-tt">' + esc(tweetText(t)) + '</div><div class="tlm-ts">' + esc(new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })) + (t.likes ? ' · ♥ ' + num(t.likes) : '') + '</div></div>';
       }).join('') + '</div>';
