@@ -751,6 +751,7 @@
   .ds-keys { text-align:center; font-size:12px; color:var(--text-3); margin-top:14px; }
   @media (hover: none) { .ds-keys { display:none; } }
   /* timeline v2 */
+  .tl-desc { margin:16px 0 4px; font-size:14px; color:var(--text-2); line-height:1.55; max-width:640px; }
   .tl-tools { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0 4px; }
   .tl-heat { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:4px; max-width:460px; margin:2px 0 12px; }
   .tl-hc { border:0; padding:0; height:30px; border-radius:6px; background:color-mix(in srgb, var(--brand) var(--p), var(--surface-2)); cursor:pointer; display:flex; align-items:flex-end; justify-content:center; font:inherit; transition:transform .12s var(--ease); min-width:0; }
@@ -1915,7 +1916,8 @@ window._ytBooted = false;
       var albums = [];
       st.d.years.forEach(function (y) { y.albums.forEach(function (a) { albums.push({ a: a, y: y.year }); }); });
       albums.sort(function (p, q) { return String(p.a.date || p.y).localeCompare(String(q.a.date || q.y)); });
-      root.innerHTML = '<div class="tl-nav"><div class="yt-tabs" id="tl-years">' + ys.map(function (y) { return '<button class="yt-tab" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div></div>' +
+      root.innerHTML = '<p class="tl-desc">ye\'s whole career month by month, with every show, release and moment dated. curated with AI.</p>' +
+        '<div class="tl-nav"><div class="yt-tabs" id="tl-years">' + ys.map(function (y) { return '<button class="yt-tab" data-y="' + y.year + '">' + y.year + '</button>'; }).join('') + '</div></div>' +
         '<div class="tl-tools"><select class="ye-sel" id="tl-order" aria-label="order"><option value="new">newest first</option><option value="old">oldest first</option></select>' +
         (albums.length ? '<select class="ye-sel" id="tl-alb" aria-label="jump to an album era"><option value="">jump to an album era</option>' + albums.map(function (x) { var m = x.a.date && x.a.date.length >= 7 ? +x.a.date.slice(5, 7) - 1 : -1; return '<option value="' + x.y + '|' + m + '">' + esc(x.a.title + ' · ' + x.y) + '</option>'; }).join('') + '</select>' : '') +
         '<button class="yh-chip" id="tl-all" style="min-height:38px;">expand all</button></div>' +
