@@ -2641,6 +2641,7 @@
           '<div class="cr-sub" style="margin-top:2px;">comps posted in forums go to the person who posted them (their wavernrs account if linked); comps posted anywhere else are credited to the name on the link, or Unknown.</div></div>' +
           '<button class="wv-pill brand" id="cr-all" style="font-size:12.5px;padding:8px 14px;min-height:40px;display:none;" onclick="crFixAll()">Fix everything</button>' +
         '</div>' +
+        '<div id="cr-auto" style="display:none;font-size:12.5px;margin:10px 0 0;padding:8px 12px;border-radius:10px;background:var(--surface-2);color:var(--text-2);"></div>' +
         '<div class="cr-legend">' +
           '<div class="cr-leg"><b>forum</b>credited to the poster. if their Discord is linked to a wavernrs account the comp moves onto it. a post saying "not mine" or "by X" still wins.</div>' +
           '<div class="cr-leg"><b>everywhere else</b>credited to the creator the link names: the untitled.stream or Samply owner, or an "Artist - Title" folder or file name. never the poster.</div>' +
@@ -2658,7 +2659,19 @@
       crLoad();
     };
 
+    window.crAutoStatus = async function () {
+      var el = document.getElementById('cr-auto'); if (!el) return;
+      var st; try { st = await api('/archive-manage/discord-credit/fix-all'); } catch (_) { return; }
+      if (!st || !st.status || st.status === 'idle') { el.style.display = 'none'; return; }
+      el.style.display = '';
+      var nums = (st.updated || 0).toLocaleString() + ' re-credited · ' + (st.moved || 0).toLocaleString() + ' moved onto accounts';
+      el.innerHTML = st.status === 'running' ? '<b>fixing every comp on the site…</b> channel ' + (st.channels_done + 1) + ' of ' + (st.channels_total || '?') + (st.current ? ' (' + escHtml(st.current) + ')' : '') + ' · ' + nums
+        : st.status === 'done' ? '<b>every comp was fixed</b> · ' + nums + (st.finished_at ? ' · ' + new Date(st.finished_at).toLocaleString() : '') + ' · undo is per channel below'
+        : '<b>the full fix stopped</b> ' + escHtml(st.error || st.status) + ' · ' + nums;
+      if (st.status === 'running' && document.getElementById('cr-card')) setTimeout(window.crAutoStatus, 8000);
+    };
     window.crLoad = async function (fresh) {
+      if (window.crAutoStatus) window.crAutoStatus();
       var card = document.getElementById('cr-card');
       if (!card) return;
       if (S.poll) { clearTimeout(S.poll); S.poll = null; }
