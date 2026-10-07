@@ -2255,7 +2255,6 @@ document.addEventListener('keydown', function(e) {
    ========================================================= */
 
 var _lyr = { trackId: null, lines: [], canEdit: false, source: null, idx: -1, open: false, mode: 'view' };
-var _lyrSyncPos = 0;
 
 function _lyrEl(id) { return document.getElementById(id); }
 
@@ -2342,16 +2341,14 @@ function _renderLyrics() {
   var tools = _lyrEl('pfs-lyrics-tools');
   if (!scroll) return;
 
-  if (_lyr.mode === 'edit') return _renderLyricsEditor();
-
   if (!_lyr.lines.length) {
     scroll.innerHTML =
       '<div class="lyr-empty">' +
         '<div class="lyr-empty-t">No lyrics yet</div>' +
         '<div class="lyr-empty-d">' +
-          (_lyr.canEdit
-            ? 'you can make them from the audio...takes about a minute'
-            : 'no one made lyrics for this track yet') +
+          (_lyr.trackId
+            ? (localStorage.getItem('token') ? 'they get made from the audio...takes about a minute' : 'log in and they get made from the audio')
+            : 'lyrics arent available for this one') +
         '</div>' +
       '</div>';
   } else {
@@ -2387,13 +2384,16 @@ function _renderLyrics() {
       tools.hidden = !_lyr.source;
       tools.innerHTML = _lyr.source
         ? '<span class="lyr-src">' + (_lyr.source === 'auto' ? 'auto made...might have mistakes'
+            : _lyr.source === 'regen' ? 'remade from the isolated vocals'
             : (_lyr.source === 'embedded' ? 'from the file' : 'from the artist')) + '</span>'
         : '';
     }
-    // The artist (or a mod) can fix the words and tap in the timing.
-    if (_lyr.canEdit && _lyr.loaded && !_lyr.generating) {
+    if (_lyr.regenerating) {
       tools.hidden = false;
-      tools.innerHTML += '<button class="lyr-tool" onclick="openLyricsEditor()">' + (_lyr.lines.length ? 'Edit lyrics' : 'Write lyrics') + '</button>';
+      tools.innerHTML = '<span class="lyr-src">' + escHtml(_lyr.regenStage || 'Remaking the lyrics…') + '</span>';
+    } else if (_lyr.canRegen && _lyr.lines.length && _lyr.loaded && !_lyr.generating && localStorage.getItem('token')) {
+      tools.hidden = false;
+      tools.innerHTML += '<button class="lyr-tool" onclick="regenerateLyrics(this)" title="isolates the vocals and transcribes them again. each song can only be regenerated once">Regenerate</button>';
     }
   }
 }
@@ -2420,16 +2420,26 @@ window.toggleLyricsView = function () {
   }
 };
 
+function _lyricsKey(t) {
+  if (!t) return null;
+  var u = String(t.ia_url || '');
+  var m = u.match(/\/resources\/audio\/([0-9a-f]{32})/i); if (m) return 'p-' + m[1].toLowerCase();
+  m = u.match(/(?:pillows|pillowcase)\.su\/f\/([0-9a-f]{32})/i); if (m) return 'p-' + m[1].toLowerCase();
+  m = u.match(/\/resources\/igg\/([A-Za-z0-9]{4,20})/); if (m) return 'g-' + m[1];
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(t.id || ''))) return t.id;
+  return null;
+}
+
 function loadLyricsForCurrent() {
   var t = (typeof currentTrack !== 'undefined') ? currentTrack : null;
-  if (!t || !t.id) {
-    _lyr = { trackId: null, lines: [], canEdit: false, source: null, idx: -1, open: _lyr.open, mode: 'view' };
+  var key = _lyricsKey(t);
+  if (!key) {
+    _lyr = { trackId: null, lines: [], canEdit: false, source: null, idx: -1, open: _lyr.open, mode: 'view', loaded: true };
     return _renderLyrics();
   }
-  // Already loaded for this track — don't refetch on every open.
-  if (_lyr.trackId === t.id && _lyr.lines.length) return _renderLyrics();
+  if (_lyr.trackId === key && _lyr.lines.length) return _renderLyrics();
 
-  _lyr.trackId = t.id;
+  _lyr.trackId = key; _lyr.canRegen = false; _lyr.regenerating = _lyr.regenFor === key;
   _lyr.lines = []; _lyr.loaded = false; _lyr.generating = false;
   _lyr.idx = -1;
   var scroll = _lyrEl('pfs-lyrics-scroll');
@@ -2438,12 +2448,12 @@ function loadLyricsForCurrent() {
   var headers = {};
   var tok = localStorage.getItem('token');
   if (tok) headers['Authorization'] = 'Bearer ' + tok;
-  fetch(API_BASE + '/lyrics/' + encodeURIComponent(t.id), { headers: headers })
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(key), { headers: headers })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
       if (!d) return;
       _lyr.lines = d.lines || [];
-      _lyr.canEdit = !!d.can_edit; _lyr.loaded = true;
+      _lyr.canEdit = !!d.can_edit; _lyr.canRegen = !!d.can_regen; _lyr.loaded = true;
       _lyr.source = d.source;
       _renderLyrics();
     })
@@ -2458,120 +2468,48 @@ function _lyricsOnTrackChange() {
   loadLyricsForCurrent();
 }
 
-/* ── Editor ──────────────────────────────────────────────────
-   Two steps, because they're genuinely different jobs: get the
-   words right, then stamp when each one lands. */
-function _renderLyricsEditor() {
-  var scroll = _lyrEl('pfs-lyrics-scroll');
-  var tools = _lyrEl('pfs-lyrics-tools');
-  var text = _lyr.lines.length ? _lyr.lines.map(function (l) { return l.x; }).join('\n') : (_lyr.plain || '');
-  scroll.innerHTML =
-    '<div class="lyr-edit">' +
-      '<div class="lyr-edit-hint">one lyric line per line. save it, then use <b>Sync</b> to tap in the timing while it plays.</div>' +
-      '<textarea id="lyr-text" class="lyr-textarea" placeholder="type or paste the lyrics…">' + escHtml(text) + '</textarea>' +
-    '</div>';
-  if (tools) {
-    tools.hidden = false;
-    tools.innerHTML =
-      '<button class="lyr-tool primary" onclick="saveLyricsText()">Save</button>' +
-      '<button class="lyr-tool" onclick="startLyricsSync()">Sync timings</button>' +
-      '<button class="lyr-tool" onclick="cancelLyricsEdit()">Cancel</button>';
-  }
-}
-
-window.openLyricsEditor = function () { _lyr.mode = 'edit'; _renderLyrics(); };
-window.cancelLyricsEdit = function () { _lyr.mode = 'view'; _lyr.trackId = null; loadLyricsForCurrent(); };
-
-function _linesFromTextarea() {
-  var ta = _lyrEl('lyr-text');
-  if (!ta) return [];
-  return ta.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
-}
-
-window.saveLyricsText = function () {
-  var texts = _linesFromTextarea();
-  // Keep any timings we already have for lines that didn't change position.
-  var lines = texts.map(function (x, i) {
-    var prev = _lyr.lines[i];
-    return { t: prev ? prev.t : i * 4, x: x };
-  });
-  _persistLyrics(lines, texts.join('\n'));
-};
-
-// Tap-to-sync: play the track and hit the button as each line arrives. Far
-// faster than typing timecodes, and accurate enough because you're listening.
-window.startLyricsSync = function () {
-  var texts = _linesFromTextarea();
-  if (!texts.length) { alert('add some lines first'); return; }
-  _lyr.pending = texts.map(function (x) { return { t: null, x: x }; });
-  _lyrSyncPos = 0;
-  _lyr.mode = 'sync';
-  if (audio) { audio.currentTime = 0; audio.play().catch(function () {}); }
-  _renderLyricsSync();
-};
-
-function _renderLyricsSync() {
-  var scroll = _lyrEl('pfs-lyrics-scroll');
-  var tools = _lyrEl('pfs-lyrics-tools');
-  scroll.innerHTML = _lyr.pending.map(function (l, i) {
-    var cls = 'lyr-line' + (i === _lyrSyncPos ? ' on' : (l.t != null ? ' past' : ''));
-    return '<div class="' + cls + '">' + (l.t != null ? '<span class="lyr-stamp">' + fmtTime(l.t) + '</span>' : '') + escHtml(l.x) + '</div>';
-  }).join('');
-  var active = scroll.children[_lyrSyncPos];
-  if (active) scroll.scrollTo({ top: active.offsetTop - scroll.clientHeight / 2, behavior: 'smooth' });
-  if (tools) {
-    tools.hidden = false;
-    tools.innerHTML =
-      '<button class="lyr-tool primary" onclick="stampLyricLine()">Stamp line ' + (_lyrSyncPos + 1) + ' / ' + _lyr.pending.length + '</button>' +
-      '<button class="lyr-tool" onclick="undoLyricStamp()">Undo</button>' +
-      '<button class="lyr-tool" onclick="finishLyricsSync()">Done</button>';
-  }
-}
-
-window.stampLyricLine = function () {
-  if (!_lyr.pending || _lyrSyncPos >= _lyr.pending.length) return;
-  _lyr.pending[_lyrSyncPos].t = audio ? audio.currentTime : 0;
-  _lyrSyncPos++;
-  if (_lyrSyncPos >= _lyr.pending.length) return finishLyricsSync();
-  _renderLyricsSync();
-};
-
-window.undoLyricStamp = function () {
-  if (_lyrSyncPos > 0) {
-    _lyrSyncPos--;
-    _lyr.pending[_lyrSyncPos].t = null;
-    if (audio && _lyrSyncPos > 0 && _lyr.pending[_lyrSyncPos - 1].t != null) {
-      audio.currentTime = _lyr.pending[_lyrSyncPos - 1].t;
-    }
-    _renderLyricsSync();
-  }
-};
-
-window.finishLyricsSync = function () {
-  var lines = (_lyr.pending || []).filter(function (l) { return l.t != null; })
-    .map(function (l) { return { t: l.t, x: l.x }; });
-  if (!lines.length) { _lyr.mode = 'edit'; return _renderLyrics(); }
-  _persistLyrics(lines, (_lyr.pending || []).map(function (l) { return l.x; }).join('\n'));
-};
-
-function _persistLyrics(lines, plain) {
+window.regenerateLyrics = function (btn) {
   var tok = localStorage.getItem('token');
-  if (!tok || !_lyr.trackId) return;
-  fetch(API_BASE + '/lyrics/' + encodeURIComponent(_lyr.trackId), {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-    body: JSON.stringify({ lines: lines, plain: plain }),
-  })
+  if (!_lyr.trackId || !tok) return;
+  if (!confirm('regenerate these lyrics?\n\nthe vocals get isolated from the song and transcribed again. it takes a few minutes, and each song can only be regenerated once.')) return;
+  var forTrack = _lyr.trackId;
+  var hdr = { 'Authorization': 'Bearer ' + tok };
+  if (btn) btn.disabled = true;
+  var STAGE = { downloading: 'Getting the song…', isolating: 'Isolating the vocals…', transcribing: 'Transcribing the vocals…' };
+  var done = function (msg) { _lyr.regenerating = false; _lyr.regenFor = null; if (_lyr.trackId === forTrack) _renderLyrics(); if (msg && typeof wvToast === 'function') wvToast(msg, 'error'); };
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/regen', { method: 'POST', headers: hdr })
     .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
     .then(function (res) {
-      if (!res.ok) { alert(res.d.error || 'couldnt save the lyrics'); return; }
-      _lyr.lines = res.d.lines || lines;
-      _lyr.source = 'manual';
-      _lyr.mode = 'view';
+      if (!res.ok) { if (/already/i.test(res.d.error || '')) _lyr.canRegen = false; done(res.d.error || 'couldnt regenerate the lyrics'); return; }
+      _lyr.regenerating = true; _lyr.regenFor = forTrack; _lyr.canRegen = false; _lyr.regenStage = STAGE.downloading;
       _renderLyrics();
+      var tries = 0;
+      var poll = setInterval(function () {
+        tries++;
+        fetch(API_BASE + '/lyrics/job/' + res.d.id, { headers: hdr })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (j) {
+            if (!j) { if (tries > 5) { clearInterval(poll); done('lost track of the regenerate job...check back in a few minutes'); } return; }
+            if (j.status === 'succeeded') {
+              clearInterval(poll);
+              _lyr.regenerating = false; _lyr.regenFor = null;
+              if (_lyr.trackId !== forTrack) return;
+              _lyr.lines = j.lines || []; _lyr.source = 'regen'; _lyr.canRegen = false; _lyr.mode = 'view';
+              _renderLyrics();
+            } else if (j.status === 'failed' || tries > 450) {
+              clearInterval(poll);
+              _lyr.canRegen = true;
+              done(j.error ? 'regenerate failed: ' + j.error : 'regenerating took too long');
+            } else if (j.stage && STAGE[j.stage] && _lyr.regenStage !== STAGE[j.stage]) {
+              _lyr.regenStage = STAGE[j.stage];
+              if (_lyr.trackId === forTrack) _renderLyrics();
+            }
+          })
+          .catch(function () {});
+      }, 4000);
     })
-    .catch(function () { alert('couldnt save the lyrics'); });
-}
+    .catch(function () { done('couldnt regenerate the lyrics'); });
+};
 
 window.autoGenerateLyrics = function (btn) {
   var tok = localStorage.getItem('token');
@@ -2593,7 +2531,7 @@ window.autoGenerateLyrics = function (btn) {
         _renderLyrics();
         if (btn) { btn.disabled = false; btn.textContent = 'Get lyrics'; }
         if (!res.d.synced) {
-          alert('found the words in the file but no timing...use Edit → Sync timings to tap them in');
+          if (typeof wvToast === 'function') wvToast('found the words in the file but no timing for them');
         }
         return;
       }
