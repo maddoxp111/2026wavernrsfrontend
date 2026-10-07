@@ -2393,7 +2393,11 @@ function _renderLyrics() {
       tools.innerHTML = '<span class="lyr-src">' + escHtml(_lyr.regenStage || 'Remaking the lyrics…') + '</span>';
     } else if (_lyr.canRegen && _lyr.lines.length && _lyr.loaded && !_lyr.generating && localStorage.getItem('token')) {
       tools.hidden = false;
-      tools.innerHTML += '<button class="lyr-tool" onclick="regenerateLyrics(this)" title="isolates the vocals and transcribes them again. each song can only be regenerated once">Regenerate</button>';
+      tools.innerHTML += '<button class="lyr-tool' + (_lyr.regenArm ? ' primary' : '') + '" onclick="regenerateLyrics(this)" title="isolates the vocals and transcribes them again. each song can only be regenerated once">' + (_lyr.regenArm ? 'Tap again to regenerate (only once)' : 'Regenerate') + '</button>';
+    }
+    if (_lyr.regenMsg && _lyr.regenMsgFor === _lyr.trackId && !_lyr.regenerating) {
+      tools.hidden = false;
+      tools.innerHTML += '<span class="lyr-src" style="color:var(--red,#e5484d);flex-basis:100%;">' + escHtml(_lyr.regenMsg) + '</span>';
     }
   }
 }
@@ -2471,16 +2475,24 @@ function _lyricsOnTrackChange() {
 window.regenerateLyrics = function (btn) {
   var tok = localStorage.getItem('token');
   if (!_lyr.trackId || !tok) return;
-  if (!confirm('regenerate these lyrics?\n\nthe vocals get isolated from the song and transcribed again. it takes a few minutes, and each song can only be regenerated once.')) return;
   var forTrack = _lyr.trackId;
+  _lyr.regenMsg = null;
+  if (!_lyr.regenArm) {
+    _lyr.regenArm = true; _renderLyrics();
+    clearTimeout(_lyr.regenArmT);
+    _lyr.regenArmT = setTimeout(function () { if (_lyr.regenArm) { _lyr.regenArm = false; if (_lyr.trackId === forTrack) _renderLyrics(); } }, 5000);
+    return;
+  }
+  _lyr.regenArm = false; clearTimeout(_lyr.regenArmT);
   var hdr = { 'Authorization': 'Bearer ' + tok };
   if (btn) btn.disabled = true;
   var STAGE = { downloading: 'Getting the song…', isolating: 'Isolating the vocals…', transcribing: 'Transcribing the vocals…' };
-  var done = function (msg) { _lyr.regenerating = false; _lyr.regenFor = null; if (_lyr.trackId === forTrack) _renderLyrics(); if (msg && typeof wvToast === 'function') wvToast(msg, 'error'); };
+  var done = function (msg) { _lyr.regenerating = false; _lyr.regenFor = null; _lyr.regenMsg = msg || null; _lyr.regenMsgFor = forTrack; if (_lyr.trackId === forTrack) _renderLyrics(); };
+  _lyr.regenerating = true; _lyr.regenFor = forTrack; _lyr.regenStage = 'Starting…'; _renderLyrics();
   fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/regen', { method: 'POST', headers: hdr })
-    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
     .then(function (res) {
-      if (!res.ok) { if (/already/i.test(res.d.error || '')) _lyr.canRegen = false; done(res.d.error || 'couldnt regenerate the lyrics'); return; }
+      if (!res.ok) { if (/already/i.test(res.d.error || '')) _lyr.canRegen = false; done(res.d.error || ('couldnt regenerate the lyrics (' + res.status + ')')); return; }
       _lyr.regenerating = true; _lyr.regenFor = forTrack; _lyr.canRegen = false; _lyr.regenStage = STAGE.downloading;
       _renderLyrics();
       var tries = 0;
@@ -2508,7 +2520,7 @@ window.regenerateLyrics = function (btn) {
           .catch(function () {});
       }, 4000);
     })
-    .catch(function () { done('couldnt regenerate the lyrics'); });
+    .catch(function () { done('couldnt reach the server to regenerate the lyrics'); });
 };
 
 window.autoGenerateLyrics = function (btn) {
