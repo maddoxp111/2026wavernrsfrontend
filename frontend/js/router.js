@@ -497,8 +497,9 @@ window._pageCleanup = [];
   // Sample the content area: if anything else sits on top of it (drawer,
   // sheet, full player, toast, popover), a view transition would paint the
   // page over it for a moment, so use the plain CSS entrance instead.
+  function isAppleTouch() { var n = navigator; return /iP(hone|ad|od)/.test(n.userAgent || '') || (/Macintosh/.test(n.userAgent || '') && (n.maxTouchPoints || 0) > 1); }
   function canViewTransition() {
-    if (typeof document.startViewTransition !== 'function' || reducedMotion() || document.hidden) return false;
+    if (typeof document.startViewTransition !== 'function' || reducedMotion() || document.hidden || isAppleTouch()) return false;
     var c = content();
     if (!c || !c.isConnected) return false;
     var r = c.getBoundingClientRect();
