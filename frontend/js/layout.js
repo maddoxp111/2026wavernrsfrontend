@@ -1992,11 +1992,21 @@
     }
   };
 
-  // The Mod Panel / Archive Panel links must be re-earned from the server on every
-  // full load — never trust persisted flags for the first paint.
-  sessionStorage.removeItem('wv_is_mod');
-  sessionStorage.removeItem('wv_is_archiver');
-  sessionStorage.removeItem('wv_can_at');
+  // Panel links come from the last answer the server gave for this login, so
+  // they show on first paint and survive a check that fails while the API is
+  // having a moment. The panels themselves still check on the server.
+  var _ROLE_FLAGS = { mod: 'wv_is_mod', archiver: 'wv_is_archiver', radio: 'wv_is_radio', at: 'wv_can_at' };
+  function _roleKey() { var t = localStorage.getItem('token') || ''; return t ? t.slice(-24) : ''; }
+  function _roleCache() {
+    try { var c = JSON.parse(localStorage.getItem('wv_roles') || 'null'); return c && c.k && c.k === _roleKey() ? c : null; } catch (_) { return null; }
+  }
+  (function () {
+    var c = _roleCache();
+    Object.keys(_ROLE_FLAGS).forEach(function (r) {
+      if (c && c[r]) sessionStorage.setItem(_ROLE_FLAGS[r], 'true');
+      else sessionStorage.removeItem(_ROLE_FLAGS[r]);
+    });
+  })();
 
   initShell();
   // Load banners after shell exists
@@ -2006,39 +2016,53 @@
   // Runs AFTER initShell so the sidebar elements exist.
   (function _checkRoleStatus() {
     var token = localStorage.getItem('token');
-    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); sessionStorage.removeItem('wv_is_radio'); sessionStorage.removeItem('wv_can_at'); return; }
+    if (!token) {
+      Object.keys(_ROLE_FLAGS).forEach(function (r) { sessionStorage.removeItem(_ROLE_FLAGS[r]); });
+      try { localStorage.removeItem('wv_roles'); } catch (_) {}
+      return;
+    }
     sessionStorage.setItem('wv_roles_at', String(Date.now()));
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
     var headers = { 'Authorization': 'Bearer ' + token };
-    Promise.all([
-      fetch(base + '/mod/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-      fetch(base + '/archive/check', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-      fetch(base + '/radio/mine', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-    ]).then(function(results) {
-      var isMod = !!(results[0] && results[0].is_mod);
-      var isArchiver = !!(results[1] && results[1].is_archiver);
-      var canAt = !!(results[1] && results[1].can_archive_trackers) || isArchiver || isMod;
-      var wasAt = sessionStorage.getItem('wv_can_at') === 'true';
-      var rm = results[2] || {};
-      var isRadio = !!(rm.available && (rm.is_mod || rm.is_host || (rm.stations && rm.stations.length)));
-      var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
-      var wasArchiver = sessionStorage.getItem('wv_is_archiver') === 'true';
-      var wasRadio = sessionStorage.getItem('wv_is_radio') === 'true';
-      sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
-      sessionStorage.setItem('wv_is_archiver', isArchiver ? 'true' : 'false');
-      sessionStorage.setItem('wv_is_radio', isRadio ? 'true' : 'false');
-      sessionStorage.setItem('wv_can_at', canAt ? 'true' : 'false');
-      // Pages read these flags at script time, before this answer lands, so
-      // tell them once it has.
-      window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: isMod, isArchiver: isArchiver, isRadio: isRadio, canArchiveTrackers: canAt } }));
-      if (isMod || isArchiver || isRadio || canAt || wasMod !== isMod || wasArchiver !== isArchiver || wasRadio !== isRadio || wasAt !== canAt) {
-        var sidebar = document.getElementById('wv-sidebar');
-        if (sidebar) sidebar.innerHTML = buildSidebarHTML();
-        var drawer = document.getElementById('wv-drawer');
-        if (drawer) drawer.innerHTML = buildSidebarHTML(true);
-        _renderLib();
-      }
-    });
+    // null means the check didn't get a real answer (offline, 5xx, timeout),
+    // which is not the same as "no".
+    function ask(path) {
+      return fetch(base + path, { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+    }
+    var tries = 0;
+    function run() {
+      tries++;
+      Promise.all([ask('/mod/check'), ask('/archive/check'), ask('/radio/mine')]).then(function(results) {
+        if (localStorage.getItem('token') !== token) return;
+        var was = {};
+        Object.keys(_ROLE_FLAGS).forEach(function (r) { was[r] = sessionStorage.getItem(_ROLE_FLAGS[r]) === 'true'; });
+        var now = { mod: was.mod, archiver: was.archiver, radio: was.radio, at: was.at };
+        if (results[0]) now.mod = !!results[0].is_mod;
+        if (results[1]) now.archiver = !!results[1].is_archiver;
+        if (results[0] && results[1]) now.at = !!results[1].can_archive_trackers || now.archiver || now.mod;
+        else if (results[1] && results[1].can_archive_trackers) now.at = true;
+        if (results[2]) {
+          var rm = results[2];
+          now.radio = !!(rm.available && (rm.is_mod || rm.is_host || (rm.stations && rm.stations.length)));
+        }
+        Object.keys(_ROLE_FLAGS).forEach(function (r) { sessionStorage.setItem(_ROLE_FLAGS[r], now[r] ? 'true' : 'false'); });
+        try { localStorage.setItem('wv_roles', JSON.stringify({ k: _roleKey(), mod: now.mod, archiver: now.archiver, radio: now.radio, at: now.at, ts: Date.now() })); } catch (_) {}
+        // Pages read these flags at script time, before this answer lands, so
+        // tell them once it has.
+        window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: now.mod, isArchiver: now.archiver, isRadio: now.radio, canArchiveTrackers: now.at } }));
+        var changed = Object.keys(_ROLE_FLAGS).some(function (r) { return was[r] !== now[r]; });
+        if (changed) {
+          var sidebar = document.getElementById('wv-sidebar');
+          if (sidebar) sidebar.innerHTML = buildSidebarHTML();
+          var drawer = document.getElementById('wv-drawer');
+          if (drawer) drawer.innerHTML = buildSidebarHTML(true);
+          _renderLib();
+        }
+        var missing = results.some(function (x) { return !x; });
+        if (missing && tries < 4) setTimeout(run, [4000, 12000, 30000][tries - 1]);
+      });
+    }
+    run();
   })();
 })();
 

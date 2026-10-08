@@ -15,7 +15,11 @@ function _clearAuthStorage() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   localStorage.removeItem('wv_site_access');
+  localStorage.removeItem('wv_roles');
   sessionStorage.removeItem('wv_is_mod');
+  sessionStorage.removeItem('wv_is_archiver');
+  sessionStorage.removeItem('wv_is_radio');
+  sessionStorage.removeItem('wv_can_at');
   sessionStorage.removeItem('mod_reauth_ok');
 }
 
