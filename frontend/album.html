@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=fcb114c11108">
-  <script src="/js/status-card.js?v=fcb114c11108"></script>
-  <script src="/js/down.js?v=fcb114c11108"></script>
+  <link rel="stylesheet" href="/css/style.css?v=2d4aca45e0bb">
+  <script src="/js/status-card.js?v=2d4aca45e0bb"></script>
+  <script src="/js/down.js?v=2d4aca45e0bb"></script>
   <style>
     /* ── comp page: skeleton ─────────────────────────────── */
     .alb-sk { padding: 28px 0; }
@@ -140,12 +140,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=fcb114c11108"></script>
-<script src="/js/layout.js?v=fcb114c11108"></script>
-<script src="/js/player.js?v=fcb114c11108"></script>
-<script src="/js/router.js?v=fcb114c11108"></script>
-<script src="/js/playlists.js?v=fcb114c11108"></script>
-<script src="/js/ratings.js?v=fcb114c11108"></script>
+<script src="/js/api.js?v=2d4aca45e0bb"></script>
+<script src="/js/layout.js?v=2d4aca45e0bb"></script>
+<script src="/js/player.js?v=2d4aca45e0bb"></script>
+<script src="/js/router.js?v=2d4aca45e0bb"></script>
+<script src="/js/playlists.js?v=2d4aca45e0bb"></script>
+<script src="/js/ratings.js?v=2d4aca45e0bb"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -194,7 +194,6 @@
     loadAlbumComments();
       loadMoreLikeThis();
       loadVsOfficial();
-      loadTrackerTags();
       if (typeof loadRatings === 'function') loadRatings('album', album.id);
       loadTrackerPills(album.id);
       if (typeof wvClampDesc === 'function') wvClampDesc(document.querySelector('.wv-hero-desc'));
@@ -1006,37 +1005,6 @@
           (missing.length ? '<div><h4>left off</h4><ul>' + missing.map(function (t) { return li(t, 'm'); }).join('') + '</ul></div>' : '') +
           (extra.length ? '<div><h4>not on the album</h4><ul>' + extra.map(function (t) { return li(t, 'e'); }).join('') + '</ul></div>' : '') +
         '</div></div>';
-  }
-
-  // Tag each song with what the Ye tracker knows: released, leaked, snippet.
-  async function loadTrackerTags() {
-    if (!albumTracks.length || albumTracks.length > 80) return;
-    var titles = albumTracks.map(function (t) { var td = t.tracks || t; var cr = _credits[td.id]; return cr ? cr.title : (td.title || ''); });
-    var d;
-    try { d = await api('/resources/match', { method: 'POST', body: JSON.stringify({ titles: titles, era: album.era_tag ? album.era_tag.name : '' }) }); } catch (_) { return; }
-    var items = (d && d.items) || [];
-    var counts = { rel: 0, leak: 0 };
-    items.forEach(function (m, i) {
-      var row = document.getElementById('trow-' + i); if (!row || !m) return;
-      var info = row.querySelector('.track-row-artist'); if (!info || info.querySelector('.wv-tt')) return;
-      var rel = m.tab === 'Released';
-      var yr = m.leak ? m.leak.slice(-4) : '';
-      var label = rel ? 'released' + (yr ? ' ' + yr : '') : m.leak ? 'leaked ' + m.leak.replace(/ \d{1,2},/, '') : (m.avail && /snippet/i.test(m.avail) ? 'snippet' : '');
-      if (!label) return;
-      if (rel) counts.rel++; else counts.leak++;
-      var tip = m.title + ' · ' + m.era + ' · ' + (rel ? 'released' : 'on the tracker') + (m.quality ? ' · ' + m.quality : '') + (m.avail ? ' · ' + m.avail : '');
-      var hub = String(m.title || '').replace(/\s*\[[^\]]*\]\s*/g, ' ').trim();
-      info.insertAdjacentHTML('afterbegin', '<span class="wv-tt ' + (rel ? 'rel' : 'unr') + '" title="' + escHtml(tip + ' · tap for every version') + '" data-hub="' + escHtml(hub) + '">' + escHtml(label) + '</span>');
-      var tag = info.querySelector('.wv-tt');
-      if (tag) tag.onclick = function (e) { e.stopPropagation(); navigate('/resources?view=song&t=' + encodeURIComponent(tag.getAttribute('data-hub'))); };
-    });
-    var tl = document.getElementById('tracklist');
-    if (tl && (counts.rel || counts.leak) && !document.getElementById('wv-tt-sum')) {
-      var bits = [];
-      if (counts.rel) bits.push(counts.rel + ' released');
-      if (counts.leak) bits.push(counts.leak + ' leaked');
-      tl.insertAdjacentHTML('beforebegin', '<div id="wv-tt-sum" class="wv-tt-sum">per the Ye tracker: ' + bits.join(' · ') + (items.length - counts.rel - counts.leak > 0 ? ' · ' + (items.length - counts.rel - counts.leak) + ' not on it' : '') + '</div>');
-    }
   }
 
   async function loadMoreLikeThis() {
