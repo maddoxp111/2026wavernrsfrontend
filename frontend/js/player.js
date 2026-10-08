@@ -2393,7 +2393,7 @@ function _renderLyrics() {
       tools.innerHTML = '<span class="lyr-src">' + escHtml(_lyr.regenStage || 'Remaking the lyrics…') + '</span>';
     } else if (_lyr.canRegen && _lyr.lines.length && _lyr.loaded && !_lyr.generating && localStorage.getItem('token')) {
       tools.hidden = false;
-      tools.innerHTML += '<button class="lyr-tool' + (_lyr.regenArm ? ' primary' : '') + '" onclick="regenerateLyrics(this)" title="listens to the vocals again with a better pass. each song can only be regenerated once">' + (_lyr.regenArm ? 'Tap again to regenerate (only once)' : 'Regenerate') + '</button>';
+      tools.innerHTML += '<button class="lyr-tool' + (_lyr.regenArm ? ' primary' : '') + '" onclick="regenerateLyrics(this)" title="transcribes the song again. each song can only be regenerated once">' + (_lyr.regenArm ? 'Tap again to regenerate (only once)' : 'Regenerate') + '</button>';
     }
     if (_lyr.regenMsg && _lyr.regenMsgFor === _lyr.trackId && !_lyr.regenerating) {
       tools.hidden = false;
@@ -2486,11 +2486,10 @@ window.regenerateLyrics = function (btn) {
   _lyr.regenArm = false; clearTimeout(_lyr.regenArmT);
   var hdr = { 'Authorization': 'Bearer ' + tok };
   if (btn) btn.disabled = true;
-  var STAGE = { downloading: 'Getting the song…', transcribing: 'Listening to the vocals…' };
-  var ct = (typeof currentTrack !== 'undefined' && currentTrack) || {};
+  var STAGE = { downloading: 'Getting the song…', transcribing: 'Listening to the song…' };
   var done = function (msg) { _lyr.regenerating = false; _lyr.regenFor = null; _lyr.regenMsg = msg || null; _lyr.regenMsgFor = forTrack; if (_lyr.trackId === forTrack) _renderLyrics(); };
   _lyr.regenerating = true; _lyr.regenFor = forTrack; _lyr.regenStage = 'Starting…'; _renderLyrics();
-  fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/regen', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, hdr), body: JSON.stringify({ title: ct.title || '', artist: String(ct.artist_name || '').split(' · ')[0] }) })
+  fetch(API_BASE + '/lyrics/' + encodeURIComponent(forTrack) + '/regen', { method: 'POST', headers: hdr })
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
     .then(function (res) {
       if (!res.ok) { if (/already/i.test(res.d.error || '')) _lyr.canRegen = false; done(res.d.error || ('couldnt regenerate the lyrics (' + res.status + ')')); return; }
