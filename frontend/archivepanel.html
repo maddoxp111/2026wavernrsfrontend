@@ -288,7 +288,7 @@
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">' +
             '<div><div style="font-size:14px;font-weight:700;">Comp claims</div>' +
             '<div style="font-size:12px;color:var(--text-3);">these come from the Claim your comps page. check the proof, fix the comps with the manager below, then approve or decline with a note they can see.</div></div>' +
-            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button class="wv-pill" id="cl-ai-all" style="font-size:12px;padding:6px 12px;" onclick="clAiAll()" title="has GPT look at every open claim and show what it would do on each one">✨ AI review all open</button><button class="wv-pill" id="cl-recheck" style="font-size:12px;padding:6px 12px;" onclick="clRecheck()" title="re-checks your last 10 approved claims against the current rules and shows what still needs fixing">Re-check last 10 approved</button>' +
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><button class="wv-pill" id="cl-ai-all" style="font-size:12px;padding:6px 12px;" onclick="clAiAll()" title="has the AI look at every open claim and show what it would do on each one">✨ AI review all open</button><button class="wv-pill" id="cl-recheck" style="font-size:12px;padding:6px 12px;" onclick="clRecheck()" title="re-checks your last 10 approved claims against the current rules and shows what still needs fixing">Re-check last 10 approved</button>' +
             '<div class="wv-seg"><button class="on" id="cl-tab-open" onclick="clLoad(\'open\')">Open</button><button id="cl-tab-approved" onclick="clLoad(\'approved\')">Approved</button><button id="cl-tab-rejected" onclick="clLoad(\'rejected\')">Declined</button></div></div>' +
           '</div>' +
           '<div id="cl-list" style="display:flex;flex-direction:column;gap:8px;"></div>' +
@@ -335,7 +335,7 @@
               '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">checks comps imported from discord threads against the real release in each thread (its download link), most starred first. nothing changes until you hit Fix. a fix swaps the songs and cover into the same comp so it keeps its likes, comments and stars. nothing ever gets deleted from here.</div>' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
                 '<button class="wv-pill brand" id="dx-check" style="font-size:12.5px;padding:7px 14px;" onclick="dxCheck()">Check the next 50</button>' +
-                '<label style="font-size:12.5px;color:var(--text-2);display:flex;gap:6px;align-items:center;"><input type="checkbox" id="dx-ai" style="width:auto;margin:0;"> Ask GPT too (slower)</label>' +
+                '<label style="font-size:12.5px;color:var(--text-2);display:flex;gap:6px;align-items:center;"><input type="checkbox" id="dx-ai" style="width:auto;margin:0;"> Ask the AI too (slower)</label>' +
                 '<span id="dx-pos" style="font-size:12px;color:var(--text-3);"></span>' +
                 '<button class="wv-see-all" onclick="dxReset()">Start over</button>' +
               '</div>' +
@@ -1730,14 +1730,14 @@
       document.getElementById('dx-out').innerHTML = rows.length ? '<div style="display:flex;flex-direction:column;gap:4px;margin-top:10px;max-height:520px;overflow:auto;">' + rows.map(function(x) {
         var can = !!fixable[x.kind] || (x.kind === 'not_a_comp' && x.to_upcoming);
         var detail = x.kind === 'linked_queued' ? (x.link || '') : x.kind === 'linked_existing' ? 'already on the site' : x.kind === 'rebuild' ? (x.files + ' songs instead of ' + (x.had || 0))
-          : x.kind === 'not_a_comp' ? (x.to_upcoming ? 'GPT agrees...clear its songs, use the first pic posted as the cover and mark it Upcoming' + (x.first_image ? '' : ' (no pic in the thread)') : x.needs_gpt ? 'tick "Ask GPT too" and check again to make sure' : 'GPT wasnt sure so it got left alone') : (x.why || '');
+          : x.kind === 'not_a_comp' ? (x.to_upcoming ? 'The AI agrees...clear its songs, use the first pic posted as the cover and mark it Upcoming' + (x.first_image ? '' : ' (no pic in the thread)') : x.needs_gpt ? 'tick "Ask the AI too" and check again to make sure' : 'The AI wasnt sure so it got left alone') : (x.why || '');
         var g = gpt[x.id];
         return '<label style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--surface-2);font-size:12.5px;">' +
           '<input type="checkbox" class="dx-pick" value="' + x.id + '"' + (x.kind === 'not_a_comp' ? ' data-upcoming="1"' : '') + (can ? ' checked' : ' disabled') + ' style="width:auto;margin:0;">' +
           '<span style="flex:1;min-width:0;"><a href="/album?id=' + encodeURIComponent(x.id) + '" target="_blank" style="color:var(--text);font-weight:700;">' + escHtml(x.title || '') + '</a>' +
           ' <span style="color:var(--text-3);">⭐ ' + (x.stars || 0) + ' · ' + (x.tracks_now || 0) + ' songs now</span><br>' +
           '<span style="color:' + (can ? 'var(--brand)' : 'var(--text-3)') + ';">' + escHtml(DX_KIND[x.kind] || x.kind) + '</span> <span style="color:var(--text-3);word-break:break-all;">' + escHtml(detail) + '</span>' +
-          (g && g.reason ? '<br><span style="color:var(--text-3);font-style:italic;">GPT: ' + escHtml(g.reason) + '</span>' : '') + '</span></label>';
+          (g && g.reason ? '<br><span style="color:var(--text-3);font-style:italic;">AI: ' + escHtml(g.reason) + '</span>' : '') + '</span></label>';
       }).join('') + '</div><button class="wv-pill brand" style="margin-top:10px;font-size:12.5px;padding:7px 16px;" onclick="dxFix()">Fix the ticked comps</button>' : '<div class="wv-empty">no thread comps left to check</div>';
     } catch (e) { document.getElementById('dx-msg').textContent = e.message || 'Check failed'; }
     btn.disabled = false; btn.textContent = 'Check the next 50';
@@ -2533,7 +2533,7 @@
       '</div></div>');
   }
   window.clAiReview = async function(id) {
-    _clAiBox(id, '<div style="margin-top:10px;font-size:12.5px;color:var(--text-3);">✨ GPT is checking the comps, the proof and the database...</div>');
+    _clAiBox(id, '<div style="margin-top:10px;font-size:12.5px;color:var(--text-3);">✨ The AI is checking the comps, the proof and the database...</div>');
     try { var d = await api('/claims/' + id + '/ai-review', { method: 'POST', body: '{}' }); _clAiRender(id, d.review); }
     catch (e) { _clAiBox(id, '<div style="margin-top:10px;font-size:12.5px;color:var(--red);">' + escHtml(e.message || 'AI review failed') + '</div>'); }
   };

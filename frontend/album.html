@@ -567,7 +567,7 @@
           (gptLine ? '<div style="margin-top:6px;font-size:12px;color:var(--text-3);white-space:pre-wrap;">' + escHtml(gptLine.trim()) + '</div>' : '') + '</div>' +
         '<div class="wv-link-pick">' + opts.map(function (o, k) {
           var when = o.at ? new Date(o.at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-          var tags = (o.suggested ? '<span class="wv-link-tag good">' + (L.gpt ? 'GPT\'s pick' : 'Suggested') + '</span>' : '') +
+          var tags = (o.suggested ? '<span class="wv-link-tag good">' + (L.gpt ? 'AI pick' : 'Suggested') + '</span>' : '') +
             (o.existing ? '<a class="wv-link-tag warn" href="/album?id=' + encodeURIComponent(o.existing) + '" target="_blank" onclick="event.stopPropagation()">Already on the site ↗</a>' : '') +
             (o.pack ? '<span class="wv-link-tag warn">Says snippet / pack</span>' : '') +
             (!o.supported ? '<span class="wv-link-tag">cant import from this site</span>' : '');
@@ -738,7 +738,7 @@
     if (!btn || !a) return;
     btn.disabled = true; btn.textContent = 'Reading the thread…';
     try {
-      btn.textContent = 'Asking GPT to read the thread…';
+      btn.textContent = 'Asking the AI to read the thread…';
       var aiCoverP = api('/archive-manage/comps/' + a.id + '/ai', { method: 'POST', body: JSON.stringify({ task: 'cover' }) }).then(function (d) {
         var ch = ((d && d.plan && d.plan.changes) || []).find(function (c) { return c.op === 'set_cover'; });
         return ch ? { image_id: ch.image_id, reason: ch.reason } : { none: (d && d.plan && d.plan.summary) || '' };
@@ -748,7 +748,7 @@
       var s = mine0.find(function (x) { return x.kind !== 'gpt' && x.kind !== 'links'; }) || {};
       var g = mine0.find(function (x) { return x.kind === 'gpt'; });
       var L = mine0.find(function (x) { return x.kind === 'links'; });
-      var gptLine = g ? (g.why ? '\n\n(gpt couldnt help... ' + g.why + ')' : g.overruled ? '\n\n(gpt didnt pick a link so the one found in the thread gets used)' : '\n\ngpt (' + (g.confidence || '?') + ' confidence)... ' + (g.reason || '') + (g.title ? '\ntitle... ' + g.title : '') + (g.creator ? '\ncreator... ' + g.creator : '')) : '';
+      var gptLine = g ? (g.why ? '\n\n(the AI couldnt help... ' + g.why + ')' : g.overruled ? '\n\n(the AI didnt pick a link so the one found in the thread gets used)' : '\n\ngpt (' + (g.confidence || '?') + ' confidence)... ' + (g.reason || '') + (g.title ? '\ntitle... ' + g.title : '') + (g.creator ? '\ncreator... ' + g.creator : '')) : '';
       var aiOn = true, extra = {};
       if (L && (L.options || []).length) {
         L.gpt = !!(g && !g.why && !g.overruled && g.link);
@@ -800,7 +800,7 @@
         }
         if (s.protected) {
           btn.disabled = false; btn.textContent = 'Rebuild from Discord';
-          alert('couldnt find a download link in this thread and gpt couldnt confirm it either...so nothing changed' + gptLine);
+          alert('couldnt find a download link in this thread and the AI couldnt confirm it either...so nothing changed' + gptLine);
           return;
         }
         msg = 'theres no download link for the comp in this thread (comp threads only import from links since the audio posted there is usually snippets). remove this comp from the archive? it goes to the recycle bin in Manage the archive where you can bring it back';
