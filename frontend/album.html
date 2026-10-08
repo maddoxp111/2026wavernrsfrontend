@@ -223,6 +223,7 @@
     const eraName = album.era_tag?.name || album.genre || '';
     const badges = await getBadgeData().catch(() => ({ verified_artists: [], highlighted_albums: [], exclusive_albums: [] }));
     const isHighlighted = badges.highlighted_albums && badges.highlighted_albums.indexOf(album.id) !== -1;
+    window._albHl = !!isHighlighted;
     const isExclusive   = badges.exclusive_albums   && badges.exclusive_albums.indexOf(album.id) !== -1;
     const isVerified    = artist.id && badges.verified_artists && badges.verified_artists.indexOf(artist.id) !== -1;
     const isOnyxWeek = badges.onyx_week_albums && badges.onyx_week_albums.indexOf(album.id) !== -1;
@@ -230,7 +231,7 @@
     const isYeditsEotw = badges.yedits_eotw_albums && badges.yedits_eotw_albums.indexOf(album.id) !== -1;
     const isLowQualityCover = badges.low_quality_covers && badges.low_quality_covers.indexOf(album.id) !== -1;
     const badgePills = (isExclusive   ? '<span class="wv-badge-pill wv-badge-exclusive" style="margin-right:4px;">◆ wavernrs exclusive</span>' : '') +
-                       (isHighlighted ? '<span class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;">★ Highlighted by wavernrs</span>' : '') +
+                       (isHighlighted ? '<span class="wv-badge-pill wv-badge-highlight" id="alb-hl-pill" style="margin-right:4px;">★ Highlighted by wavernrs</span>' : '') +
                        (isOnyxWeek    ? '<span class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;">🏆 Onyx Yedit of the Week</span>' : '') +
                        (isOnyxHl      ? '<span class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;">★ Onyx Highlighted Yedit</span>' : '') +
                        (isYeditsEotw  ? '<span class="wv-badge-pill wv-badge-highlight" style="margin-right:4px;">🏆 Yedits Discord Edit of the Week</span>' : '');
@@ -595,21 +596,139 @@
   // ── Staff toolbar: edit by hand, rebuild, or have the AI fix things ─────
   var AI_QUICK = [['titles', 'Clean up song titles'], ['artist', 'Fix artist name'], ['cover', 'Fix cover'], ['description', 'Write description'], ['era', 'Set era'], ['tidy', 'Tidy everything']];
   function _isStaffNow() { try { return sessionStorage.getItem('wv_is_mod') === 'true' || sessionStorage.getItem('wv_is_archiver') === 'true'; } catch (_) { return false; } }
+  function _canTrackersNow() { try { return _isStaffNow() || sessionStorage.getItem('wv_can_at') === 'true'; } catch (_) { return false; } }
+  function _hlLabel() { return window._albHl ? '★ Highlighted' : '☆ Highlight'; }
   function renderStaffBar() {
     var bar = document.getElementById('staff-bar');
-    if (!bar || bar.dataset.done || !album || !album.is_archive || !_isStaffNow()) return;
-    bar.dataset.done = '1';
+    if (!bar || !album || !album.is_archive) return;
+    var staff = _isStaffNow(), trk = _canTrackersNow();
+    var want = (staff ? 's' : '') + (trk ? 't' : '');
+    if (!want || bar.dataset.done === want) return;
+    bar.dataset.done = want;
     bar.style.display = '';
-    bar.innerHTML = '<div class="wv-sb-row"><span class="wv-sb-label">Staff</span>' +
+    bar.innerHTML = (staff ? '<div class="wv-sb-row"><span class="wv-sb-label">Staff</span>' +
         '<button class="wv-pill" onclick="staffEdit()">✏️ Edit</button>' +
+        '<button class="wv-pill' + (window._albHl ? ' is-active' : '') + '" id="staff-hl" onclick="staffHighlight()" title="show this comp in the Highlighted tab and on the home page">' + _hlLabel() + '</button>' +
         '<span id="staff-bar-rebuild"></span>' +
         '<button class="wv-pill" id="staff-undo" style="display:none;" onclick="staffUndo()">↶ Undo last change</button>' +
-      '</div>' +
-      '<div class="wv-sb-row"><span class="wv-sb-label">AI</span>' + AI_QUICK.map(function (q) { return '<button class="wv-pill wv-sb-ai" onclick="staffAi(\'' + q[0] + '\')">' + q[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="wv-sb-row"><input id="staff-ai-q" class="wv-input" placeholder="tell the AI what to change on this comp, like \'move the interlude to the end\'" onkeydown="if(event.key===\'Enter\')staffAi(\'custom\')"><button class="wv-pill brand" onclick="staffAi(\'custom\')">Ask AI</button></div>' +
+      '</div>' : '') +
+      (trk ? '<div class="wv-sb-row"><span class="wv-sb-label">Trackers</span><span id="staff-trk" class="wv-sb-trk"><span class="wv-sb-note">loading your trackers…</span></span></div>' : '') +
+      (staff ? '<div class="wv-sb-row"><span class="wv-sb-label">AI</span>' + AI_QUICK.map(function (q) { return '<button class="wv-pill wv-sb-ai" onclick="staffAi(\'' + q[0] + '\')">' + q[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="wv-sb-row"><input id="staff-ai-q" class="wv-input" placeholder="tell the AI what to change on this comp, like \'move the interlude to the end\'" onkeydown="if(event.key===\'Enter\')staffAi(\'custom\')"><button class="wv-pill brand" onclick="staffAi(\'custom\')">Ask AI</button></div>' : '') +
       '<div id="staff-bar-msg" class="wv-sb-msg"></div>';
-    api('/archive-manage/comps/' + album.id + '/undo').then(function (d) { var u = document.getElementById('staff-undo'); if (u && d && d.available) { u.style.display = ''; u.title = 'undo the ' + (d.reason || 'last change') + ' from ' + new Date(d.at).toLocaleString(); } }).catch(function () {});
+    if (staff) api('/archive-manage/comps/' + album.id + '/undo').then(function (d) { var u = document.getElementById('staff-undo'); if (u && d && d.available) { u.style.display = ''; u.title = 'undo the ' + (d.reason || 'last change') + ' from ' + new Date(d.at).toLocaleString(); } }).catch(function () {});
+    if (staff) renderStaffThreadButton();
+    if (trk) loadTrackerRow();
   }
+  if (!window._albRolesHook) {
+    window._albRolesHook = function () { if (typeof renderStaffBar === 'function') renderStaffBar(); };
+    window.addEventListener('wv-roles', window._albRolesHook);
+    (window._pageCleanup || (window._pageCleanup = [])).push(function () { window.removeEventListener('wv-roles', window._albRolesHook); window._albRolesHook = null; });
+  }
+
+  window.staffHighlight = async function () {
+    var btn = document.getElementById('staff-hl'); if (!btn) return;
+    var on = !window._albHl;
+    btn.disabled = true;
+    try {
+      await api('/archive-manage/comps/' + album.id + '/highlight', { method: 'POST', body: JSON.stringify({ value: on }) });
+      window._albHl = on;
+      if (typeof invalidateBadgeCache === 'function') invalidateBadgeCache();
+      btn.textContent = _hlLabel(); btn.classList.toggle('is-active', on);
+      var pill = document.getElementById('alb-hl-pill');
+      if (pill) pill.style.display = on ? '' : 'none';
+      _sbMsg(on ? 'highlighted...it shows in the Highlighted tab now' : 'not highlighted anymore');
+    } catch (e) { _sbMsg(e.message || 'couldnt change the highlight', true); }
+    btn.disabled = false;
+  };
+
+  var TRK_TAGS = [['', 'No tag'], ['⭐', '⭐ Best'], ['🏆', '🏆 One of the best'], ['💎', '💎 Hidden gem'], ['⌛', '⌛ Older']];
+  window._trkState = window._trkState || {};
+  async function loadTrackerRow() {
+    var el = document.getElementById('staff-trk'); if (!el) return;
+    var d;
+    try { d = await api('/trackers/archive/for-album/' + album.id); }
+    catch (e) { el.innerHTML = '<span class="wv-sb-note">' + escHtml(e.message || 'couldnt load your trackers') + '</span>'; return; }
+    window._trkState.list = (d && d.trackers) || [];
+    paintTrackerRow();
+  }
+  function paintTrackerRow() {
+    var el = document.getElementById('staff-trk'); if (!el) return;
+    var list = window._trkState.list || [];
+    el.innerHTML = (list.length ? list.map(function (t) {
+      return '<button class="wv-pill' + (t.in ? ' is-active' : '') + '" onclick="trkOpen(\'' + escHtml(t.id) + '\')" title="' + escHtml(t.in ? 'on ' + t.name + (t.entry && t.entry.era ? ' · ' + t.entry.era : '') + ' · tap to edit or remove' : 'add to ' + t.name) + '">' +
+        (t.in ? '✓ ' + (t.entry && t.entry.tag ? t.entry.tag + ' ' : '') : '+ ') + escHtml(t.name) + '</button>';
+    }).join('') : '<span class="wv-sb-note">you dont have any trackers yet</span>') +
+      '<a class="wv-pill" href="/archivetrackers" onclick="navigate(\'/archivetrackers\');return false;">' + (list.length ? 'Manage' : 'Make one') + '</a>';
+  }
+  function _eraGuess(eras) {
+    var name = String((album.era_tag && album.era_tag.name) || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    if (!name) return '';
+    var hit = eras.find(function (e) { return e.name.toLowerCase().replace(/[^a-z0-9]+/g, '') === name; });
+    return hit ? hit.slug : '';
+  }
+  window.trkOpen = async function (id) {
+    var t = (window._trkState.list || []).find(function (x) { return x.id === id; }); if (!t) return;
+    if (!window._trkState.eras) {
+      try { window._trkState.eras = ((await api('/trackers/archive/eras')) || {}).eras || []; }
+      catch (e) { _sbMsg(e.message || 'couldnt load the eras', true); return; }
+    }
+    var eras = window._trkState.eras;
+    var cur = t.entry || {};
+    var pick = cur.es || _eraGuess(eras);
+    var known = !pick || eras.some(function (e) { return e.slug === pick; });
+    var kind = (album.track_count === 1 || albumTracks.length === 1) ? 'edit' : 'comp';
+    var wrap = document.createElement('div');
+    wrap.className = 'wv-vp-wrap';
+    wrap.innerHTML = '<div class="wv-vp" style="max-width:480px;text-align:left;">' +
+      '<button class="wv-vp-x" aria-label="close">×</button>' +
+      '<div class="wv-vp-title">' + (t.in ? 'Edit on ' : 'Add to ') + escHtml(t.name) + '</div>' +
+      '<div class="wv-vp-body" style="margin-bottom:6px;">' + escHtml(album.title || '') + ' · ' + kind + '</div>' +
+      '<div class="wv-ed-grid">' +
+        '<label>Era<select class="wv-input" id="trk-era"><option value="">Pick an era</option>' + eras.map(function (e) { return '<option value="' + escHtml(e.slug) + '"' + (e.slug === pick ? ' selected' : '') + '>' + escHtml(e.name) + '</option>'; }).join('') +
+          '<option value="__other"' + (!known ? ' selected' : '') + '>Other…</option></select></label>' +
+        '<label id="trk-era-other-l" style="' + (known ? 'display:none;' : '') + '">Era name<input class="wv-input" id="trk-era-other" value="' + escHtml(!known ? (cur.era || '') : '') + '" placeholder="type the era"></label>' +
+        '<label>Tag<select class="wv-input" id="trk-tag">' + TRK_TAGS.map(function (g) { return '<option value="' + g[0] + '"' + ((cur.tag || '') === g[0] ? ' selected' : '') + '>' + escHtml(g[1]) + '</option>'; }).join('') + '</select></label>' +
+        '<label>Description<textarea class="wv-input" id="trk-desc" rows="3" placeholder="what makes it worth listening to">' + escHtml(cur.d || '') + '</textarea></label>' +
+      '</div>' +
+      '<div id="trk-msg" class="wv-sb-msg" style="margin-top:8px;"></div>' +
+      '<div class="wv-vp-actions" style="margin-top:14px;justify-content:flex-end;">' +
+        (t.in ? '<button class="wv-pill" id="trk-remove" style="margin-right:auto;color:var(--red);">Remove</button>' : '') +
+        '<button class="wv-pill" id="trk-cancel">Cancel</button><button class="wv-pill brand" id="trk-save">' + (t.in ? 'Save' : 'Add') + '</button></div>' +
+    '</div>';
+    document.body.appendChild(wrap);
+    var close = function () { wrap.remove(); };
+    var msg = function (x, bad) { var m = wrap.querySelector('#trk-msg'); m.textContent = x; m.style.color = bad ? 'var(--red)' : 'var(--text-2)'; };
+    wrap.querySelector('.wv-vp-x').onclick = close;
+    wrap.querySelector('#trk-cancel').onclick = close;
+    wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
+    var sel = wrap.querySelector('#trk-era');
+    sel.onchange = function () { wrap.querySelector('#trk-era-other-l').style.display = sel.value === '__other' ? '' : 'none'; };
+    var done = function (d) {
+      var nt = d && d.tracker; if (!nt) return;
+      var x = (nt.entries || []).find(function (e) { return e.album_id === album.id; });
+      t.in = !!x; t.entry = x ? { es: x.es, era: x.era, d: x.d, tag: x.tag } : null;
+      paintTrackerRow();
+      if (typeof loadTrackerPills === 'function') setTimeout(function () { loadTrackerPills(album.id); }, 1500);
+    };
+    wrap.querySelector('#trk-save').onclick = async function () {
+      var es = sel.value, era = '';
+      if (es === '__other') { era = wrap.querySelector('#trk-era-other').value.trim(); es = ''; if (!era) { msg('type the era name', true); return; } }
+      else if (!es) { msg('pick an era', true); return; }
+      var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+      try {
+        var d = await api('/trackers/archive/' + t.id + '/entries/' + album.id, { method: 'PUT', body: JSON.stringify({ es: es, era: era, tag: wrap.querySelector('#trk-tag').value, d: wrap.querySelector('#trk-desc').value }) });
+        done(d); close(); _sbMsg((t.in ? 'saved on ' : 'added to ') + t.name);
+      } catch (e) { msg(e.message || 'couldnt save it', true); btn.disabled = false; btn.textContent = t.in ? 'Save' : 'Add'; }
+    };
+    var rm = wrap.querySelector('#trk-remove');
+    if (rm) rm.onclick = async function () {
+      if (!confirm('take this off ' + t.name + '?')) return;
+      rm.disabled = true;
+      try { var d = await api('/trackers/archive/' + t.id + '/entries/' + album.id, { method: 'DELETE' }); done(d); close(); _sbMsg('removed from ' + t.name); }
+      catch (e) { msg(e.message || 'couldnt remove it', true); rm.disabled = false; }
+    };
+  };
   function _sbMsg(t, bad) { var m = document.getElementById('staff-bar-msg'); if (m) { m.textContent = t; m.style.color = bad ? 'var(--red)' : 'var(--text-2)'; } }
 
   window.staffUndo = async function () {

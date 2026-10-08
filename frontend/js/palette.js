@@ -300,6 +300,7 @@
     });
     if (sess('wv_is_mod')) out.push({ id: 'page:modpanel', group: 'Go to', kind: 'page', title: 'Mod panel', keys: 'moderation admin reports', icon: 'shield', href: '/modpanel' });
     if (sess('wv_is_archiver')) out.push({ id: 'page:archivepanel', group: 'Go to', kind: 'page', title: 'Archive panel', keys: 'archiver import', icon: 'shield', href: '/archivepanel' });
+    if (sess('wv_can_at')) out.push({ id: 'page:archivetrackers', group: 'Go to', kind: 'page', title: 'Archive trackers', keys: 'tracker list curate', icon: 'shield', href: '/archivetrackers' });
     if (sess('wv_is_radio')) out.push({ id: 'page:radiopanel', group: 'Go to', kind: 'page', title: 'Radio panel', keys: 'station dj', icon: 'shield', href: '/radiopanel' });
     YE.forEach(function (p) {
       out.push({ id: 'page:' + p[0], group: 'Ye archive', kind: 'page', title: p[1], keys: 'ye kanye ' + p[4], icon: p[3], href: p[2], here: here(p[2]) });

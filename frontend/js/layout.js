@@ -61,7 +61,7 @@
     };
     var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
       'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
-      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'profile', 'admin', 'playlists',
+      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'archivetrackers', 'profile', 'admin', 'playlists',
       'music', 'tracker', 'notifications', 'wrapped', 'awards', 'whatsnew', 'games', 'status'];
     if (ALIAS[name]) return ALIAS[name];
     return KNOWN.indexOf(name) >= 0 ? name : '';
@@ -131,6 +131,7 @@
       html += '<a href="/settings" data-page="settings">Settings</a>';
       if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel" data-page="modpanel">Mod panel</a>';
       if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel" data-page="archivepanel">Archive panel</a>';
+      if (sessionStorage.getItem('wv_can_at') === 'true') html += '<a href="/archivetrackers" data-page="archivetrackers">Archive trackers</a>';
       if (sessionStorage.getItem('wv_is_radio') === 'true') html += '<a href="/radiopanel" data-page="radiopanel">Radio panel</a>';
     } else {
       html += '<a href="/login">Log in</a><a href="/register">Sign up</a>';
@@ -797,6 +798,7 @@
     try {
       if (sessionStorage.getItem('wv_is_mod') === 'true') roles += _acctItem('a', '/modpanel', 'Mod panel', icon('shield'));
       if (sessionStorage.getItem('wv_is_archiver') === 'true') roles += _acctItem('a', '/archivepanel', 'Archive panel', icon('archive'));
+      if (sessionStorage.getItem('wv_can_at') === 'true') roles += _acctItem('a', '/archivetrackers', 'Archive trackers', icon('archive'));
       if (sessionStorage.getItem('wv_is_radio') === 'true') roles += _acctItem('a', '/radiopanel', 'Radio panel', icon('radio'));
     } catch (_) {}
     if (roles) html += '<div class="wva-sep" role="separator"></div>' + roles;
@@ -1994,6 +1996,7 @@
   // full load — never trust persisted flags for the first paint.
   sessionStorage.removeItem('wv_is_mod');
   sessionStorage.removeItem('wv_is_archiver');
+  sessionStorage.removeItem('wv_can_at');
 
   initShell();
   // Load banners after shell exists
@@ -2003,7 +2006,7 @@
   // Runs AFTER initShell so the sidebar elements exist.
   (function _checkRoleStatus() {
     var token = localStorage.getItem('token');
-    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); sessionStorage.removeItem('wv_is_radio'); return; }
+    if (!token) { sessionStorage.removeItem('wv_is_mod'); sessionStorage.removeItem('wv_is_archiver'); sessionStorage.removeItem('wv_is_radio'); sessionStorage.removeItem('wv_can_at'); return; }
     sessionStorage.setItem('wv_roles_at', String(Date.now()));
     var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
     var headers = { 'Authorization': 'Bearer ' + token };
@@ -2014,6 +2017,8 @@
     ]).then(function(results) {
       var isMod = !!(results[0] && results[0].is_mod);
       var isArchiver = !!(results[1] && results[1].is_archiver);
+      var canAt = !!(results[1] && results[1].can_archive_trackers) || isArchiver || isMod;
+      var wasAt = sessionStorage.getItem('wv_can_at') === 'true';
       var rm = results[2] || {};
       var isRadio = !!(rm.available && (rm.is_mod || rm.is_host || (rm.stations && rm.stations.length)));
       var wasMod = sessionStorage.getItem('wv_is_mod') === 'true';
@@ -2022,10 +2027,11 @@
       sessionStorage.setItem('wv_is_mod', isMod ? 'true' : 'false');
       sessionStorage.setItem('wv_is_archiver', isArchiver ? 'true' : 'false');
       sessionStorage.setItem('wv_is_radio', isRadio ? 'true' : 'false');
+      sessionStorage.setItem('wv_can_at', canAt ? 'true' : 'false');
       // Pages read these flags at script time, before this answer lands, so
       // tell them once it has.
-      window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: isMod, isArchiver: isArchiver, isRadio: isRadio } }));
-      if (isMod || isArchiver || isRadio || wasMod !== isMod || wasArchiver !== isArchiver || wasRadio !== isRadio) {
+      window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: isMod, isArchiver: isArchiver, isRadio: isRadio, canArchiveTrackers: canAt } }));
+      if (isMod || isArchiver || isRadio || canAt || wasMod !== isMod || wasArchiver !== isArchiver || wasRadio !== isRadio || wasAt !== canAt) {
         var sidebar = document.getElementById('wv-sidebar');
         if (sidebar) sidebar.innerHTML = buildSidebarHTML();
         var drawer = document.getElementById('wv-drawer');

@@ -58,7 +58,7 @@
   };
 
   var NOINDEX = {
-    settings: 1, dashboard: 1, adminpanel: 1, modpanel: 1, archivepanel: 1, radiopanel: 1,
+    settings: 1, dashboard: 1, adminpanel: 1, modpanel: 1, archivepanel: 1, archivetrackers: 1, radiopanel: 1,
     claim: 1, 'auth-callback': 1, 'playlist-builder': 1, upload: 1, library: 1, history: 1,
     login: 1, register: 1, search: 1, '404': 1
   };

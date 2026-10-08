@@ -290,13 +290,15 @@
           '<div class="tk-sub">' + (t.comps || 0).toLocaleString() + ' comps · ' + (t.edits || 0).toLocaleString() + ' edits' +
             (t.art ? ' · ' + t.art.toLocaleString() + ' pieces of art' : '') +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
+          (t.staff && t.by && t.by.length ? '<div class="tk-sub" style="margin-top:4px;">a wavernrs tracker by ' + esc(listNames(t.by)) + '</div>' : '') +
+          (t.staff && t.blurb ? '<div class="tk-sub" style="margin-top:4px;">' + esc(t.blurb) + '</div>' : '') +
           (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">this mixes ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
             ' together. if a comp is on more than one it only shows once, with a badge for each tracker that has it.</div>' : '') +
         '</div>' +
         '<div class="tk-tabs" role="tablist" aria-label="tracker sections">' +
           tabBtn('comp', 'Comps', kind) + tabBtn('edit', 'Edits', kind) +
           (t.art ? tabBtn('art', 'Art', kind) : '') +
-          (t.comps && !t.combined ? tabBtn('missing', 'Not available', kind, ' title="comps on this tracker that are not available on wavernrs"') : '') +
+          (t.comps && !t.combined && !t.staff ? tabBtn('missing', 'Not available', kind, ' title="comps on this tracker that are not available on wavernrs"') : '') +
           (hasSheet(t.slug) ? tabBtn('sheet', 'Full tracker', kind, ' data-sheet') : '') +
         '</div>' +
       '</div>';

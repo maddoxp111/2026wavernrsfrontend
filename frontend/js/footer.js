@@ -5,7 +5,7 @@
   var STATS_KEY = 'wv_footer_stats_v1';
   var STATS_TTL = 10 * 60 * 1000;
   var SEEN_KEY = 'wv_whatsnew_seen';
-  var HIDE_PATHS = /^\/(games|playlist-builder|upload|login|register|offline|auth-callback|adminpanel|modpanel|archivepanel|radiopanel|claim)(\.html)?\/?$/;
+  var HIDE_PATHS = /^\/(games|playlist-builder|upload|login|register|offline|auth-callback|adminpanel|modpanel|archivepanel|archivetrackers|radiopanel|claim)(\.html)?\/?$/;
 
   var COLS = [
     ['Listen', [

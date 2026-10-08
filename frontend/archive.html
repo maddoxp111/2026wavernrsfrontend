@@ -10,6 +10,7 @@
   <style>
     .arc-top { display: flex; flex-direction: column; gap: 10px; }
     .arc-sub { margin: 0; font-size: 14px; color: var(--text-2); max-width: 560px; line-height: 1.55; }
+    .arc-hl-note { font-size: 13px; color: var(--text-3); margin: 2px 0 4px; }
     .arc-stats { display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .arc-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 118px; min-height: 64px; padding: 11px 16px 10px; border-radius: 12px; border: 1px solid var(--hair); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, transform .15s var(--ease), background .15s; }
     .arc-stat:hover { border-color: var(--hair-strong); background: var(--surface-2); }
@@ -344,6 +345,7 @@ async function initArchive() {
     '<div class="wv-seg" role="group" aria-label="Curated lists">' +
       '<button id="arc-view-top" onclick="arcSetView(\'top\')">Top 150</button>' +
       '<button id="arc-view-trackers" onclick="arcSetView(\'trackers\')">Trackers</button>' +
+      '<button id="arc-view-highlighted" onclick="arcSetView(\'highlighted\')">Highlighted</button>' +
     '</div>' +
     '</div>' +
     '<div id="arc-home" style="display:none;"></div>' +
@@ -398,7 +400,7 @@ async function initArchive() {
   }
   var _v0 = _p0.get('view');
   _arcView = 'all'; _arcKind = 'all';
-  if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers' && _v0 !== 'home') _arcKind = _v0; }
+  if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers' && _v0 !== 'highlighted' && _v0 !== 'home') _arcKind = _v0; }
   else if (!['view', 'era', 'q', 'sort', 'source'].some(function (k) { return _p0.get(k); })) _arcView = 'home';
   var _so0 = _p0.get('sort');
   if (_so0 && ARC_SORTS.indexOf(_so0) >= 0) _arcSort = _so0;
@@ -411,12 +413,13 @@ async function initArchive() {
   if (_arcView === 'artists') loadArtists(true);
   else if (_arcView === 'top') loadTopComps();
   else if (_arcView === 'home') arcHomeOpen();
+  else if (_arcView === 'highlighted') loadHighlighted();
   else if (_arcView !== 'trackers') arcReload();
   loadTrackerTabs();
   loadArcEras();
   setTimeout(function () {
     var g = document.getElementById('archive-grid');
-    if (g && !_arcItems.length && _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'home' && g.querySelector('.wv-skel-card')) {
+    if (g && !_arcItems.length && _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcView !== 'home' && g.querySelector('.wv-skel-card')) {
       g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">the archive is taking forever to load... <button class="wv-pill" style="margin-left:8px;" onclick="arcReload()">Try again</button></div>';
     }
   }, 20000);
@@ -433,7 +436,7 @@ function arcReload() {
 }
 
 async function arcLoadMore() {
-  if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'home' || _arcLoading || _arcDone) return;
+  if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home' || _arcLoading || _arcDone) return;
   _arcLoading = true;
   var gen = _arcGen;
   var more = document.getElementById('archive-loading-more');
@@ -454,7 +457,7 @@ async function arcLoadMore() {
       throw e;
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
-    if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'home') return;
+    if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home') return;
     var items = Array.isArray(page) ? page : (page.items || []);
     var knownTotal = Array.isArray(page) ? items.length
       : (page.total_known || typeof page.total === 'number' && page.total > 0) ? page.total : null;
@@ -540,13 +543,13 @@ async function loadArcEras() {
       var named = r.items.find(function (e) { return String(e.name || '').toLowerCase() === want; });
       if (named) {
         _arcEra = named.id;
-        if (_arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'home') arcReload();
+        if (_arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcView !== 'home') arcReload();
       }
     }
     sel.innerHTML = '<option value="">Every era</option>' +
       r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
     sel.value = _arcEra;
-    sel.style.display = (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'home') ? 'none' : '';
+    sel.style.display = (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home') ? 'none' : '';
     if (_arcEra) {
       var cur = r.items.find(function (e) { return e.id === _arcEra; });
       if (cur && cur.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(cur.cover, cur.name);
@@ -747,12 +750,12 @@ function arcSyncUrl(push) {
     var u = new URL(location.href);
     var set = function (k, v) { if (v) u.searchParams.set(k, v); else u.searchParams.delete(k); };
     var home = _arcView === 'home';
-    var listView = _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && !home;
+    var listView = _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home;
     var filtered = listView && (_arcSort !== 'likes' || _arcEra || _arcQuery || _arcSource);
     set('view', home || (_arcView === 'all' && filtered) ? '' : _arcView);
     set('sort', listView && _arcSort !== 'likes' ? _arcSort : '');
-    set('era', _arcView !== 'top' && _arcView !== 'trackers' && !home ? _arcEra : '');
-    set('q', _arcView !== 'top' && _arcView !== 'trackers' && !home ? _arcQuery : '');
+    set('era', _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home ? _arcEra : '');
+    set('q', _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home ? _arcQuery : '');
     set('source', listView ? _arcSource : '');
     var next = u.pathname + u.search;
     if (next !== location.pathname + location.search) {
@@ -772,7 +775,7 @@ function arcWatchScroll() {
   var sc = arcScroller() || window;
   var onScroll = function () {
     var top = sc === window ? window.scrollY : sc.scrollTop;
-    var deep = _arcView === 'artists' ? _archiveArtists.length > 240 : (_arcView !== 'top' && _arcView !== 'trackers' && _arcItems.length >= _ARC_PAGE * 2);
+    var deep = _arcView === 'artists' ? _archiveArtists.length > 240 : (_arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcItems.length >= _ARC_PAGE * 2);
     var btn = document.getElementById('arc-top-btn');
     if (btn) btn.classList.toggle('on', deep && top > 1400);
     var bar = document.getElementById('arc-filters');
@@ -1056,6 +1059,24 @@ function _arcMoreArtists() {
 }
 
 // ── View toggle ──────────────────────────────────────────────────────────────
+async function loadHighlighted() {
+  var grid = document.getElementById('archive-grid'); if (!grid) return;
+  var gen = _arcGen;
+  grid.className = 'wv-tile-grid';
+  grid.innerHTML = arcSkel(12);
+  try {
+    var d = await api('/archive/highlighted');
+    if (gen !== _arcGen || _arcView !== 'highlighted') return;
+    var items = (d && d.items) || [];
+    grid.innerHTML = items.length
+      ? '<div class="arc-hl-note" style="grid-column:1/-1;">' + items.length + (items.length === 1 ? ' pick' : ' picks') + ' from wavernrs staff</div>' + items.map(archiveCardHTML).join('')
+      : '<div class="wv-empty" style="grid-column:1/-1;">nothing highlighted yet</div>';
+  } catch (e) {
+    if (gen !== _arcGen) return;
+    if (typeof wvShowError === 'function') wvShowError(grid, e, 'loadHighlighted()'); else grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">couldnt load the highlighted comps</div>';
+  }
+}
+
 function arcSetView(view) {
   if (view === _arcView) return;
   _arcGen++;
@@ -1066,12 +1087,13 @@ function arcSetView(view) {
   if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
   if (view === 'top') return loadTopComps();
   if (view === 'trackers') return renderTrackerCards();
+  if (view === 'highlighted') return loadHighlighted();
   if (view === 'home') return arcHomeOpen();
   _arcKind = view;
   arcReload();
 }
 
-var ARC_VIEWS = ['home', 'all', 'comps', 'edits', 'artists', 'top', 'trackers'];
+var ARC_VIEWS = ['home', 'all', 'comps', 'edits', 'artists', 'top', 'trackers', 'highlighted'];
 var ARC_SORTS = ['likes', 'newest', 'oldest', 'title', 'artist', 'plays'];
 
 function arcApplyView() {
@@ -1083,7 +1105,7 @@ function arcApplyView() {
   var homeEl = document.getElementById('arc-home');
   if (homeEl) homeEl.style.display = _arcView === 'home' ? '' : 'none';
   if (_arcView === 'home' && typeof window.setPageBgImage === 'function') window.setPageBgImage('');
-  var curated = _arcView === 'top' || _arcView === 'trackers';
+  var curated = _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted';
   var listView = _arcView !== 'artists' && !curated;
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = listView ? '' : 'none';

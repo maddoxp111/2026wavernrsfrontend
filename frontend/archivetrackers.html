@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wavernrs — archive trackers</title>
+  <link rel="stylesheet" href="/css/style.css?v=2d4aca45e0bb">
+  <script src="/js/status-card.js?v=2d4aca45e0bb"></script>
+  <script src="/js/down.js?v=2d4aca45e0bb"></script>
+</head>
+<body>
+<div id="view">
+  <style>
+    .at-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+    .at-head h1 { margin:0; font-size:clamp(26px,4vw,34px); font-weight:800; letter-spacing:-.03em; }
+    .at-head p { margin:4px 0 0; color:var(--text-2); font-size:14px; max-width:620px; line-height:1.5; }
+    .at-wrap { display:grid; grid-template-columns:minmax(240px, 320px) minmax(0, 1fr); gap:18px; align-items:start; }
+    @media (max-width: 900px) { .at-wrap { grid-template-columns:minmax(0, 1fr); } }
+    .at-card { background:var(--surface); border-radius:var(--r-lg); padding:16px; }
+    .at-card + .at-card { margin-top:14px; }
+    .at-h { font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--text-3); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+    .at-h .sp { margin-left:auto; }
+    .at-list { display:grid; gap:6px; }
+    .at-tr { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; cursor:pointer; background:transparent; border:0; color:var(--text); text-align:left; width:100%; font:inherit; }
+    .at-tr:hover { background:var(--surface-2); }
+    .at-tr.on { background:color-mix(in srgb, var(--brand) 16%, transparent); }
+    .at-tr .m { min-width:0; flex:1; }
+    .at-tr .t { font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .at-tr .s { font-size:12px; color:var(--text-3); }
+    .at-form { display:grid; gap:8px; }
+    .at-form .wv-input { padding:9px 12px; font-size:13.5px; }
+    .at-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .at-row .wv-input { flex:1; min-width:160px; padding:9px 12px; font-size:13.5px; }
+    .at-people { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+    .at-person { display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 11px; border-radius:999px; background:var(--surface-2); font-size:12.5px; font-weight:600; }
+    .at-person .x { border:0; background:transparent; color:var(--text-3); cursor:pointer; font-size:15px; line-height:1; padding:0 4px; }
+    .at-person .x:hover { color:var(--red); }
+    .at-person .own { font-size:10px; font-weight:800; letter-spacing:.06em; color:var(--brand); }
+    .at-era { font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3); margin:16px 2px 6px; display:flex; gap:8px; align-items:center; }
+    .at-era span { font-weight:600; letter-spacing:0; text-transform:none; }
+    .at-ent { display:flex; align-items:center; gap:10px; padding:8px; border-radius:10px; }
+    .at-ent:hover { background:var(--surface-2); }
+    .at-ent img, .at-ent .ph { width:46px; height:46px; border-radius:8px; object-fit:cover; background:var(--surface-2); flex:none; }
+    .at-ent .m { min-width:0; flex:1; }
+    .at-ent .t { font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .at-ent .a { font-size:12px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .at-ent .d { font-size:12px; color:var(--text-3); margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .at-kind { font-size:9.5px; font-weight:800; letter-spacing:.06em; padding:2px 6px; border-radius:5px; background:var(--surface-2); color:var(--text-2); text-transform:uppercase; }
+    .at-acts { display:flex; gap:4px; flex:none; }
+    .at-ib { width:32px; height:32px; border-radius:8px; border:1px solid var(--hair); background:transparent; color:var(--text); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; }
+    .at-ib:hover { background:var(--surface); border-color:var(--text-3); }
+    .at-ib:disabled { opacity:.35; cursor:default; }
+    .at-ib.danger:hover { color:var(--red); }
+    .at-res { display:grid; gap:4px; margin-top:8px; max-height:320px; overflow:auto; }
+    .at-empty { font-size:13px; color:var(--text-3); padding:10px 4px; }
+    .at-msg { font-size:12.5px; color:var(--text-2); min-height:0; margin-top:6px; }
+    .at-msg:empty { display:none; }
+    .at-msg.bad { color:var(--red); }
+    @media (max-width: 600px) { .at-ent img, .at-ent .ph { width:40px; height:40px; } .at-ib { width:30px; height:30px; } }
+  </style>
+  <div class="wv-empty">Loading…</div>
+</div>
+
+<script src="/js/api.js?v=2d4aca45e0bb"></script>
+<script src="/js/layout.js?v=2d4aca45e0bb"></script>
+<script src="/js/player.js?v=2d4aca45e0bb"></script>
+<script src="/js/router.js?v=2d4aca45e0bb"></script>
+<script>
+var AT = { list: [], sel: null, eras: null, staff: false, access: null, searchT: null };
+var AT_TAGS = [['', 'No tag'], ['⭐', '⭐ Best'], ['🏆', '🏆 One of the best'], ['💎', '💎 Hidden gem'], ['⌛', '⌛ Older']];
+
+function atEsc(s) { return typeof escHtml === 'function' ? escHtml(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function atView(html) { var v = document.getElementById('view'); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
+function atMsg(id, text, bad) { var m = document.getElementById(id); if (!m) return; m.textContent = text || ''; m.className = 'at-msg' + (bad ? ' bad' : ''); }
+function atToast(t) { if (typeof wvToast === 'function') wvToast(t); }
+function atCur() { return AT.list.find(function (t) { return t.id === AT.sel; }) || null; }
+function atThumb(u) { return /^https?:\/\//.test(String(u || '')) ? 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=96&h=96&fit=cover&output=webp' : ''; }
+
+async function atInit() {
+  if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login'); return; }
+  var chk;
+  try { chk = await api('/trackers/archive/check'); } catch (e) { atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt check your access') + '</div>'); return; }
+  if (!chk || !chk.can_use) {
+    atView('<div class="wv-empty" style="padding:40px 10px;">you dont have archive tracker access yet. someone with the archive panel can give it to you.</div>');
+    return;
+  }
+  AT.staff = !!chk.is_staff;
+  await atLoad();
+}
+
+async function atLoad(keepSel) {
+  if (!AT.eras) { try { AT.eras = ((await api('/trackers/archive/eras')) || {}).eras || []; } catch (_) {} }
+  try {
+    var d = await api('/trackers/archive/mine');
+    AT.list = (d && d.trackers) || [];
+    AT.staff = !!(d && d.is_staff);
+  } catch (e) { atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt load your trackers') + '</div>'); return; }
+  var want = keepSel || AT.sel || new URLSearchParams(location.search).get('t');
+  AT.sel = (AT.list.find(function (t) { return t.id === want; }) || AT.list.find(function (t) { return t.member; }) || AT.list[0] || {}).id || null;
+  if (AT.staff && !AT.access) atLoadAccess();
+  atRender();
+}
+
+async function atLoadAccess() {
+  try { var d = await api('/trackers/archive/access'); AT.access = (d && d.users) || []; } catch (_) { AT.access = []; }
+  atPaintAccess();
+}
+
+function atItem(t) {
+  return '<button class="at-tr' + (t.id === AT.sel ? ' on' : '') + '" onclick="atPick(\'' + atEsc(t.id) + '\')"><div class="m"><div class="t">' + atEsc(t.name) + '</div><div class="s">' + t.entries.length + ' comps and edits · ' + t.members.length + (t.members.length === 1 ? ' person' : ' people') + '</div></div></button>';
+}
+function atListHTML(list, empty) { return list.length ? list.map(atItem).join('') : (empty ? '<div class="at-empty">' + empty + '</div>' : ''); }
+function atRefreshLists() {
+  var a = document.getElementById('at-list-mine'), b = document.getElementById('at-list-others');
+  if (a) a.innerHTML = atListHTML(AT.list.filter(function (t) { return t.member; }), 'no trackers yet. make one below.');
+  if (b) b.innerHTML = atListHTML(AT.list.filter(function (t) { return !t.member; }), '');
+}
+function atRender() {
+  var mine = AT.list.filter(function (t) { return t.member; }), others = AT.list.filter(function (t) { return !t.member; });
+  atView(
+    '<div class="at-head"><div><h1>Archive trackers</h1><p>make your own trackers for the archive. add comps and edits from their pages or here, give them an era, a tag and a description, and bring other people on to make a joint one. they show up in the Trackers tab on the archive.</p></div></div>' +
+    '<div class="at-wrap">' +
+      '<div>' +
+        '<div class="at-card"><div class="at-h">Your trackers</div><div class="at-list" id="at-list-mine">' + atListHTML(mine, 'no trackers yet. make one below.') + '</div></div>' +
+        (others.length ? '<div class="at-card"><div class="at-h">Everyone else\'s <span class="sp" style="font-weight:600;letter-spacing:0;text-transform:none;">staff can edit these</span></div><div class="at-list" id="at-list-others">' + atListHTML(others, '') + '</div></div>' : '') +
+        '<div class="at-card"><div class="at-h">New tracker</div><div class="at-form">' +
+          '<input class="wv-input" id="at-new-name" maxlength="80" placeholder="name, like Best of the Donda era">' +
+          '<textarea class="wv-input" id="at-new-blurb" rows="2" maxlength="400" placeholder="what its about (optional)"></textarea>' +
+          '<button class="wv-pill brand" onclick="atCreate(this)">Create tracker</button><div id="at-new-msg" class="at-msg"></div></div></div>' +
+        (AT.staff ? '<div class="at-card"><div class="at-h">Access</div><div style="font-size:12.5px;color:var(--text-3);margin-bottom:8px;">everyone with the archive panel can use trackers. add other people here.</div><div id="at-access" class="at-people"><span class="at-empty">loading…</span></div>' +
+          '<div class="at-row"><input class="wv-input" id="at-access-name" placeholder="username" onkeydown="if(event.key===\'Enter\')atGrant()"><button class="wv-pill" onclick="atGrant()">Give access</button></div><div id="at-access-msg" class="at-msg"></div></div>' : '') +
+      '</div>' +
+      '<div id="at-main">' + atMainHTML() + '</div>' +
+    '</div>'
+  );
+  atPaintAccess();
+}
+
+function atMainHTML() {
+  var t = atCur();
+  if (!t) return '<div class="at-card"><div class="at-empty">pick a tracker or make a new one</div></div>';
+  var eraOrder = {};
+  (AT.eras || []).forEach(function (e, i) { eraOrder[e.slug] = i; });
+  var groups = {};
+  t.entries.forEach(function (x) { (groups[x.es] = groups[x.es] || { es: x.es, era: x.era, items: [] }).items.push(x); });
+  var gl = Object.keys(groups).map(function (k) { return groups[k]; }).sort(function (a, b) { return (eraOrder[a.es] != null ? eraOrder[a.es] : 9999) - (eraOrder[b.es] != null ? eraOrder[b.es] : 9999) || a.era.localeCompare(b.era); });
+  gl.forEach(function (g) { g.items.sort(function (a, b) { return (a.ord || 0) - (b.ord || 0); }); });
+  var people = t.members.map(function (m) {
+    var canX = t.can_edit && !m.owner && (t.is_owner || AT.staff);
+    return '<span class="at-person">' + atEsc(m.username || 'someone') + (m.owner ? ' <span class="own">OWNER</span>' : '') + (canX ? '<button class="x" title="remove" onclick="atRemoveMember(\'' + atEsc(m.id) + '\')">×</button>' : '') + '</span>';
+  }).join('');
+  return '<div class="at-card">' +
+      '<div class="at-h">Tracker<span class="sp"><a class="wv-pill" href="/tracker?t=' + encodeURIComponent(t.slug) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">View tracker</a></span></div>' +
+      (t.can_edit ? '<div class="at-form"><input class="wv-input" id="at-name" maxlength="80" value="' + atEsc(t.name) + '"><textarea class="wv-input" id="at-blurb" rows="2" maxlength="400" placeholder="what its about">' + atEsc(t.blurb || '') + '</textarea>' +
+        '<div class="at-row"><button class="wv-pill brand" onclick="atSaveInfo(this)">Save</button>' + (t.is_owner || AT.staff ? '<button class="wv-pill" style="color:var(--red);margin-left:auto;" onclick="atDelete()">Delete tracker</button>' : '') + '</div><div id="at-info-msg" class="at-msg"></div></div>'
+        : '<div style="font-weight:800;font-size:18px;">' + atEsc(t.name) + '</div>') +
+    '</div>' +
+    '<div class="at-card"><div class="at-h">People</div><div class="at-people">' + people + '</div>' +
+      (t.can_edit ? '<div class="at-row"><input class="wv-input" id="at-member-name" placeholder="add someone by username" onkeydown="if(event.key===\'Enter\')atAddMember()"><button class="wv-pill" onclick="atAddMember()">Add</button></div><div id="at-member-msg" class="at-msg"></div>' : '') +
+    '</div>' +
+    (t.can_edit ? '<div class="at-card"><div class="at-h">Add comps and edits</div><div class="at-row"><input class="wv-input" id="at-search" placeholder="search the archive, or paste a comp link" oninput="atSearch()" onkeydown="if(event.key===\'Enter\')atSearch(true)"></div><div id="at-res" class="at-res"></div></div>' : '') +
+    '<div class="at-card"><div class="at-h">On this tracker<span class="sp" style="font-weight:600;letter-spacing:0;text-transform:none;">' + t.entries.length + '</span></div>' +
+      (gl.length ? gl.map(function (g) {
+        return '<div class="at-era">' + atEsc(g.era || g.es) + ' <span>' + g.items.length + '</span></div>' + g.items.map(function (x, i) { return atEntryHTML(t, g, x, i); }).join('');
+      }).join('') : '<div class="at-empty">nothing on it yet. add comps above or from a comp page.</div>') +
+    '</div>';
+}
+
+function atEntryHTML(t, g, x, i) {
+  var img = x.cover_url ? '<img src="' + atEsc(atThumb(x.cover_url)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<div class="ph"></div>';
+  return '<div class="at-ent">' + img +
+    '<div class="m"><div class="t">' + (x.tag ? x.tag + ' ' : '') + '<a href="/album?id=' + encodeURIComponent(x.album_id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;" style="color:inherit;text-decoration:none;">' + atEsc(x.missing ? 'removed from the site' : x.title) + '</a> ' + (x.kind ? '<span class="at-kind">' + x.kind + '</span>' : '') + '</div>' +
+      '<div class="a">' + atEsc(x.creator || '') + '</div>' + (x.d ? '<div class="d">' + atEsc(x.d) + '</div>' : '') + '</div>' +
+    (t.can_edit ? '<div class="at-acts">' +
+      '<button class="at-ib" title="move up" ' + (i === 0 ? 'disabled' : '') + ' onclick="atMove(\'' + atEsc(g.es) + '\',\'' + atEsc(x.album_id) + '\',-1)">↑</button>' +
+      '<button class="at-ib" title="move down" ' + (i === g.items.length - 1 ? 'disabled' : '') + ' onclick="atMove(\'' + atEsc(g.es) + '\',\'' + atEsc(x.album_id) + '\',1)">↓</button>' +
+      '<button class="at-ib" title="edit" onclick="atEdit(\'' + atEsc(x.album_id) + '\')">✎</button>' +
+      '<button class="at-ib danger" title="remove" onclick="atRemove(\'' + atEsc(x.album_id) + '\')">×</button></div>' : '') +
+  '</div>';
+}
+
+function atPaintAccess() {
+  var el = document.getElementById('at-access'); if (!el) return;
+  if (!AT.access) { el.innerHTML = '<span class="at-empty">loading…</span>'; return; }
+  el.innerHTML = AT.access.length ? AT.access.map(function (u) {
+    return '<span class="at-person">' + atEsc(u.username || u.user_id) + '<button class="x" title="take access away" onclick="atRevoke(\'' + atEsc(u.user_id) + '\')">×</button></span>';
+  }).join('') : '<span class="at-empty">nobody extra yet</span>';
+}
+
+function atReplace(tr) {
+  if (!tr) return;
+  var i = AT.list.findIndex(function (x) { return x.id === tr.id; });
+  if (i >= 0) AT.list[i] = tr; else AT.list.unshift(tr);
+  var main = document.getElementById('at-main'); if (main) main.innerHTML = atMainHTML();
+  atRefreshLists();
+}
+
+window.atPick = function (id) {
+  AT.sel = id;
+  try { history.replaceState(history.state, '', '/archivetrackers?t=' + encodeURIComponent(id)); } catch (_) {}
+  atRender();
+};
+
+window.atCreate = async function (btn) {
+  var name = document.getElementById('at-new-name').value.trim(), blurb = document.getElementById('at-new-blurb').value.trim();
+  if (name.length < 2) { atMsg('at-new-msg', 'give it a name', true); return; }
+  btn.disabled = true;
+  try {
+    var d = await api('/trackers/archive', { method: 'POST', body: JSON.stringify({ name: name, blurb: blurb }) });
+    AT.list.unshift(d.tracker); AT.sel = d.tracker.id; atRender(); atToast('made ' + d.tracker.name);
+  } catch (e) { atMsg('at-new-msg', e.message || 'couldnt make it', true); btn.disabled = false; }
+};
+
+window.atSaveInfo = async function (btn) {
+  var t = atCur(); if (!t) return;
+  btn.disabled = true;
+  try {
+    var d = await api('/trackers/archive/' + t.id, { method: 'PATCH', body: JSON.stringify({ name: document.getElementById('at-name').value, blurb: document.getElementById('at-blurb').value }) });
+    atReplace(d.tracker); atRender(); atToast('saved');
+  } catch (e) { atMsg('at-info-msg', e.message || 'couldnt save', true); btn.disabled = false; }
+};
+
+window.atDelete = async function () {
+  var t = atCur(); if (!t) return;
+  if (!confirm('delete ' + t.name + '? this takes it off the archive for good.')) return;
+  try { await api('/trackers/archive/' + t.id, { method: 'DELETE' }); AT.list = AT.list.filter(function (x) { return x.id !== t.id; }); AT.sel = null; atLoad(); atToast('deleted'); }
+  catch (e) { atMsg('at-info-msg', e.message || 'couldnt delete it', true); }
+};
+
+window.atAddMember = async function () {
+  var t = atCur(); var inp = document.getElementById('at-member-name'); if (!t || !inp) return;
+  var name = inp.value.trim(); if (!name) return;
+  try { var d = await api('/trackers/archive/' + t.id + '/members', { method: 'POST', body: JSON.stringify({ username: name }) }); atReplace(d.tracker); atToast('added ' + name); }
+  catch (e) { atMsg('at-member-msg', e.message || 'couldnt add them', true); }
+};
+
+window.atRemoveMember = async function (uid) {
+  var t = atCur(); if (!t) return;
+  if (!confirm('take them off this tracker?')) return;
+  try { var d = await api('/trackers/archive/' + t.id + '/members/' + encodeURIComponent(uid), { method: 'DELETE' }); atReplace(d.tracker); }
+  catch (e) { atMsg('at-member-msg', e.message || 'couldnt remove them', true); }
+};
+
+window.atGrant = async function () {
+  var inp = document.getElementById('at-access-name'); if (!inp) return;
+  var name = inp.value.trim(); if (!name) return;
+  try { var d = await api('/trackers/archive/access', { method: 'POST', body: JSON.stringify({ username: name }) }); inp.value = ''; atMsg('at-access-msg', d.user.username + ' can use archive trackers now'); atLoadAccess(); }
+  catch (e) { atMsg('at-access-msg', e.message || 'couldnt give access', true); }
+};
+
+window.atRevoke = async function (uid) {
+  if (!confirm('take away their archive tracker access?')) return;
+  try { await api('/trackers/archive/access/' + encodeURIComponent(uid), { method: 'DELETE' }); atLoadAccess(); }
+  catch (e) { atMsg('at-access-msg', e.message || 'couldnt take it away', true); }
+};
+
+window.atMove = async function (es, albumId, dir) {
+  var t = atCur(); if (!t) return;
+  var items = t.entries.filter(function (x) { return x.es === es; }).sort(function (a, b) { return (a.ord || 0) - (b.ord || 0); });
+  var i = items.findIndex(function (x) { return x.album_id === albumId; }), j = i + dir;
+  if (i < 0 || j < 0 || j >= items.length) return;
+  var ids = items.map(function (x) { return x.album_id; });
+  var tmp = ids[i]; ids[i] = ids[j]; ids[j] = tmp;
+  ids.forEach(function (id, k) { var e = t.entries.find(function (x) { return x.album_id === id; }); if (e) e.ord = k + 1; });
+  var main = document.getElementById('at-main'); if (main) main.innerHTML = atMainHTML();
+  try { var d = await api('/trackers/archive/' + t.id + '/order', { method: 'POST', body: JSON.stringify({ es: es, album_ids: ids }) }); atReplace(d.tracker); }
+  catch (e) { atToast(e.message || 'couldnt move it'); atLoad(t.id); }
+};
+
+window.atRemove = async function (albumId) {
+  var t = atCur(); if (!t) return;
+  if (!confirm('take this off ' + t.name + '?')) return;
+  try { var d = await api('/trackers/archive/' + t.id + '/entries/' + albumId, { method: 'DELETE' }); atReplace(d.tracker); }
+  catch (e) { atToast(e.message || 'couldnt remove it'); }
+};
+
+window.atEdit = function (albumId) {
+  var t = atCur(); if (!t) return;
+  var x = t.entries.find(function (e) { return e.album_id === albumId; });
+  atPopup(t, { id: albumId, title: x ? x.title : '', kind: x ? x.kind : '' }, x || null);
+};
+
+window.atSearch = function (now) {
+  clearTimeout(AT.searchT);
+  AT.searchT = setTimeout(atRunSearch, now ? 0 : 280);
+};
+async function atRunSearch() {
+  var inp = document.getElementById('at-search'), box = document.getElementById('at-res'); if (!inp || !box) return;
+  var q = inp.value.trim();
+  var t = atCur(); if (!t) return;
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  var idm = q.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  var items = [];
+  try {
+    if (idm) {
+      var a = await api('/albums/' + idm[0].toLowerCase());
+      if (a && a.id) items = [{ id: a.id, title: a.title, cover_url: a.cover_url, archive_artist_name: a.archive_artist_name, artists: a.artists, track_count: a.track_count }];
+    } else {
+      var d = await api('/archive?limit=12&q=' + encodeURIComponent(q));
+      items = (d && d.items) || [];
+    }
+  } catch (e) { box.innerHTML = '<div class="at-empty">' + atEsc(e.message || 'couldnt search') + '</div>'; return; }
+  if (inp.value.trim() !== q) return;
+  var on = {}; t.entries.forEach(function (x) { on[x.album_id] = 1; });
+  box.innerHTML = items.length ? items.map(function (a) {
+    var creator = a.archive_artist_name || (a.artists && a.artists.display_name) || '';
+    var kind = Number(a.track_count) === 1 ? 'edit' : 'comp';
+    var img = a.cover_url ? '<img src="' + atEsc(atThumb(a.cover_url)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<div class="ph"></div>';
+    return '<div class="at-ent">' + img + '<div class="m"><div class="t">' + atEsc(a.title) + ' <span class="at-kind">' + kind + '</span></div><div class="a">' + atEsc(creator) + '</div></div>' +
+      '<div class="at-acts">' + (on[a.id] ? '<button class="wv-pill" onclick="atEdit(\'' + atEsc(a.id) + '\')">Edit</button>' : '<button class="wv-pill brand" data-add="' + atEsc(a.id) + '">Add</button>') + '</div></div>';
+  }).join('') : '<div class="at-empty">nothing found</div>';
+  box.querySelectorAll('[data-add]').forEach(function (b) {
+    b.onclick = function () {
+      var a = items.find(function (x) { return x.id === b.getAttribute('data-add'); });
+      atPopup(t, { id: a.id, title: a.title, kind: Number(a.track_count) === 1 ? 'edit' : 'comp', era: a.era_tag && a.era_tag.name }, null);
+    };
+  });
+}
+
+async function atPopup(t, album, cur) {
+  if (!AT.eras) {
+    try { AT.eras = ((await api('/trackers/archive/eras')) || {}).eras || []; }
+    catch (e) { atToast(e.message || 'couldnt load the eras'); return; }
+  }
+  var eras = AT.eras;
+  var guess = '';
+  if (!cur && album.era) { var n = String(album.era).toLowerCase().replace(/[^a-z0-9]+/g, ''); var hit = eras.find(function (e) { return e.name.toLowerCase().replace(/[^a-z0-9]+/g, '') === n; }); if (hit) guess = hit.slug; }
+  var pick = cur ? cur.es : guess;
+  var known = !pick || eras.some(function (e) { return e.slug === pick; });
+  var wrap = document.createElement('div');
+  wrap.className = 'wv-vp-wrap';
+  wrap.innerHTML = '<div class="wv-vp" style="max-width:480px;text-align:left;">' +
+    '<button class="wv-vp-x" aria-label="close">×</button>' +
+    '<div class="wv-vp-title">' + (cur ? 'Edit on ' : 'Add to ') + atEsc(t.name) + '</div>' +
+    '<div class="wv-vp-body" style="margin-bottom:6px;">' + atEsc(album.title || '') + (album.kind ? ' · ' + album.kind : '') + '</div>' +
+    '<div class="wv-ed-grid">' +
+      '<label>Era<select class="wv-input" id="atp-era"><option value="">Pick an era</option>' + eras.map(function (e) { return '<option value="' + atEsc(e.slug) + '"' + (e.slug === pick ? ' selected' : '') + '>' + atEsc(e.name) + '</option>'; }).join('') +
+        '<option value="__other"' + (!known ? ' selected' : '') + '>Other…</option></select></label>' +
+      '<label id="atp-other-l" style="' + (known ? 'display:none;' : '') + '">Era name<input class="wv-input" id="atp-other" value="' + atEsc(!known && cur ? (cur.era || '') : '') + '" placeholder="type the era"></label>' +
+      '<label>Tag<select class="wv-input" id="atp-tag">' + AT_TAGS.map(function (g) { return '<option value="' + g[0] + '"' + (((cur && cur.tag) || '') === g[0] ? ' selected' : '') + '>' + atEsc(g[1]) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Description<textarea class="wv-input" id="atp-desc" rows="3" placeholder="what makes it worth listening to">' + atEsc((cur && cur.d) || '') + '</textarea></label>' +
+    '</div>' +
+    '<div id="atp-msg" class="at-msg" style="margin-top:8px;"></div>' +
+    '<div class="wv-vp-actions" style="margin-top:14px;justify-content:flex-end;"><button class="wv-pill" id="atp-cancel">Cancel</button><button class="wv-pill brand" id="atp-save">' + (cur ? 'Save' : 'Add') + '</button></div>' +
+  '</div>';
+  document.body.appendChild(wrap);
+  var close = function () { wrap.remove(); };
+  wrap.querySelector('.wv-vp-x').onclick = close;
+  wrap.querySelector('#atp-cancel').onclick = close;
+  wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
+  var sel = wrap.querySelector('#atp-era');
+  sel.onchange = function () { wrap.querySelector('#atp-other-l').style.display = sel.value === '__other' ? '' : 'none'; };
+  wrap.querySelector('#atp-save').onclick = async function () {
+    var es = sel.value, era = '';
+    if (es === '__other') { era = wrap.querySelector('#atp-other').value.trim(); es = ''; if (!era) { atMsg('atp-msg', 'type the era name', true); return; } }
+    else if (!es) { atMsg('atp-msg', 'pick an era', true); return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      var d = await api('/trackers/archive/' + t.id + '/entries/' + album.id, { method: 'PUT', body: JSON.stringify({ es: es, era: era, tag: wrap.querySelector('#atp-tag').value, d: wrap.querySelector('#atp-desc').value }) });
+      close(); atReplace(d.tracker); atToast(cur ? 'saved' : 'added'); if (document.getElementById('at-res')) atRunSearch();
+    } catch (e) { atMsg('atp-msg', e.message || 'couldnt save it', true); btn.disabled = false; btn.textContent = cur ? 'Save' : 'Add'; }
+  };
+}
+
+if (typeof initPlayer === 'function') initPlayer();
+atInit();
+</script>
+</body>
+</html>
