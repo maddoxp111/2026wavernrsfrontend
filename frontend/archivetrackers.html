@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive trackers</title>
-  <link rel="stylesheet" href="/css/style.css?v=2d4aca45e0bb">
-  <script src="/js/status-card.js?v=2d4aca45e0bb"></script>
-  <script src="/js/down.js?v=2d4aca45e0bb"></script>
+  <link rel="stylesheet" href="/css/style.css?v=dcfb38c6c547">
+  <script src="/js/status-card.js?v=dcfb38c6c547"></script>
+  <script src="/js/down.js?v=dcfb38c6c547"></script>
 </head>
 <body>
 <div id="view">
@@ -61,16 +61,34 @@
   <div class="wv-empty">Loading…</div>
 </div>
 
-<script src="/js/api.js?v=2d4aca45e0bb"></script>
-<script src="/js/layout.js?v=2d4aca45e0bb"></script>
-<script src="/js/player.js?v=2d4aca45e0bb"></script>
-<script src="/js/router.js?v=2d4aca45e0bb"></script>
+<script src="/js/api.js?v=dcfb38c6c547"></script>
+<script src="/js/layout.js?v=dcfb38c6c547"></script>
+<script src="/js/player.js?v=dcfb38c6c547"></script>
+<script src="/js/router.js?v=dcfb38c6c547"></script>
 <script>
 var AT = { list: [], sel: null, eras: null, staff: false, access: null, searchT: null };
 var AT_TAGS = [['', 'No tag'], ['⭐', '⭐ Best'], ['🏆', '🏆 One of the best'], ['💎', '💎 Hidden gem'], ['⌛', '⌛ Older']];
 
 function atEsc(s) { return typeof escHtml === 'function' ? escHtml(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-function atView(html) { var v = document.getElementById('view'); var st = v.querySelector('style'); v.innerHTML = (st ? st.outerHTML : '') + html; }
+function atHere() { return /^\/archivetrackers(\.html)?\/?$/.test(location.pathname); }
+function atView(html) {
+  if (!atHere()) return;
+  var v = document.getElementById('view'); if (!v) return;
+  var st = v.querySelector('style');
+  v.innerHTML = (st ? st.outerHTML : '') + '<div id="at-root">' + html + '</div>';
+  var root = document.getElementById('at-root');
+  if (root) root.addEventListener('click', atClick);
+}
+function atClick(e) {
+  var b = e.target.closest && e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  var act = b.getAttribute('data-act'), id = b.getAttribute('data-id');
+  if (act === 'pick') atPick(id);
+  else if (act === 'unmember') atRemoveMember(id);
+  else if (act === 'revoke') atRevoke(id);
+  else if (act === 'move') atMove(b.getAttribute('data-es'), id, +b.getAttribute('data-dir'));
+  else if (act === 'edit') atEdit(id);
+  else if (act === 'remove') atRemove(id);
+}
 function atMsg(id, text, bad) { var m = document.getElementById(id); if (!m) return; m.textContent = text || ''; m.className = 'at-msg' + (bad ? ' bad' : ''); }
 function atToast(t) { if (typeof wvToast === 'function') wvToast(t); }
 function atCur() { return AT.list.find(function (t) { return t.id === AT.sel; }) || null; }
@@ -79,7 +97,7 @@ function atThumb(u) { return /^https?:\/\//.test(String(u || '')) ? 'https://wsr
 async function atInit() {
   if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login'); return; }
   var chk;
-  try { chk = await api('/trackers/archive/check'); } catch (e) { atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt check your access') + '</div>'); return; }
+  try { chk = await api('/trackers/archive/check'); } catch (e) { if (!e.navAborted) atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt check your access') + '</div>'); return; }
   if (!chk || !chk.can_use) {
     atView('<div class="wv-empty" style="padding:40px 10px;">you dont have archive tracker access yet. someone with the archive panel can give it to you.</div>');
     return;
@@ -94,7 +112,7 @@ async function atLoad(keepSel) {
     var d = await api('/trackers/archive/mine');
     AT.list = (d && d.trackers) || [];
     AT.staff = !!(d && d.is_staff);
-  } catch (e) { atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt load your trackers') + '</div>'); return; }
+  } catch (e) { if (!e.navAborted) atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt load your trackers') + '</div>'); return; }
   var want = keepSel || AT.sel || new URLSearchParams(location.search).get('t');
   AT.sel = (AT.list.find(function (t) { return t.id === want; }) || AT.list.find(function (t) { return t.member; }) || AT.list[0] || {}).id || null;
   if (AT.staff && !AT.access) atLoadAccess();
@@ -107,7 +125,7 @@ async function atLoadAccess() {
 }
 
 function atItem(t) {
-  return '<button class="at-tr' + (t.id === AT.sel ? ' on' : '') + '" onclick="atPick(\'' + atEsc(t.id) + '\')"><div class="m"><div class="t">' + atEsc(t.name) + '</div><div class="s">' + t.entries.length + ' comps and edits · ' + t.members.length + (t.members.length === 1 ? ' person' : ' people') + '</div></div></button>';
+  return '<button class="at-tr' + (t.id === AT.sel ? ' on' : '') + '" data-act="pick" data-id="' + atEsc(t.id) + '"><div class="m"><div class="t">' + atEsc(t.name) + '</div><div class="s">' + t.entries.length + ' comps and edits · ' + t.members.length + (t.members.length === 1 ? ' person' : ' people') + '</div></div></button>';
 }
 function atListHTML(list, empty) { return list.length ? list.map(atItem).join('') : (empty ? '<div class="at-empty">' + empty + '</div>' : ''); }
 function atRefreshLists() {
@@ -116,6 +134,7 @@ function atRefreshLists() {
   if (b) b.innerHTML = atListHTML(AT.list.filter(function (t) { return !t.member; }), '');
 }
 function atRender() {
+  if (!atHere()) return;
   var mine = AT.list.filter(function (t) { return t.member; }), others = AT.list.filter(function (t) { return !t.member; });
   atView(
     '<div class="at-head"><div><h1>Archive trackers</h1><p>make your own trackers for the archive. add comps and edits from their pages or here, give them an era, a tag and a description, and bring other people on to make a joint one. they show up in the Trackers tab on the archive.</p></div></div>' +
@@ -147,7 +166,7 @@ function atMainHTML() {
   gl.forEach(function (g) { g.items.sort(function (a, b) { return (a.ord || 0) - (b.ord || 0); }); });
   var people = t.members.map(function (m) {
     var canX = t.can_edit && !m.owner && (t.is_owner || AT.staff);
-    return '<span class="at-person">' + atEsc(m.username || 'someone') + (m.owner ? ' <span class="own">OWNER</span>' : '') + (canX ? '<button class="x" title="remove" onclick="atRemoveMember(\'' + atEsc(m.id) + '\')">×</button>' : '') + '</span>';
+    return '<span class="at-person">' + atEsc(m.username || 'someone') + (m.owner ? ' <span class="own">OWNER</span>' : '') + (canX ? '<button class="x" title="remove" data-act="unmember" data-id="' + atEsc(m.id) + '">×</button>' : '') + '</span>';
   }).join('');
   return '<div class="at-card">' +
       '<div class="at-h">Tracker<span class="sp"><a class="wv-pill" href="/tracker?t=' + encodeURIComponent(t.slug) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">View tracker</a></span></div>' +
@@ -172,10 +191,10 @@ function atEntryHTML(t, g, x, i) {
     '<div class="m"><div class="t">' + (x.tag ? x.tag + ' ' : '') + '<a href="/album?id=' + encodeURIComponent(x.album_id) + '" onclick="navigate(this.getAttribute(\'href\'));return false;" style="color:inherit;text-decoration:none;">' + atEsc(x.missing ? 'removed from the site' : x.title) + '</a> ' + (x.kind ? '<span class="at-kind">' + x.kind + '</span>' : '') + '</div>' +
       '<div class="a">' + atEsc(x.creator || '') + '</div>' + (x.d ? '<div class="d">' + atEsc(x.d) + '</div>' : '') + '</div>' +
     (t.can_edit ? '<div class="at-acts">' +
-      '<button class="at-ib" title="move up" ' + (i === 0 ? 'disabled' : '') + ' onclick="atMove(\'' + atEsc(g.es) + '\',\'' + atEsc(x.album_id) + '\',-1)">↑</button>' +
-      '<button class="at-ib" title="move down" ' + (i === g.items.length - 1 ? 'disabled' : '') + ' onclick="atMove(\'' + atEsc(g.es) + '\',\'' + atEsc(x.album_id) + '\',1)">↓</button>' +
-      '<button class="at-ib" title="edit" onclick="atEdit(\'' + atEsc(x.album_id) + '\')">✎</button>' +
-      '<button class="at-ib danger" title="remove" onclick="atRemove(\'' + atEsc(x.album_id) + '\')">×</button></div>' : '') +
+      '<button class="at-ib" title="move up" ' + (i === 0 ? 'disabled' : '') + ' data-act="move" data-dir="-1" data-es="' + atEsc(g.es) + '" data-id="' + atEsc(x.album_id) + '">↑</button>' +
+      '<button class="at-ib" title="move down" ' + (i === g.items.length - 1 ? 'disabled' : '') + ' data-act="move" data-dir="1" data-es="' + atEsc(g.es) + '" data-id="' + atEsc(x.album_id) + '">↓</button>' +
+      '<button class="at-ib" title="edit" data-act="edit" data-id="' + atEsc(x.album_id) + '">✎</button>' +
+      '<button class="at-ib danger" title="remove" data-act="remove" data-id="' + atEsc(x.album_id) + '">×</button></div>' : '') +
   '</div>';
 }
 
@@ -183,7 +202,7 @@ function atPaintAccess() {
   var el = document.getElementById('at-access'); if (!el) return;
   if (!AT.access) { el.innerHTML = '<span class="at-empty">loading…</span>'; return; }
   el.innerHTML = AT.access.length ? AT.access.map(function (u) {
-    return '<span class="at-person">' + atEsc(u.username || u.user_id) + '<button class="x" title="take access away" onclick="atRevoke(\'' + atEsc(u.user_id) + '\')">×</button></span>';
+    return '<span class="at-person">' + atEsc(u.username || u.user_id) + '<button class="x" title="take access away" data-act="revoke" data-id="' + atEsc(u.user_id) + '">×</button></span>';
   }).join('') : '<span class="at-empty">nobody extra yet</span>';
 }
 
@@ -307,7 +326,7 @@ async function atRunSearch() {
     var kind = Number(a.track_count) === 1 ? 'edit' : 'comp';
     var img = a.cover_url ? '<img src="' + atEsc(atThumb(a.cover_url)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<div class="ph"></div>';
     return '<div class="at-ent">' + img + '<div class="m"><div class="t">' + atEsc(a.title) + ' <span class="at-kind">' + kind + '</span></div><div class="a">' + atEsc(creator) + '</div></div>' +
-      '<div class="at-acts">' + (on[a.id] ? '<button class="wv-pill" onclick="atEdit(\'' + atEsc(a.id) + '\')">Edit</button>' : '<button class="wv-pill brand" data-add="' + atEsc(a.id) + '">Add</button>') + '</div></div>';
+      '<div class="at-acts">' + (on[a.id] ? '<button class="wv-pill" data-act="edit" data-id="' + atEsc(a.id) + '">Edit</button>' : '<button class="wv-pill brand" data-add="' + atEsc(a.id) + '">Add</button>') + '</div></div>';
   }).join('') : '<div class="at-empty">nothing found</div>';
   box.querySelectorAll('[data-add]').forEach(function (b) {
     b.onclick = function () {

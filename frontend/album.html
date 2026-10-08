@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=2d4aca45e0bb">
-  <script src="/js/status-card.js?v=2d4aca45e0bb"></script>
-  <script src="/js/down.js?v=2d4aca45e0bb"></script>
+  <link rel="stylesheet" href="/css/style.css?v=dcfb38c6c547">
+  <script src="/js/status-card.js?v=dcfb38c6c547"></script>
+  <script src="/js/down.js?v=dcfb38c6c547"></script>
   <style>
     /* ── comp page: skeleton ─────────────────────────────── */
     .alb-sk { padding: 28px 0; }
@@ -140,12 +140,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=2d4aca45e0bb"></script>
-<script src="/js/layout.js?v=2d4aca45e0bb"></script>
-<script src="/js/player.js?v=2d4aca45e0bb"></script>
-<script src="/js/router.js?v=2d4aca45e0bb"></script>
-<script src="/js/playlists.js?v=2d4aca45e0bb"></script>
-<script src="/js/ratings.js?v=2d4aca45e0bb"></script>
+<script src="/js/api.js?v=dcfb38c6c547"></script>
+<script src="/js/layout.js?v=dcfb38c6c547"></script>
+<script src="/js/player.js?v=dcfb38c6c547"></script>
+<script src="/js/router.js?v=dcfb38c6c547"></script>
+<script src="/js/playlists.js?v=dcfb38c6c547"></script>
+<script src="/js/ratings.js?v=dcfb38c6c547"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -668,7 +668,8 @@
     return hit ? hit.slug : '';
   }
   window.trkOpen = async function (id) {
-    var t = (window._trkState.list || []).find(function (x) { return x.id === id; }); if (!t) return;
+    var t = (window._trkState.list || []).find(function (x) { return x.id === id; }); if (!t || !album) return;
+    var aid = album.id, atitle = album.title || '';
     if (!window._trkState.eras) {
       try { window._trkState.eras = ((await api('/trackers/archive/eras')) || {}).eras || []; }
       catch (e) { _sbMsg(e.message || 'couldnt load the eras', true); return; }
@@ -683,7 +684,7 @@
     wrap.innerHTML = '<div class="wv-vp" style="max-width:480px;text-align:left;">' +
       '<button class="wv-vp-x" aria-label="close">×</button>' +
       '<div class="wv-vp-title">' + (t.in ? 'Edit on ' : 'Add to ') + escHtml(t.name) + '</div>' +
-      '<div class="wv-vp-body" style="margin-bottom:6px;">' + escHtml(album.title || '') + ' · ' + kind + '</div>' +
+      '<div class="wv-vp-body" style="margin-bottom:6px;">' + escHtml(atitle) + ' · ' + kind + '</div>' +
       '<div class="wv-ed-grid">' +
         '<label>Era<select class="wv-input" id="trk-era"><option value="">Pick an era</option>' + eras.map(function (e) { return '<option value="' + escHtml(e.slug) + '"' + (e.slug === pick ? ' selected' : '') + '>' + escHtml(e.name) + '</option>'; }).join('') +
           '<option value="__other"' + (!known ? ' selected' : '') + '>Other…</option></select></label>' +
@@ -698,6 +699,7 @@
     '</div>';
     document.body.appendChild(wrap);
     var close = function () { wrap.remove(); };
+    (window._pageCleanup || (window._pageCleanup = [])).push(close);
     var msg = function (x, bad) { var m = wrap.querySelector('#trk-msg'); m.textContent = x; m.style.color = bad ? 'var(--red)' : 'var(--text-2)'; };
     wrap.querySelector('.wv-vp-x').onclick = close;
     wrap.querySelector('#trk-cancel').onclick = close;
@@ -706,10 +708,11 @@
     sel.onchange = function () { wrap.querySelector('#trk-era-other-l').style.display = sel.value === '__other' ? '' : 'none'; };
     var done = function (d) {
       var nt = d && d.tracker; if (!nt) return;
-      var x = (nt.entries || []).find(function (e) { return e.album_id === album.id; });
+      var x = (nt.entries || []).find(function (e) { return e.album_id === aid; });
       t.in = !!x; t.entry = x ? { es: x.es, era: x.era, d: x.d, tag: x.tag } : null;
+      if (!album || album.id !== aid) return;
       paintTrackerRow();
-      if (typeof loadTrackerPills === 'function') setTimeout(function () { loadTrackerPills(album.id); }, 1500);
+      if (typeof loadTrackerPills === 'function') setTimeout(function () { if (album && album.id === aid) loadTrackerPills(aid); }, 1500);
     };
     wrap.querySelector('#trk-save').onclick = async function () {
       var es = sel.value, era = '';
@@ -717,7 +720,7 @@
       else if (!es) { msg('pick an era', true); return; }
       var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
       try {
-        var d = await api('/trackers/archive/' + t.id + '/entries/' + album.id, { method: 'PUT', body: JSON.stringify({ es: es, era: era, tag: wrap.querySelector('#trk-tag').value, d: wrap.querySelector('#trk-desc').value }) });
+        var d = await api('/trackers/archive/' + t.id + '/entries/' + aid, { method: 'PUT', body: JSON.stringify({ es: es, era: era, tag: wrap.querySelector('#trk-tag').value, d: wrap.querySelector('#trk-desc').value }) });
         done(d); close(); _sbMsg((t.in ? 'saved on ' : 'added to ') + t.name);
       } catch (e) { msg(e.message || 'couldnt save it', true); btn.disabled = false; btn.textContent = t.in ? 'Save' : 'Add'; }
     };
@@ -725,7 +728,7 @@
     if (rm) rm.onclick = async function () {
       if (!confirm('take this off ' + t.name + '?')) return;
       rm.disabled = true;
-      try { var d = await api('/trackers/archive/' + t.id + '/entries/' + album.id, { method: 'DELETE' }); done(d); close(); _sbMsg('removed from ' + t.name); }
+      try { var d = await api('/trackers/archive/' + t.id + '/entries/' + aid, { method: 'DELETE' }); done(d); close(); _sbMsg('removed from ' + t.name); }
       catch (e) { msg(e.message || 'couldnt remove it', true); rm.disabled = false; }
     };
   };
