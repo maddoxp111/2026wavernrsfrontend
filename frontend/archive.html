@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=46e0883ab076">
-  <script src="/js/status-card.js?v=46e0883ab076"></script>
-  <script src="/js/down.js?v=46e0883ab076"></script>
+  <link rel="stylesheet" href="/css/style.css?v=f22c4a3ddb73">
+  <script src="/js/status-card.js?v=f22c4a3ddb73"></script>
+  <script src="/js/down.js?v=f22c4a3ddb73"></script>
   <style>
     .arc-top { display: flex; flex-direction: column; gap: 10px; }
     .arc-sub { margin: 0; font-size: 14px; color: var(--text-2); max-width: 560px; line-height: 1.55; }
@@ -282,10 +282,10 @@
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=46e0883ab076"></script>
-<script src="/js/layout.js?v=46e0883ab076"></script>
-<script src="/js/player.js?v=46e0883ab076"></script>
-<script src="/js/router.js?v=46e0883ab076"></script>
+<script src="/js/api.js?v=f22c4a3ddb73"></script>
+<script src="/js/layout.js?v=f22c4a3ddb73"></script>
+<script src="/js/player.js?v=f22c4a3ddb73"></script>
+<script src="/js/router.js?v=f22c4a3ddb73"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -1141,7 +1141,12 @@ function _arcWatchSentinel() {
 
 // ── Tracker tabs (second row) ────────────────────────────────────────────────
 var _trackers = null;
+var _trackerLinks = null;
 async function loadTrackerTabs() {
+  api('/trackers/links').then(function (d) {
+    _trackerLinks = (d && d.links) || [];
+    if (_arcView === 'trackers' && _trackers && _trackers.length) renderTrackerCards();
+  }).catch(function () { _trackerLinks = []; });
   try {
     var d = await api('/trackers');
     _trackers = (d && d.trackers) || [];
@@ -1186,6 +1191,25 @@ function renderTrackerCards() {
           ' · ' + (t.eras || 0) + ' eras</div>' +
       '</div>' +
     '</div>';
+  }).join('') + trackerLinksHTML();
+}
+
+// Trackers posted in the CET #trackers channel that aren't comp lists we can
+// show here (leak directories, BPM sheets, other sites) get a link card.
+function trackerLinksHTML() {
+  var list = (_trackerLinks || []).filter(function (l) { return !l.on_site && /^https?:\/\//i.test(l.url || ''); });
+  if (!list.length) return '';
+  return '<div class="wv-tlinks-head">More trackers <span>from the CET trackers channel</span></div>' + list.map(function (l) {
+    var by = (l.by || []).length ? ' · by ' + l.by.map(function (b) { return '@' + b; }).join(', ') : '';
+    return '<a class="wv-tracker-card wv-tracker-link" href="' + escHtml(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<div class="wv-tracker-art" style="background:' + coverGradient(l.name || l.host || '') + ';">' + escHtml(String(l.name || l.host || '?').replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase() || '↗') + '</div>' +
+      '<div class="wv-tracker-body">' +
+        '<div class="wv-tracker-name">' + escHtml(l.name || l.host) + '</div>' +
+        (l.blurb ? '<div class="wv-tracker-blurb">' + escHtml(l.blurb) + '</div>' : '') +
+        '<div class="wv-tracker-stats">' + escHtml(l.host || '') + escHtml(by) + '</div>' +
+      '</div>' +
+      '<span class="wv-tracker-out" aria-hidden="true">↗</span>' +
+    '</a>';
   }).join('');
 }
 
