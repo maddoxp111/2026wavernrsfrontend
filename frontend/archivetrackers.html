@@ -56,7 +56,12 @@
     .at-msg { font-size:12.5px; color:var(--text-2); min-height:0; margin-top:6px; }
     .at-msg:empty { display:none; }
     .at-msg.bad { color:var(--red); }
-    @media (max-width: 600px) { .at-ent img, .at-ent .ph { width:40px; height:40px; } .at-ib { width:30px; height:30px; } }
+    .at-tr .pic { width:38px; height:38px; border-radius:8px; object-fit:cover; background:var(--surface-2); flex:none; }
+    .at-cover { display:flex; gap:14px; align-items:center; margin-bottom:12px; }
+    .at-cover .pic { width:104px; height:104px; border-radius:12px; object-fit:cover; background:var(--surface-2); flex:none; display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:12px; text-align:center; }
+    .at-cover .side { display:grid; gap:8px; min-width:0; flex:1; }
+    .at-cover input[type=file] { display:none; }
+    @media (max-width: 600px) { .at-ent img, .at-ent .ph { width:40px; height:40px; } .at-ib { width:30px; height:30px; } .at-cover .pic { width:84px; height:84px; } }
   </style>
   <div class="wv-empty">Loading…</div>
 </div>
@@ -92,7 +97,7 @@ function atClick(e) {
 function atMsg(id, text, bad) { var m = document.getElementById(id); if (!m) return; m.textContent = text || ''; m.className = 'at-msg' + (bad ? ' bad' : ''); }
 function atToast(t) { if (typeof wvToast === 'function') wvToast(t); }
 function atCur() { return AT.list.find(function (t) { return t.id === AT.sel; }) || null; }
-function atThumb(u) { return /^https?:\/\//.test(String(u || '')) ? 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=96&h=96&fit=cover&output=webp' : ''; }
+function atThumb(u, px) { px = px || 96; return /^https?:\/\//.test(String(u || '')) ? 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + px + '&h=' + px + '&fit=cover&output=webp' : ''; }
 
 async function atInit() {
   if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login'); return; }
@@ -125,7 +130,7 @@ async function atLoadAccess() {
 }
 
 function atItem(t) {
-  return '<button class="at-tr' + (t.id === AT.sel ? ' on' : '') + '" data-act="pick" data-id="' + atEsc(t.id) + '"><div class="m"><div class="t">' + atEsc(t.name) + '</div><div class="s">' + t.entries.length + ' comps and edits · ' + t.members.length + (t.members.length === 1 ? ' person' : ' people') + '</div></div></button>';
+  return '<button class="at-tr' + (t.id === AT.sel ? ' on' : '') + '" data-act="pick" data-id="' + atEsc(t.id) + '">' + (t.cover ? '<img class="pic" src="' + atEsc(atThumb(t.cover, 76)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<div class="pic"></div>') + '<div class="m"><div class="t">' + atEsc(t.name) + '</div><div class="s">' + t.entries.length + ' comps and edits · ' + t.members.length + (t.members.length === 1 ? ' person' : ' people') + '</div></div></button>';
 }
 function atListHTML(list, empty) { return list.length ? list.map(atItem).join('') : (empty ? '<div class="at-empty">' + empty + '</div>' : ''); }
 function atRefreshLists() {
@@ -170,6 +175,7 @@ function atMainHTML() {
   }).join('');
   return '<div class="at-card">' +
       '<div class="at-h">Tracker<span class="sp"><a class="wv-pill" href="/tracker?t=' + encodeURIComponent(t.slug) + '" onclick="navigate(this.getAttribute(\'href\'));return false;">View tracker</a></span></div>' +
+      atCoverHTML(t) +
       (t.can_edit ? '<div class="at-form"><input class="wv-input" id="at-name" maxlength="80" value="' + atEsc(t.name) + '"><textarea class="wv-input" id="at-blurb" rows="2" maxlength="400" placeholder="what its about">' + atEsc(t.blurb || '') + '</textarea>' +
         '<div class="at-row"><button class="wv-pill brand" onclick="atSaveInfo(this)">Save</button>' + (t.is_owner || AT.staff ? '<button class="wv-pill" style="color:var(--red);margin-left:auto;" onclick="atDelete()">Delete tracker</button>' : '') + '</div><div id="at-info-msg" class="at-msg"></div></div>'
         : '<div style="font-weight:800;font-size:18px;">' + atEsc(t.name) + '</div>') +
@@ -183,6 +189,17 @@ function atMainHTML() {
         return '<div class="at-era">' + atEsc(g.era || g.es) + ' <span>' + g.items.length + '</span></div>' + g.items.map(function (x, i) { return atEntryHTML(t, g, x, i); }).join('');
       }).join('') : '<div class="at-empty">nothing on it yet. add comps above or from a comp page.</div>') +
     '</div>';
+}
+
+function atCoverHTML(t) {
+  var pic = t.cover ? '<img class="pic" src="' + atEsc(atThumb(t.cover, 208)) + '" alt="">' : '<div class="pic">no cover yet</div>';
+  if (!t.can_edit) return t.cover ? '<div class="at-cover">' + pic + '</div>' : '';
+  return '<div class="at-cover">' + pic + '<div class="side">' +
+      '<div class="at-row"><label class="wv-pill brand" style="cursor:pointer;">' + (t.cover ? 'Change cover' : 'Upload cover') + '<input type="file" id="at-cover-file" accept="image/jpeg,image/png,image/webp,image/gif" onchange="atCoverUpload(this)"></label>' +
+        (t.cover ? '<button class="wv-pill" onclick="atCoverRemove(this)">Remove</button>' : '') + '</div>' +
+      '<div class="at-row"><input class="wv-input" id="at-cover-url" placeholder="or paste an image link" onkeydown="if(event.key===\'Enter\')atCoverLink()"><button class="wv-pill" onclick="atCoverLink()">Use link</button></div>' +
+      '<div id="at-cover-msg" class="at-msg"></div>' +
+    '</div></div>';
 }
 
 function atEntryHTML(t, g, x, i) {
@@ -237,6 +254,41 @@ window.atSaveInfo = async function (btn) {
     var d = await api('/trackers/archive/' + t.id, { method: 'PATCH', body: JSON.stringify({ name: document.getElementById('at-name').value, blurb: document.getElementById('at-blurb').value }) });
     atReplace(d.tracker); atRender(); atToast('saved');
   } catch (e) { atMsg('at-info-msg', e.message || 'couldnt save', true); btn.disabled = false; }
+};
+
+window.atCoverUpload = async function (input) {
+  var t = atCur(), f = input && input.files && input.files[0];
+  if (!t || !f) return;
+  if (f.size > 8 * 1024 * 1024) { atMsg('at-cover-msg', 'thats too big, keep it under 8MB', true); input.value = ''; return; }
+  atMsg('at-cover-msg', 'uploading…');
+  var fd = new FormData(); fd.append('cover', f);
+  try {
+    var res = await fetch(API_BASE + '/trackers/archive/' + encodeURIComponent(t.id) + '/cover', { method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd });
+    var d = {}; try { d = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error(d.error || 'upload failed');
+    atReplace(d.tracker); atToast('cover saved');
+  } catch (e) { atMsg('at-cover-msg', e.message || 'upload failed', true); }
+  if (input) input.value = '';
+};
+
+window.atCoverLink = async function () {
+  var t = atCur(); if (!t) return;
+  var inp = document.getElementById('at-cover-url'), url = inp ? inp.value.trim() : '';
+  if (!url) { atMsg('at-cover-msg', 'paste an image link first', true); return; }
+  atMsg('at-cover-msg', 'saving…');
+  try {
+    var d = await api('/trackers/archive/' + encodeURIComponent(t.id) + '/cover', { method: 'POST', body: JSON.stringify({ url: url }) });
+    atReplace(d.tracker); atToast('cover saved');
+  } catch (e) { atMsg('at-cover-msg', e.message || 'couldnt use that link', true); }
+};
+
+window.atCoverRemove = async function (btn) {
+  var t = atCur(); if (!t) return;
+  if (btn) btn.disabled = true;
+  try {
+    var d = await api('/trackers/archive/' + encodeURIComponent(t.id) + '/cover', { method: 'DELETE' });
+    atReplace(d.tracker); atToast('cover removed');
+  } catch (e) { atMsg('at-cover-msg', e.message || 'couldnt remove it', true); if (btn) btn.disabled = false; }
 };
 
 window.atDelete = async function () {
