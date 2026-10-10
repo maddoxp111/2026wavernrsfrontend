@@ -128,6 +128,7 @@
     .qc-rm-at { color: var(--text-3); white-space: nowrap; }
     .qc-rm-row .wv-pill { font-size: 12.5px; padding: 8px 14px; min-height: 40px; }
     .qc-rm-more { display: block; margin: 12px auto 0; min-height: 36px; }
+    .qc-rm-more[hidden] { display: none; }
     .qc-note { font-size: 13px; color: var(--text-3); padding: 18px 4px; text-align: center; }
     .qc-note.is-bad { color: var(--red); }
     @media (max-width: 560px) {
@@ -229,7 +230,7 @@
     @media (max-width: 760px) {
       .qc-card { top: 10px; left: 10px; right: 10px; bottom: 4px; border-radius: 18px; }
       .qc-card-in { display: block; padding: 0 0 18px; }
-      .qc-cv { position: relative; top: auto; aspect-ratio: auto; height: min(40vh, calc(100vw - 20px)); border-radius: 0; }
+      .qc-cv { position: relative; top: auto; aspect-ratio: auto; height: min(34vh, calc(100vw - 20px)); border-radius: 0; }
       .qc-info { padding: 14px 16px 0; }
       .qc-t { font-size: 20px; }
       .qc-rv-keys, .qc-act kbd { display: none; }
@@ -3106,6 +3107,7 @@
     function img(u, px) { u = safeUrl(u); return u && typeof wvImg === 'function' ? wvImg(u, px) : u; }
     function grad(seed) { return typeof coverGradient === 'function' ? coverGradient(String(seed || '')) : 'linear-gradient(135deg,#2d1b6e,#1a0a2e)'; }
     function toast(m, kind) { if (typeof wvToast === 'function') wvToast(m, kind); }
+    function emsg(e) { var d = e && e.data; return e && e.status === 503 && d && typeof d.error === 'string' && d.error.length < 200 ? d.error : (e && e.message) || 'something went wrong'; }
     function post(path, body) { return api('/archive-qc' + path, { method: 'POST', body: JSON.stringify(body || {}) }); }
     function paneOn() { var p = $('mg-quality'); return !!(p && p.style.display !== 'none'); }
 
@@ -3158,9 +3160,10 @@
         if (quiet && b && f && b.contains(f) && f.tagName === 'INPUT') { tabCount(Q.st.counts && Q.st.counts.review); return; }
         paintStatus();
       }).catch(function (e) {
+        if (e && e.navAborted) return;
         tabCount(null);
         if (Q.st && quiet) return;
-        var b = $('qc-status'); if (b) b.innerHTML = '<div class="qc-box"><div class="qc-note is-bad">couldnt load the quality check: ' + esc(e.message || 'error') + '</div><div class="qc-btns" style="justify-content:center;"><button class="wv-pill" data-qc-act="reload">try again</button></div></div>';
+        var b = $('qc-status'); if (b) b.innerHTML = '<div class="qc-box"><div class="qc-note is-bad">couldnt load the quality check: ' + esc(emsg(e)) + '</div><div class="qc-btns" style="justify-content:center;"><button class="wv-pill" data-qc-act="reload">try again</button></div></div>';
       });
     }
     function tabCount(n) { var b = $('mg-tab-quality'); if (b) b.textContent = 'Quality' + (n ? ' (' + num(n) + ')' : ''); }
@@ -3227,7 +3230,7 @@
         '</button>';
     }
     function setConfig(patch, msg) {
-      return post('/config', patch).then(function (s) { Q.st = s || Q.st; paintStatus(); if (msg) toast(msg); }).catch(function (e) { toast(e.message || 'couldnt save that', 'error'); });
+      return post('/config', patch).then(function (s) { Q.st = s || Q.st; paintStatus(); if (msg) toast(msg); }).catch(function (e) { if (!(e && e.navAborted)) toast(emsg(e), 'error'); });
     }
 
     function onPaneClick(e) {
@@ -3247,7 +3250,7 @@
       else if (a === 'toggle') setConfig({ enabled: cfg.enabled === false }, cfg.enabled === false ? 'resumed' : 'paused');
       else if (a === 'now') {
         b.disabled = true;
-        post('/run-now').then(function (d) { toast(d && d.busy ? 'its already working on it' : 'checking now'); setTimeout(function () { qcStatus(true); }, 2500); }).catch(function (e) { toast(e.message || 'couldnt start it', 'error'); }).then(function () { b.disabled = false; });
+        post('/run-now').then(function (d) { toast(d && d.busy ? 'its already working on it' : 'checking now'); setTimeout(function () { qcStatus(true); }, 2500); }).catch(function (e) { toast(emsg(e), 'error'); }).then(function () { b.disabled = false; });
       }
       else if (a === 'save') {
         var rm = parseFloat(($('qc-set-rm') || {}).value), kp = parseFloat(($('qc-set-keep') || {}).value), mx = parseFloat(($('qc-set-max') || {}).value);
@@ -3283,8 +3286,8 @@
         M.items = M.items.concat(add); M.total = Number(d && d.total) || 0; M.loaded = true; M.err = null;
         rmPaint(more ? add : null);
       }).catch(function (e) {
-        if (gen !== M.gen) return;
-        M.err = e.message || 'error';
+        if (gen !== M.gen || (e && e.navAborted)) return;
+        M.err = emsg(e);
         if (more) toast('couldnt load more: ' + M.err, 'error'); else list.innerHTML = '<div class="qc-note is-bad">couldnt load the removed list: ' + esc(M.err) + '</div>';
       }).then(function () { if (gen !== M.gen) return; M.loading = false; rmMore(); });
     }
@@ -3329,7 +3332,8 @@
         toast(done === 1 ? 'brought it back...its on the site again' : 'brought back ' + num(done) + ' comps');
         qcStatus(true);
       }).catch(function (e) {
-        toast((done ? 'brought back ' + num(done) + ', then ' : '') + (e.message || 'couldnt bring it back'), 'error');
+        if (e && e.navAborted) return;
+        toast((done ? 'brought back ' + num(done) + ', then ' : '') + emsg(e), 'error');
       }).then(function () { if (btn && btn.isConnected) btn.disabled = false; });
     }
     function rmGone(ids) {
@@ -3370,6 +3374,8 @@
         '</div>';
       document.body.appendChild(el);
       document.documentElement.classList.add('qc-lock');
+      R.inert = Array.prototype.filter.call(document.body.children, function (n) { return n !== el && n.id !== 'wv-toasts' && n.tagName !== 'SCRIPT' && !n.inert; });
+      R.inert.forEach(function (n) { n.inert = true; });
       el.addEventListener('click', rvClick, true);
       el.addEventListener('change', function (e) { if (e.target.id === 'qc-rv-auto' && R) { R.auto = e.target.checked; try { localStorage.setItem('wv_qc_autoplay', R.auto ? '1' : '0'); } catch (_) {} if (R.auto && !R.playing) rvPlayFirst(true); } });
       var stage = $('qc-rv-stage');
@@ -3389,6 +3395,7 @@
       document.documentElement.classList.remove('qc-lock');
       if (el) el.remove();
       var S = R; R = null;
+      if (S && S.inert) S.inert.forEach(function (n) { n.inert = false; });
       if (silent || !S) return;
       if (S.prev && S.prev.isConnected && S.prev.focus) { try { S.prev.focus({ preventScroll: true }); } catch (_) {} }
       qcStatus(true);
@@ -3414,8 +3421,8 @@
         S.loading = false;
         if (!was) rvShow('in'); else { rvPeek(); rvCount(); }
       }).catch(function (e) {
-        if (R !== S) return;
-        S.loading = false; S.err = e.message || 'error';
+        if (R !== S || (e && e.navAborted)) return;
+        S.loading = false; S.err = emsg(e);
         if (!S.queue.length) rvShow(); else toast('couldnt load more: ' + S.err, 'error');
       });
     }
@@ -3531,10 +3538,10 @@
         return true;
       }, function (e) {
         S.inflight--;
-        if (h.state === 'undone') return false;
+        if (h.state === 'undone' || (e && e.navAborted)) return false;
         h.state = 'failed';
         var k = S.hist.indexOf(h); if (k >= 0) S.hist.splice(k, 1);
-        toast('couldnt save that so its back: ' + (e.message || 'error'), 'error');
+        toast('couldnt save that so its back: ' + emsg(e), 'error');
         S.base = (S.base || 0) + 1;
         if (R !== S) return false;
         var q = S.queue.indexOf(it); if (q >= 0) S.queue.splice(q, 1);
@@ -3564,7 +3571,8 @@
       }).then(function (d) {
         if (d && typeof d.remaining === 'number' && !S.inflight) { S.base = d.remaining; if (R === S) rvCount(); }
       }, function (e) {
-        toast('couldnt undo that: ' + (e.message || 'error'), 'error');
+        if (e && e.navAborted) return;
+        toast('couldnt undo that: ' + emsg(e), 'error');
         h.state = 'ok'; S.hist.push(h);
         var q = S.queue.indexOf(it); if (q < 0) return;
         S.queue.splice(q, 1);

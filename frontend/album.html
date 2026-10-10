@@ -657,6 +657,7 @@
     var slot = document.getElementById('staff-qc-slot');
     if (slot) slot.innerHTML = q && q.hidden ? '' : '<button class="wv-pill" id="staff-qc-rm" onclick="staffQcRemove()" title="takes it off the site without deleting anything...bring it back from here or the Quality tab in the archive panel">remove from site</button>';
   }
+  function _qcErr(e, fb) { var d = e && e.data; return e && e.status === 503 && d && typeof d.error === 'string' && d.error.length < 200 ? d.error : (e && e.message) || fb; }
   function _qcMe() { var me = (typeof getUser === 'function' && getUser()) || {}; return 'staff:' + (me.username || me.id || 'you'); }
   window.staffQcRemove = async function () {
     if (!album) return;
@@ -672,7 +673,7 @@
       paintQc();
       _sbMsg('removed from the site...nothing got deleted, bring it back anytime');
       var ban = document.getElementById('qc-banner'); if (ban && ban.scrollIntoView) ban.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } catch (e) { _sbMsg(e.message || 'couldnt remove it', true); if (btn) btn.disabled = false; }
+    } catch (e) { _sbMsg(_qcErr(e, 'couldnt remove it'), true); if (btn) btn.disabled = false; }
   };
   window.staffQcRestore = async function () {
     if (!album) return;
@@ -685,7 +686,7 @@
       paintQc();
       if (typeof wvToast === 'function') wvToast('its back on the site');
     } catch (e) {
-      if (typeof wvToast === 'function') wvToast(e.message || 'couldnt bring it back', 'error');
+      if (typeof wvToast === 'function') wvToast(_qcErr(e, 'couldnt bring it back'), 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'bring it back'; }
     }
   };
