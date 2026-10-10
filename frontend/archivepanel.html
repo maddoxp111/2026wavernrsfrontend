@@ -189,6 +189,7 @@
     .qc-fix .wv-input { flex: 1; min-width: 150px; width: auto; padding: 8px 14px; }
     .qc-fix .wv-pill { min-height: 38px; font-size: 12.5px; padding: 8px 14px; }
     .qc-fix small { flex-basis: 100%; font-size: 11.5px; color: var(--text-3); }
+    .qc-fix-l { flex-basis: 100%; font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
     .qc-facts { font-size: 12.5px; color: var(--text-3); margin-top: 10px; overflow-wrap: anywhere; }
     .qc-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12.5px; }
     .qc-links a { color: var(--brand); font-weight: 600; overflow-wrap: anywhere; }
@@ -3479,9 +3480,10 @@
       var ev = ai.credit_ok === false && Array.isArray(ai.evidence) ? ai.evidence.filter(function (x) { return x != null && String(x).trim(); }).slice(0, 12) : [];
       var credit = ai.credit_ok === false ? '<div class="qc-cr"><div class="qc-cr-h">credited to <b>' + esc(it.creator || 'Unknown') + '</b> · ' + (ai.credit_to ? 'looks like <b>' + esc(ai.credit_to) + '</b>\'s' : 'looks like someone else made it') + '</div>' +
         (ev.length ? '<ul class="qc-cr-ev">' + ev.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' : '';
-      var fix = '<div class="qc-fix" hidden><input class="wv-input qc-fix-in" type="text" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="who made it?" aria-label="who made it">' +
-        '<button class="wv-pill brand" data-qc-act="credit-save">save</button><button class="wv-see-all" data-qc-act="credit-cancel">cancel</button>' +
-        '<small>enter saves it · the comp stays on the site under that name</small></div>';
+      var fix = '<div class="qc-fix" hidden><label class="qc-fix-l">change who this comp is credited to. right now it says <b>' + esc(it.creator || 'Unknown') + '</b>' + (ai.credit_to ? ', the box below has the AI\'s guess. fix it if it\'s wrong' : '') + ':</label>' +
+        '<input class="wv-input qc-fix-in" type="text" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="type the real creator\'s name" aria-label="real creator name">' +
+        '<button class="wv-pill brand" data-qc-act="credit-save">save credit</button><button class="wv-see-all" data-qc-act="credit-cancel">cancel</button>' +
+        '<small>save renames the credit on the site and keeps the comp up. if the credit was already right, hit cancel and then keep.</small></div>';
       var tracks = tr.map(function (t, i) {
         var ok = !!safeUrl(t && t.url), title = (t && t.title) || 'track ' + (i + 1), file = t && t.file;
         return '<div class="qc-tr' + (ok ? '' : ' is-off') + '" data-i="' + i + '">' +
