@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=f22c4a3ddb73">
+  <link rel="stylesheet" href="/css/style.css?v=cd05c8cd8c83">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -17,8 +17,8 @@
       #view h1 { font-size: 30px !important; }
     }
   </style>
-  <script src="/js/status-card.js?v=f22c4a3ddb73"></script>
-  <script src="/js/down.js?v=f22c4a3ddb73"></script>
+  <script src="/js/status-card.js?v=cd05c8cd8c83"></script>
+  <script src="/js/down.js?v=cd05c8cd8c83"></script>
   <style id="cr-style">
     #cr-card .cr-sub { font-size: 12px; color: var(--text-3); line-height: 1.55; }
     #cr-card .cr-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 14px; }
@@ -178,6 +178,17 @@
     .qc-ai { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--brand-bg); }
     .qc-ai-k { display: flex; flex-wrap: wrap; gap: 6px; }
     .qc-ai-r { font-size: 13px; color: var(--text); margin-top: 6px; line-height: 1.45; overflow-wrap: anywhere; }
+    .qc-cr { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--orange) 13%, transparent); }
+    .qc-cr-h { font-size: 13.5px; color: var(--text); line-height: 1.45; overflow-wrap: anywhere; }
+    .qc-cr-h b { font-weight: 800; }
+    .qc-cr-ev { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; font-size: 12px; color: var(--text-2); line-height: 1.45; }
+    .qc-cr-ev li { position: relative; padding-left: 12px; overflow-wrap: anywhere; }
+    .qc-cr-ev li::before { content: '·'; position: absolute; left: 2px; color: var(--text-3); }
+    .qc-fix { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    .qc-fix[hidden] { display: none; }
+    .qc-fix .wv-input { flex: 1; min-width: 150px; width: auto; padding: 8px 14px; }
+    .qc-fix .wv-pill { min-height: 38px; font-size: 12.5px; padding: 8px 14px; }
+    .qc-fix small { flex-basis: 100%; font-size: 11.5px; color: var(--text-3); }
     .qc-facts { font-size: 12.5px; color: var(--text-3); margin-top: 10px; overflow-wrap: anywhere; }
     .qc-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12.5px; }
     .qc-links a { color: var(--brand); font-weight: 600; overflow-wrap: anywhere; }
@@ -210,6 +221,7 @@
     .qc-stamp { position: absolute; top: 34px; z-index: 5; padding: 4px 14px; border: 3px solid; border-radius: 10px; background: var(--surface); font-size: 22px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; opacity: 0; pointer-events: none; }
     .qc-stamp-keep { left: 22px; color: var(--green); transform: rotate(-12deg); }
     .qc-stamp-rm { right: 22px; color: var(--red); transform: rotate(12deg); }
+    .qc-stamp-fix { left: 22px; color: var(--orange); transform: rotate(-12deg); }
     .qc-rv-acts { flex: none; display: flex; justify-content: center; align-items: flex-start; gap: clamp(8px, 4vw, 28px); padding: 10px 16px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
     .qc-act { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 62px; padding: 0; border: 0; background: none; color: var(--text-2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
     .qc-act-ic { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--hair-strong); transition: transform .12s, background .12s; }
@@ -220,6 +232,8 @@
     .qc-act-rm .qc-act-ic { color: var(--red); border-color: color-mix(in srgb, var(--red) 55%, transparent); }
     .qc-act-keep .qc-act-ic { color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent); }
     .qc-act-sm .qc-act-ic { width: 46px; height: 46px; margin: 8px 0; color: var(--text-2); }
+    .qc-act-cr.is-hot { color: var(--orange); }
+    .qc-act-cr.is-hot .qc-act-ic { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 60%, transparent); }
     .qc-act:disabled { opacity: .4; cursor: default; }
     .qc-act:disabled .qc-act-ic { transform: none; }
     .qc-act kbd { font: inherit; font-size: 10.5px; font-weight: 600; color: var(--text-3); }
@@ -236,8 +250,10 @@
       .qc-rv-keys, .qc-act kbd { display: none; }
       .qc-act-ic { width: 58px; height: 58px; }
       .qc-act-sm .qc-act-ic { width: 44px; height: 44px; }
+      .qc-rv-acts { gap: clamp(2px, 2.6vw, 22px); padding-left: 8px; padding-right: 8px; }
+      .qc-act { min-width: 0; }
       .qc-stamp { top: 26px; font-size: 19px; }
-      .qc-stamp-keep { left: 16px; }
+      .qc-stamp-keep, .qc-stamp-fix { left: 16px; }
       .qc-stamp-rm { right: 16px; }
     }
     @media (hover: none) { .qc-rv-keys, .qc-act kbd { display: none; } }
@@ -249,10 +265,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=f22c4a3ddb73"></script>
-<script src="/js/layout.js?v=f22c4a3ddb73"></script>
-<script src="/js/player.js?v=f22c4a3ddb73"></script>
-<script src="/js/router.js?v=f22c4a3ddb73"></script>
+<script src="/js/api.js?v=cd05c8cd8c83"></script>
+<script src="/js/layout.js?v=cd05c8cd8c83"></script>
+<script src="/js/player.js?v=cd05c8cd8c83"></script>
+<script src="/js/router.js?v=cd05c8cd8c83"></script>
 <script>
   initPlayer();
 
@@ -3074,12 +3090,12 @@
 <script>
   // ── Quality: the AI's verdicts, the review queue and the Removed list ──
   (function () {
-    var KIND = { release: 'finished release', wip: 'work in progress', snippet: 'snippet', loop_or_stem: 'loop or stem', feedback_request: 'feedback post', chat_reply: 'chat reply', meme: 'meme', test: 'test upload', not_ye: 'not ye', broken: 'broken', other: 'other' };
+    var KIND = { release: 'finished release', wip: 'work in progress', snippet: 'snippet', loop_or_stem: 'loop or stem', feedback_request: 'feedback post', chat_reply: 'chat reply', meme: 'meme', test: 'test upload', not_ye: 'not ye', broken: 'broken', other: 'other', file_dump: 'loose files', miscredited: 'wrong credit' };
     var PHASE = { pilot: 'test run', paused: 'waiting on you', full: 'checking everything' };
     var SVG = function (d, w) { return '<svg width="' + (w || 20) + '" height="' + (w || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
     var IC = {
       x: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 26), check: SVG('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 28), undo: SVG('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 20),
-      down: SVG('<path d="M12 5v14M6 13l6 6 6-6"/>', 20), close: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 18), arrow: SVG('<path d="M9 6l6 6-6 6"/>', 22),
+      down: SVG('<path d="M12 5v14M6 13l6 6 6-6"/>', 20), pen: SVG('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 19), close: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 18), arrow: SVG('<path d="M9 6l6 6-6 6"/>', 22),
       play: '<svg class="qc-i-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>',
       pause: '<svg class="qc-i-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5.5" y="4.5" width="4.5" height="15" rx="1"/><rect x="14" y="4.5" width="4.5" height="15" rx="1"/></svg>'
     };
@@ -3191,8 +3207,15 @@
       } else if (s.running) lines.push('<div>working on it…</div>');
       else if (s.next_at && !off && cfg.phase !== 'paused') lines.push('<div>next check ' + esc(until(s.next_at)) + '</div>');
       if (last && last.counts && last.at) {
-        var lc = last.counts;
-        lines.push('<div>last round ' + esc(ago(last.at)) + ': ' + plural(lc.sent || 0, 'comp') + ' checked · ' + num(lc.ok) + ' ok · ' + num(lc.review) + ' for you · ' + num(lc.hidden) + ' removed' + (lc.errors ? ' · ' + plural(lc.errors, 'error') : '') + '</div>');
+        var lc = last.counts, prot = Number(lc.protected) || 0, empt = Number(lc.empty) || 0, emptR = Number(lc.empty_review) || 0;
+        var rules = (prot ? ' · ' + num(prot) + ' kept by the rules' : '') + (empt ? ' · ' + num(empt) + ' empty ones removed' : '') + (emptR ? ' · ' + num(emptR) + ' empty ones for you' : '');
+        if (b && b.round != null && Number(b.round) === Number(last.round)) {
+          if (rules) lines.push('<div>round ' + num(b.round) + ' so far: sent ' + plural(lc.sent || 0, 'comp') + ' to the AI' + rules + '</div>');
+        } else {
+          var ok = (Number(lc.ok) || 0) + prot, rv = (Number(lc.review) || 0) + emptR, gone = (Number(lc.hidden) || 0) + empt;
+          var seen = (Number(lc.sent) || 0) + prot + empt + emptR;
+          lines.push('<div>last round ' + esc(ago(last.at)) + ': ' + plural(seen, 'comp') + ' checked · ' + num(ok) + ' ok' + (prot ? ' (' + num(prot) + ' by the rules)' : '') + ' · ' + num(rv) + ' for you · ' + num(gone) + ' removed' + (empt ? ' (' + num(empt) + ' empty)' : '') + (Number(lc.miscredited) ? ' · ' + num(lc.miscredited) + ' with the wrong credit' : '') + (lc.errors ? ' · ' + plural(lc.errors, 'error') : '') + '</div>');
+        }
       }
       if (last && last.error) lines.push('<div class="is-bad">last error: ' + esc(last.error) + '</div>');
       var total = c ? (Number(c.unchecked) || 0) + (Number(c.ok) || 0) + review + (Number(c.hidden) || 0) : 0;
@@ -3362,7 +3385,7 @@
         '<div class="qc-rv-top">' +
           '<button class="qc-rv-x" data-qc-act="close" aria-label="close the review">' + IC.close + '</button>' +
           '<div class="qc-rv-h"><b>review</b><span id="qc-rv-left" aria-live="polite"></span></div>' +
-          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · z undo</span>' +
+          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · f fix credit · z undo</span>' +
           '<label class="qc-rv-auto"><input type="checkbox" id="qc-rv-auto"' + (auto ? ' checked' : '') + '> autoplay</label>' +
         '</div>' +
         '<div class="qc-rv-stage" id="qc-rv-stage"></div>' +
@@ -3370,6 +3393,7 @@
           '<button class="qc-act qc-act-rm" data-qc-act="remove" aria-keyshortcuts="ArrowLeft A"><span class="qc-act-ic">' + IC.x + '</span><span>remove</span><kbd>← A</kbd></button>' +
           '<button class="qc-act qc-act-sm" data-qc-act="undo" aria-keyshortcuts="Z Backspace"><span class="qc-act-ic">' + IC.undo + '</span><span>undo</span><kbd>Z</kbd></button>' +
           '<button class="qc-act qc-act-sm" data-qc-act="skip" aria-keyshortcuts="ArrowDown S"><span class="qc-act-ic">' + IC.down + '</span><span>later</span><kbd>↓ S</kbd></button>' +
+          '<button class="qc-act qc-act-sm qc-act-cr" data-qc-act="credit" aria-keyshortcuts="F"><span class="qc-act-ic">' + IC.pen + '</span><span>fix credit</span><kbd>F</kbd></button>' +
           '<button class="qc-act qc-act-keep" data-qc-act="keep" aria-keyshortcuts="ArrowRight D"><span class="qc-act-ic">' + IC.check + '</span><span>keep</span><kbd>→ D</kbd></button>' +
         '</div>';
       document.body.appendChild(el);
@@ -3377,12 +3401,19 @@
       R.inert = Array.prototype.filter.call(document.body.children, function (n) { return n !== el && n.id !== 'wv-toasts' && n.tagName !== 'SCRIPT' && !n.inert; });
       R.inert.forEach(function (n) { n.inert = true; });
       el.addEventListener('click', rvClick, true);
+      el.addEventListener('keydown', function (e) {
+        if (!R || !e.target.classList || !e.target.classList.contains('qc-fix-in') || e.isComposing) return;
+        if (e.key === 'Enter') { e.preventDefault(); rvFixSave(); }
+        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); rvFix(false); }
+      });
       el.addEventListener('change', function (e) { if (e.target.id === 'qc-rv-auto' && R) { R.auto = e.target.checked; try { localStorage.setItem('wv_qc_autoplay', R.auto ? '1' : '0'); } catch (_) {} if (R.auto && !R.playing) rvPlayFirst(true); } });
       var stage = $('qc-rv-stage');
       stage.addEventListener('pointerdown', rvDown);
       stage.addEventListener('pointermove', rvMove);
       stage.addEventListener('pointerup', rvUp);
       stage.addEventListener('pointercancel', rvCancel);
+      stage.addEventListener('lostpointercapture', function (e) { var d = R && R.drag; if (d && d.on && e.target === d.card) rvCancel(e); });
+      stage.addEventListener('touchmove', function (e) { if (R && R.drag && R.drag.on && e.cancelable) e.preventDefault(); }, { passive: false });
       window.addEventListener('keydown', rvKey, true);
       try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); }
       rvShow();
@@ -3429,7 +3460,10 @@
     function rvLeft() { return R ? Math.max(R.queue.length, R.base == null ? 0 : R.base) : 0; }
     function rvCount() { var el = $('qc-rv-left'); if (el && R) el.textContent = R.queue.length || !R.loading ? num(rvLeft()) + ' left' : ''; }
     function curCard() { return document.querySelector('#qc-rv-stage .qc-card.qc-cur'); }
-    function rvActs(on) { document.querySelectorAll('#qc-rv .qc-act').forEach(function (b) { var a = b.getAttribute('data-qc-act'); b.disabled = a === 'undo' ? !(R && R.hist.length) : !on; }); }
+    function rvActs(on) {
+      var it = on && R && R.queue[0], hot = !!(it && it.ai && it.ai.credit_ok === false);
+      document.querySelectorAll('#qc-rv .qc-act').forEach(function (b) { var a = b.getAttribute('data-qc-act'); b.disabled = a === 'undo' ? !(R && R.hist.length) : !on; if (a === 'credit') b.classList.toggle('is-hot', hot); });
+    }
 
     function cardHtml(it, peek) {
       var ai = it.ai || {}, src = it.source || {}, tr = Array.isArray(it.tracks) ? it.tracks : [], cv = img(it.cover_url, 640);
@@ -3442,6 +3476,12 @@
       if (it.original_date) facts.push(esc(day(it.original_date)));
       facts.push(plural(n, 'track'));
       var su = safeUrl(src.url);
+      var ev = ai.credit_ok === false && Array.isArray(ai.evidence) ? ai.evidence.filter(function (x) { return x != null && String(x).trim(); }).slice(0, 12) : [];
+      var credit = ai.credit_ok === false ? '<div class="qc-cr"><div class="qc-cr-h">credited to <b>' + esc(it.creator || 'Unknown') + '</b> · ' + (ai.credit_to ? 'looks like <b>' + esc(ai.credit_to) + '</b>\'s' : 'looks like someone else made it') + '</div>' +
+        (ev.length ? '<ul class="qc-cr-ev">' + ev.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' : '';
+      var fix = '<div class="qc-fix" hidden><input class="wv-input qc-fix-in" type="text" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="who made it?" aria-label="who made it">' +
+        '<button class="wv-pill brand" data-qc-act="credit-save">save</button><button class="wv-see-all" data-qc-act="credit-cancel">cancel</button>' +
+        '<small>enter saves it · the comp stays on the site under that name</small></div>';
       var tracks = tr.map(function (t, i) {
         var ok = !!safeUrl(t && t.url), title = (t && t.title) || 'track ' + (i + 1), file = t && t.file;
         return '<div class="qc-tr' + (ok ? '' : ' is-off') + '" data-i="' + i + '">' +
@@ -3451,13 +3491,14 @@
           '<span class="qc-tr-time"></span></div>';
       }).join('');
       return '<article class="qc-card qc-cur" data-id="' + esc(it.id) + '" aria-label="' + esc(it.title || 'untitled') + '">' +
-        '<div class="qc-stamp qc-stamp-keep" aria-hidden="true">keep</div><div class="qc-stamp qc-stamp-rm" aria-hidden="true">remove</div>' +
+        '<div class="qc-stamp qc-stamp-keep" aria-hidden="true">keep</div><div class="qc-stamp qc-stamp-rm" aria-hidden="true">remove</div><div class="qc-stamp qc-stamp-fix" aria-hidden="true">fixed</div>' +
         '<div class="qc-card-in">' + head +
           '<div class="qc-info">' +
             '<h2 class="qc-t">' + esc(it.title || 'untitled') + '</h2>' +
             '<div class="qc-by">' + esc(it.creator || 'Unknown') + (it.era ? ' · ' + esc(it.era) : '') + '</div>' +
             '<div class="qc-ai"><div class="qc-ai-k"><span class="wv-chip acc">AI: ' + esc(KIND[ai.kind] || ai.kind || 'not sure') + '</span>' + (ai.score != null ? '<span class="wv-chip">' + esc(pct(ai.score)) + ' sure</span>' : '') + (ai.verdict ? '<span class="wv-chip">leans ' + esc(ai.verdict) + '</span>' : '') + '</div>' +
               (ai.reason ? '<div class="qc-ai-r">' + esc(ai.reason) + '</div>' : '') + '</div>' +
+            credit + fix +
             '<div class="qc-facts">' + facts.join(' · ') + '</div>' +
             '<div class="qc-links">' + (su ? '<a href="' + esc(su) + '" target="_blank" rel="noopener noreferrer">' + esc(src.label || 'original post') + ' ↗</a>' : src.label ? '<span>' + esc(src.label) + '</span>' : '') +
               '<a href="/album?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener">open the comp ↗</a></div>' +
@@ -3470,6 +3511,9 @@
     }
     function rvShow(how) {
       var stage = $('qc-rv-stage'); if (!stage || !R) return;
+      // the card under a finger may be swapped out (a failed save puts one back), so drop that drag
+      if (R.drag) { if (R.drag.on) R.noClick = Date.now(); R.drag = null; }
+      var ov = $('qc-rv'); if (ov) ov.classList.remove('is-l', 'is-r');
       stage.querySelectorAll('.qc-card:not(.qc-gone), .qc-rv-msg').forEach(function (x) { x.remove(); });
       rvCount();
       var it = R.queue[0];
@@ -3496,13 +3540,13 @@
       var old = stage.querySelector('.qc-peek'); if (old) old.remove();
       if (R.queue[1] && curCard()) stage.insertAdjacentHTML('afterbegin', cardHtml(R.queue[1], true));
     }
-    function fly(card, dir, from) {
+    function fly(card, dir, from, stamp) {
       if (!card) return;
       card.classList.remove('qc-cur', 'qc-in', 'qc-back-l', 'qc-back-r', 'qc-back-d', 'qc-dragging', 'qc-snap');
       card.classList.add('qc-gone');
       var ov = $('qc-rv'); if (ov) ov.classList.remove('is-l', 'is-r');
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) { card.remove(); return; }
-      var st = card.querySelector(dir === 'r' ? '.qc-stamp-keep' : '.qc-stamp-rm');
+      var st = card.querySelector(stamp || (dir === 'r' ? '.qc-stamp-keep' : '.qc-stamp-rm'));
       if (st && dir !== 'd') st.style.opacity = '1';
       var dx = from ? from.dx : 0, dy = from ? from.dy : 0, W = window.innerWidth * 1.3;
       var tx = dir === 'r' ? W : dir === 'l' ? -W : dx, ty = dir === 'd' ? window.innerHeight : dy + 60, rot = dir === 'r' ? 22 : dir === 'l' ? -22 : 0;
@@ -3517,19 +3561,19 @@
       S.chain[id] = p.then(function () {}, function () {});
       return p;
     }
-    function rvDecide(action, from) {
+    function rvDecide(action, from, credit) {
       if (!R) return;
       var S = R, it = S.queue[0]; if (!it) return;
       rvStop();
       S.queue.shift();
-      fly(curCard(), action === 'keep' ? 'r' : action === 'remove' ? 'l' : 'd', from);
+      fly(curCard(), action === 'remove' ? 'l' : action === 'skip' ? 'd' : 'r', from, action === 'fix_credit' ? '.qc-stamp-fix' : '');
       var h = { item: it, action: action, state: 'pending', saved: false };
       S.hist.push(h); if (S.hist.length > 100) S.hist.shift();
       if (action === 'skip') { h.state = 'ok'; S.queue.push(it); rvShow('in'); return; }
       S.inflight++; S.changed = true;
       S.base = Math.max(0, (S.base == null ? S.queue.length + 1 : S.base) - 1);
       h.p = serial(S, it.id, function () {
-        return post('/decide', { id: it.id, action: action }).then(function (d) { h.saved = true; return d; });
+        return post('/decide', action === 'fix_credit' ? { id: it.id, action: action, credit: credit } : { id: it.id, action: action }).then(function (d) { h.saved = true; return d; });
       }).then(function (d) {
         S.inflight--;
         if (h.state === 'pending') h.state = 'ok';
@@ -3547,7 +3591,8 @@
         var q = S.queue.indexOf(it); if (q >= 0) S.queue.splice(q, 1);
         S.queue.unshift(it);
         rvStop();
-        rvShow(action === 'keep' ? 'back-r' : 'back-l');
+        rvShow(action === 'remove' ? 'back-l' : 'back-r');
+        if (action === 'fix_credit') rvFix(true, credit, true);
         return false;
       });
       rvShow('in');
@@ -3563,7 +3608,7 @@
       if (h.action === 'skip') { rvShow('back-d'); return; }
       var was = h.state; h.state = 'undone';
       S.base = (S.base == null ? S.queue.length - 1 : S.base) + 1;
-      rvShow(h.action === 'keep' ? 'back-r' : 'back-l');
+      rvShow(h.action === 'remove' ? 'back-l' : 'back-r');
       if (was !== 'pending' && was !== 'ok') return;
       serial(S, it.id, function () {
         if (!h.saved) return null;
@@ -3579,6 +3624,28 @@
         S.base = Math.max(0, (S.base || 1) - 1);
         if (R === S) { if (q === 0) { rvStop(); rvShow('in'); } else { rvPeek(); rvCount(); } }
       });
+    }
+    // fix credit: small inline input on the card, enter saves it
+    function rvFix(open, value, noFocus) {
+      var card = curCard(), it = R && R.queue[0]; if (!card || !it) return;
+      var box = card.querySelector('.qc-fix'), inp = box && box.querySelector('.qc-fix-in'); if (!inp) return;
+      if (!open) { box.hidden = true; var ov = $('qc-rv'); if (ov) { try { ov.focus({ preventScroll: true }); } catch (_) { ov.focus(); } } return; }
+      var ai = it.ai || {};
+      if (value != null) inp.value = value;
+      else if (box.hidden) inp.value = ai.credit_to || (it.creator && it.creator !== 'Unknown' ? it.creator : '');
+      box.hidden = false;
+      if (noFocus) return;
+      try { inp.focus({ preventScroll: true }); } catch (_) { inp.focus(); }
+      inp.select();
+      try { box.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+    }
+    function rvFixSave() {
+      var card = curCard(), inp = card && card.querySelector('.qc-fix-in'); if (!inp || !R) return;
+      var v = inp.value.replace(/\s+/g, ' ').trim();
+      if (!v) { toast('type who made it first', 'error'); inp.focus(); return; }
+      if (v.length > 80) { toast('thats too long, 80 characters max', 'error'); inp.focus(); return; }
+      var ov = $('qc-rv'); if (ov) { try { ov.focus({ preventScroll: true }); } catch (_) { ov.focus(); } }
+      rvDecide('fix_credit', null, v);
     }
 
     // audio: one shared element for every card
@@ -3650,6 +3717,9 @@
       if (a === 'close') rvClose();
       else if (a === 'remove' || a === 'keep' || a === 'skip') rvDecide(a);
       else if (a === 'undo') rvUndo();
+      else if (a === 'credit') rvFix(true);
+      else if (a === 'credit-save') rvFixSave();
+      else if (a === 'credit-cancel') rvFix(false);
       else if (a === 'retry') { R.done = false; R.err = null; rvFetch(); rvShow(); }
       else if (a === 'play') rvPlay(+b.getAttribute('data-i'));
       else if (a === 'msg') { var m = b.parentNode.querySelector('.qc-msg'); if (m) { var open = m.classList.toggle('is-open'); b.textContent = open ? 'less' : 'more'; } }
@@ -3670,6 +3740,7 @@
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') act = 'remove';
       else if (k === 'ArrowRight' || k === 'd' || k === 'D') act = 'keep';
       else if (k === 'ArrowDown' || k === 's' || k === 'S') act = 'skip';
+      else if (k === 'f' || k === 'F') act = 'credit';
       else if (k === 'z' || k === 'Z' || k === 'Backspace') act = 'undo';
       else if (k === ' ' || k === 'Spacebar') act = t && t.tagName === 'INPUT' ? null : 'space';
       else if (k === 'Escape') act = 'close';
@@ -3680,6 +3751,7 @@
       if (act === 'close') rvClose();
       else if (act === 'undo') rvUndo();
       else if (act === 'space') rvSpace();
+      else if (act === 'credit') rvFix(true);
       else rvDecide(act);
     }
 
@@ -3687,7 +3759,9 @@
     function thr() { var s = $('qc-rv-stage'); return Math.min(130, (s ? s.clientWidth : 400) * 0.28); }
     function rvDown(e) {
       if (!R || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      var card = e.target.closest('.qc-card.qc-cur'); if (!card || e.target.closest('.qc-tr-bar')) return;
+      var o = R.drag; if (o && o.on && o.id !== e.pointerId && o.card.isConnected) return;
+      R.drag = null;
+      var card = e.target.closest('.qc-card.qc-cur'); if (!card || e.target.closest('.qc-tr-bar, .qc-fix')) return;
       R.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0, on: false, card: card, pts: [[e.clientX, performance.now()]] };
     }
     function rvMove(e) {
@@ -3716,6 +3790,8 @@
       R.drag = null;
       if (!d.on) return;
       R.noClick = Date.now();
+      var it = R.queue[0];
+      if (!it || !d.card.isConnected || !d.card.classList.contains('qc-cur') || d.card.getAttribute('data-id') !== String(it.id)) { snapBack(d.card); return; }
       var a = d.pts[0], b = d.pts[d.pts.length - 1], v = b && a && b[1] > a[1] ? (b[0] - a[0]) / (b[1] - a[1]) : 0;
       var go = Math.abs(d.dx) >= thr() || (Math.abs(v) > 0.55 && Math.abs(d.dx) > 40 && (v > 0) === (d.dx > 0));
       if (go) rvDecide(d.dx > 0 ? 'keep' : 'remove', { dx: d.dx, dy: d.dy });
