@@ -3532,6 +3532,7 @@
       R.busy = false;
       rvActs(true);
       paintPlay();
+      paintTitle(it);
       rvDurations(it);
       rvDurations(R.queue[1]);
       if (R.auto) rvPlayFirst(true);
@@ -3580,6 +3581,7 @@
       }).then(function (d) {
         S.inflight--;
         if (h.state === 'pending') h.state = 'ok';
+        if (action === 'fix_credit' && d && !credit) toast(d.unchanged ? '"' + short(it.title) + '" was already credited right' : 'credited "' + short(it.title) + '" to ' + (d.credit || 'the right person'));
         if (d && typeof d.remaining === 'number' && !S.inflight && h.state === 'ok') S.base = d.remaining;
         if (R === S) rvCount();
         return true;
@@ -3588,6 +3590,14 @@
         if (h.state === 'undone' || (e && e.navAborted)) return false;
         h.state = 'failed';
         var k = S.hist.indexOf(h); if (k >= 0) S.hist.splice(k, 1);
+        if (action === 'fix_credit' && !credit && e && (e.status === 422 || e.status === 502)) {
+          toast((e.status === 422 ? 'couldnt tell who made "' + short(it.title) + '"' : 'couldnt fix the credit on "' + short(it.title) + '"') + ', its at the back of your queue', 'error');
+          S.base = (S.base || 0) + 1;
+          if (R !== S) return false;
+          if (S.queue.indexOf(it) < 0) S.queue.push(it);
+          if (S.queue.length === 1) rvShow('in'); else { rvPeek(); rvCount(); }
+          return false;
+        }
         toast('couldnt save that so its back: ' + emsg(e), 'error');
         S.base = (S.base || 0) + 1;
         if (R !== S) return false;
@@ -3627,80 +3637,66 @@
         if (R === S) { if (q === 0) { rvStop(); rvShow('in'); } else { rvPeek(); rvCount(); } }
       });
     }
-    // fix credit / fix title: the AI works it out, nothing to type
-    function rvBusy(on, text) {
-      if (!R) return;
-      R.busy = !!on;
-      var card = curCard(), el = card && card.querySelector('.qc-fixing');
-      if (el) { el.hidden = !on; el.textContent = on ? (text || '') : ''; }
-      rvActs(!on);
-    }
+    // fix credit / fix title: the AI works it out in the background, nothing to type and no waiting
+    function short(t) { t = String(t || 'untitled'); return t.length > 40 ? t.slice(0, 39) + '…' : t; }
     function rvAiCredit() {
-      if (!R || R.busy) return;
-      var S = R, it = S.queue[0]; if (!it) return;
-      rvBusy(true, 'working out who made it…');
-      post('/decide', { id: it.id, action: 'fix_credit' }).then(function (d) {
-        if (R !== S) return;
-        rvBusy(false);
-        if (S.queue[0] !== it) return;
-        toast(d && d.unchanged ? 'the credit was already right (' + (d.credit || it.creator || 'Unknown') + '), kept it' : 'credited to ' + ((d && d.credit) || 'the right person'));
-        rvDecide('fix_credit', null, null, d || { ok: true });
-      }, function (e) {
-        if (e && e.navAborted) return;
-        if (R === S) rvBusy(false);
-        toast(emsg(e), 'error');
-      });
+      if (!R || !R.queue[0]) return;
+      rvDecide('fix_credit');
     }
     function paintTitle(it) {
-      var card = curCard(); if (!card || !it) return;
+      var card = curCard(); if (!card || !it || card.getAttribute('data-id') !== it.id) return;
       var t = card.querySelector('.qc-t'); if (t) t.textContent = it.title || 'untitled';
       if (it.tracks && it.tracks.length === 1) { var tt = card.querySelector('.qc-tr-t'); if (tt) { tt.textContent = it.tracks[0].title || ''; tt.title = it.tracks[0].title || ''; } }
       var w = card.querySelector('.qc-was');
       if (!w && t) { w = document.createElement('div'); w.className = 'qc-was'; t.parentNode.insertBefore(w, t.nextSibling); }
-      if (!w) return;
-      if (it._prevTitle) { w.hidden = false; w.innerHTML = 'was: ' + esc(it._prevTitle.title || 'untitled') + ' · <button class="wv-see-all" data-qc-act="title-revert">put it back</button>'; }
-      else { w.hidden = true; w.innerHTML = ''; }
+      if (w) {
+        if (it._titling) { w.hidden = false; w.textContent = it._titling === 'back' ? 'putting the old title back…' : 'fixing the title in the background…'; }
+        else if (it._prevTitle) { w.hidden = false; w.innerHTML = 'was: ' + esc(it._prevTitle.title || 'untitled') + ' · <button class="wv-see-all" data-qc-act="title-revert">put it back</button>'; }
+        else { w.hidden = true; w.innerHTML = ''; }
+      }
     }
     function rvAiTitle() {
-      if (!R || R.busy) return;
-      var S = R, it = S.queue[0]; if (!it) return;
-      rvBusy(true, 'working out the title…');
+      if (!R) return;
+      var S = R, it = S.queue[0]; if (!it || it._titling) return;
+      var before = it.title;
+      it._titling = 'fix';
+      paintTitle(it);
       post('/fix-title', { id: it.id }).then(function (d) {
-        if (R !== S) return;
-        rvBusy(false);
-        if (S.queue[0] !== it || !d) return;
-        if (d.unchanged) { toast('the title was already right'); return; }
-        it._prevTitle = it._prevTitle || d.previous || null;
-        it.title = d.title;
-        if (it.tracks && it.tracks.length === 1 && d.previous && d.previous.track_title != null) it.tracks[0].title = d.title;
-        paintTitle(it);
-        toast('renamed to ' + d.title);
+        it._titling = false;
+        if (d && !d.unchanged) {
+          it._prevTitle = it._prevTitle || d.previous || null;
+          it.title = d.title;
+          if (it.tracks && it.tracks.length === 1 && d.previous && d.previous.track_title != null) it.tracks[0].title = d.title;
+        }
+        if (R === S) paintTitle(it);
+        toast(d && d.unchanged ? '"' + short(before) + '" already had the right title' : 'renamed "' + short(before) + '" to "' + short(d && d.title) + '"');
       }, function (e) {
+        it._titling = false;
         if (e && e.navAborted) return;
-        if (R === S) rvBusy(false);
-        toast(emsg(e), 'error');
+        if (R === S) paintTitle(it);
+        toast('couldnt fix the title of "' + short(before) + '": ' + emsg(e), 'error');
       });
     }
     function rvTitleBack() {
-      if (!R || R.busy) return;
-      var S = R, it = S.queue[0]; if (!it || !it._prevTitle) return;
-      var prev = it._prevTitle;
-      rvBusy(true, 'putting the old title back…');
+      if (!R) return;
+      var S = R, it = S.queue[0]; if (!it || !it._prevTitle || it._titling) return;
+      var prev = it._prevTitle, now = it.title;
+      it._titling = 'back';
+      paintTitle(it);
       var body = { id: it.id, title: prev.title || '' };
       if (prev.track_title != null) body.track_title = prev.track_title;
       post('/fix-title', body).then(function () {
-        if (R !== S) return;
-        rvBusy(false);
-        if (S.queue[0] !== it) return;
+        it._titling = false;
         it.title = prev.title;
         if (it.tracks && it.tracks.length === 1 && prev.track_title != null) it.tracks[0].title = prev.track_title;
         it._prevTitle = null;
-        paintTitle(it);
-        toast('put the old title back');
+        if (R === S) paintTitle(it);
+        toast('put the old title back on "' + short(prev.title) + '"');
       }, function (e) {
+        it._titling = false;
         if (e && e.navAborted) return;
-        if (R === S) rvBusy(false);
-        toast(emsg(e), 'error');
+        if (R === S) paintTitle(it);
+        toast('couldnt put the title back on "' + short(now) + '": ' + emsg(e), 'error');
       });
     }
 
