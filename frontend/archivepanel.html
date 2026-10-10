@@ -228,6 +228,13 @@
     .qc-stamp-keep { left: 22px; color: var(--green); transform: rotate(-12deg); }
     .qc-stamp-rm { right: 22px; color: var(--red); transform: rotate(12deg); }
     .qc-stamp-fix { left: 22px; color: var(--orange); transform: rotate(-12deg); }
+    .qc-dup { display: flex; gap: 10px; align-items: center; background: var(--surface); border-radius: 12px; padding: 10px; margin: 10px 0; }
+    .qc-dup-cv { width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex: none; }
+    .qc-dup-cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .qc-dup-m { flex: 1; min-width: 0; font-size: 13px; }
+    .qc-dup-m a { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qc-dup-h, .qc-dup-s { font-size: 11.5px; color: var(--text-3); }
+    .qc-act-mg.is-hot .qc-act-ic { color: var(--brand); border-color: var(--brand); }
     .qc-rv-acts { flex: none; display: flex; justify-content: center; align-items: flex-start; gap: clamp(8px, 4vw, 28px); padding: 10px 16px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
     .qc-act { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 62px; padding: 0; border: 0; background: none; color: var(--text-2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
     .qc-act-ic { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--hair-strong); transition: transform .12s, background .12s; }
@@ -1399,16 +1406,17 @@
       var rows = d.log || [];
       if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">nothing here</div>'; return; }
       el.innerHTML = rows.map(function(r) {
-        var col = { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
+        var empty = r.status === 'done' && !r.imported_count;
+        var col = empty ? 'bad' : { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
         var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
         return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
-          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(r.status) + '</span>' +
+          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(empty ? '0 tracks' : r.status) + '</span>' +
           '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
           '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
+          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
@@ -3096,11 +3104,12 @@
 <script>
   // ── Quality: the AI's verdicts, the review queue and the Removed list ──
   (function () {
-    var KIND = { release: 'finished release', wip: 'work in progress', snippet: 'snippet', loop_or_stem: 'loop or stem', feedback_request: 'feedback post', chat_reply: 'chat reply', meme: 'meme', test: 'test upload', not_ye: 'not ye', broken: 'broken', other: 'other', file_dump: 'loose files', miscredited: 'wrong credit' };
+    var KIND = { release: 'finished release', wip: 'work in progress', snippet: 'snippet', loop_or_stem: 'loop or stem', feedback_request: 'feedback post', chat_reply: 'chat reply', meme: 'meme', test: 'test upload', not_ye: 'not ye', broken: 'broken', other: 'other', file_dump: 'loose files', miscredited: 'wrong credit', duplicate: 'duplicate' };
     var PHASE = { pilot: 'test run', paused: 'waiting on you', full: 'checking everything' };
     var SVG = function (d, w) { return '<svg width="' + (w || 20) + '" height="' + (w || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
     var IC = {
       x: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 26), check: SVG('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 28), undo: SVG('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 20),
+      merge: SVG('<circle cx="6" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="12" r="2.2"/><path d="M6 8.2v7.6M8 7.2c4.5.8 8 2 8 4.8"/>', 20),
       down: SVG('<path d="M12 5v14M6 13l6 6 6-6"/>', 20), ttl: SVG('<path d="M5 6h14M12 6v13"/><path d="M9 19h6"/>', 19), pen: SVG('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 19), close: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 18), arrow: SVG('<path d="M9 6l6 6-6 6"/>', 22),
       play: '<svg class="qc-i-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>',
       pause: '<svg class="qc-i-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5.5" y="4.5" width="4.5" height="15" rx="1"/><rect x="14" y="4.5" width="4.5" height="15" rx="1"/></svg>'
@@ -3143,7 +3152,7 @@
         '<div class="qc-rm-tools"><input id="qc-rm-q" class="wv-input" type="search" placeholder="search removed comps..." aria-label="search removed comps" autocomplete="off">' +
           '<label class="qc-rm-all"><input type="checkbox" id="qc-rm-all"> select all shown</label></div>' +
         '<div class="wv-filters qc-rm-chips" role="group" aria-label="removed by">' +
-          [['', 'all'], ['ai', 'AI'], ['rule', 'rules'], ['staff', 'staff']].map(function (c) { return '<button type="button" class="wv-chip' + (c[0] === Q.rm.by ? ' acc' : '') + '" data-qc-act="by" data-by="' + c[0] + '" aria-pressed="' + (c[0] === Q.rm.by) + '">' + c[1] + '</button>'; }).join('') +
+          [['', 'all'], ['ai', 'AI'], ['rule', 'rules'], ['staff', 'staff'], ['dup', 'merged']].map(function (c) { return '<button type="button" class="wv-chip' + (c[0] === Q.rm.by ? ' acc' : '') + '" data-qc-act="by" data-by="' + c[0] + '" aria-pressed="' + (c[0] === Q.rm.by) + '">' + c[1] + '</button>'; }).join('') +
         '</div>' +
         '<div class="qc-rm-bulk" id="qc-rm-bulk" hidden><b id="qc-rm-selcount">0 selected</b><button class="wv-pill brand" data-qc-act="restore-sel">bring back selected</button><button class="wv-see-all" data-qc-act="clear-sel">clear</button></div>' +
         '<div class="qc-rm-list" id="qc-rm-list"></div>' +
@@ -3229,6 +3238,18 @@
         }
       }
       if (last && last.error) lines.push('<div class="is-bad">last error: ' + esc(last.error) + '</div>');
+      var dd = s.dedupe, dt = (dd && dd.totals) || {}, dl = (dd && dd.last) || null, merged = c ? Number(c.merged) || 0 : 0;
+      if (dd || merged) {
+        var dline = 'duplicates: ' + (merged ? '<b>' + num(merged) + '</b> merged into their main copy' : 'none merged yet');
+        if (dd && dd.batch) dline += ' · the AI is checking ' + plural(dd.batch.pairs || 0, 'possible pair');
+        else if (dd && dd.running) dline += ' · looking for more now';
+        else if (dd && dd.config && dd.config.phase === 'paused' && dt.runs) dline += ' · test run done, waiting for the go ahead';
+        else if (dd && dd.next_at) dline += ' · next check ' + esc(until(dd.next_at));
+        if (dl && dl.counts && dl.at) dline += ' · last check ' + esc(ago(dl.at)) + ': ' + num(dl.counts.merged || 0) + ' merged' + (dl.counts.ai_sent ? ', ' + num(dl.counts.ai_sent) + ' sent to the AI' : '');
+        if (dl && dl.ai) dline += ' · AI: ' + num(dl.ai.merged || 0) + ' merged, ' + num((dl.ai.different || 0) + (dl.ai.versions || 0)) + ' not the same' + (dl.ai.review ? ', ' + num(dl.ai.review) + ' for you' : '');
+        lines.push('<div>' + dline + '</div>');
+        if (dl && dl.error) lines.push('<div class="is-bad">duplicate check error: ' + esc(dl.error) + '</div>');
+      }
       var total = c ? (Number(c.unchecked) || 0) + (Number(c.ok) || 0) + review + second + (Number(c.hidden) || 0) : 0;
       var w = function (n) { return total ? Math.max(0, Math.min(100, (Number(n) || 0) / total * 100)).toFixed(2) : 0; };
       var spent = Number(t.usd) || 0, cap = Number(cfg.max_usd) || 0;
@@ -3335,9 +3356,9 @@
           '<div class="qc-rm-s">' + esc(x.creator || 'Unknown') + ' · ' + plural(x.track_count, 'track') + '</div>' +
           '<div class="qc-rm-r"><span class="wv-chip ' + (bk === 'ai' ? 'acc' : bk === 'staff' ? 'warn' : '') + '">' + esc(byLabel(x.by)) + (bk === 'ai' && x.score != null ? ' · ' + pct(x.score) : '') + '</span>' +
             (x.kind ? '<span class="wv-chip">' + esc(KIND[x.kind] || x.kind) + '</span>' : '') +
-            '<span class="qc-rm-why">' + esc(x.reason || 'no reason given') + '</span>' + (x.at ? '<span class="qc-rm-at">' + esc(ago(x.at)) + '</span>' : '') + '</div>' +
+            (x.merged_into ? '<span class="qc-rm-why">merged into <a href="/album?id=' + encodeURIComponent(x.merged_into.id) + '" target="_blank" rel="noopener">' + esc(x.merged_into.title || 'another copy') + '</a> by ' + esc(x.merged_into.creator || 'Unknown') + '</span>' : '<span class="qc-rm-why">' + esc(x.reason || 'no reason given') + '</span>') + (x.at ? '<span class="qc-rm-at">' + esc(ago(x.at)) + '</span>' : '') + '</div>' +
         '</div>' +
-        '<button class="wv-pill" data-qc-act="restore" data-id="' + esc(x.id) + '">bring back</button>' +
+        '<button class="wv-pill" data-qc-act="restore" data-id="' + esc(x.id) + '">' + (x.merged_into ? 'undo merge' : 'bring back') + '</button>' +
       '</div>';
     }
     function rmPaint(added) {
@@ -3396,7 +3417,7 @@
         '<div class="qc-rv-top">' +
           '<button class="qc-rv-x" data-qc-act="close" aria-label="close the review">' + IC.close + '</button>' +
           '<div class="qc-rv-h"><b>review</b><span id="qc-rv-left" aria-live="polite"></span></div>' +
-          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · f fix credit · t fix title · z undo</span>' +
+          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · f fix credit · t fix title · m merge · z undo</span>' +
           '<label class="qc-rv-auto"><input type="checkbox" id="qc-rv-auto"' + (auto ? ' checked' : '') + '> autoplay</label>' +
         '</div>' +
         '<div class="qc-rv-stage" id="qc-rv-stage"></div>' +
@@ -3406,6 +3427,7 @@
           '<button class="qc-act qc-act-sm" data-qc-act="skip" aria-keyshortcuts="ArrowDown S"><span class="qc-act-ic">' + IC.down + '</span><span>later</span><kbd>↓ S</kbd></button>' +
           '<button class="qc-act qc-act-sm qc-act-cr" data-qc-act="credit" aria-keyshortcuts="F"><span class="qc-act-ic">' + IC.pen + '</span><span>fix credit</span><kbd>F</kbd></button>' +
           '<button class="qc-act qc-act-sm" data-qc-act="title" aria-keyshortcuts="T"><span class="qc-act-ic">' + IC.ttl + '</span><span>fix title</span><kbd>T</kbd></button>' +
+          '<button class="qc-act qc-act-sm qc-act-mg" data-qc-act="merge" aria-keyshortcuts="M"><span class="qc-act-ic">' + IC.merge + '</span><span>merge</span><kbd>M</kbd></button>' +
           '<button class="qc-act qc-act-keep" data-qc-act="keep" aria-keyshortcuts="ArrowRight D"><span class="qc-act-ic">' + IC.check + '</span><span>keep</span><kbd>→ D</kbd></button>' +
         '</div>';
       document.body.appendChild(el);
@@ -3469,7 +3491,7 @@
     function curCard() { return document.querySelector('#qc-rv-stage .qc-card.qc-cur'); }
     function rvActs(on) {
       var it = on && R && R.queue[0], hot = !!(it && it.ai && it.ai.credit_ok === false);
-      document.querySelectorAll('#qc-rv .qc-act').forEach(function (b) { var a = b.getAttribute('data-qc-act'); b.disabled = a === 'undo' ? !(R && R.hist.length) : !on; if (a === 'credit') b.classList.toggle('is-hot', hot); });
+      document.querySelectorAll('#qc-rv .qc-act').forEach(function (b) { var a = b.getAttribute('data-qc-act'); b.disabled = a === 'undo' ? !(R && R.hist.length) : a === 'merge' ? !(on && it && it.dup) : !on; if (a === 'credit') b.classList.toggle('is-hot', hot); if (a === 'merge') b.classList.toggle('is-hot', !!(it && it.dup)); });
     }
 
     function cardHtml(it, peek) {
@@ -3487,6 +3509,11 @@
       var credit = ai.credit_ok === false ? '<div class="qc-cr"><div class="qc-cr-h">credited to <b>' + esc(it.creator || 'Unknown') + '</b> · ' + (ai.credit_to ? 'looks like <b>' + esc(ai.credit_to) + '</b>\'s' : 'looks like someone else made it') + '</div>' +
         (ev.length ? '<ul class="qc-cr-ev">' + ev.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' : '';
       var fix = '<div class="qc-fixing" hidden></div>';
+      var dp = it.dup;
+      var dup = dp ? '<div class="qc-dup"><div class="qc-dup-cv" style="background:' + esc(grad(dp.title)) + ';">' + (img(dp.cover_url, 96) ? '<img src="' + esc(img(dp.cover_url, 96)) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
+        '<div class="qc-dup-m"><div class="qc-dup-h">might be the same comp as</div><a href="/album?id=' + encodeURIComponent(dp.id) + '" target="_blank" rel="noopener">' + esc(dp.title || 'untitled') + ' ↗</a>' +
+        '<div class="qc-dup-s">' + esc(dp.creator || 'Unknown') + ' · ' + plural(dp.track_count, 'track') + (Number(dp.stars) ? ' · ⭐ ' + num(dp.stars) : '') + '</div></div>' +
+        '<button class="wv-pill" data-qc-act="merge">merge into it</button></div>' : '';
       var tracks = tr.map(function (t, i) {
         var ok = !!safeUrl(t && t.url), title = (t && t.title) || 'track ' + (i + 1), file = t && t.file;
         return '<div class="qc-tr' + (ok ? '' : ' is-off') + '" data-i="' + i + '">' +
@@ -3496,14 +3523,14 @@
           '<span class="qc-tr-time"></span></div>';
       }).join('');
       return '<article class="qc-card qc-cur" data-id="' + esc(it.id) + '" aria-label="' + esc(it.title || 'untitled') + '">' +
-        '<div class="qc-stamp qc-stamp-keep" aria-hidden="true">keep</div><div class="qc-stamp qc-stamp-rm" aria-hidden="true">remove</div><div class="qc-stamp qc-stamp-fix" aria-hidden="true">fixed</div>' +
+        '<div class="qc-stamp qc-stamp-keep" aria-hidden="true">keep</div><div class="qc-stamp qc-stamp-rm" aria-hidden="true">remove</div><div class="qc-stamp qc-stamp-fix" aria-hidden="true">fixed</div><div class="qc-stamp qc-stamp-fix qc-stamp-mg" aria-hidden="true">merged</div>' +
         '<div class="qc-card-in">' + head +
           '<div class="qc-info">' +
             '<h2 class="qc-t">' + esc(it.title || 'untitled') + '</h2>' +
             '<div class="qc-by">' + esc(it.creator || 'Unknown') + (it.era ? ' · ' + esc(it.era) : '') + '</div>' +
             '<div class="qc-ai"><div class="qc-ai-k"><span class="wv-chip acc">AI: ' + esc(KIND[ai.kind] || ai.kind || 'not sure') + '</span>' + (ai.score != null ? '<span class="wv-chip">' + esc(pct(ai.score)) + ' sure</span>' : '') + (ai.verdict ? '<span class="wv-chip">leans ' + esc(ai.verdict) + '</span>' : '') + '</div>' +
               (ai.reason ? '<div class="qc-ai-r">' + esc(ai.reason) + '</div>' : '') + '</div>' +
-            credit + fix +
+            credit + dup + fix +
             '<div class="qc-facts">' + facts.join(' · ') + '</div>' +
             '<div class="qc-links">' + (su ? '<a href="' + esc(su) + '" target="_blank" rel="noopener noreferrer">' + esc(src.label || 'original post') + ' ↗</a>' : src.label ? '<span>' + esc(src.label) + '</span>' : '') +
               '<a href="/album?id=' + encodeURIComponent(it.id) + '" target="_blank" rel="noopener">open the comp ↗</a></div>' +
@@ -3575,7 +3602,8 @@
       var S = R, it = S.queue[0]; if (!it) return;
       rvStop();
       S.queue.shift();
-      fly(curCard(), action === 'remove' ? 'l' : action === 'skip' ? 'd' : 'r', from, action === 'fix_credit' ? '.qc-stamp-fix' : '');
+      if (action === 'merge' && !it.dup) return;
+      fly(curCard(), action === 'remove' ? 'l' : action === 'skip' ? 'd' : 'r', from, action === 'fix_credit' ? '.qc-stamp-fix:not(.qc-stamp-mg)' : action === 'merge' ? '.qc-stamp-mg' : '');
       var h = { item: it, action: action, state: 'pending', saved: false };
       S.hist.push(h); if (S.hist.length > 100) S.hist.shift();
       if (action === 'skip') { h.state = 'ok'; S.queue.push(it); rvShow('in'); return; }
@@ -3583,11 +3611,12 @@
       S.base = Math.max(0, (S.base == null ? S.queue.length + 1 : S.base) - 1);
       h.p = serial(S, it.id, function () {
         if (done) { h.saved = true; return Promise.resolve(done); }
-        return post('/decide', action === 'fix_credit' ? { id: it.id, action: action, credit: credit } : { id: it.id, action: action }).then(function (d) { h.saved = true; return d; });
+        return post('/decide', action === 'fix_credit' ? { id: it.id, action: action, credit: credit } : action === 'merge' ? { id: it.id, action: action, into: it.dup.id } : { id: it.id, action: action }).then(function (d) { h.saved = true; return d; });
       }).then(function (d) {
         S.inflight--;
         if (h.state === 'pending') h.state = 'ok';
         if (action === 'fix_credit' && d && !credit) toast(d.unchanged ? '"' + short(it.title) + '" was already credited right' : 'credited "' + short(it.title) + '" to ' + (d.credit || 'the right person'));
+        if (action === 'merge' && d && d.merged) toast('merged "' + short(it.title) + '" into "' + short(it.dup.title) + '"');
         if (d && typeof d.remaining === 'number' && !S.inflight && h.state === 'ok') S.base = d.remaining;
         if (R === S) rvCount();
         return true;
@@ -3791,7 +3820,7 @@
       var b = e.target.closest('[data-qc-act]'); if (!b) return;
       var a = b.getAttribute('data-qc-act');
       if (a === 'close') rvClose();
-      else if (a === 'remove' || a === 'keep' || a === 'skip') rvDecide(a);
+      else if (a === 'remove' || a === 'keep' || a === 'skip' || a === 'merge') rvDecide(a);
       else if (a === 'undo') rvUndo();
       else if (a === 'credit') rvAiCredit();
       else if (a === 'title') rvAiTitle();
@@ -3818,6 +3847,7 @@
       else if (k === 'ArrowDown' || k === 's' || k === 'S') act = 'skip';
       else if (k === 'f' || k === 'F') act = 'credit';
       else if (k === 't' || k === 'T') act = 'title';
+      else if (k === 'm' || k === 'M') act = 'merge';
       else if (k === 'z' || k === 'Z' || k === 'Backspace') act = 'undo';
       else if (k === ' ' || k === 'Spacebar') act = t && t.tagName === 'INPUT' ? null : 'space';
       else if (k === 'Escape') act = 'close';
