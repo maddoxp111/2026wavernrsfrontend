@@ -190,6 +190,10 @@
     .qc-fix .wv-pill { min-height: 38px; font-size: 12.5px; padding: 8px 14px; }
     .qc-fix small { flex-basis: 100%; font-size: 11.5px; color: var(--text-3); }
     .qc-fix-l { flex-basis: 100%; font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+    .qc-fixing { margin-top: 10px; font-size: 13px; color: var(--brand); font-weight: 600; }
+    .qc-fixing[hidden], .qc-was[hidden] { display: none; }
+    .qc-was { font-size: 12.5px; color: var(--text-3); margin: -2px 0 8px; overflow-wrap: anywhere; }
+    .qc-was .wv-see-all { font-size: 12.5px; padding: 0; }
     .qc-facts { font-size: 12.5px; color: var(--text-3); margin-top: 10px; overflow-wrap: anywhere; }
     .qc-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12.5px; }
     .qc-links a { color: var(--brand); font-weight: 600; overflow-wrap: anywhere; }
@@ -3096,7 +3100,7 @@
     var SVG = function (d, w) { return '<svg width="' + (w || 20) + '" height="' + (w || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>'; };
     var IC = {
       x: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 26), check: SVG('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 28), undo: SVG('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 20),
-      down: SVG('<path d="M12 5v14M6 13l6 6 6-6"/>', 20), pen: SVG('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 19), close: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 18), arrow: SVG('<path d="M9 6l6 6-6 6"/>', 22),
+      down: SVG('<path d="M12 5v14M6 13l6 6 6-6"/>', 20), ttl: SVG('<path d="M5 6h14M12 6v13"/><path d="M9 19h6"/>', 19), pen: SVG('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 19), close: SVG('<path d="M6 6l12 12M18 6 6 18"/>', 18), arrow: SVG('<path d="M9 6l6 6-6 6"/>', 22),
       play: '<svg class="qc-i-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>',
       pause: '<svg class="qc-i-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5.5" y="4.5" width="4.5" height="15" rx="1"/><rect x="14" y="4.5" width="4.5" height="15" rx="1"/></svg>'
     };
@@ -3386,7 +3390,7 @@
         '<div class="qc-rv-top">' +
           '<button class="qc-rv-x" data-qc-act="close" aria-label="close the review">' + IC.close + '</button>' +
           '<div class="qc-rv-h"><b>review</b><span id="qc-rv-left" aria-live="polite"></span></div>' +
-          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · f fix credit · z undo</span>' +
+          '<span class="qc-rv-keys">space play · ← remove · → keep · ↓ later · f fix credit · t fix title · z undo</span>' +
           '<label class="qc-rv-auto"><input type="checkbox" id="qc-rv-auto"' + (auto ? ' checked' : '') + '> autoplay</label>' +
         '</div>' +
         '<div class="qc-rv-stage" id="qc-rv-stage"></div>' +
@@ -3395,6 +3399,7 @@
           '<button class="qc-act qc-act-sm" data-qc-act="undo" aria-keyshortcuts="Z Backspace"><span class="qc-act-ic">' + IC.undo + '</span><span>undo</span><kbd>Z</kbd></button>' +
           '<button class="qc-act qc-act-sm" data-qc-act="skip" aria-keyshortcuts="ArrowDown S"><span class="qc-act-ic">' + IC.down + '</span><span>later</span><kbd>↓ S</kbd></button>' +
           '<button class="qc-act qc-act-sm qc-act-cr" data-qc-act="credit" aria-keyshortcuts="F"><span class="qc-act-ic">' + IC.pen + '</span><span>fix credit</span><kbd>F</kbd></button>' +
+          '<button class="qc-act qc-act-sm" data-qc-act="title" aria-keyshortcuts="T"><span class="qc-act-ic">' + IC.ttl + '</span><span>fix title</span><kbd>T</kbd></button>' +
           '<button class="qc-act qc-act-keep" data-qc-act="keep" aria-keyshortcuts="ArrowRight D"><span class="qc-act-ic">' + IC.check + '</span><span>keep</span><kbd>→ D</kbd></button>' +
         '</div>';
       document.body.appendChild(el);
@@ -3402,11 +3407,6 @@
       R.inert = Array.prototype.filter.call(document.body.children, function (n) { return n !== el && n.id !== 'wv-toasts' && n.tagName !== 'SCRIPT' && !n.inert; });
       R.inert.forEach(function (n) { n.inert = true; });
       el.addEventListener('click', rvClick, true);
-      el.addEventListener('keydown', function (e) {
-        if (!R || !e.target.classList || !e.target.classList.contains('qc-fix-in') || e.isComposing) return;
-        if (e.key === 'Enter') { e.preventDefault(); rvFixSave(); }
-        else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); rvFix(false); }
-      });
       el.addEventListener('change', function (e) { if (e.target.id === 'qc-rv-auto' && R) { R.auto = e.target.checked; try { localStorage.setItem('wv_qc_autoplay', R.auto ? '1' : '0'); } catch (_) {} if (R.auto && !R.playing) rvPlayFirst(true); } });
       var stage = $('qc-rv-stage');
       stage.addEventListener('pointerdown', rvDown);
@@ -3480,10 +3480,7 @@
       var ev = ai.credit_ok === false && Array.isArray(ai.evidence) ? ai.evidence.filter(function (x) { return x != null && String(x).trim(); }).slice(0, 12) : [];
       var credit = ai.credit_ok === false ? '<div class="qc-cr"><div class="qc-cr-h">credited to <b>' + esc(it.creator || 'Unknown') + '</b> · ' + (ai.credit_to ? 'looks like <b>' + esc(ai.credit_to) + '</b>\'s' : 'looks like someone else made it') + '</div>' +
         (ev.length ? '<ul class="qc-cr-ev">' + ev.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') + '</div>' : '';
-      var fix = '<div class="qc-fix" hidden><label class="qc-fix-l">change who this comp is credited to. right now it says <b>' + esc(it.creator || 'Unknown') + '</b>' + (ai.credit_to ? ', the box below has the AI\'s guess. fix it if it\'s wrong' : '') + ':</label>' +
-        '<input class="wv-input qc-fix-in" type="text" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="type the real creator\'s name" aria-label="real creator name">' +
-        '<button class="wv-pill brand" data-qc-act="credit-save">save credit</button><button class="wv-see-all" data-qc-act="credit-cancel">cancel</button>' +
-        '<small>save renames the credit on the site and keeps the comp up. if the credit was already right, hit cancel and then keep.</small></div>';
+      var fix = '<div class="qc-fixing" hidden></div>';
       var tracks = tr.map(function (t, i) {
         var ok = !!safeUrl(t && t.url), title = (t && t.title) || 'track ' + (i + 1), file = t && t.file;
         return '<div class="qc-tr' + (ok ? '' : ' is-off') + '" data-i="' + i + '">' +
@@ -3532,8 +3529,11 @@
       var m = card && card.querySelector('.qc-msg'), mb = card && card.querySelector('.qc-more');
       if (m && mb && m.scrollHeight > m.clientHeight + 4) mb.hidden = false;
       R.queue.slice(1, 4).forEach(function (x) { var u = img(x.cover_url, 640); if (u) { var im = new Image(); im.src = u; } });
+      R.busy = false;
       rvActs(true);
       paintPlay();
+      rvDurations(it);
+      rvDurations(R.queue[1]);
       if (R.auto) rvPlayFirst(true);
       if (R.queue.length <= 3) rvFetch();
     }
@@ -3563,8 +3563,8 @@
       S.chain[id] = p.then(function () {}, function () {});
       return p;
     }
-    function rvDecide(action, from, credit) {
-      if (!R) return;
+    function rvDecide(action, from, credit, done) {
+      if (!R || R.busy) return;
       var S = R, it = S.queue[0]; if (!it) return;
       rvStop();
       S.queue.shift();
@@ -3575,6 +3575,7 @@
       S.inflight++; S.changed = true;
       S.base = Math.max(0, (S.base == null ? S.queue.length + 1 : S.base) - 1);
       h.p = serial(S, it.id, function () {
+        if (done) { h.saved = true; return Promise.resolve(done); }
         return post('/decide', action === 'fix_credit' ? { id: it.id, action: action, credit: credit } : { id: it.id, action: action }).then(function (d) { h.saved = true; return d; });
       }).then(function (d) {
         S.inflight--;
@@ -3594,13 +3595,12 @@
         S.queue.unshift(it);
         rvStop();
         rvShow(action === 'remove' ? 'back-l' : 'back-r');
-        if (action === 'fix_credit') rvFix(true, credit, true);
         return false;
       });
       rvShow('in');
     }
     function rvUndo() {
-      if (!R) return;
+      if (!R || R.busy) return;
       var S = R, h = S.hist.pop();
       if (!h) { toast('nothing to undo'); return; }
       var it = h.item;
@@ -3627,27 +3627,95 @@
         if (R === S) { if (q === 0) { rvStop(); rvShow('in'); } else { rvPeek(); rvCount(); } }
       });
     }
-    // fix credit: small inline input on the card, enter saves it
-    function rvFix(open, value, noFocus) {
-      var card = curCard(), it = R && R.queue[0]; if (!card || !it) return;
-      var box = card.querySelector('.qc-fix'), inp = box && box.querySelector('.qc-fix-in'); if (!inp) return;
-      if (!open) { box.hidden = true; var ov = $('qc-rv'); if (ov) { try { ov.focus({ preventScroll: true }); } catch (_) { ov.focus(); } } return; }
-      var ai = it.ai || {};
-      if (value != null) inp.value = value;
-      else if (box.hidden) inp.value = ai.credit_to || (it.creator && it.creator !== 'Unknown' ? it.creator : '');
-      box.hidden = false;
-      if (noFocus) return;
-      try { inp.focus({ preventScroll: true }); } catch (_) { inp.focus(); }
-      inp.select();
-      try { box.scrollIntoView({ block: 'nearest' }); } catch (_) {}
+    // fix credit / fix title: the AI works it out, nothing to type
+    function rvBusy(on, text) {
+      if (!R) return;
+      R.busy = !!on;
+      var card = curCard(), el = card && card.querySelector('.qc-fixing');
+      if (el) { el.hidden = !on; el.textContent = on ? (text || '') : ''; }
+      rvActs(!on);
     }
-    function rvFixSave() {
-      var card = curCard(), inp = card && card.querySelector('.qc-fix-in'); if (!inp || !R) return;
-      var v = inp.value.replace(/\s+/g, ' ').trim();
-      if (!v) { toast('type who made it first', 'error'); inp.focus(); return; }
-      if (v.length > 80) { toast('thats too long, 80 characters max', 'error'); inp.focus(); return; }
-      var ov = $('qc-rv'); if (ov) { try { ov.focus({ preventScroll: true }); } catch (_) { ov.focus(); } }
-      rvDecide('fix_credit', null, v);
+    function rvAiCredit() {
+      if (!R || R.busy) return;
+      var S = R, it = S.queue[0]; if (!it) return;
+      rvBusy(true, 'working out who made it…');
+      post('/decide', { id: it.id, action: 'fix_credit' }).then(function (d) {
+        if (R !== S) return;
+        rvBusy(false);
+        if (S.queue[0] !== it) return;
+        toast(d && d.unchanged ? 'the credit was already right (' + (d.credit || it.creator || 'Unknown') + '), kept it' : 'credited to ' + ((d && d.credit) || 'the right person'));
+        rvDecide('fix_credit', null, null, d || { ok: true });
+      }, function (e) {
+        if (e && e.navAborted) return;
+        if (R === S) rvBusy(false);
+        toast(emsg(e), 'error');
+      });
+    }
+    function paintTitle(it) {
+      var card = curCard(); if (!card || !it) return;
+      var t = card.querySelector('.qc-t'); if (t) t.textContent = it.title || 'untitled';
+      if (it.tracks && it.tracks.length === 1) { var tt = card.querySelector('.qc-tr-t'); if (tt) { tt.textContent = it.tracks[0].title || ''; tt.title = it.tracks[0].title || ''; } }
+      var w = card.querySelector('.qc-was');
+      if (!w && t) { w = document.createElement('div'); w.className = 'qc-was'; t.parentNode.insertBefore(w, t.nextSibling); }
+      if (!w) return;
+      if (it._prevTitle) { w.hidden = false; w.innerHTML = 'was: ' + esc(it._prevTitle.title || 'untitled') + ' · <button class="wv-see-all" data-qc-act="title-revert">put it back</button>'; }
+      else { w.hidden = true; w.innerHTML = ''; }
+    }
+    function rvAiTitle() {
+      if (!R || R.busy) return;
+      var S = R, it = S.queue[0]; if (!it) return;
+      rvBusy(true, 'working out the title…');
+      post('/fix-title', { id: it.id }).then(function (d) {
+        if (R !== S) return;
+        rvBusy(false);
+        if (S.queue[0] !== it || !d) return;
+        if (d.unchanged) { toast('the title was already right'); return; }
+        it._prevTitle = it._prevTitle || d.previous || null;
+        it.title = d.title;
+        if (it.tracks && it.tracks.length === 1 && d.previous && d.previous.track_title != null) it.tracks[0].title = d.title;
+        paintTitle(it);
+        toast('renamed to ' + d.title);
+      }, function (e) {
+        if (e && e.navAborted) return;
+        if (R === S) rvBusy(false);
+        toast(emsg(e), 'error');
+      });
+    }
+    function rvTitleBack() {
+      if (!R || R.busy) return;
+      var S = R, it = S.queue[0]; if (!it || !it._prevTitle) return;
+      var prev = it._prevTitle;
+      rvBusy(true, 'putting the old title back…');
+      var body = { id: it.id, title: prev.title || '' };
+      if (prev.track_title != null) body.track_title = prev.track_title;
+      post('/fix-title', body).then(function () {
+        if (R !== S) return;
+        rvBusy(false);
+        if (S.queue[0] !== it) return;
+        it.title = prev.title;
+        if (it.tracks && it.tracks.length === 1 && prev.track_title != null) it.tracks[0].title = prev.track_title;
+        it._prevTitle = null;
+        paintTitle(it);
+        toast('put the old title back');
+      }, function (e) {
+        if (e && e.navAborted) return;
+        if (R === S) rvBusy(false);
+        toast(emsg(e), 'error');
+      });
+    }
+
+    // track lengths: the server reads each file's header, so nothing has to play
+    function rvDurations(it) {
+      if (!it || !Array.isArray(it.tracks)) return;
+      var D = Q.dur || (Q.dur = {});
+      var need = it.tracks.filter(function (t) { return t && t.id && t.url && !(t.id in D); }).map(function (t) { return t.id; }).slice(0, 80);
+      if (!need.length) return;
+      need.forEach(function (id) { D[id] = null; });
+      api('/archive-qc/durations?ids=' + encodeURIComponent(need.join(','))).then(function (d) {
+        var m = (d && d.durations) || {};
+        need.forEach(function (id) { D[id] = Number(m[id]) || 0; });
+        if (R) paintPlay();
+      }, function () { need.forEach(function (id) { delete D[id]; }); });
     }
 
     // audio: one shared element for every card
@@ -3707,7 +3775,11 @@
           var d = isFinite(a.duration) ? a.duration : 0;
           if (tm) tm.textContent = clock(a.currentTime) + (d ? ' / ' + clock(d) : '');
           if (bar) bar.style.width = d ? Math.min(100, a.currentTime / d * 100).toFixed(2) + '%' : '0';
-        } else { if (tm) tm.textContent = ''; if (bar) bar.style.width = '0'; }
+        } else {
+          var cur = R.queue[0], t0 = cur && cur.tracks && cur.tracks[+row.getAttribute('data-i')], dd = t0 && Q.dur && Q.dur[t0.id];
+          if (tm) tm.textContent = dd ? clock(dd) : '';
+          if (bar) bar.style.width = '0';
+        }
       });
     }
 
@@ -3719,9 +3791,9 @@
       if (a === 'close') rvClose();
       else if (a === 'remove' || a === 'keep' || a === 'skip') rvDecide(a);
       else if (a === 'undo') rvUndo();
-      else if (a === 'credit') rvFix(true);
-      else if (a === 'credit-save') rvFixSave();
-      else if (a === 'credit-cancel') rvFix(false);
+      else if (a === 'credit') rvAiCredit();
+      else if (a === 'title') rvAiTitle();
+      else if (a === 'title-revert') rvTitleBack();
       else if (a === 'retry') { R.done = false; R.err = null; rvFetch(); rvShow(); }
       else if (a === 'play') rvPlay(+b.getAttribute('data-i'));
       else if (a === 'msg') { var m = b.parentNode.querySelector('.qc-msg'); if (m) { var open = m.classList.toggle('is-open'); b.textContent = open ? 'less' : 'more'; } }
@@ -3743,6 +3815,7 @@
       else if (k === 'ArrowRight' || k === 'd' || k === 'D') act = 'keep';
       else if (k === 'ArrowDown' || k === 's' || k === 'S') act = 'skip';
       else if (k === 'f' || k === 'F') act = 'credit';
+      else if (k === 't' || k === 'T') act = 'title';
       else if (k === 'z' || k === 'Z' || k === 'Backspace') act = 'undo';
       else if (k === ' ' || k === 'Spacebar') act = t && t.tagName === 'INPUT' ? null : 'space';
       else if (k === 'Escape') act = 'close';
@@ -3753,7 +3826,8 @@
       if (act === 'close') rvClose();
       else if (act === 'undo') rvUndo();
       else if (act === 'space') rvSpace();
-      else if (act === 'credit') rvFix(true);
+      else if (act === 'credit') rvAiCredit();
+      else if (act === 'title') rvAiTitle();
       else rvDecide(act);
     }
 
