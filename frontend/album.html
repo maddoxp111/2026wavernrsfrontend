@@ -180,6 +180,7 @@
         try { history.replaceState(null, '', '/album?id=' + albumId + location.hash); } catch (_) {}
       }
     } catch (err) {
+      if (err && err.data && err.data.removed) { showRemovedComp(); return; }
       document.getElementById('album-container').innerHTML =
         `<div class="empty-state"><div class="empty-title">couldnt find this comp</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
       return;
@@ -275,6 +276,7 @@
 
     document.getElementById('album-container').innerHTML = `
       <div style="padding:28px 0;">
+        <div id="qc-banner" class="qc-banner" role="status" hidden></div>
         ${freshBanner}
         <div id="staff-bar" class="wv-staff-bar" style="display:none;"></div>
         <div class="wv-hero">
@@ -405,7 +407,7 @@
       </div>`;
 
     // Wire IA CDN retry on all cover images (they may take 1-3 min to propagate)
-    renderStaffCoverButton(); renderStaffThreadButton(); renderStaffBar();
+    renderStaffCoverButton(); renderStaffThreadButton(); renderStaffBar(); paintQc();
     setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 2000);
     setTimeout(function () { renderStaffCoverButton(); renderStaffThreadButton(); }, 6000);
     if (typeof wireIACoverRetry === 'function') {
@@ -609,6 +611,7 @@
     bar.innerHTML = (staff ? '<div class="wv-sb-row"><span class="wv-sb-label">Staff</span>' +
         '<button class="wv-pill" onclick="staffEdit()">✏️ Edit</button>' +
         '<button class="wv-pill' + (window._albHl ? ' is-active' : '') + '" id="staff-hl" onclick="staffHighlight()" title="show this comp in the Highlighted tab and on the home page">' + _hlLabel() + '</button>' +
+        '<span id="staff-qc-slot"></span>' +
         '<span id="staff-bar-rebuild"></span>' +
         '<button class="wv-pill" id="staff-undo" style="display:none;" onclick="staffUndo()">↶ Undo last change</button>' +
       '</div>' : '') +
@@ -619,7 +622,73 @@
     if (staff) api('/archive-manage/comps/' + album.id + '/undo').then(function (d) { var u = document.getElementById('staff-undo'); if (u && d && d.available) { u.style.display = ''; u.title = 'undo the ' + (d.reason || 'last change') + ' from ' + new Date(d.at).toLocaleString(); } }).catch(function () {});
     if (staff) renderStaffThreadButton();
     if (trk) loadTrackerRow();
+    paintQc();
   }
+
+  // ── Removed from the site (soft): staff banner + remove / bring back ────
+  function _qcIcon(px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18v3H3z"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M10 14h4"/></svg>'; }
+  function showRemovedComp() {
+    document.title = 'removed — wavernrs stream';
+    var el = document.getElementById('album-container'); if (!el) return;
+    el.innerHTML = '<div class="empty-state qc-removed"><div class="empty-icon">' + _qcIcon(26) + '</div>' +
+      '<div class="empty-title">this was removed from the site</div>' +
+      '<div class="empty-desc">it got taken down while we cleaned up the archive (stuff like unfinished posts, loops and chat clips). if you think it should be back, let a mod know</div>' +
+      '<a href="/archive" class="btn btn-primary">browse the archive</a></div>';
+  }
+  function _qcBy(by) {
+    by = String(by || '');
+    if (by === 'ai') return 'the AI';
+    if (by.indexOf('rule:') === 0) return 'an auto rule (' + by.slice(5).replace(/_/g, ' ') + ')';
+    if (by.indexOf('staff:') === 0) return by.slice(6) || 'staff';
+    return by || 'someone';
+  }
+  function paintQc() {
+    var q = album && album.qc;
+    var ban = document.getElementById('qc-banner');
+    if (ban) {
+      if (q && q.hidden) {
+        ban.innerHTML = '<span class="qc-banner-ic">' + _qcIcon(18) + '</span>' +
+          '<div class="qc-banner-tx"><b>removed from the site</b>' + (q.reason ? ' · ' + escHtml(q.reason) : '') + ' · by ' + escHtml(_qcBy(q.by)) + (q.at ? ' · ' + escHtml(timeAgo(q.at)) : '') +
+          '<div class="qc-banner-sub">only staff can open this page rn. everyone else sees a removed message and it doesnt show anywhere on the site</div></div>' +
+          '<button class="wv-pill brand" id="qc-bring-back" onclick="staffQcRestore()">bring it back</button>';
+        ban.hidden = false;
+      } else { ban.hidden = true; ban.innerHTML = ''; }
+    }
+    var slot = document.getElementById('staff-qc-slot');
+    if (slot) slot.innerHTML = q && q.hidden ? '' : '<button class="wv-pill" id="staff-qc-rm" onclick="staffQcRemove()" title="takes it off the site without deleting anything...bring it back from here or the Quality tab in the archive panel">remove from site</button>';
+  }
+  function _qcMe() { var me = (typeof getUser === 'function' && getUser()) || {}; return 'staff:' + (me.username || me.id || 'you'); }
+  window.staffQcRemove = async function () {
+    if (!album) return;
+    var aid = album.id;
+    var reason = prompt('why is this coming off the site? (optional, only staff see it)', '');
+    if (reason === null) return;
+    reason = String(reason).trim().slice(0, 300);
+    var btn = document.getElementById('staff-qc-rm'); if (btn) btn.disabled = true;
+    try {
+      await api('/archive-qc/remove', { method: 'POST', body: JSON.stringify({ ids: [aid], reason: reason }) });
+      if (!album || album.id !== aid) return;
+      album.qc = Object.assign({}, album.qc || {}, { hidden: true, status: 'hidden', reason: reason || 'removed by staff', by: _qcMe(), score: null, kind: null, at: new Date().toISOString() });
+      paintQc();
+      _sbMsg('removed from the site...nothing got deleted, bring it back anytime');
+      var ban = document.getElementById('qc-banner'); if (ban && ban.scrollIntoView) ban.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) { _sbMsg(e.message || 'couldnt remove it', true); if (btn) btn.disabled = false; }
+  };
+  window.staffQcRestore = async function () {
+    if (!album) return;
+    var aid = album.id;
+    var btn = document.getElementById('qc-bring-back'); if (btn) { btn.disabled = true; btn.textContent = 'bringing it back…'; }
+    try {
+      await api('/archive-qc/restore', { method: 'POST', body: JSON.stringify({ ids: [aid] }) });
+      if (!album || album.id !== aid) return;
+      album.qc = Object.assign({}, album.qc || {}, { hidden: false, status: 'ok', reason: 'brought back', by: _qcMe(), at: new Date().toISOString() });
+      paintQc();
+      if (typeof wvToast === 'function') wvToast('its back on the site');
+    } catch (e) {
+      if (typeof wvToast === 'function') wvToast(e.message || 'couldnt bring it back', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'bring it back'; }
+    }
+  };
   if (!window._albRolesHook) {
     window._albRolesHook = function () { if (typeof renderStaffBar === 'function') renderStaffBar(); };
     window.addEventListener('wv-roles', window._albRolesHook);
