@@ -72,6 +72,7 @@
     .qc-head b { font-size: 14px; }
     .qc-head .wv-see-all { margin-left: auto; min-height: 32px; }
     .qc-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .qc-tiles.is-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .qc-tile { background: var(--surface); border: 0; border-radius: 12px; padding: 10px 12px; text-align: left; font: inherit; color: inherit; min-width: 0; }
     button.qc-tile { cursor: pointer; transition: background .12s; }
     button.qc-tile:hover { background: var(--surface-hover); }
@@ -133,7 +134,7 @@
     .qc-note.is-bad { color: var(--red); }
     @media (max-width: 560px) {
       .qc-box { padding: 12px; }
-      .qc-tiles { grid-template-columns: 1fr 1fr; }
+      .qc-tiles, .qc-tiles.is-5 { grid-template-columns: 1fr 1fr; }
       .qc-set-grid { grid-template-columns: 1fr 1fr; }
       .qc-rm-row { grid-template-columns: auto 40px minmax(0, 1fr); }
       .qc-rm-cv { width: 40px; height: 40px; }
@@ -3191,7 +3192,7 @@
     function paintStatus() {
       var box = $('qc-status'); if (!box) return;
       var s = Q.st || {}, cfg = s.config || {}, c = s.counts || null, t = s.totals || {}, b = s.batch, last = s.last || null;
-      var review = c ? Number(c.review) || 0 : 0;
+      var review = c ? Number(c.review) || 0 : 0, second = c ? Number(c.second_look) || 0 : 0;
       tabCount(review);
       var off = cfg.enabled === false;
       var phaseLabel = off ? 'paused' : (PHASE[cfg.phase] || cfg.phase || '…');
@@ -3208,10 +3209,15 @@
       else lines.push('<div>going through the whole archive, ' + num(cfg.round_size || 4000) + ' comps a round</div>');
       if (b) {
         var bc = b.counts || {}, back = (Number(bc.succeeded) || 0) + (Number(bc.errored) || 0) + (Number(bc.canceled) || 0) + (Number(bc.expired) || 0), all = back + (Number(bc.processing) || 0);
-        lines.push('<div>round ' + num(b.round) + ': ' + (b.albums ? plural(b.albums, 'comp') + ' are' : 'a batch is') + ' with the AI rn · sent ' + esc(ago(b.created_at)) + (all ? ' · ' + num(back) + ' of ' + num(all) + ' answers back' : b.status ? ' · ' + esc(String(b.status).replace(/_/g, ' ')) : '') + '</div>');
+        if (b.kind === 'escalate') lines.push('<div>second look: ' + plural(b.albums || 0, 'comp') + ' the first AI wasnt sure about are with the smarter AI rn · sent ' + esc(ago(b.created_at)) + (all ? ' · ' + num(back) + ' of ' + num(all) + ' answers back' : '') + '</div>');
+        else lines.push('<div>round ' + num(b.round) + ': ' + (b.albums ? plural(b.albums, 'comp') + ' are' : 'a batch is') + ' with the AI rn · sent ' + esc(ago(b.created_at)) + (all ? ' · ' + num(back) + ' of ' + num(all) + ' answers back' : b.status ? ' · ' + esc(String(b.status).replace(/_/g, ' ')) : '') + '</div>');
       } else if (s.running) lines.push('<div>working on it…</div>');
       else if (s.next_at && !off && cfg.phase !== 'paused') lines.push('<div>next check ' + esc(until(s.next_at)) + '</div>');
-      if (last && last.counts && last.at) {
+      if (second && !(b && b.kind === 'escalate')) lines.push('<div>' + plural(second, 'comp') + ' the first AI wasnt sure about are waiting for the smarter AI to take a second look before they come to you</div>');
+      if (last && last.counts && last.at && last.counts.second_look != null) {
+        var ec = last.counts;
+        if (!(b && b.kind === 'escalate') && ec.sent != null) lines.push('<div>last second look ' + esc(ago(last.at)) + ': ' + plural(ec.sent || 0, 'comp') + ' · ' + num(ec.ok) + ' kept · ' + num(ec.hidden) + ' removed · ' + num(ec.review) + ' still for you' + (ec.errors ? ' · ' + plural(ec.errors, 'error') : '') + '</div>');
+      } else if (last && last.counts && last.at) {
         var lc = last.counts, prot = Number(lc.protected) || 0, empt = Number(lc.empty) || 0, emptR = Number(lc.empty_review) || 0;
         var rules = (prot ? ' · ' + num(prot) + ' kept by the rules' : '') + (empt ? ' · ' + num(empt) + ' empty ones removed' : '') + (emptR ? ' · ' + num(emptR) + ' empty ones for you' : '');
         if (b && b.round != null && Number(b.round) === Number(last.round)) {
@@ -3223,15 +3229,15 @@
         }
       }
       if (last && last.error) lines.push('<div class="is-bad">last error: ' + esc(last.error) + '</div>');
-      var total = c ? (Number(c.unchecked) || 0) + (Number(c.ok) || 0) + review + (Number(c.hidden) || 0) : 0;
+      var total = c ? (Number(c.unchecked) || 0) + (Number(c.ok) || 0) + review + second + (Number(c.hidden) || 0) : 0;
       var w = function (n) { return total ? Math.max(0, Math.min(100, (Number(n) || 0) / total * 100)).toFixed(2) : 0; };
       var spent = Number(t.usd) || 0, cap = Number(cfg.max_usd) || 0;
       var tile = function (n, label, act, attn) { return (act ? '<button type="button" class="qc-tile' + (attn ? ' is-attn' : '') + '" data-qc-act="' + act + '">' : '<div class="qc-tile">') + '<div class="qc-tile-n">' + (c ? num(n) : '–') + '</div><div class="qc-tile-l">' + label + '</div>' + (act ? '</button>' : '</div>'); };
       box.innerHTML =
         '<div class="qc-box">' +
           '<div class="qc-head"><b>Quality check</b><span class="wv-chip ' + chip + '">' + esc(phaseLabel) + '</span><button class="wv-see-all" data-qc-act="reload">refresh</button></div>' +
-          '<div class="qc-tiles">' + tile(c && c.unchecked, 'not checked yet') + tile(c && c.ok, 'ok') + tile(review, 'waiting for you', 'review', review > 0) + tile(c && c.hidden, 'removed', 'to-removed') + '</div>' +
-          (total ? '<div class="qc-bar" title="' + esc(pct((total - (Number(c.unchecked) || 0)) / total)) + ' checked"><i style="width:' + w(c.ok) + '%;background:var(--green);"></i><i style="width:' + w(review) + '%;background:var(--brand);"></i><i style="width:' + w(c.hidden) + '%;background:var(--red);"></i></div>' +
+          '<div class="qc-tiles' + (second ? ' is-5' : '') + '">' + tile(c && c.unchecked, 'not checked yet') + tile(c && c.ok, 'ok') + (second ? tile(second, 'second look') : '') + tile(review, 'waiting for you', 'review', review > 0) + tile(c && c.hidden, 'removed', 'to-removed') + '</div>' +
+          (total ? '<div class="qc-bar" title="' + esc(pct((total - (Number(c.unchecked) || 0)) / total)) + ' checked"><i style="width:' + w(c.ok) + '%;background:var(--green);"></i><i style="width:' + w(second) + '%;background:var(--orange);"></i><i style="width:' + w(review) + '%;background:var(--brand);"></i><i style="width:' + w(c.hidden) + '%;background:var(--red);"></i></div>' +
             '<div style="font-size:11.5px;color:var(--text-3);">' + num(total - (Number(c.unchecked) || 0)) + ' of ' + num(total) + ' checked</div>' : '') +
           '<div class="qc-lines">' +
             '<div>spent <b>' + money(spent) + '</b>' + (cap ? ' of ' + money(cap) : '') + (t.rounds ? ' over ' + plural(t.rounds, 'round') : '') + (t.errors ? ' · ' + plural(t.errors, 'error') + ' so far' : '') + '</div>' +
