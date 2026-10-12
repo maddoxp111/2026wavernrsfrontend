@@ -709,9 +709,11 @@
     }
   }
 
+  function upSingle(u) { return u._type === 'album' && Number(u.track_count) === 1; }
   function upItemMatches(item) {
-    if (upLibF === 'comps' && item._type !== 'album') return false;
-    if (upLibF === 'edits' && item._type !== 'track') return false;
+    if (item._type === 'track' && item.album_id && uploads.some(function (u) { return u.id === item.album_id && upSingle(u); })) return false;
+    if (upLibF === 'comps' && (item._type !== 'album' || upSingle(item))) return false;
+    if (upLibF === 'edits' && item._type !== 'track' && !upSingle(item)) return false;
     var q = upLibQ.trim().toLowerCase();
     if (!q) return true;
     return String(item.title || '').toLowerCase().indexOf(q) >= 0 || eraName(item.era_tag_id).toLowerCase().indexOf(q) >= 0;
@@ -720,8 +722,11 @@
   function renderUploads() {
     var el = document.getElementById('my-uploads');
     if (!el) return;
-    var nComps = uploads.filter(function (u) { return u._type === 'album'; }).length;
-    var nEdits = uploads.length - nComps;
+    var saved = upLibF, savedQ = upLibQ;
+    upLibQ = '';
+    upLibF = 'comps'; var nComps = uploads.filter(upItemMatches).length;
+    upLibF = 'edits'; var nEdits = uploads.filter(upItemMatches).length;
+    upLibF = saved; upLibQ = savedQ;
     document.getElementById('uploads-header').innerHTML = 'Your uploads' + (uploadsLoaded ? '<span>' + uploads.length + '</span>' : '');
     var chips = document.getElementById('up-chips');
     if (chips) {
@@ -739,7 +744,9 @@
       var isAlbum = item._type === 'album';
       var cover = item.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(item.cover_url, 96) : item.cover_url) + '" alt="" loading="lazy" decoding="async">' : (isAlbum ? UP_IC.disc : UP_IC.note);
       var parts = [];
-      if (isAlbum) {
+      if (isAlbum && upSingle(item)) {
+        parts.push(fmtNum(item.play_count || 0) + ' plays');
+      } else if (isAlbum) {
         if (item.track_count != null) parts.push(item.track_count + ' track' + (item.track_count === 1 ? '' : 's'));
       } else {
         parts.push(fmtNum(item.play_count || 0) + ' plays');
@@ -749,7 +756,7 @@
       var era = eraName(item.era_tag_id);
       if (era) parts.push(era);
       parts.push(timeAgo(item.created_at));
-      var tags = '<span class="tag' + (isAlbum ? ' comp' : '') + '">' + (isAlbum ? 'Comp' : 'Edit') + '</span>';
+      var tags = '<span class="tag' + (isAlbum && !upSingle(item) ? ' comp' : '') + '">' + (isAlbum && !upSingle(item) ? 'Comp' : 'Edit') + '</span>';
       if (isAlbum && item.release_status === 'draft') tags += '<span class="tag draft">Draft</span>';
       if (isAlbum && item.release_status === 'upcoming') tags += '<span class="tag draft">Upcoming</span>';
       var href = isAlbum ? '/album?id=' + encodeURIComponent(item.id) : '/track?id=' + encodeURIComponent(item.id);

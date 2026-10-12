@@ -899,7 +899,8 @@
       el.innerHTML = '<div class="empty-state" style="padding:36px 12px;"><div class="empty-title">no uploads yet</div><div class="empty-desc" style="margin-bottom:16px;">post your first edit or comp and your stats start here</div><a class="st-btn brand" href="/upload">' + ST_ICON.upload + 'Upload</a></div>';
       return;
     }
-    var list = uploads.filter(function (u) { return _upFilter === 'all' || u._type === _upFilter; });
+    var single = function (u) { return u._type === 'album' && !u.collab && Number(u.track_count) === 1; };
+    var list = uploads.filter(function (u) { return _upFilter === 'all' || (_upFilter === 'track' ? (u._type === 'track' || single(u)) : (u._type === 'album' && !single(u))); });
     if (_upSort === 'plays') list = list.slice().sort(function (a, b) { return (b.play_count || 0) - (a.play_count || 0); });
     if (!list.length) {
       el.innerHTML = '<div class="st-empty-sm">no ' + (_upFilter === 'album' ? 'comps' : 'edits') + ' yet</div>';
@@ -909,12 +910,12 @@
       var isAlbum = item._type === 'album';
       var href = (isAlbum ? '/album?id=' : '/track?id=') + encodeURIComponent(item.id);
       var img = item.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(item.cover_url, 96) : item.cover_url) + '" alt="" loading="lazy">' : '';
-      var tag = isAlbum ? (item.collab ? 'Collab' : 'Comp') : 'Edit';
+      var tag = isAlbum ? (item.collab ? 'Collab' : single(item) ? 'Edit' : 'Comp') : 'Edit';
       var status = '';
       if (isAlbum && item.release_status === 'draft') status = '<span class="st-tag draft">Draft</span>';
       else if (isAlbum && item.release_status === 'upcoming' && item.release_at && new Date(item.release_at) > new Date()) status = '<span class="st-tag warn">Out ' + escHtml(new Date(item.release_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) + '</span>';
       var bits = [];
-      if (isAlbum && item.track_count) bits.push(item.track_count + ' track' + (item.track_count === 1 ? '' : 's'));
+      if (isAlbum && item.track_count && !single(item)) bits.push(item.track_count + ' track' + (item.track_count === 1 ? '' : 's'));
       bits.push(stNum(item.play_count || 0) + ' plays');
       bits.push(timeAgo(item.created_at));
       var t = escHtml(item.title || 'Untitled');
