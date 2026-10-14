@@ -453,6 +453,79 @@ function wvImg(url, w, opts) {
 window.wvImg = wvImg;
 window.wvImgSize = wvImgSize;
 
+function _wvFileName(title, url, fallback) {
+  const ext = (String(url || '').split('?')[0].split('/').pop().match(/\.([a-z0-9]{2,5})$/i) || [])[1] || 'mp3';
+  return ((String(title || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').replace(/\s+/g, ' ').trim()) || fallback) + '.' + ext.toLowerCase();
+}
+function _wvSaveBlob(blob, name) {
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href; a.download = name; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(href); a.remove(); }, 60000);
+}
+function _wvFallback(url) {
+  const f = document.createElement('iframe');
+  f.style.display = 'none'; f.src = url;
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 120000);
+}
+function _wvToast(msg, kind) { if (typeof window.wvToast === 'function') window.wvToast(msg, kind); }
+async function _wvFetchFile(url) {
+  const r = await fetch(url, { mode: 'cors', credentials: 'omit' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r;
+}
+let _wvZip = null;
+function _wvLoadZip() { if (!_wvZip) _wvZip = import('https://cdn.jsdelivr.net/npm/client-zip@2.4.5/index.js').catch(e => { _wvZip = null; throw e; }); return _wvZip; }
+async function wvDownloadTrack(id) {
+  const back = API_BASE + '/tracks/' + encodeURIComponent(id) + '/download';
+  try {
+    const t = await api('/tracks/' + encodeURIComponent(id));
+    if (!t || !t.ia_url) throw new Error('no file');
+    _wvToast('downloading ' + (t.title || 'song') + '...');
+    const r = await _wvFetchFile(t.ia_url);
+    _wvSaveBlob(await r.blob(), _wvFileName(t.title, t.ia_url, 'track'));
+  } catch (_) { _wvFallback(back); }
+}
+async function wvDownloadComp(id) {
+  const back = API_BASE + '/albums/' + encodeURIComponent(id) + '/download';
+  let started = false;
+  try {
+    const a = await api('/albums/' + encodeURIComponent(id));
+    const list = ((a && a.album_tracks) || []).slice().sort((x, y) => (x.position || 0) - (y.position || 0))
+      .map(x => x.tracks || x).filter(t => t && t.ia_url);
+    if (!list.length) throw new Error('no files');
+    const { downloadZip } = await _wvLoadZip();
+    await _wvFetchFile(list[0].ia_url).then(r => r.body && r.body.cancel && r.body.cancel()).catch(e => { throw e; });
+    started = true;
+    _wvToast('zipping ' + list.length + ' song' + (list.length === 1 ? '' : 's') + ' from ' + (a.title || 'this comp') + '...');
+    const pad = String(list.length).length < 2 ? 2 : String(list.length).length;
+    async function* files() {
+      for (let i = 0; i < list.length; i++) {
+        const t = list[i];
+        try { yield { name: String(i + 1).padStart(pad, '0') + ' - ' + _wvFileName(t.title, t.ia_url, 'track ' + (i + 1)), input: await _wvFetchFile(t.ia_url) }; } catch (_) {}
+      }
+    }
+    const blob = await downloadZip(files()).blob();
+    _wvSaveBlob(blob, ((String((a && a.title) || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim()) || 'comp') + '.zip');
+  } catch (e) {
+    if (started) _wvToast('couldnt finish the zip, trying another way', 'error');
+    _wvFallback(back);
+  }
+}
+window.wvDownloadTrack = wvDownloadTrack;
+window.wvDownloadComp = wvDownloadComp;
+document.addEventListener('click', function (e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target && e.target.closest && e.target.closest('a[href]');
+  if (!a) return;
+  const m = /\/api\/(tracks|albums)\/([0-9a-zA-Z_-]+)\/download(?:$|\?)/.exec(a.getAttribute('href') || '');
+  if (!m || (a.getAttribute('href') || '').indexOf(API_BASE) !== 0) return;
+  e.preventDefault();
+  if (m[1] === 'tracks') wvDownloadTrack(m[2]); else wvDownloadComp(m[2]);
+});
+
 function coverHTML(seed, size, opts) {
   opts = opts || {};
   const bg = opts.coverUrl
