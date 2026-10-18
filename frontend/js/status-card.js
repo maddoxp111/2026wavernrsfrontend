@@ -103,7 +103,9 @@
   }
 
   function load() {
-    return _get(API + '/site/status?t=' + Date.now())
+    var live = function () { return _get(API + '/site/status?t=' + Date.now()); };
+    return live()
+      .catch(function () { return new Promise(function (r) { setTimeout(r, 2000); }).then(live); })
       .catch(function () { return _get('/status.json?t=' + Date.now()); });
   }
 
