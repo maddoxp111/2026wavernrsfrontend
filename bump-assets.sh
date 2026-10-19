@@ -33,4 +33,5 @@ fi
 sed -i -E "s#(src=\"/js/[^\"?]+\.js)(\?v=[^\"]*)?\"#\1?v=$V\"#g; s#(href=\"/css/[^\"?]+\.css)(\?v=[^\"]*)?\"#\1?v=$V\"#g" *.html
 # Scripts loaded from layout.js
 sed -i -E "s#(s\.src = '/js/[^'?]+\.js)(\?v=[^']*)?'#\1?v=$V'#g" js/layout.js
+sed -i -E "s#'/(js/igx\.js|css/igx\.css)(\?v=[^']*)?'#'/\1?v=$V'#g" resources.html
 echo "assets stamped v=$V"
