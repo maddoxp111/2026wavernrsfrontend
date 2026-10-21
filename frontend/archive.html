@@ -1605,7 +1605,12 @@ function arcHomeLoad(h) {
   var S = get('/stats');
   var C = get('/archive?limit=14&offset=0&sort=plays&kind=comps');
   var E = get('/archive?limit=14&offset=0&sort=likes&kind=edits');
-  var N = get('/archive/recent?limit=16');
+  var N = Promise.all([get('/archive/recent?kind=comps&limit=8'), get('/archive/recent?kind=edits&limit=12')]).then(function (r) {
+    var items = [].concat((r[0] && r[0].items) || [], (r[1] && r[1].items) || []);
+    if (!items.length) return null;
+    items.sort(function (x, y) { return new Date(y.created_at || 0) - new Date(x.created_at || 0); });
+    return { items: items };
+  });
   var AR = get('/archive/artists?sort=plays&limit=14');
   var ER = get('/archive/eras');
   var T = (_arcTopReq || api('/archive/top')).catch(function () { return null; });
@@ -1648,12 +1653,12 @@ function arcHomeLoad(h) {
 
   N.then(function (d) {
     if (!live()) return;
-    var items = ((d && d.items) || []).slice(0, 16);
+    var items = ((d && d.items) || []).slice(0, 20);
     h.d.newest = items; remember(items);
     if (!items.length) return ahDrop('ah-new');
     ahSec('ah-new').innerHTML = ahHead('Just archived', 'the newest saves, as they come in', { href: '/archive?sort=newest', view: 'all', sort: 'newest' }) +
       '<div class="ah-rail">' + items.map(function (x) {
-        return ahCard(x, [x.archive_artist_name || 'Unknown', ahAgo(x.created_at || x.original_date)].filter(Boolean).join(' · '));
+        return ahCard(x, [x.archive_artist_name || 'Unknown', ahAgo(x.created_at || x.original_date)].filter(Boolean).join(' · '), x.track_count === 1 ? 'Edit' : '');
       }).join('') + '</div>';
   });
 
