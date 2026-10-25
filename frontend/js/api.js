@@ -464,9 +464,10 @@ function _wvSaveBlob(blob, name) {
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(href); a.remove(); }, 60000);
 }
-function _wvFallback(url) {
+function _wvHost(u) { try { return new URL(u).hostname.replace(/^pub-[a-z0-9]+\.r2\.dev$/, 'r2').slice(0, 24); } catch (_) { return 'bad'; } }
+function _wvFallback(url, why) {
   const f = document.createElement('iframe');
-  f.style.display = 'none'; f.src = url;
+  f.style.display = 'none'; f.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'why=' + encodeURIComponent(why || 'unknown');
   document.body.appendChild(f);
   setTimeout(() => f.remove(), 120000);
 }
@@ -480,25 +481,31 @@ let _wvZip = null;
 function _wvLoadZip() { if (!_wvZip) _wvZip = import('https://cdn.jsdelivr.net/npm/client-zip@2.4.5/index.js').catch(e => { _wvZip = null; throw e; }); return _wvZip; }
 async function wvDownloadTrack(id) {
   const back = API_BASE + '/tracks/' + encodeURIComponent(id) + '/download';
+  let why = 'meta';
   try {
     const t = await api('/tracks/' + encodeURIComponent(id));
     if (!t || !t.ia_url) throw new Error('no file');
     _wvToast('downloading ' + (t.title || 'song') + '...');
+    why = 'fetch.' + _wvHost(t.ia_url);
     const r = await _wvFetchFile(t.ia_url);
+    why = 'blob';
     _wvSaveBlob(await r.blob(), _wvFileName(t.title, t.ia_url, 'track'));
-  } catch (_) { _wvFallback(back); }
+  } catch (_) { _wvFallback(back, why); }
 }
 async function wvDownloadComp(id) {
   const back = API_BASE + '/albums/' + encodeURIComponent(id) + '/download';
-  let started = false;
+  let started = false, why = 'meta';
   try {
     const a = await api('/albums/' + encodeURIComponent(id));
     const list = ((a && a.album_tracks) || []).slice().sort((x, y) => (x.position || 0) - (y.position || 0))
       .map(x => x.tracks || x).filter(t => t && t.ia_url);
     if (!list.length) throw new Error('no files');
+    why = 'lib';
     const { downloadZip } = await _wvLoadZip();
+    why = 'fetch.' + _wvHost(list[0].ia_url);
     await _wvFetchFile(list[0].ia_url).then(r => r.body && r.body.cancel && r.body.cancel()).catch(e => { throw e; });
     started = true;
+    why = 'zip.' + list.length;
     _wvToast('zipping ' + list.length + ' song' + (list.length === 1 ? '' : 's') + ' from ' + (a.title || 'this comp') + '...');
     const pad = String(list.length).length < 2 ? 2 : String(list.length).length;
     async function* files() {
@@ -508,10 +515,11 @@ async function wvDownloadComp(id) {
       }
     }
     const blob = await downloadZip(files()).blob();
+    why = 'save.' + Math.round(blob.size / 1048576);
     _wvSaveBlob(blob, ((String((a && a.title) || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim()) || 'comp') + '.zip');
   } catch (e) {
     if (started) _wvToast('couldnt finish the zip, trying another way', 'error');
-    _wvFallback(back);
+    _wvFallback(back, why);
   }
 }
 window.wvDownloadTrack = wvDownloadTrack;
