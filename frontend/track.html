@@ -359,6 +359,12 @@
       document.title = `${track.title} — wavernrs stream`;
       if (typeof window.setPageBgImage === 'function') window.setPageBgImage(_trkCover());
       renderTrack();
+      var _q = new URLSearchParams(location.search);
+      if (_q.get('dl') === '1') {
+        _q.delete('dl');
+        try { history.replaceState(history.state, '', location.pathname + (_q.toString() ? '?' + _q.toString() : '')); } catch (_) {}
+        if (typeof wvDownloadTrack === 'function' && track.ia_url) setTimeout(function () { wvDownloadTrack(trackId); }, 300);
+      }
       box.setAttribute('aria-busy', 'false');
       _trkWire();
       loadLyrics();

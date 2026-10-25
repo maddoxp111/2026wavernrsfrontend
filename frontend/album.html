@@ -190,7 +190,15 @@
       _credits = (typeof wvAlbumCredits === 'function' && wvAlbumCredits(album)) || {};
       document.title = `${album.title} — wavernrs stream`;
       await renderAlbum();
-      if (new URLSearchParams(location.search).get('play') === '1' && albumTracks.length) { try { playAll(); } catch (_) {} }
+      var _q = new URLSearchParams(location.search);
+      if (_q.get('dl') === '1') {
+        _q.delete('dl');
+        try { history.replaceState(history.state, '', location.pathname + (_q.toString() ? '?' + _q.toString() : '')); } catch (_) {}
+        var _db = document.getElementById('download-comp-btn');
+        if (_db) { try { _db.scrollIntoView({ block: 'center' }); } catch (_) {} }
+        if (typeof wvDownloadComp === 'function' && albumTracks.length) setTimeout(function () { wvDownloadComp(albumId); }, 300);
+      }
+      if (_q.get('play') === '1' && albumTracks.length) { try { playAll(); } catch (_) {} }
       else { try { albumDeepLink(); } catch (_) {} }
     loadAlbumComments();
       loadMoreLikeThis();
