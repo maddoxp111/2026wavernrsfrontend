@@ -465,6 +465,7 @@ function _wvSaveBlob(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(href); a.remove(); }, 60000);
 }
 function _wvHost(u) { try { return new URL(u).hostname.replace(/^pub-[a-z0-9]+\.r2\.dev$/, 'r2').slice(0, 24); } catch (_) { return 'bad'; } }
+function _wvWhy(why, e) { if (!/^fetch\./.test(why)) return why; const m = /^HTTP (\d+)/.exec((e && e.message) || ''); return why + '.' + (m ? m[1] : 'net'); }
 function _wvFallback(url, why) {
   const f = document.createElement('iframe');
   f.style.display = 'none'; f.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'why=' + encodeURIComponent(why || 'unknown');
@@ -490,7 +491,7 @@ async function wvDownloadTrack(id) {
     const r = await _wvFetchFile(t.ia_url);
     why = 'blob';
     _wvSaveBlob(await r.blob(), _wvFileName(t.title, t.ia_url, 'track'));
-  } catch (_) { _wvFallback(back, why); }
+  } catch (e) { _wvFallback(back, _wvWhy(why, e)); }
 }
 async function wvDownloadComp(id) {
   const back = API_BASE + '/albums/' + encodeURIComponent(id) + '/download';
@@ -519,7 +520,7 @@ async function wvDownloadComp(id) {
     _wvSaveBlob(blob, ((String((a && a.title) || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim()) || 'comp') + '.zip');
   } catch (e) {
     if (started) _wvToast('couldnt finish the zip, trying another way', 'error');
-    _wvFallback(back, why);
+    _wvFallback(back, _wvWhy(why, e));
   }
 }
 window.wvDownloadTrack = wvDownloadTrack;
