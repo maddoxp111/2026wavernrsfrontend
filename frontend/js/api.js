@@ -466,41 +466,60 @@ function _wvSaveBlob(blob, name) {
 }
 function _wvHost(u) { try { return new URL(u).hostname.replace(/^pub-[a-z0-9]+\.r2\.dev$/, 'r2').slice(0, 24); } catch (_) { return 'bad'; } }
 function _wvWhy(why, e) { if (!/^fetch\./.test(why)) return why; const m = /^HTTP (\d+)/.exec((e && e.message) || ''); return why + '.' + (m ? m[1] : 'net'); }
-function _wvFallback(url, why) {
+// Files are fetched through a small Cloudflare relay: archive.org sends no
+// CORS headers, and Cloudflare bandwidth is free where the API's is not.
+const WV_DL = 'https://wavernrs-dl.oldmn123456.workers.dev/f';
+function _wvRelay(url, name) { return WV_DL + '?u=' + encodeURIComponent(url) + (name ? '&n=' + encodeURIComponent(name) : ''); }
+function _wvFrame(url) {
   const f = document.createElement('iframe');
-  f.style.display = 'none'; f.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'why=' + encodeURIComponent(why || 'unknown');
+  f.style.display = 'none'; f.src = url;
   document.body.appendChild(f);
   setTimeout(() => f.remove(), 120000);
 }
+function _wvFallback(url, why) { _wvFrame(url + (url.indexOf('?') >= 0 ? '&' : '?') + 'why=' + encodeURIComponent(why || 'unknown')); }
 function _wvToast(msg, kind) { if (typeof window.wvToast === 'function') window.wvToast(msg, kind); }
 async function _wvFetchFile(url) {
+  try {
+    const viaRelay = await fetch(_wvRelay(url), { mode: 'cors', credentials: 'omit' });
+    if (viaRelay.ok) return viaRelay;
+  } catch (_) {}
   const r = await fetch(url, { mode: 'cors', credentials: 'omit' });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r;
+}
+// When the browser can't build a zip, the songs still download one at a time
+// through the relay, so nothing falls back to the API.
+function _wvEach(list, pad) {
+  _wvToast('downloading ' + list.length + ' song' + (list.length === 1 ? '' : 's') + ' one by one...');
+  list.forEach((t, i) => setTimeout(() => _wvFrame(_wvRelay(t.ia_url, String(i + 1).padStart(pad, '0') + ' - ' + _wvFileName(t.title, t.ia_url, 'track ' + (i + 1)))), i * 1200));
 }
 let _wvZip = null;
 function _wvLoadZip() { if (!_wvZip) _wvZip = import('https://cdn.jsdelivr.net/npm/client-zip@2.4.5/index.js').catch(e => { _wvZip = null; throw e; }); return _wvZip; }
 async function wvDownloadTrack(id) {
   const back = API_BASE + '/tracks/' + encodeURIComponent(id) + '/download';
-  let why = 'meta';
+  let why = 'meta', t = null;
   try {
-    const t = await api('/tracks/' + encodeURIComponent(id));
+    t = await api('/tracks/' + encodeURIComponent(id));
     if (!t || !t.ia_url) throw new Error('no file');
     _wvToast('downloading ' + (t.title || 'song') + '...');
     why = 'fetch.' + _wvHost(t.ia_url);
     const r = await _wvFetchFile(t.ia_url);
     why = 'blob';
     _wvSaveBlob(await r.blob(), _wvFileName(t.title, t.ia_url, 'track'));
-  } catch (e) { _wvFallback(back, _wvWhy(why, e)); }
+  } catch (e) {
+    if (t && t.ia_url) _wvFrame(_wvRelay(t.ia_url, _wvFileName(t.title, t.ia_url, 'track')));
+    else _wvFallback(back, _wvWhy(why, e));
+  }
 }
 async function wvDownloadComp(id) {
   const back = API_BASE + '/albums/' + encodeURIComponent(id) + '/download';
-  let started = false, why = 'meta';
+  let started = false, why = 'meta', list = null, pad = 2;
   try {
     const a = await api('/albums/' + encodeURIComponent(id));
-    const list = ((a && a.album_tracks) || []).slice().sort((x, y) => (x.position || 0) - (y.position || 0))
+    list = ((a && a.album_tracks) || []).slice().sort((x, y) => (x.position || 0) - (y.position || 0))
       .map(x => x.tracks || x).filter(t => t && t.ia_url);
     if (!list.length) throw new Error('no files');
+    pad = String(list.length).length < 2 ? 2 : String(list.length).length;
     why = 'lib';
     const { downloadZip } = await _wvLoadZip();
     why = 'fetch.' + _wvHost(list[0].ia_url);
@@ -508,7 +527,6 @@ async function wvDownloadComp(id) {
     started = true;
     why = 'zip.' + list.length;
     _wvToast('zipping ' + list.length + ' song' + (list.length === 1 ? '' : 's') + ' from ' + (a.title || 'this comp') + '...');
-    const pad = String(list.length).length < 2 ? 2 : String(list.length).length;
     async function* files() {
       for (let i = 0; i < list.length; i++) {
         const t = list[i];
@@ -520,7 +538,8 @@ async function wvDownloadComp(id) {
     _wvSaveBlob(blob, ((String((a && a.title) || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim()) || 'comp') + '.zip');
   } catch (e) {
     if (started) _wvToast('couldnt finish the zip, trying another way', 'error');
-    _wvFallback(back, _wvWhy(why, e));
+    if (list && list.length) _wvEach(list, pad);
+    else _wvFallback(back, _wvWhy(why, e));
   }
 }
 window.wvDownloadTrack = wvDownloadTrack;
