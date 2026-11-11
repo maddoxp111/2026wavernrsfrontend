@@ -162,7 +162,7 @@
     }
     function sized(url, w) {
       var m = /^https:\/\/([^/]+)(\/.*)$/.exec(url);
-      if (!m || !/\.yetour\.xyz$/i.test(m[1])) return url;
+      if (!m || !(/\.yetour\.xyz$/i.test(m[1]) || /^\/y\/[a-z]+\.yetour\.xyz\//i.test(m[2]))) return url;
       return 'https://i0.wp.com/' + m[1] + m[2] + '?w=' + w + '&quality=80&strip=all';
     }
     function ratio(p) {

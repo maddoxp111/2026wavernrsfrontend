@@ -7,6 +7,8 @@
 const R2_HOST = 'pub-01c00b2a8ed144ecab591c33aa467b1a.r2.dev';
 const ORIGINS = /^https:\/\/((www\.)?wavernrs\.com|[a-z0-9-]*wavernrs[a-z0-9-]*\.vercel\.app)$/i;
 const IA_HOST = /^([a-z0-9-]+\.)*archive\.org$/i;
+const YETOUR = /^(media|submissions)\.yetour\.xyz$/i;
+const YETOUR_REFERER = 'https://waverunners.com/';
 const PASS = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified'];
 
 function withCors(req, h) {
@@ -28,6 +30,30 @@ function attachment(name) {
   return 'attachment; filename="' + ascii + '"; filename*=UTF-8\'\'' + encodeURIComponent(name);
 }
 
+// yetour.xyz media, fetched under the name the yetour owner whitelisted for us.
+async function yetour(req, url) {
+  const rest = url.pathname.slice(3);
+  const slash = rest.indexOf('/');
+  const host = slash > 0 ? rest.slice(0, slash) : '';
+  if (!YETOUR.test(host)) return fail(req, 400, 'host not allowed');
+  const q = new URLSearchParams(url.search);
+  const name = String(q.get('n') || '').replace(/[\\/:*?"<>|\x00-\x1f]+/g, ' ').trim().slice(0, 180);
+  q.delete('n');
+  const target = 'https://' + host + rest.slice(slash) + (q.toString() ? '?' + q.toString() : '');
+  const range = req.headers.get('Range');
+  const headers = { Referer: YETOUR_REFERER };
+  if (range) headers.Range = range;
+  const up = await fetch(target, { method: req.method, headers, cf: range ? undefined : { cacheEverything: true, cacheTtl: 86400 } });
+  if (!up.ok && up.status !== 206) return fail(req, up.status === 404 ? 404 : 502, 'upstream ' + up.status);
+  const h = new Headers();
+  for (const k of PASS) { const v = up.headers.get(k); if (v) h.set(k, v); }
+  if (!h.get('accept-ranges')) h.set('Accept-Ranges', 'bytes');
+  if (name) h.set('Content-Disposition', attachment(name));
+  h.set('Cache-Control', 'public, max-age=86400');
+  withCors(req, h);
+  return new Response(req.method === 'HEAD' ? null : up.body, { status: up.status, headers: h });
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -38,8 +64,9 @@ export default {
       h.set('Access-Control-Max-Age', '86400');
       return new Response(null, { status: 204, headers: h });
     }
-    if (url.pathname !== '/f') return fail(req, 404, 'not found');
     if (req.method !== 'GET' && req.method !== 'HEAD') return fail(req, 405, 'method not allowed');
+    if (url.pathname.startsWith('/y/')) return yetour(req, url);
+    if (url.pathname !== '/f') return fail(req, 404, 'not found');
 
     let target;
     try { target = new URL(url.searchParams.get('u') || ''); } catch (_) { return fail(req, 400, 'bad link'); }
