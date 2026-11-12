@@ -258,7 +258,7 @@
       results = await Promise.all([
         api('/artists/' + artistId),
         api('/artists/' + artistId + '/tracks').catch(function () { return []; }),
-        api('/albums/by-artist/' + artistId).catch(function () { return []; }),
+        api('/albums/by-artist/' + artistId + '?lite=1').catch(function () { return []; }),
         api('/artists/' + artistId + '/follow').catch(function () { return null; }),
       ]);
     } catch (err) {
@@ -581,7 +581,7 @@
   async function renderMoreEditors() {
     var gen = _epGen;
     var d;
-    try { d = await api('/stats/artists'); } catch (_) { return; }
+    try { d = await api('/stats/artists?active=1&sort=plays&limit=13'); } catch (_) { return; }
     if (gen !== window._epGen) return;
     var sec = document.getElementById('ep-more');
     var rail = document.getElementById('ep-more-rail');

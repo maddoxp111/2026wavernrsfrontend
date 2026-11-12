@@ -159,13 +159,15 @@ async function openStation(id) {
   await Promise.all([loadList('queue'), loadList('playlist')]);
   renderList();
   browseDefault();
-  clearInterval(window._rpPoll); window._rpPoll = setInterval(function() { if (!document.hidden) refreshNow(); }, 10000);
+  clearInterval(window._rpPoll); window._rpPoll = setInterval(function() { if (document.hidden) { window._rpMiss = true; return; } refreshNow(); }, 10000);
   clearInterval(window._rpBar); window._rpBar = setInterval(tickBar, 1000);
   document.addEventListener('visibilitychange', rpVis);
   if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(window._rpPoll); clearInterval(window._rpBar); document.removeEventListener('visibilitychange', rpVis); });
 }
 function rpVis() {
-  if (!document.hidden && _stId && _st) refreshNow();
+  if (document.hidden || !window._rpMiss || !_stId || !_st) return;
+  window._rpMiss = false;
+  refreshNow();
 }
 
 function renderOnAir() {

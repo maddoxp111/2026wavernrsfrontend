@@ -1836,7 +1836,7 @@ window._ytBooted = false;
     var _live = null;
     function liveTags(slug) {
       var nk = function (t) { return String(t || '').toLowerCase().replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/\s+(feat|ft)\.?\s.*$/i, '').replace(/[^a-z0-9]+/g, ''); };
-      if (!_live) _live = api('/ye/tour/songs').then(function (d) { var m = {}; (d.songs || []).forEach(function (x) { m[nk(x.song)] = x.plays; }); return m; }).catch(function () { _live = null; return {}; });
+      if (!_live) _live = api('/ye/tour/songs?lite=1').then(function (d) { var m = {}; (d.songs || []).forEach(function (x) { m[nk(x.song)] = x.plays; }); return m; }).catch(function () { _live = null; return {}; });
       _live.then(function (m) {
         if (st.album !== slug) return;
         root.querySelectorAll('[data-song]').forEach(function (b) {
@@ -3217,7 +3217,7 @@ window._ytBooted = false;
       }).catch(function () { var el = document.getElementById('yh-today'); if (el) el.remove(); });
       yeCached('/resources/latest?n=24', 180000).then(function (d) { var seen = {}; st.latest = ((d && d.results) || []).filter(function (r) { var k = cleanTitle(r.title).toLowerCase() + '|' + r.era; if (seen[k]) return false; seen[k] = 1; return true; }).slice(0, 14); latest(st.latest); }).catch(function () { var el = document.getElementById('yh-latest'); if (el) el.remove(); });
       yeCached('/ye/spotlight', 300000).then(spot).catch(function () { var el = document.getElementById('yh-spot'); if (el) el.remove(); });
-      yeCached('/ye/tour/songs', 900000).then(live).catch(function () { var el = document.getElementById('yh-live'); if (el) el.remove(); });
+      yeCached('/ye/tour/songs?top=5&lite=1', 900000).then(live).catch(function () { var el = document.getElementById('yh-live'); if (el) el.remove(); });
       yeCached('/ye/yeezy?limit=4&section=footwear', 900000).then(function (d) { st.yz = ((d && d.items) || []).map(function (x) { return x.img; }); explore({}); }).catch(function () {});
     }
     return { open: function () { if (st.started) return; st.started = true; load(); }, surprise: surprise };

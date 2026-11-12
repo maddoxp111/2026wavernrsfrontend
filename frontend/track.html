@@ -1508,7 +1508,7 @@
       // Fetch more by same artist + same era tag in parallel
       var results = await Promise.all([
         artistId ? api('/artists/' + artistId + '/tracks').catch(function() { return []; }) : Promise.resolve([]),
-        artistId ? api('/albums/by-artist/' + artistId).catch(function() { return []; }) : Promise.resolve([]),
+        artistId ? api('/albums/by-artist/' + artistId + '?limit=2&lite=1').catch(function() { return []; }) : Promise.resolve([]),
         eraTagId ? api('/discover/era/' + eraTagId).catch(function() { return []; }) : Promise.resolve([]),
       ]);
       var artistTracks = Array.isArray(results[0]) ? results[0] : [];

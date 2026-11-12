@@ -1392,9 +1392,11 @@ initPlayer();
   function onLpState(e) { if (joined()) applyState(e.detail); }
   function onLpLeft() { renderHero(); }
   function onVisLp() {
-    if (document.hidden || !alive() || !S.lp) return;
+    if (document.hidden) { S._hidAt = Date.now(); return; }
+    if (!alive() || !S.lp || Date.now() - (S._hidAt || 0) < 3000) return;
     poll();
-    if (S.status !== 'ended') { loadChat(false); loadRoom(true, true); }
+    if (S.status !== 'ended') loadChat(false);
+    if (S._roomMiss) { S._roomMiss = false; loadRoom(true, true); }
   }
   document.addEventListener('lpState', onLpState);
   document.addEventListener('lpLeft', onLpLeft);
@@ -1495,7 +1497,7 @@ initPlayer();
   timers.push(setInterval(function () { if (S.mode === 'wait') tickLobby(); if (S.mode === 'live') { var n = Date.now(); if (!S._tq || n - S._tq > 20000) { S._tq = n; renderUpNext(); refreshTimes(); } } }, 1000));
   timers.push(setInterval(function () { if (S.status !== 'ended' && !document.hidden) loadChat(false); }, 3000));
   timers.push(setInterval(function () { if (document.hidden || (S.status === 'ended' && S._endChat)) return; if (S.status === 'ended') S._endChat = true; loadChat(true); }, 30000));
-  timers.push(setInterval(function () { if (document.hidden) return; if (S.status !== 'ended' || !S.lp) loadRoom(true, !!S.lp); }, 20000));
+  timers.push(setInterval(function () { if (S.status === 'ended' && S.lp) return; if (document.hidden) { S._roomMiss = true; return; } loadRoom(true, !!S.lp); }, 20000));
   document.addEventListener('visibilitychange', onVisLp);
 })();
 </script>
