@@ -455,6 +455,11 @@ function chAfterHot() {
   }
   chSyncTabs();
   if (redraw) chRender();
+  if (_ch.hotState === 'ok' && !_ch.charts && _ch.chartsState === 'idle') {
+    var t = setTimeout(function () { chLoadCharts(); }, 1500);
+    window._pageCleanup = window._pageCleanup || [];
+    window._pageCleanup.push(function () { clearTimeout(t); });
+  }
 }
 
 function chPrefetchCharts() {

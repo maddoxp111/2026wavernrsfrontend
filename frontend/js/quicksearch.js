@@ -218,7 +218,7 @@
     if (hit) return Promise.resolve(hit);
     if (_inflight[k]) return _inflight[k];
     var p = Promise.all([
-      getJSON('/search?q=' + enc(q) + '&n=5', 9000),
+      getJSON('/search?q=' + enc(q), 9000),
       getJSON('/ye/search?q=' + enc(q), 4000),
       getJSON('/archive/artists?q=' + enc(q) + '&limit=3', 4000),
     ]).then(function (r) {

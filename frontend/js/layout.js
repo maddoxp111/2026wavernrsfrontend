@@ -510,7 +510,7 @@
         fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
         new Promise(function(res) { setTimeout(function() { res(null); }, 700); })
       ]);
-      fetch(base + '/search?q=' + encodeURIComponent(q) + '&n=5')
+      fetch(base + '/search?q=' + encodeURIComponent(q))
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) { return yeP.then(function(ye) { if (d) d._ye = ye; return d; }); })
         .then(function(d) {
