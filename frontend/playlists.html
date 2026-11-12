@@ -361,7 +361,7 @@
   function loadMixes() {
     var safe = function (p) { return p.catch(function () { return null; }); };
     return Promise.all([
-      safe(api('/charts')), safe(api('/discover?limit=150')), safe(api('/awards/current')), safe(api('/eratags'))
+      safe(api('/charts?only=edits')), safe(api('/discover?limit=150')), safe(api('/awards/current')), safe(api('/eratags'))
     ]).then(function (r) {
       mixes = buildMixes(r[0], r[1], r[2], Array.isArray(r[3]) ? r[3] : ((r[3] && r[3].items) || []));
       mixesReady = true;

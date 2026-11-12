@@ -356,6 +356,7 @@ initPlayer();
     timers.forEach(function (t) { clearInterval(t); clearTimeout(t); }); timers = [];
     document.removeEventListener('lpState', onLpState);
     document.removeEventListener('lpLeft', onLpLeft);
+    document.removeEventListener('visibilitychange', onVisLp);
     window.removeEventListener('keydown', onKey, true);
     closePop();
     var f = document.querySelector('.wv-vp-wrap.lp-formwrap'); if (f) f.remove();
@@ -702,9 +703,9 @@ initPlayer();
     S.seen = now;
   }
 
-  async function loadRoom(keepChat) {
+  async function loadRoom(keepChat, lite) {
     var d;
-    try { d = await api('/lp/' + encodeURIComponent(id)); }
+    try { d = await api('/lp/' + encodeURIComponent(id) + (lite ? '?lite=1' : '')); }
     catch (e) {
       if ((e && e.navAborted) || !alive()) return;
       if (!S.lp) {
@@ -714,7 +715,8 @@ initPlayer();
       return;
     }
     if (!alive()) return;
-    S.lp = d.lp; S.items = d.items || []; S.now = d.now; S.curPos = d.cur_position || 0; S.qv = d.queue_version; S.host = !!d.can_control; S.status = d.lp.status;
+    if (d.lite && (!S.lp || d.queue_version !== S.qv || d.dur_sig !== S.dsig)) return loadRoom(keepChat);
+    S.lp = d.lp; if (!d.lite) S.items = d.items || []; S.now = d.now; S.curPos = d.cur_position || 0; S.qv = d.queue_version; S.dsig = d.dur_sig; S.host = !!d.can_control; S.status = d.lp.status;
     S.listeners = d.listeners || S.listeners;
     S.offset = Date.parse(d.server_time) - Date.now();
     if (!document.getElementById('lp-main')) renderShell();
@@ -1389,6 +1391,11 @@ initPlayer();
   }
   function onLpState(e) { if (joined()) applyState(e.detail); }
   function onLpLeft() { renderHero(); }
+  function onVisLp() {
+    if (document.hidden || !alive() || !S.lp) return;
+    poll();
+    if (S.status !== 'ended') { loadChat(false); loadRoom(true, true); }
+  }
   document.addEventListener('lpState', onLpState);
   document.addEventListener('lpLeft', onLpLeft);
 
@@ -1483,12 +1490,13 @@ initPlayer();
   }
 
   loadRoom(false);
-  timers.push(setInterval(poll, 3000));
+  timers.push(setInterval(function () { if (!document.hidden) poll(); }, 3000));
   timers.push(setInterval(tick, 500));
   timers.push(setInterval(function () { if (S.mode === 'wait') tickLobby(); if (S.mode === 'live') { var n = Date.now(); if (!S._tq || n - S._tq > 20000) { S._tq = n; renderUpNext(); refreshTimes(); } } }, 1000));
-  timers.push(setInterval(function () { if (S.status !== 'ended') loadChat(false); }, 3000));
-  timers.push(setInterval(function () { loadChat(true); }, 30000));
-  timers.push(setInterval(function () { if (S.status !== 'ended' || !S.lp) loadRoom(true); }, 20000));
+  timers.push(setInterval(function () { if (S.status !== 'ended' && !document.hidden) loadChat(false); }, 3000));
+  timers.push(setInterval(function () { if (document.hidden || (S.status === 'ended' && S._endChat)) return; if (S.status === 'ended') S._endChat = true; loadChat(true); }, 30000));
+  timers.push(setInterval(function () { if (document.hidden) return; if (S.status !== 'ended' || !S.lp) loadRoom(true, !!S.lp); }, 20000));
+  document.addEventListener('visibilitychange', onVisLp);
 })();
 </script>
 </body>

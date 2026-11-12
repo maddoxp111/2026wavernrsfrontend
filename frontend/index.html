@@ -335,7 +335,6 @@ var HOME_SRC = {
   playlists:   function () { return api('/playlists/published?limit=16'); },
   justadded:   function () { return api('/archive/recent?limit=14'); },
   archive:     function () { return api('/archive?limit=12'); },
-  stats:       function () { return api('/stats'); },
   presence:    function () { return api('/site/presence'); },
   charts:      function () {
     function viaCharts() {
@@ -444,7 +443,7 @@ function fillSlot(id) {
 function homeRefresh(key) {
   Object.keys(HOME_SLOTS).forEach(function (id) { if (HOME_SLOTS[id].deps.indexOf(key) !== -1) fillSlot(id); });
   if (key === 'discover' || key === 'highlighted' || key === 'awards') renderHero();
-  if (key === 'stats' || key === 'presence' || key === 'discover') fillWelcome();
+  if (key === 'presence' || key === 'discover') fillWelcome();
 }
 window.homeRetry = function (id) {
   var s = HOME_SLOTS[id];
@@ -546,7 +545,7 @@ function loadHome() {
   _hSetupObservers();
   // Everything above the fold starts at once; the rest waits to be scrolled near.
   ['discover', 'badges', 'highlighted', 'awards', 'eras'].forEach(homeData);
-  if (!_hLoggedIn()) { homeData('stats'); homeData('presence'); }
+  if (!_hLoggedIn()) homeData('presence');
   renderHome();
 }
 

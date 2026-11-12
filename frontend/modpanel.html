@@ -278,7 +278,7 @@
       '</div>';
   }
 
-  var _discordPollInterval = null;
+  var _discordPollInterval = null, _discordPollMissed = false;
 
   function showModTab(tab) {
     ['users', 'uploads', 'replace-audio', 'arc', 'discord', 'dupes'].forEach(function(t) {
@@ -295,8 +295,16 @@
       if (!_discordPollInterval) {
         _discordPollInterval = setInterval(function() {
           var panel = document.getElementById('mod-tab-discord');
-          if (panel && panel.style.display !== 'none') loadDiscordUploads();
+          if (!panel || panel.style.display === 'none') return;
+          if (document.hidden) { _discordPollMissed = true; return; }
+          loadDiscordUploads();
         }, 10000);
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden || !_discordPollMissed) return;
+          _discordPollMissed = false;
+          var panel = document.getElementById('mod-tab-discord');
+          if (panel && panel.style.display !== 'none') loadDiscordUploads();
+        });
       }
     }
   }

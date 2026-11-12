@@ -218,7 +218,7 @@
     if (hit) return Promise.resolve(hit);
     if (_inflight[k]) return _inflight[k];
     var p = Promise.all([
-      getJSON('/search?q=' + enc(q), 9000),
+      getJSON('/search?q=' + enc(q) + '&n=5', 9000),
       getJSON('/ye/search?q=' + enc(q), 4000),
       getJSON('/archive/artists?q=' + enc(q) + '&limit=3', 4000),
     ]).then(function (r) {
@@ -882,5 +882,9 @@
     if (a && isQs(a)) run(a);
   } catch (_) {}
   // Warm the trending list quietly so the first focus paints instantly.
-  setTimeout(function () { trending(); }, 2500);
+  document.addEventListener('pointerover', function warm(e) {
+    if (!e.target || !e.target.closest || !e.target.closest('.wv-topbar-search, .am-search')) return;
+    document.removeEventListener('pointerover', warm, true);
+    trending();
+  }, true);
 })();

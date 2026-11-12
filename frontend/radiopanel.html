@@ -159,9 +159,13 @@ async function openStation(id) {
   await Promise.all([loadList('queue'), loadList('playlist')]);
   renderList();
   browseDefault();
-  clearInterval(window._rpPoll); window._rpPoll = setInterval(refreshNow, 10000);
+  clearInterval(window._rpPoll); window._rpPoll = setInterval(function() { if (!document.hidden) refreshNow(); }, 10000);
   clearInterval(window._rpBar); window._rpBar = setInterval(tickBar, 1000);
-  if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(window._rpPoll); clearInterval(window._rpBar); });
+  document.addEventListener('visibilitychange', rpVis);
+  if (window._pageCleanup) window._pageCleanup.push(function() { clearInterval(window._rpPoll); clearInterval(window._rpBar); document.removeEventListener('visibilitychange', rpVis); });
+}
+function rpVis() {
+  if (!document.hidden && _stId && _st) refreshNow();
 }
 
 function renderOnAir() {
@@ -179,9 +183,9 @@ function tickBar() {
   var s = Date.parse(n.started_at), e = Date.parse(n.ends_at), p = Math.min(1, (Date.now() - s) / Math.max(1000, e - s));
   var b = document.getElementById('onair-bar'), t = document.getElementById('onair-time'); if (b) b.style.width = (p * 100) + '%';
   if (t) t.textContent = fmtDur((Date.now() - s) / 1000) + ' / ' + fmtDur((e - s) / 1000);
-  if (Date.now() > e + 1500) refreshNow();
+  if (Date.now() > e + 1500 && !document.hidden) refreshNow();
 }
-async function refreshNow() { try { var d = await api('/radio/stations/' + _stId + '/now'); var was = _st._now && _st._now.track && _st._now.track.id; _st._now = d.now; renderOnAir(); if ((d.now && d.now.track && d.now.track.id) !== was) { await loadList('queue'); await loadList('playlist'); renderList(); } } catch (e) {} }
+async function refreshNow() { try { var d = await api('/radio/stations/' + _stId + '/now?lite=1'); var was = _st._now && _st._now.track && _st._now.track.id; _st._now = d.now; renderOnAir(); if ((d.now && d.now.track && d.now.track.id) !== was) { await loadList('queue'); await loadList('playlist'); renderList(); } } catch (e) {} }
 
 async function saveStation() {
   var msg = document.getElementById('st-msg'); msg.textContent = 'Saving…';

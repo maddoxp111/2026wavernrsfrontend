@@ -510,7 +510,7 @@
         fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
         new Promise(function(res) { setTimeout(function() { res(null); }, 700); })
       ]);
-      fetch(base + '/search?q=' + encodeURIComponent(q))
+      fetch(base + '/search?q=' + encodeURIComponent(q) + '&n=5')
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) { return yeP.then(function(ye) { if (d) d._ye = ye; return d; }); })
         .then(function(d) {
@@ -2833,15 +2833,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (m && !m.hidden && !e.target.closest('.wv-presence')) m.hidden = true;
   });
 
+  var _mq = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+  var _full = 0;
   async function beat() {
     try {
       var token = localStorage.getItem('token');
-      var r = await fetch(API_BASE + '/site/presence', {
+      var show = !document.hidden && !(_mq && _mq.matches);
+      if (!token && !show) return;
+      var r = await fetch(API_BASE + '/site/presence' + (token && !show ? '?quiet=1' : ''), {
         method: token ? 'POST' : 'GET',
         headers: token ? { Authorization: 'Bearer ' + token } : {},
       });
       if (!r.ok) return;
       var d = await r.json();
+      if (d.quiet) {
+        if (d.me && typeof window._wvSetMyAvatar === 'function') window._wvSetMyAvatar(d.me, d.avatar || '');
+        return;
+      }
+      _full = Date.now();
+      window._wvPresence = { at: _full, d: d };
+      try { document.dispatchEvent(new CustomEvent('wv-presence', { detail: d })); } catch (_) {}
       // Everyone signed in and active in the last minute or so, you excluded.
       _people = (d.online || []).filter(function (p) {
         return p && p.username && p.id !== d.me;
@@ -2854,12 +2865,16 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (_) {}
   }
 
-  window._presenceRefresh = beat;
+  window._presenceRefresh = function () { render(); beat(); };
   function start() {
     if (_timer) return;
     beat();
     _timer = setInterval(beat, 30000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && Date.now() - _full > 10000) beat(); });
+    if (_mq) {
+      var onMq = function () { if (!_mq.matches && !document.hidden && Date.now() - _full > 10000) beat(); };
+      if (_mq.addEventListener) _mq.addEventListener('change', onMq); else if (_mq.addListener) _mq.addListener(onMq);
+    }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
@@ -3402,12 +3417,15 @@ window.wvClampDesc = function (el) {
       } else if (dot) dot.remove();
     });
   }
+  var _at = 0, _iv = null;
   function check() {
-    if (typeof API_BASE === 'undefined') return;
+    if (typeof API_BASE === 'undefined' || document.hidden) return;
+    _at = Date.now();
     fetch(API_BASE + '/lp/live-count').then(function (r) { return r.json(); }).then(function (d) { _live = (d && d.live) || 0; paint(); }).catch(function () {});
   }
-  setTimeout(check, 1500);
-  setInterval(check, 60000);
+  function arm() { clearInterval(_iv); _iv = setInterval(check, 60000); }
+  setTimeout(function () { check(); arm(); }, 1500);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && _iv && Date.now() - _at >= 60000) { check(); arm(); } });
   document.addEventListener('click', function () { setTimeout(paint, 400); }, true);
 })();
 

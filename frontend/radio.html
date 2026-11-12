@@ -388,10 +388,17 @@ async function init() {
   rdBindOnce();
   var s = new URLSearchParams(location.search).get('s');
   if (window._rdCache && Date.now() - window._rdCache.at < 120000) { rdRenderList(window._rdCache.d); }
+  document.addEventListener('visibilitychange', rdVis);
   if (s) rdOpenStation(s);
   await loadList();
-  clearInterval(_rdListTimer); _rdListTimer = setInterval(function() { if (!_rdOpen && document.visibilityState === 'visible') loadList(true); }, 15000);
+  clearInterval(_rdListTimer); _rdListTimer = setInterval(function() { if (!_rdOpen && document.visibilityState === 'visible') loadList(true); }, 45000);
   clearInterval(_rdListTick); _rdListTick = setInterval(rdListTickFn, 1000);
+}
+
+function rdVis() {
+  if (document.hidden) return;
+  if (_rdOpen) { if (_slug && Date.now() - _rdLastPoll > 4000) pollNow(); }
+  else if (rdRoot() && Date.now() - _rdListLast > 15000) loadList(true);
 }
 
 function rdSortStations(list) {
@@ -799,14 +806,14 @@ function tickUI() {
       if (target) { var off = target.offsetTop - box.clientHeight / 2 + target.offsetHeight / 2; box.scrollTo({ top: Math.max(0, off), behavior: reduce ? 'auto' : 'smooth' }); }
     }
   }
-  if (p > d + 2) {
+  if (p > d + 2 && !document.hidden) {
     var wait = Math.min(30000, 2000 * Math.pow(2, _rdStale));
     if (!_rdPollBusy && Date.now() - _rdLastPoll > wait) { _rdStale++; pollNow(); }
   }
 }
 
 async function pollNow() {
-  if (!_slug || _rdPollBusy) return;
+  if (!_slug || _rdPollBusy || document.hidden) return;
   var slug = _slug;
   _rdPollBusy = true; _rdLastPoll = Date.now();
   try {
@@ -958,6 +965,7 @@ function rdBindOnce() {
 (window._pageCleanup = window._pageCleanup || []).push(function() {
   clearInterval(_poll); clearInterval(_tick); clearInterval(_rdListTimer); clearInterval(_rdListTick); clearTimeout(_likeTimer);
   _poll = _tick = _rdListTimer = _rdListTick = null;
+  document.removeEventListener('visibilitychange', rdVis);
   if (_pendingLikes && _slug) { var n = _pendingLikes, s = _slug; _pendingLikes = 0; try { api('/radio/stations/' + encodeURIComponent(s) + '/like', { method: 'POST', body: JSON.stringify({ n: n }) }).catch(function() {}); } catch (_) {} }
   _rdOpen = false; _slug = null; _rdPushed = false; _rdListSig = ''; _rdRail = null; _rdRailKey = ''; _rdBgKey = null;
   var fs = document.getElementById('rd-fs'); if (fs && fs.parentNode === document.body) fs.remove();

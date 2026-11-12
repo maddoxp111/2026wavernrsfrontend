@@ -686,15 +686,20 @@
     }
   }
 
+  function setPresence(d) {
+    CM.presence = { online: ((d && d.online) || []).filter(function (p) { return p && p.username; }), count: (d && d.count) || 0 };
+    renderOnline();
+  }
   function refreshPresence() {
-    api('/site/presence').then(function (d) {
-      CM.presence = { online: ((d && d.online) || []).filter(function (p) { return p && p.username; }), count: (d && d.count) || 0 };
-      renderOnline();
-    }).catch(function () {});
+    var c = window._wvPresence;
+    if (c && c.d && Date.now() - c.at < 45000) { setPresence(c.d); return; }
+    api('/site/presence').then(setPresence).catch(function () {});
   }
   if (!window._wvCommPresenceTimer) {
     window._wvCommPresenceTimer = setInterval(function () { if (!document.hidden && document.getElementById('cm-rail')) refreshPresence(); }, 60000);
-    window._pageCleanup.push(function () { clearInterval(window._wvCommPresenceTimer); window._wvCommPresenceTimer = null; });
+    window._wvCommOnPresence = function (e) { if (e && e.detail) setPresence(e.detail); };
+    document.addEventListener('wv-presence', window._wvCommOnPresence);
+    window._pageCleanup.push(function () { clearInterval(window._wvCommPresenceTimer); window._wvCommPresenceTimer = null; document.removeEventListener('wv-presence', window._wvCommOnPresence); });
   }
 
   function renderList() {

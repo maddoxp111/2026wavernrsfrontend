@@ -643,11 +643,16 @@
     arcBulkAddRow();
     arcBulkAddRow();
     loadMegaJobs(); loadOverview(); rdLoad();
-    if (!window._ovPoll) window._ovPoll = setInterval(function() { if (document.getElementById('ov-total')) { loadOverview(); rdLoad(true); } }, 30000);
-    if (!window._mjPoll) window._mjPoll = setInterval(function() { if (document.getElementById('mj-list')) loadMegaJobs(true); }, 10000);
+    if (!window._apMiss) {
+      window._apMiss = {};
+      document.addEventListener('visibilitychange', function() { if (document.hidden) return; var m = window._apMiss; window._apMiss = {}; Object.keys(m).forEach(function(k) { m[k](); }); });
+    }
+    var apPoll = function(k, el, fn) { var run = function() { if (!document.getElementById(el)) return; if (document.hidden) { window._apMiss[k] = run; return; } fn(); }; return run; };
+    if (!window._ovPoll) window._ovPoll = setInterval(apPoll('ov', 'ov-total', function() { loadOverview(); rdLoad(true); }), 30000);
+    if (!window._mjPoll) window._mjPoll = setInterval(apPoll('mj', 'mj-list', function() { loadMegaJobs(true); }), 10000);
     dcLoad();
     if (typeof window.clLoad === 'function') window.clLoad('open');
-    if (!window._dcPoll) window._dcPoll = setInterval(function() { if (document.getElementById('dc-servers')) dcLoad(true); }, 60000);
+    if (!window._dcPoll) window._dcPoll = setInterval(apPoll('dc', 'dc-servers', function() { dcLoad(true); }), 60000);
   }
 
   // ── MEGA bulk imports (live) ─────────────────────────────────────────────

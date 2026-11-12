@@ -231,7 +231,7 @@
     if (cached && cached.t && Date.now() - cached.at < STATS_TTL) { renderStats(cached.t); return; }
     if (cached && cached.t) renderStats(cached.t);
     if (typeof fetch !== 'function') return;
-    fetch(apiBase() + '/stats', { credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    fetch(apiBase() + '/stats/totals', { credentials: 'omit' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
       if (!d || !d.totals) return;
       ssSet(STATS_KEY, JSON.stringify({ at: Date.now(), t: d.totals }));
       renderStats(d.totals);

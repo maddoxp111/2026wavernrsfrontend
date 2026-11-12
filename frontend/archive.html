@@ -727,9 +727,17 @@ function arcSetStat(id, n, suffix) {
   if (first) arcCountUp(b, n, suffix); else b.innerHTML = n.toLocaleString() + (suffix || '');
 }
 
+function arcPrefetchTop() {
+  if (_topComps || _arcTopReq) return;
+  _arcTopReq = api('/archive/top');
+  _arcTopReq.then(function (d) {
+    if (!_topComps && d && d.items) _topComps = d;
+  }).catch(function () { _arcTopReq = null; });
+}
+
 function arcLoadStats() {
   _arcStatSet = {};
-  api('/stats').then(function (d) {
+  api('/stats/totals').then(function (d) {
     var n = d && d.totals && d.totals.archive_comps;
     if (typeof n === 'number') arcSetStat('rel', n);
     var pl = d && d.totals && d.totals.plays;
@@ -738,11 +746,9 @@ function arcLoadStats() {
   api('/archive/artists?limit=1').then(function (d) {
     if (d && typeof d.total === 'number') arcSetStat('art', d.total);
   }).catch(function () {});
-  _arcTopReq = api('/archive/top');
-  _arcTopReq.then(function (d) {
-    if (!_topComps && d && d.items) _topComps = d;
-    var items = (d && d.items) || [];
-  }).catch(function () { _arcTopReq = null; });
+  if (_arcView === 'home' || _arcView === 'top') arcPrefetchTop();
+  var topBtn = document.getElementById('arc-view-top');
+  if (topBtn) ['pointerenter', 'focus', 'touchstart'].forEach(function (ev) { topBtn.addEventListener(ev, arcPrefetchTop, { passive: true }); });
 }
 
 function arcSyncUrl(push) {
@@ -1602,7 +1608,7 @@ function arcHomeLoad(h) {
   var get = function (p) { return api(p).catch(function () { return null; }); };
   var remember = function (list) { (list || []).forEach(function (x) { if (x && x.id) h.items[x.id] = x; }); };
 
-  var S = get('/stats');
+  var S = get('/stats/totals');
   var C = get('/archive?limit=14&offset=0&sort=plays&kind=comps');
   var E = get('/archive?limit=14&offset=0&sort=likes&kind=edits');
   var N = Promise.all([get('/archive/recent?kind=comps&limit=8'), get('/archive/recent?kind=edits&limit=12')]).then(function (r) {

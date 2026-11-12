@@ -1779,7 +1779,7 @@ async function _radioSync(force) {
     // Plain fetch: api() drops responses across page navigations, which would freeze the station clock.
     const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 20000);
     const isLp = !!_radio.lp;
-    let url = API_BASE + '/radio/stations/' + encodeURIComponent(slug) + '/now';
+    let url = API_BASE + '/radio/stations/' + encodeURIComponent(slug) + '/now?lite=1';
     const headers = {};
     if (isLp) {
       url = API_BASE + '/lp/' + encodeURIComponent(slug) + '/now?c=' + encodeURIComponent(_lpCid());
@@ -1866,9 +1866,12 @@ async function _autoplayPicks(n) {
   let heard = new Set();
   try { (JSON.parse(localStorage.getItem('recently_played') || '[]') || []).forEach(h => { if (h && h.id) heard.add(h.id); }); (JSON.parse(localStorage.getItem('wv_autoplay_heard') || '[]') || []).forEach(id => heard.add(id)); } catch (_) {}
   try {
-    const p = await api('/trackers/pool?n=40');
-    const ids = (p.ids || []).filter(id => !heard.has(id) && !_autoplaySeen.has(id)).slice(0, Math.max(n + 4, 14));
-    const full = await Promise.all(ids.map(id => api('/albums/' + id).catch(() => null)));
+    const want = Math.max(n + 4, 14);
+    const p = await api('/trackers/pool?n=40&expand=' + (want + 6));
+    const ids = (p.ids || []).filter(id => !heard.has(id) && !_autoplaySeen.has(id)).slice(0, want);
+    const got = new Map(), tried = new Set(Array.isArray(p.albums) ? (p.ids || []).slice(0, p.expanded || 0) : []);
+    (Array.isArray(p.albums) ? p.albums : []).forEach(a => { if (a && a.id) got.set(a.id, a); });
+    const full = await Promise.all(ids.map(id => got.has(id) ? got.get(id) : tried.has(id) ? null : api('/albums/' + id).catch(() => null)));
     full.forEach(al => {
       if (!al) return;
       const tracks = (al.album_tracks || []).map(x => x.tracks || x).filter(t => t && t.ia_url && !heard.has(t.id));
