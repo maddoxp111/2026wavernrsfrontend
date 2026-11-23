@@ -1764,7 +1764,7 @@ window.radioSlug = function () { return _radio && !_radio.lp ? _radio.slug : nul
 window.lpTuneIn = async function (id) {
   _radio = { slug: id, offset: 0, lp: true, hostPaused: false };
   _liveMode(true);
-  clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 3000);
+  clearInterval(_radioTimer); _radioTimer = setInterval(() => _radioSync(false), 5000);
   await _radioSync(true);
 };
 window.lpId = function () { return _radio && _radio.lp ? _radio.slug : null; };

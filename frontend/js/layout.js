@@ -87,7 +87,6 @@
     ['artists',   'Editors',   '/artists',   'profile'],
     ['music',     'Artists',   '/music',     'mic'],
     ['archive',   'Archive',   '/archive',   'archive'],
-    ['radio',     'Radio',     '/radio',     'radio'],
     ['lp',        'Live LPs',  '/lp',        'headphones'],
     ['community', 'Community', '/community', 'community'],
   ];
@@ -132,7 +131,6 @@
       if (sessionStorage.getItem('wv_is_mod') === 'true') html += '<a href="/modpanel" data-page="modpanel">Mod panel</a>';
       if (sessionStorage.getItem('wv_is_archiver') === 'true') html += '<a href="/archivepanel" data-page="archivepanel">Archive panel</a>';
       if (sessionStorage.getItem('wv_can_at') === 'true') html += '<a href="/archivetrackers" data-page="archivetrackers">Archive trackers</a>';
-      if (sessionStorage.getItem('wv_is_radio') === 'true') html += '<a href="/radiopanel" data-page="radiopanel">Radio panel</a>';
     } else {
       html += '<a href="/login">Log in</a><a href="/register">Sign up</a>';
     }
@@ -215,7 +213,6 @@
     html += _amSection('Apple Music', [
       ['home', 'Home', '/index', 'home'],
       ['browse', 'Browse', '/browse', 'discover'],
-      ['radio', 'Radio', '/radio', 'radio'],
       ['lp', 'Live LPs', '/lp', 'headphones'],
       ['charts', 'Charts', '/charts', 'chart'],
       ['community', 'Community', '/community', 'community'],
@@ -799,7 +796,6 @@
       if (sessionStorage.getItem('wv_is_mod') === 'true') roles += _acctItem('a', '/modpanel', 'Mod panel', icon('shield'));
       if (sessionStorage.getItem('wv_is_archiver') === 'true') roles += _acctItem('a', '/archivepanel', 'Archive panel', icon('archive'));
       if (sessionStorage.getItem('wv_can_at') === 'true') roles += _acctItem('a', '/archivetrackers', 'Archive trackers', icon('archive'));
-      if (sessionStorage.getItem('wv_is_radio') === 'true') roles += _acctItem('a', '/radiopanel', 'Radio panel', icon('radio'));
     } catch (_) {}
     if (roles) html += '<div class="wva-sep" role="separator"></div>' + roles;
     html += '<div class="wva-sep" role="separator"></div>';
@@ -1878,8 +1874,9 @@
     }
 
     // Fetch lock status
-    fetch(typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-status' : '/api/site/lock-status')
-      .then(function(r) { return r.json(); })
+    var lockUrl = typeof API_BASE !== 'undefined' ? API_BASE + '/site/lock-status' : '/api/site/lock-status';
+    (window._wvBoot ? window._wvBoot().then(function (b) { return { locked: !!b.locked }; }) : Promise.reject())
+      .catch(function () { return fetch(lockUrl).then(function(r) { return r.json(); }); })
       .then(function(d) {
         localStorage.setItem('wv_site_was_locked', d.locked ? '1' : '0');
         if (!d.locked) {
@@ -1979,8 +1976,9 @@
     var container = document.getElementById('wv-banners');
     if (!container) return;
     try {
-      var res = await fetch(API_BASE + '/site/banners');
-      var banners = await res.json();
+      var banners = null;
+      try { if (window._wvBoot) banners = (await window._wvBoot()).banners; } catch (_) {}
+      if (!Array.isArray(banners)) banners = await (await fetch(API_BASE + '/site/banners')).json();
       if (!banners || !banners.length) { container.innerHTML = ''; return; }
       container.innerHTML = banners.map(function(b) {
         return '<div class="site-banner ' + (b.type || 'info') + '">' +
@@ -2032,7 +2030,7 @@
     var tries = 0;
     function run() {
       tries++;
-      Promise.all([ask('/mod/check'), ask('/archive/check'), ask('/radio/mine')]).then(function(results) {
+      Promise.all([ask('/mod/check'), ask('/archive/check')]).then(function(results) {
         if (localStorage.getItem('token') !== token) return;
         var was = {};
         Object.keys(_ROLE_FLAGS).forEach(function (r) { was[r] = sessionStorage.getItem(_ROLE_FLAGS[r]) === 'true'; });
@@ -2041,10 +2039,7 @@
         if (results[1]) now.archiver = !!results[1].is_archiver;
         if (results[0] && results[1]) now.at = !!results[1].can_archive_trackers || now.archiver || now.mod;
         else if (results[1] && results[1].can_archive_trackers) now.at = true;
-        if (results[2]) {
-          var rm = results[2];
-          now.radio = !!(rm.available && (rm.is_mod || rm.is_host || (rm.stations && rm.stations.length)));
-        }
+        now.radio = false;
         Object.keys(_ROLE_FLAGS).forEach(function (r) { sessionStorage.setItem(_ROLE_FLAGS[r], now[r] ? 'true' : 'false'); });
         try { localStorage.setItem('wv_roles', JSON.stringify({ k: _roleKey(), mod: now.mod, archiver: now.archiver, radio: now.radio, at: now.at, ts: Date.now() })); } catch (_) {}
         // Pages read these flags at script time, before this answer lands, so
@@ -2229,150 +2224,6 @@
   ensure('footer.js', 'wvFooter');
   ensure('seo.js', 'wvSeo');
 })();
-
-// ── Countdown / pre-launch lockdown ─────────────────────────────────────────
-(function () {
-  var BYPASS_KEY = 'wv_cd_bypass_2';
-  var _cdTimer = null;
-  var _cdAllowed = ['adminpanel', 'community', 'login', 'register'];
-
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-  function tickCountdown(launchAt) {
-    var diff = new Date(launchAt).getTime() - Date.now();
-    if (diff <= 0) {
-      localStorage.removeItem(BYPASS_KEY);
-      var ov = document.getElementById('wv-cd-overlay');
-      if (ov) ov.remove();
-      if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
-      // Unwrap navigate if it was wrapped
-      if (typeof window._cdOrigNavigate === 'function') {
-        window.navigate = window._cdOrigNavigate;
-        window._cdOrigNavigate = null;
-      }
-      return;
-    }
-    var days  = Math.floor(diff / 86400000);
-    var hours = Math.floor((diff % 86400000) / 3600000);
-    var mins  = Math.floor((diff % 3600000) / 60000);
-    var secs  = Math.floor((diff % 60000) / 1000);
-    var d = document.getElementById('wv-cd-days');
-    var h = document.getElementById('wv-cd-hours');
-    var m = document.getElementById('wv-cd-mins');
-    var s = document.getElementById('wv-cd-secs');
-    if (d) d.textContent = pad(days);
-    if (h) h.textContent = pad(hours);
-    if (m) m.textContent = pad(mins);
-    if (s) s.textContent = pad(secs);
-  }
-
-  function showCountdownOverlay(launchAt, hasPassword) {
-    if (document.getElementById('wv-cd-overlay')) return;
-    var ov = document.createElement('div');
-    ov.id = 'wv-cd-overlay';
-    ov.innerHTML =
-      '<div class="wv-cd-inner">' +
-        '<div class="wv-cd-logo">wavernrs</div>' +
-        '<div class="wv-cd-sub">“welcome back” -mp</div>' +
-        '<div class="wv-cd-timer">' +
-          '<div class="wv-cd-unit"><span id="wv-cd-days">00</span><label>days</label></div>' +
-          '<div class="wv-cd-unit"><span id="wv-cd-hours">00</span><label>hours</label></div>' +
-          '<div class="wv-cd-unit"><span id="wv-cd-mins">00</span><label>minutes</label></div>' +
-          '<div class="wv-cd-unit"><span id="wv-cd-secs">00</span><label>seconds</label></div>' +
-        '</div>' +
-        '<div class="wv-cd-links">' +
-          '<button onclick="location.assign(\'/community\')" class="wv-pill brand">Community</button>' +
-          '<button onclick="location.assign(\'/login\')" class="wv-pill">Log in</button>' +
-          '<button onclick="location.assign(\'/register\')" class="wv-pill">Sign up</button>' +
-        '</div>' +
-        (hasPassword
-          ? '<div class="wv-cd-pw-wrap">' +
-              '<input type="password" id="wv-cd-pw" class="wv-input" placeholder="have early access? put the password here…" onkeydown="if(event.key===\'Enter\')window._verifyCountdown()">' +
-              '<button class="wv-pill" style="margin-top:10px;width:100%;" onclick="window._verifyCountdown()">Enter</button>' +
-              '<div id="wv-cd-err" style="color:#f87171;font-size:13px;margin-top:8px;min-height:18px;"></div>' +
-            '</div>'
-          : '') +
-      '</div>';
-    document.body.appendChild(ov);
-    tickCountdown(launchAt);
-    _cdTimer = setInterval(function () { tickCountdown(launchAt); }, 1000);
-  }
-
-  function wrapNavigate(launchAt, hasPassword) {
-    if (window._cdOrigNavigate) return; // already wrapped
-    var orig = window.navigate;
-    if (typeof orig !== 'function') return;
-    window._cdOrigNavigate = orig;
-    window.navigate = function(url) {
-      var target;
-      try { target = new URL(url, location.href); } catch(e) { return orig.apply(this, arguments); }
-      var path = target.pathname;
-      // Always allow community / auth pages — dismiss overlay and SPA-navigate
-      // (login/register fall back to full reload inside the router since they have no #view)
-      if (_cdAllowed.some(function(p) { return path.includes(p); })) {
-        var ov = document.getElementById('wv-countdown-overlay');
-        if (ov) ov.remove();
-        return orig.apply(this, arguments);
-      }
-      // If bypass is active, pass through normally
-      if (localStorage.getItem(BYPASS_KEY) === '1') {
-        return orig.apply(this, arguments);
-      }
-      // Blocked — ensure overlay is shown
-      showCountdownOverlay(launchAt, hasPassword);
-    };
-  }
-
-  window._verifyCountdown = async function () {
-    var pw = (document.getElementById('wv-cd-pw') || {}).value || '';
-    var errEl = document.getElementById('wv-cd-err');
-    try {
-      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
-      var r = await fetch(base + '/site/countdown/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw }),
-      });
-      var d = await r.json();
-      if (d.ok) {
-        localStorage.setItem(BYPASS_KEY, '1');
-        if (d.access_token) localStorage.setItem('wv_site_access', d.access_token);
-        // Reload so page content refetches with the early-access token (any
-        // content requests that fired before unlock would have been 403'd).
-        location.reload();
-      } else {
-        if (errEl) errEl.textContent = 'wrong password';
-      }
-    } catch (e) {
-      if (errEl) errEl.textContent = 'couldnt check it...check your connection';
-    }
-  };
-
-  // Run the check once on every page load
-  (async function () {
-    try {
-      var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
-      var r = await fetch(base + '/site/countdown');
-      var d = await r.json();
-
-      if (!d.active || d.elapsed) {
-        localStorage.removeItem(BYPASS_KEY);
-        return;
-      }
-
-      // Countdown is active — wrap navigate to enforce access restrictions
-      wrapNavigate(d.launch_at, d.has_password);
-
-      // If already bypassed via password, allow free navigation
-      if (localStorage.getItem(BYPASS_KEY) === '1') return;
-
-      // Show overlay on restricted pages
-      var isAllowedPage = _cdAllowed.some(function(p) { return location.pathname.includes(p); });
-      if (!isAllowedPage) showCountdownOverlay(d.launch_at, d.has_password);
-    } catch (_) {}
-  })();
-})();
-
 
 // ── Star field: faint drifting points in page space; lines reach from the pointer to nearby ones ──
 (function () {
@@ -3417,15 +3268,19 @@ window.wvClampDesc = function (el) {
       } else if (dot) dot.remove();
     });
   }
-  var _at = 0, _iv = null;
+  var _at = 0, LP_EVERY = 5 * 60000;
   function check() {
-    if (typeof API_BASE === 'undefined' || document.hidden) return;
+    if (typeof API_BASE === 'undefined' || document.hidden || Date.now() - _at < LP_EVERY) return;
     _at = Date.now();
     fetch(API_BASE + '/lp/live-count').then(function (r) { return r.json(); }).then(function (d) { _live = (d && d.live) || 0; paint(); }).catch(function () {});
   }
-  function arm() { clearInterval(_iv); _iv = setInterval(check, 60000); }
-  setTimeout(function () { check(); arm(); }, 1500);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && _iv && Date.now() - _at >= 60000) { check(); arm(); } });
+  setTimeout(function () {
+    _at = Date.now();
+    var first = window._wvBoot ? window._wvBoot().then(function (b) { return b.lp_live; }) : Promise.reject();
+    first.then(function (n) { _live = n || 0; paint(); }, function () { _at = 0; check(); });
+  }, 1500);
+  setInterval(check, LP_EVERY);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
   document.addEventListener('click', function () { setTimeout(paint, 400); }, true);
 })();
 
@@ -3480,4 +3335,13 @@ window.wvClampDesc = function (el) {
   window.addEventListener('resize', soon);
   document.addEventListener('DOMContentLoaded', soon);
   soon();
+})();
+
+(function () {
+  if (window.va || !/wavernrs\.com$/.test(location.hostname)) return;
+  window.va = function () { (window.vaq = window.vaq || []).push(arguments); };
+  var s = document.createElement('script');
+  s.defer = true;
+  s.src = '/_vercel/insights/script.js';
+  document.head.appendChild(s);
 })();

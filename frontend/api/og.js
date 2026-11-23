@@ -257,27 +257,6 @@ async function communityPost(id) {
   };
 }
 
-async function radioStation(slug) {
-  const d = await getJSON('/radio/stations/' + encodeURIComponent(slug) + '?peek=1');
-  const s = d && d.station;
-  if (!s || !s.name) return null;
-  const nowSrc = s.now || d.now;
-  const now = nowSrc && nowSrc.track;
-  const cover = s.cover_url || (now && now.cover_url);
-  return {
-    title: s.name + ' — wavernrs radio',
-    description: joinParts([
-      s.is_live && now ? 'on air: ' + clip(now.title, 90) + (now.artist ? ' by ' + clip(now.artist, 40) : '') : (s.is_live ? 'live now' : null),
-      s.owner && s.owner.name ? 'hosted by ' + s.owner.name : null,
-      clip(s.description, 160) || 'tune in and listen together',
-    ]),
-    image: cover || FALLBACK_IMAGE,
-    alt: cover ? s.name : null,
-    type: 'website',
-    ttl: 120,
-  };
-}
-
 const STATIC = {
   home: ['wavernrs — Ye comps, edits & the Ye archive', TAGLINE],
   charts: ['Charts — the most played comps and edits right now', 'what the wavernrs community is playing today, this week and all time'],
@@ -315,7 +294,6 @@ const LOADERS = {
   tracker: p => p.get('t') && trackerMeta(p.get('t')),
   music: p => p.get('a') && musicArtist(p.get('a')),
   community: p => p.get('post') && communityPost(p.get('post')),
-  radio: p => p.get('s') && radioStation(p.get('s')),
   search: p => {
     const q = clip(p.get('q'), 80);
     return q ? { title: 'results for “' + q + '” — wavernrs', description: 'comps, edits, artists and Ye archive results for “' + q + '” on wavernrs', image: FALLBACK_IMAGE, type: 'website' } : null;

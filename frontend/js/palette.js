@@ -179,7 +179,6 @@
     ['music', 'Artists', '/music', 'mic', 'featured artists kanye rappers', 'm'],
     ['archive', 'Archive', '/archive', 'archive', 'comps archive index database', 'a'],
     ['resources', 'Ye archive', '/resources', 'folder', 'kanye ye resources tracker leaks discography', 'y'],
-    ['radio', 'Radio', '/radio', 'radio', 'stations live stream', 'r'],
     ['lp', 'Live LPs', '/lp', 'headphones', 'listening parties live listen together'],
     ['community', 'Community', '/community', 'community', 'posts forum discuss threads'],
     ['library', 'Your library', '/library', 'list', 'liked saved comps edits collection', 'l'],
@@ -301,7 +300,6 @@
     if (sess('wv_is_mod')) out.push({ id: 'page:modpanel', group: 'Go to', kind: 'page', title: 'Mod panel', keys: 'moderation admin reports', icon: 'shield', href: '/modpanel' });
     if (sess('wv_is_archiver')) out.push({ id: 'page:archivepanel', group: 'Go to', kind: 'page', title: 'Archive panel', keys: 'archiver import', icon: 'shield', href: '/archivepanel' });
     if (sess('wv_can_at')) out.push({ id: 'page:archivetrackers', group: 'Go to', kind: 'page', title: 'Archive trackers', keys: 'tracker list curate', icon: 'shield', href: '/archivetrackers' });
-    if (sess('wv_is_radio')) out.push({ id: 'page:radiopanel', group: 'Go to', kind: 'page', title: 'Radio panel', keys: 'station dj', icon: 'shield', href: '/radiopanel' });
     YE.forEach(function (p) {
       out.push({ id: 'page:' + p[0], group: 'Ye archive', kind: 'page', title: p[1], keys: 'ye kanye ' + p[4], icon: p[3], href: p[2], here: here(p[2]) });
     });
@@ -1094,7 +1092,6 @@
         [['G', 'then', 'A'], 'Archive'],
         [['G', 'then', 'Y'], 'Ye archive'],
         [['G', 'then', 'L'], 'Your library'],
-        [['G', 'then', 'R'], 'Radio'],
         [['G', 'then', 'P'], 'Playlists'],
       ] },
       { t: 'General', rows: [

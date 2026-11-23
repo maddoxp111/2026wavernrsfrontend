@@ -23,7 +23,7 @@
 'use strict';
 
 var KILL = false;
-var CACHE_VERSION = 'wv1';
+var CACHE_VERSION = 'wv2';
 var STAMP = (function () {
   try { return new URL(self.location.href).searchParams.get('v') || 'dev'; } catch (_) { return 'dev'; }
 })();
@@ -123,7 +123,7 @@ self.addEventListener('fetch', function (event) {
   try { url = new URL(req.url); } catch (_) { return; }
   if (url.origin !== self.location.origin) return;
   var p = url.pathname;
-  if (p.indexOf('/api/') === 0 || p === '/api' || p === '/sw.js' || p === '/status.json' || p === '/manifest.json') return;
+  if (p.indexOf('/api/') === 0 || p.indexOf('/_vercel/') === 0 || p === '/api' || p === '/sw.js' || p === '/status.json' || p === '/manifest.json') return;
   if (/\.(mp3|m4a|mp4|mov|webm|ogg|oga|wav|flac|m3u8|ts)$/i.test(p)) return;
   if (req.cache === 'no-store') return;
 

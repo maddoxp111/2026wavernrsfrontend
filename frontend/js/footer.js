@@ -9,7 +9,7 @@
 
   var COLS = [
     ['Listen', [
-      ['Home', '/'], ['Browse', '/browse'], ['Charts', '/charts'], ['Radio', '/radio'], ['Listening parties', '/lp'], ['Playlists', '/playlists']
+      ['Home', '/'], ['Browse', '/browse'], ['Charts', '/charts'], ['Listening parties', '/lp'], ['Playlists', '/playlists']
     ]],
     ['Explore', [
       ['Archive', '/archive'], ['Ye archive', '/resources'], ['Trackers', '/tracker'], ['Discography', '/resources?view=disco'], ['On this day', '/resources?view=today'], ['Eras', '/eras']

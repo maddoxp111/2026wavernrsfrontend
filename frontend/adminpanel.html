@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — admin</title>
-  <link rel="stylesheet" href="/css/style.css?v=1f68ae9a5303">
-  <script src="/js/status-card.js?v=1f68ae9a5303"></script>
-  <script src="/js/down.js?v=1f68ae9a5303"></script>
+  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <script src="/js/status-card.js?v=94b29db58d28"></script>
+  <script src="/js/down.js?v=94b29db58d28"></script>
 </head>
 <body>
 
@@ -79,11 +79,9 @@
     <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
     <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
     <button class="wv-admin-tab"        id="atab-archivers"  onclick="showAdminTab('archivers')">Archivers</button>
-    <button class="wv-admin-tab"        id="atab-radio"      onclick="showAdminTab('radio')">Radio</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
     <button class="wv-admin-tab"        id="atab-trackermatch" onclick="showAdminTab('trackermatch')">Tracker Matching</button>
     <button class="wv-admin-tab"        id="atab-tourvideos" onclick="showAdminTab('tourvideos')">Tour Videos</button>
-    <button class="wv-admin-tab"        id="atab-aivoices" onclick="showAdminTab('aivoices')">AI Voices</button>
     <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
   </div>
 
@@ -175,27 +173,6 @@
         <div id="lockdown-status" style="font-size:13px;"></div>
       </div>
 
-      <!-- Countdown lockdown -->
-      <div style="background:var(--surface-2);border-radius:20px;padding:28px;margin-top:20px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Pre-Launch Countdown</h2>
-        <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.6;">
-          pick a launch date and time. everyone sees a full screen countdown until then. people with the early access password can skip it. it turns itself off once the launch time passes.
-        </p>
-        <div style="margin-bottom:14px;">
-          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Launch date &amp; time</label>
-          <input type="datetime-local" id="cd-launch-at" class="wv-input" style="width:100%;padding:10px 14px;">
-          <div style="font-size:12px;color:var(--text-3);margin-top:4px;">times are in your local timezone</div>
-        </div>
-        <div style="margin-bottom:18px;">
-          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Early-access password <span style="font-weight:400;color:var(--text-3);">(optional)</span></label>
-          <input type="text" id="cd-password" class="wv-input" placeholder="leave blank so nobody can skip the countdown" style="width:100%;padding:10px 14px;">
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="saveCountdown()">Save &amp; Enable</button>
-          <button class="btn btn-secondary" onclick="clearCountdown()">Clear / Disable</button>
-        </div>
-        <div id="cd-status" style="font-size:13px;margin-top:10px;"></div>
-      </div>
     </div>
   </div>
 
@@ -237,22 +214,6 @@
 
       <!-- Current archivers list -->
       <div id="archivers-list"><div class="loading"><div class="spinner"></div></div></div>
-    </div>
-  </div>
-
-  <div id="tab-radio" style="display:none;">
-    <div style="max-width:640px;">
-      <h2 style="font-size:18px;font-weight:700;margin:0 0 8px;">Radio hosts</h2>
-      <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.55;">a radio host gets the Radio panel...they can make one station, name it, fill the playlist, queue tracks and play stuff whenever they want. only they (and mods) can control it.</p>
-      <div style="margin-bottom:24px;padding:18px 20px;background:var(--glass-small-bg);border:1px solid var(--hair);border-radius:16px;">
-        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Give someone a radio station</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="radiohost-username-input" class="wv-input" placeholder="username..." style="flex:1;min-width:180px;padding:9px 14px;">
-          <button class="btn btn-primary" onclick="lookupAndAddRadioHost()">Add host</button>
-        </div>
-        <div id="radiohost-lookup-result" style="margin-top:8px;font-size:13px;"></div>
-      </div>
-      <div id="radiohosts-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -311,37 +272,6 @@
     </div>
   </div>
 
-  <!-- ── AI Voices tab ─────────────────────────────────────── -->
-  <div id="tab-aivoices" style="display:none;">
-    <div style="max-width:700px;">
-      <div style="background:var(--surface-2);border-radius:20px;padding:28px;margin-bottom:18px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Resources › AI Voices</h2>
-        <p style="font-size:14px;color:var(--text-2);margin:0 0 20px;line-height:1.6;">
-          add RVC voice models for the AI Voice tab. upload the model <code>.pth</code> (and its <code>.index</code> if you have it) or a <code>.zip</code>...it finds the right files on its own. models are saved on the Internet Archive so they dont get wiped on redeploys.
-        </p>
-
-        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Model name</label>
-        <input id="rvc-name" class="wv-input" style="width:100%;padding:10px 14px;margin-bottom:14px;" placeholder="like Drake">
-
-        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Model file (.pth or .zip)</label>
-        <input id="rvc-model-file" type="file" accept=".pth,.zip" class="wv-input" style="width:100%;padding:10px 14px;margin-bottom:14px;cursor:pointer;">
-
-        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Index file (.index)...optional, makes it sound better</label>
-        <input id="rvc-index-file" type="file" accept=".index" class="wv-input" style="width:100%;padding:10px 14px;margin-bottom:18px;cursor:pointer;">
-
-        <div style="display:flex;gap:10px;align-items:center;">
-          <button class="btn btn-primary" id="rvc-upload-btn" onclick="uploadRvcModel()">Upload Model</button>
-          <div id="rvc-upload-status" style="font-size:13px;"></div>
-        </div>
-      </div>
-
-      <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
-        <h3 style="font-size:15px;font-weight:700;margin:0 0 14px;">Installed voices</h3>
-        <div id="rvc-models-list"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- ── Badges tab ─────────────────────────────────────────── -->
   <div id="tab-badges" style="display:none;">
     <div style="max-width:700px;display:flex;flex-direction:column;gap:24px;">
@@ -388,9 +318,9 @@
 </div><!-- /admin-content -->
 </div><!-- /view -->
 
-<script src="/js/router.js?v=1f68ae9a5303"></script>
-<script src="/js/api.js?v=1f68ae9a5303"></script>
-<script src="/js/layout.js?v=1f68ae9a5303"></script>
+<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=94b29db58d28"></script>
+<script src="/js/layout.js?v=94b29db58d28"></script>
 <script>
   var adminPw = null;
   var activeAdminTab = 'banners';
@@ -609,7 +539,7 @@
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','archivers','radio','tracker','trackermatch','tourvideos','aivoices','badges'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','archivers','tracker','trackermatch','tourvideos','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -622,110 +552,12 @@
     if (tab === 'lockdown')   loadLockdown();
     if (tab === 'moderators') loadModerators();
     if (tab === 'archivers')  loadArchivers();
-    if (tab === 'radio')      loadRadioHosts();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'tourvideos') loadTourVideos();
     if (tab === 'trackermatch') loadTrackerMatch();
-    if (tab === 'aivoices')   loadRvcModels();
     if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
   }
 
-  // ── AI Voices (RVC models) ────────────────────────────────────
-  async function loadRvcModels() {
-    var list = document.getElementById('rvc-models-list');
-    if (list) list.innerHTML = '<div style="color:var(--text-2);font-size:13px;">Loading…</div>';
-    try {
-      var data = await adminApi('/admin/rvc-models');
-      renderRvcModels(data.models || []);
-    } catch (e) {
-      if (list) list.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message || 'couldnt load') + '</div>';
-    }
-  }
-
-  function renderRvcModels(models) {
-    var list = document.getElementById('rvc-models-list');
-    if (!list) return;
-    if (!models.length) {
-      list.innerHTML = '<div style="color:var(--text-3);font-size:13px;">no voices yet...upload one above</div>';
-      return;
-    }
-    list.innerHTML = models.map(function(m) {
-      var builtin = m.source === 'builtin';
-      var badge = builtin
-        ? '<span style="font-size:11px;color:var(--text-3);border-radius:6px;padding:2px 7px;margin-left:8px;">built-in</span>'
-        : '';
-      var actions = builtin ? '' :
-        '<button class="btn btn-secondary btn-sm" onclick="renameRvcModel(\'' + m.id + '\')">Rename</button>' +
-        '<button class="btn btn-danger btn-sm" onclick="deleteRvcModel(\'' + m.id + '\',\'' + encodeURIComponent(m.name) + '\')">Delete</button>';
-      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);">' +
-        '<div style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(m.name) + badge + '</div>' +
-        '<div style="display:flex;gap:8px;">' + actions + '</div>' +
-        '</div>';
-    }).join('');
-  }
-
-  function escapeHtmlAdmin(s) {
-    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  async function uploadRvcModel() {
-    var name = (document.getElementById('rvc-name').value || '').trim();
-    var modelInput = document.getElementById('rvc-model-file');
-    var indexInput = document.getElementById('rvc-index-file');
-    var btn = document.getElementById('rvc-upload-btn');
-    var status = document.getElementById('rvc-upload-status');
-    function setStatus(color, msg) { if (status) status.innerHTML = '<span style="color:' + color + ';">' + msg + '</span>'; }
-
-    if (!name) { setStatus('var(--red)', 'give the model a name'); return; }
-    var modelFile = modelInput && modelInput.files && modelInput.files[0];
-    if (!modelFile) { setStatus('var(--red)', 'pick a .pth or .zip file'); return; }
-
-    var form = new FormData();
-    form.append('name', name);
-    form.append('model', modelFile);
-    if (indexInput && indexInput.files && indexInput.files[0]) form.append('index', indexInput.files[0]);
-
-    if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
-    setStatus('var(--text-2)', 'uploading...big models can take a minute');
-    try {
-      var res = await fetch(API_BASE + '/admin/rvc-models', {
-        method: 'POST',
-        headers: { 'X-Admin-Password': adminPw },
-        body: form,
-      });
-      var data = await res.json().catch(function() { return {}; });
-      if (!res.ok) throw new Error(data.error || ('Upload failed (' + res.status + ')'));
-      setStatus('var(--green)', 'Added "' + escapeHtmlAdmin(data.name) + '".');
-      document.getElementById('rvc-name').value = '';
-      modelInput.value = '';
-      if (indexInput) indexInput.value = '';
-      loadRvcModels();
-    } catch (e) {
-      setStatus('var(--red)', e.message || 'upload failed');
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Upload Model'; }
-    }
-  }
-
-  async function renameRvcModel(id) {
-    var name = prompt('new name for this voice');
-    if (name == null) return;
-    name = name.trim();
-    if (!name) return;
-    try {
-      await adminApi('/admin/rvc-models/' + id, { method: 'PATCH', body: JSON.stringify({ name: name }) });
-      loadRvcModels();
-    } catch (e) { alert(e.message || 'rename failed'); }
-  }
-
-  async function deleteRvcModel(id, encName) {
-    var ok = await adminConfirm('Delete voice?', 'delete the voice "' + decodeURIComponent(encName) + '"? it gets taken off the AI Voice tab');
-    if (!ok) return;
-    try {
-      await adminApi('/admin/rvc-models/' + id, { method: 'DELETE' });
-      loadRvcModels();
-    } catch (e) { alert(e.message || 'delete failed'); }
-  }
 
   // ── Tracker (Resources) ───────────────────────────────────────
   var trackerTabRows = [];
@@ -1393,38 +1225,6 @@
     } catch (err) { showMsg('admin-alert', err.message); }
   }
 
-  // ── Radio hosts ───────────────────────────────────────────────
-  async function loadRadioHosts() {
-    var el = document.getElementById('radiohosts-list');
-    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      var hosts = await adminApi('/admin/radio-hosts');
-      if (!hosts.length) { el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no radio hosts yet</div>'; return; }
-      el.innerHTML = '<table class="admin-table"><thead><tr><th>Username</th><th>Actions</th></tr></thead><tbody>' + hosts.map(function(h) {
-        return '<tr><td style="font-weight:600;">' + escHtml(h.users && h.users.username || '?') + '</td><td><button class="btn btn-danger btn-sm" onclick="removeRadioHost(\'' + h.user_id + '\')">Remove</button></td></tr>';
-      }).join('') + '</tbody></table>';
-    } catch (err) { el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>'; }
-  }
-  async function lookupAndAddRadioHost() {
-    var inputEl = document.getElementById('radiohost-username-input'), resultEl = document.getElementById('radiohost-lookup-result');
-    var username = inputEl ? inputEl.value.trim() : '';
-    if (!username) { resultEl.innerHTML = '<span style="color:var(--red);">type a username</span>'; return; }
-    if (!_allAdminUsers.length) { try { _allAdminUsers = await adminApi('/admin/users'); } catch (err) { resultEl.innerHTML = '<span style="color:var(--red);">couldnt load users: ' + escHtml(err.message) + '</span>'; return; } }
-    var match = _allAdminUsers.find(function(u) { return u.username && u.username.toLowerCase() === username.toLowerCase(); });
-    if (!match) { resultEl.innerHTML = '<span style="color:var(--red);">User "' + escHtml(username) + '" not found</span>'; return; }
-    try {
-      await adminApi('/admin/radio-hosts', { method: 'POST', body: JSON.stringify({ user_id: match.id }) });
-      if (inputEl) inputEl.value = '';
-      resultEl.innerHTML = '<span style="color:var(--green);">&#x2713; ' + escHtml(match.username) + ' can run a station now</span>';
-      setTimeout(function() { resultEl.innerHTML = ''; }, 3000);
-      loadRadioHosts();
-    } catch (err) { resultEl.innerHTML = '<span style="color:var(--red);">' + escHtml(err.message) + '</span>'; }
-  }
-  async function removeRadioHost(userId) {
-    if (!confirm('remove this radio host? their station stays but they cant make a new one')) return;
-    try { await adminApi('/admin/radio-hosts/' + userId, { method: 'DELETE' }); loadRadioHosts(); } catch (err) { alert(err.message); }
-  }
-
   // ── Archivers ─────────────────────────────────────────────────
 
   async function loadArchivers() {
@@ -1674,40 +1474,6 @@
       await adminApi('/admin/badges/track/' + id + '/' + badge, { method: 'POST', body: JSON.stringify({ value: value }) });
       _doSearchBadgeTracks();
     } catch (e) { showMsg('admin-alert', e.message); }
-  }
-
-  // ── Countdown ─────────────────────────────────────────────────
-
-  async function saveCountdown() {
-    var launchAtEl = document.getElementById('cd-launch-at');
-    var passwordEl = document.getElementById('cd-password');
-    var statusEl   = document.getElementById('cd-status');
-    var localVal   = launchAtEl ? launchAtEl.value : '';
-    if (!localVal) { if (statusEl) { statusEl.textContent = 'pick a launch date and time first'; statusEl.style.color = 'var(--red)'; } return; }
-    var launchAt   = new Date(localVal).toISOString();
-    var password   = passwordEl ? passwordEl.value.trim() : '';
-    if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.style.color = 'var(--text-3)'; }
-    try {
-      await adminApi('/admin/countdown', { method: 'POST', body: JSON.stringify({ launch_at: launchAt, password: password || null }) });
-      if (statusEl) { statusEl.textContent = '✓ countdown saved!! launch: ' + new Date(launchAt).toLocaleString(); statusEl.style.color = 'var(--green)'; }
-    } catch (e) {
-      if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
-    }
-  }
-
-  async function clearCountdown() {
-    var statusEl = document.getElementById('cd-status');
-    if (statusEl) { statusEl.textContent = 'Clearing…'; statusEl.style.color = 'var(--text-3)'; }
-    try {
-      await adminApi('/admin/countdown', { method: 'POST', body: JSON.stringify({ launch_at: null, password: null }) });
-      var el = document.getElementById('cd-launch-at');
-      if (el) el.value = '';
-      var pel = document.getElementById('cd-password');
-      if (pel) pel.value = '';
-      if (statusEl) { statusEl.textContent = '✓ countdown turned off'; statusEl.style.color = 'var(--green)'; }
-    } catch (e) {
-      if (statusEl) { statusEl.textContent = 'Failed: ' + e.message; statusEl.style.color = 'var(--red)'; }
-    }
   }
 
   // ── Auto-login ────────────────────────────────────────────────
