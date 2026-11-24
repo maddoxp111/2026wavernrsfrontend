@@ -263,7 +263,7 @@ struct FollowButton: View {
     private func load() async {
         if let s = try? await API.followStatus(artistId: artistId, token: auth.token) {
             following = s.following
-            followerCount = s.followerCount
+            followerCount = s.followerCount ?? followerCount
             loaded = true
         }
     }
@@ -273,7 +273,7 @@ struct FollowButton: View {
         working = true
         if let s = try? await API.toggleFollow(artistId: artistId, token: token) {
             following = s.following
-            followerCount = s.followerCount
+            followerCount = s.followerCount ?? followerCount
         }
         working = false
     }

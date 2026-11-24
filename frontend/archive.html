@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .arc-top { display: flex; flex-direction: column; gap: 10px; }
     .arc-sub { margin: 0; font-size: 14px; color: var(--text-2); max-width: 560px; line-height: 1.55; }
-    .arc-hl-note { font-size: 13px; color: var(--text-3); margin: 2px 0 4px; }
     .arc-stats { display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
     .arc-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 118px; min-height: 64px; padding: 11px 16px 10px; border-radius: 12px; border: 1px solid var(--hair); background: var(--surface); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, transform .15s var(--ease), background .15s; }
     .arc-stat:hover { border-color: var(--hair-strong); background: var(--surface-2); }
@@ -29,6 +28,8 @@
     .arc-views { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .arc-views .wv-seg { flex: none; }
     .arc-views .wv-seg button { min-height: 36px; }
+    .arc-chips { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; align-self: flex-start; max-width: 100%; }
+    .arc-chips .wv-seg { flex: none; }
     #arc-filters.arc-sticky { position: sticky; top: 0; z-index: 4; margin: 0 -28px; padding: 10px 28px; background: var(--page-bg); border-bottom: 1px solid transparent; transition: border-color .2s, box-shadow .2s; }
     #arc-filters.arc-sticky.stuck { border-bottom-color: var(--hair); box-shadow: 0 10px 24px -18px rgba(0,0,0,.6); }
     .arc-search { position: relative; flex: 1; min-width: 200px; max-width: 360px; }
@@ -215,7 +216,7 @@
     .ah-sk-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; padding: 7px 0; }
     .ah-sk-row .a { width: 44px; height: 44px; border-radius: 6px; } .ah-sk-row .l1 { height: 12px; width: 70%; } .ah-sk-row .l2 { height: 10px; width: 40%; margin-top: 6px; }
     #arc-home a:focus-visible, #arc-home button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-    #arc-root.home-on .arc-sub, #arc-root.home-on .arc-stats, #arc-root.home-on .arc-claim, #arc-root.home-on #arc-source, #arc-root.home-on #arc-filters, #arc-root.home-on #arc-era-hero, #arc-root.home-on #archive-grid, #arc-root.home-on #archive-sentinel, #arc-root.home-on #archive-loading-more { display: none !important; }
+    #arc-root.home-on .arc-sub, #arc-root.home-on .arc-stats, #arc-root.home-on .arc-claim, #arc-root.home-on #arc-chips, #arc-root.home-on #arc-filters, #arc-root.home-on #arc-era-hero, #arc-root.home-on #archive-grid, #arc-root.home-on #archive-sentinel, #arc-root.home-on #archive-loading-more { display: none !important; }
     @media (max-width: 1100px) { .ah-ex { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 960px) { .ah-two { grid-template-columns: 1fr; } }
     @media (max-width: 640px) {
@@ -253,11 +254,14 @@
       .arc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .arc-stat { min-width: 0; }
       .arc-stat.hof { grid-column: 1 / -1; }
+      #arc-root:not(.home-on) .arc-sub, #arc-root:not(.home-on) .arc-stats, #arc-root:not(.home-on) .arc-claim { display: none; }
+      #arc-root:not(.home-on) .arc-claim-mini { display: block !important; }
       .arc-views { gap: 8px; }
-      .arc-views .wv-seg, #arc-source { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-      .arc-views .wv-seg::-webkit-scrollbar, #arc-source::-webkit-scrollbar { display: none; }
-      #arc-source button, .arc-views .wv-seg button { white-space: nowrap; flex: none; }
-      #arc-sort, #arc-era { flex: 1 1 40%; min-width: 0; }
+      .arc-views .wv-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+      .arc-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; align-self: stretch; gap: 8px; }
+      .arc-views .wv-seg::-webkit-scrollbar, .arc-chips::-webkit-scrollbar { display: none; }
+      #arc-source button, #arc-kind button, .arc-views .wv-seg button { white-space: nowrap; flex: none; }
+      #arc-sort, #arc-era, #arc-artist-sort { flex: 1 1 40%; min-width: 0; }
       .arc-rl-win { height: 150px; }
       .arc-rl-tile { flex-basis: 122px; height: 122px; }
       .arc-rl-mark { width: 136px; }
@@ -282,10 +286,10 @@
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 var _wvBadges = null;
 function _onyxIcon(id) {
@@ -307,11 +311,13 @@ var _archiveArtists = []; // grouped artist index (one request, drawn in chunks)
 var _archiveTotal = 0;
 var _arcQuery = '';
 var _arcSort = 'likes';   // opens on most liked
-var _arcView = 'all';     // 'all' | 'comps' | 'edits' | 'artists' — the flat grid opens first
+var _arcView = 'all';
 var _arcKind = 'all';
 var _arcSearchTimer = null;
 var _ARC_PAGE = 60;
 var _arcItems = [];       // comps fetched so far for the current query/sort
+var _arcNext = 0, _arcSeenIds = {};
+var _arcArtistSort = 'comps';
 var _arcLoading = false;
 var _arcDone = false;
 var _arcGen = 0;          // bumps when the query/sort changes so stale pages are dropped
@@ -324,6 +330,7 @@ async function initArchive() {
     '<div id="arc-root" style="display:flex;flex-direction:column;gap:20px;">' +
     '<div class="arc-top">' +
       '<div class="wv-arc-head" style="margin-bottom:0;"><h1 style="margin:0;font-size:38px;font-weight:800;letter-spacing:-0.035em;">Archive</h1>' + (typeof wvArchiveMode === 'function' ? wvArchiveMode('yedits') : '') + '</div>' +
+      '<div class="arc-claim-mini" style="display:none;font-size:12.5px;color:var(--text-3);">made one of these? <a href="/claim">claim it</a> · <a href="/claim?type=remove">takedown</a></div>' +
       '<p class="arc-sub">comps the wavernrs team saved...the people who made them arent on the site, but they were too good to lose.</p>' +
       arcStatsHTML() +
     '</div>' +
@@ -337,23 +344,25 @@ async function initArchive() {
     '<div class="arc-views">' +
     '<div class="wv-seg" role="group" aria-label="What to browse">' +
       '<button id="arc-view-home" onclick="arcSetView(\'home\')">Home</button>' +
-      '<button class="on" id="arc-view-all" onclick="arcSetView(\'all\')">All Releases</button>' +
-      '<button id="arc-view-comps" onclick="arcSetView(\'comps\')">Comps</button>' +
-      '<button id="arc-view-edits" onclick="arcSetView(\'edits\')">Edits</button>' +
+      '<button class="on" id="arc-view-all" onclick="arcSetView(\'all\')">Releases</button>' +
       '<button id="arc-view-artists" onclick="arcSetView(\'artists\')">Artists</button>' +
-    '</div>' +
-    '<div class="wv-seg" role="group" aria-label="Curated lists">' +
       '<button id="arc-view-top" onclick="arcSetView(\'top\')">Top 150</button>' +
       '<button id="arc-view-trackers" onclick="arcSetView(\'trackers\')">Trackers</button>' +
-      '<button id="arc-view-highlighted" onclick="arcSetView(\'highlighted\')">Highlighted</button>' +
     '</div>' +
     '</div>' +
     '<div id="arc-home" style="display:none;"></div>' +
-    '<div class="wv-seg arc-src-seg" id="arc-source" role="group" aria-label="Where the release came from" style="align-self:flex-start;">' +
+    '<div class="arc-chips" id="arc-chips">' +
+    '<div class="wv-seg" id="arc-kind" role="group" aria-label="What kind of release">' +
+      '<button class="on" data-k="all" onclick="arcKindChange(\'all\')">All</button>' +
+      '<button data-k="comps" onclick="arcKindChange(\'comps\')">Comps</button>' +
+      '<button data-k="edits" onclick="arcKindChange(\'edits\')">Edits</button>' +
+    '</div>' +
+    '<div class="wv-seg arc-src-seg" id="arc-source" role="group" aria-label="Where the release came from">' +
       '<button class="on" data-s="" onclick="arcSourceChange(\'\')">All sources</button>' +
       '<button data-s="discord" onclick="arcSourceChange(\'discord\')"><svg class="arc-src-ico" width="16" height="16" viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.445.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg><span>Discord</span></button>' +
       '<button data-s="reddit" onclick="arcSourceChange(\'reddit\')"><svg class="arc-src-ico" width="16" height="16" viewBox="0 0 24 24" fill="#FF4500" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z"/></svg><span>Reddit</span></button>' +
       '<button data-s="other" onclick="arcSourceChange(\'other\')">Other</button>' +
+    '</div>' +
     '</div>' +
     '<div id="arc-filters" class="arc-sticky" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">' +
       '<label class="arc-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
@@ -366,11 +375,17 @@ async function initArchive() {
         '<option value="artist">Artist A–Z</option>' +
         '<option value="plays">Most played</option>' +
       '</select>' +
+      '<select id="arc-artist-sort" class="wv-input" aria-label="Sort creators" style="padding:9px 12px;font-size:13px;width:auto;display:none;" onchange="arcArtistSortChange()">' +
+        '<option value="comps">Most releases</option>' +
+        '<option value="plays">Most played</option>' +
+        '<option value="recent">Recently active</option>' +
+        '<option value="name">A–Z</option>' +
+      '</select>' +
       '<select id="arc-era" class="wv-input" style="padding:9px 12px;font-size:13px;width:auto;display:none;" onchange="arcEraChange()">' +
         '<option value="">Every era</option>' +
       '</select>' +
       '<button class="wv-pill arc-surprise" id="arc-surprise-btn" style="font-size:13px;padding:8px 14px;font-weight:700;min-height:40px;" onclick="arcSurprise()" title="spin for a random comp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/></svg>Surprise me</button>' +
-      '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;min-height:40px;" onclick="arcShuffleResults()" title="queues one track from every comp on screen">Shuffle these</button>' +
+      '<button class="wv-pill" style="font-size:13px;padding:8px 14px;font-weight:700;min-height:40px;" onclick="arcShuffleResults()" title="queues one random track from each of the first 25 on screen">Shuffle these</button>' +
       '<span id="arc-count" style="font-size:12px;color:var(--text-3);"></span>' +
     '</div>' +
     '<div id="arc-era-hero" style="display:none;"></div>' +
@@ -399,27 +414,35 @@ async function initArchive() {
     _arcSourceMark();
   }
   var _v0 = _p0.get('view');
-  _arcView = 'all'; _arcKind = 'all';
-  if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) { _arcView = _v0; if (_v0 !== 'artists' && _v0 !== 'top' && _v0 !== 'trackers' && _v0 !== 'highlighted' && _v0 !== 'home') _arcKind = _v0; }
-  else if (!['view', 'era', 'q', 'sort', 'source'].some(function (k) { return _p0.get(k); })) _arcView = 'home';
+  var _k0 = _p0.get('kind');
+  _arcView = 'all';
+  _arcKind = _k0 === 'comps' || _k0 === 'edits' ? _k0 : 'all';
+  var _legacy0 = _v0 === 'comps' || _v0 === 'edits' || _v0 === 'highlighted';
+  if (_v0 === 'comps' || _v0 === 'edits') _arcKind = _v0;
+  else if (_v0 === 'highlighted') _arcView = 'home';
+  else if (_v0 && ARC_VIEWS.indexOf(_v0) >= 0) _arcView = _v0;
+  else if (!['view', 'era', 'q', 'sort', 'source', 'kind'].some(function (k) { return _p0.get(k); })) _arcView = 'home';
   var _so0 = _p0.get('sort');
-  if (_so0 && ARC_SORTS.indexOf(_so0) >= 0) _arcSort = _so0;
+  if (_arcView === 'artists') { if (_so0 && ARC_ARTIST_SORTS.indexOf(_so0) >= 0) _arcArtistSort = _so0; }
+  else if (_so0 && ARC_SORTS.indexOf(_so0) >= 0) _arcSort = _so0;
   var _sortEl0 = document.getElementById('arc-sort');
   if (_sortEl0) _sortEl0.value = _arcSort;
+  var _asEl0 = document.getElementById('arc-artist-sort');
+  if (_asEl0) _asEl0.value = _arcArtistSort;
   arcApplyView();
+  if (_legacy0) arcSyncUrl();
   _arcWatchSentinel();
   arcWatchScroll();
   arcLoadStats();
   if (_arcView === 'artists') loadArtists(true);
   else if (_arcView === 'top') loadTopComps();
   else if (_arcView === 'home') arcHomeOpen();
-  else if (_arcView === 'highlighted') loadHighlighted();
   else if (_arcView !== 'trackers') arcReload();
   loadTrackerTabs();
   loadArcEras();
   setTimeout(function () {
     var g = document.getElementById('archive-grid');
-    if (g && !_arcItems.length && _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcView !== 'home' && g.querySelector('.wv-skel-card')) {
+    if (g && !_arcItems.length && _arcView === 'all' && g.querySelector('.wv-skel-card')) {
       g.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">the archive is taking forever to load... <button class="wv-pill" style="margin-left:8px;" onclick="arcReload()">Try again</button></div>';
     }
   }, 20000);
@@ -430,22 +453,24 @@ function _arcNoun(n) { var w = _arcKind === 'edits' ? 'edit' : _arcKind === 'com
 function arcReload() {
   _arcGen++;
   _arcItems = []; _arcDone = false; _arcLoading = false; _archiveTotal = 0;
+  _arcNext = 0; _arcSeenIds = {};
   var grid = document.getElementById('archive-grid');
   if (grid && _arcView !== 'artists') { grid.className = 'wv-tile-grid'; grid.innerHTML = arcSkel(12); }
   arcLoadMore();
 }
 
 async function arcLoadMore() {
-  if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home' || _arcLoading || _arcDone) return;
+  if (_arcView !== 'all' || _arcLoading || _arcDone) return;
   _arcLoading = true;
   var gen = _arcGen;
   var more = document.getElementById('archive-loading-more');
   if (more && _arcItems.length) more.style.display = '';
   try {
     var lim = _ARC_PAGE;
-    if (!_arcItems.length && window._arcRestoreN > _ARC_PAGE) lim = Math.min(window._arcRestoreN, 600);
+    var from = _arcNext;
+    if (!from && window._arcRestoreN > _ARC_PAGE) lim = Math.min(window._arcRestoreN, 500);
     window._arcRestoreN = 0;
-    var url = '/archive?limit=' + lim + '&offset=' + _arcItems.length + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
+    var url = '/archive?limit=' + lim + '&offset=' + from + '&sort=' + encodeURIComponent(_arcSort) + '&kind=' + _arcKind +
       (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '') +
       (_arcEra ? '&era=' + encodeURIComponent(_arcEra) : '') +
       (_arcSource ? '&source=' + encodeURIComponent(_arcSource) : '');
@@ -457,19 +482,21 @@ async function arcLoadMore() {
       throw e;
     }
     if (gen !== _arcGen) return; // the query changed while this was in flight
-    if (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home') return;
+    if (_arcView !== 'all') return;
     var items = Array.isArray(page) ? page : (page.items || []);
     var knownTotal = Array.isArray(page) ? items.length
       : (page.total_known || typeof page.total === 'number' && page.total > 0) ? page.total : null;
     if (typeof knownTotal === 'number') _archiveTotal = knownTotal;
     if (typeof knownTotal === 'number' && !_arcQuery && !_arcEra && !_arcSource && _arcKind === 'all') arcSetStat('rel', knownTotal);
-    var first = _arcItems.length === 0;
+    var first = from === 0;
+    var rows = !Array.isArray(page) && typeof page.next_offset === 'number' ? page.next_offset - _arcNext : items.length;
+    _arcNext += rows;
+    items = items.filter(function (i) { if (!i || _arcSeenIds[i.id]) return false; _arcSeenIds[i.id] = 1; return true; });
     _arcItems = _arcItems.concat(items);
     // A short page means the end. Only trust a total the server actually knows;
     // it counts in the background and reports null until that lands.
-    try { sessionStorage.setItem('wv_arc_n:' + location.search, String(_arcItems.length)); } catch (_) {}
-    _arcDone = !items.length || items.length < lim ||
-      (typeof knownTotal === 'number' && _arcItems.length >= knownTotal);
+    try { sessionStorage.setItem('wv_arc_n:' + location.search, String(_arcNext)); } catch (_) {}
+    _arcDone = rows < lim || (typeof knownTotal === 'number' && _arcNext >= knownTotal);
     var grid = document.getElementById('archive-grid');
     if (!grid) return;
     grid.className = 'wv-tile-grid';
@@ -490,9 +517,10 @@ async function arcLoadMore() {
     }
     var countEl = document.getElementById('arc-count');
     if (countEl) {
+      var n = _arcItems.length;
       countEl.textContent = _archiveTotal
         ? _archiveTotal.toLocaleString() + ' ' + _arcNoun(_archiveTotal) + (_arcQuery ? ' match' : '')
-        : _arcItems.length.toLocaleString() + '+ ' + _arcNoun(2) + (_arcDone ? '' : ' so far');
+        : _arcDone ? n.toLocaleString() + ' ' + _arcNoun(n) : n.toLocaleString() + '+ ' + _arcNoun(2) + ' so far';
     }
   } catch (err) {
     if (gen !== _arcGen) return;
@@ -529,10 +557,44 @@ function arcSourceChange(v) {
   arcSyncUrl(true);
   arcReload();
 }
+function _arcKindMark() {
+  document.querySelectorAll('#arc-kind button').forEach(function (b) {
+    var on = (b.getAttribute('data-k') || 'all') === _arcKind;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function arcKindChange(k) {
+  var next = k === 'comps' || k === 'edits' ? k : 'all';
+  if (next === _arcKind) return;
+  _arcKind = next;
+  _arcKindMark();
+  arcEraOptions();
+  arcSyncUrl(true);
+  arcReload();
+}
 var _arcEras = [];
+var _arcTotalsReq = null, _arcErasReq = null;
+function arcTotalsReq() {
+  if (!_arcTotalsReq) _arcTotalsReq = api('/stats/totals').catch(function (e) { _arcTotalsReq = null; throw e; });
+  return _arcTotalsReq;
+}
+function arcErasReq() {
+  if (!_arcErasReq) _arcErasReq = api('/archive/eras').catch(function (e) { _arcErasReq = null; throw e; });
+  return _arcErasReq;
+}
+function arcEraOptions() {
+  var sel = document.getElementById('arc-era');
+  if (!sel || _arcEras.length < 2) return;
+  sel.innerHTML = '<option value="">Every era</option>' + _arcEras.map(function (e) {
+    var n = _arcKind === 'comps' ? e.comps : _arcKind === 'edits' ? e.edits : e.total;
+    return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + Number(n || 0).toLocaleString() + ')</option>';
+  }).join('');
+  sel.value = _arcEra;
+}
 async function loadArcEras() {
   try {
-    var r = await api('/archive/eras');
+    var r = await arcErasReq();
     var sel = document.getElementById('arc-era');
     if (!sel || !r || !r.items || r.items.length < 2) return;
     _arcEras = r.items;
@@ -543,13 +605,11 @@ async function loadArcEras() {
       var named = r.items.find(function (e) { return String(e.name || '').toLowerCase() === want; });
       if (named) {
         _arcEra = named.id;
-        if (_arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcView !== 'home') arcReload();
+        if (_arcView === 'all') arcReload();
       }
     }
-    sel.innerHTML = '<option value="">Every era</option>' +
-      r.items.map(function (e) { return '<option value="' + escHtml(e.id) + '">' + escHtml(e.name) + ' (' + e.comps.toLocaleString() + ')</option>'; }).join('');
-    sel.value = _arcEra;
-    sel.style.display = (_arcView === 'artists' || _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted' || _arcView === 'home') ? 'none' : '';
+    arcEraOptions();
+    sel.style.display = _arcView === 'all' ? '' : 'none';
     if (_arcEra) {
       var cur = r.items.find(function (e) { return e.id === _arcEra; });
       if (cur && cur.cover && typeof window.setPageBgImage === 'function') window.setPageBgImage(cur.cover, cur.name);
@@ -643,18 +703,31 @@ window.arcClearEra = function () {
 
 // Build a mixtape out of whatever the grid is currently showing: one track
 // from each comp, shuffled.
+async function arcLoadTracks(ids) {
+  var lists = new Array(ids.length);
+  var next = 0;
+  async function worker() {
+    while (next < ids.length) {
+      var i = next++;
+      try {
+        var rows = await api('/albums/' + ids[i] + '/tracks');
+        lists[i] = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+      } catch (e) { lists[i] = []; }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(8, ids.length) }, worker));
+  return lists;
+}
+
 async function arcShuffleResults() {
-  var comps = _arcItems.filter(function (i) { return (i.track_count || 0) > 1 || i.track_count === undefined; }).slice(0, 25);
+  var comps = _arcItems.filter(function (i) { return i.track_count !== 0; }).slice(0, 25);
   if (!comps.length) { if (typeof wvToast === 'function') wvToast('nothing to shuffle yet'); return; }
-  if (typeof wvToast === 'function') wvToast('making a mix from ' + comps.length + ' comps...');
-  var batches = await Promise.all(comps.map(function (c) {
-    return api('/albums/' + c.id + '/tracks').catch(function () { return []; });
-  }));
+  if (typeof wvToast === 'function') wvToast('making a mix from ' + comps.length + ' releases...');
+  var batches = await arcLoadTracks(comps.map(function (c) { return c.id; }));
   var queue = [];
-  batches.forEach(function (rows, i) {
+  batches.forEach(function (tracks, i) {
     var c = comps[i];
-    var tracks = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
-    if (!tracks.length) return;
+    if (!tracks || !tracks.length) return;
     var t = tracks[Math.floor(Math.random() * tracks.length)];
     queue.push({
       id: t.id, title: t.title, ia_url: t.ia_url,
@@ -688,7 +761,7 @@ function arcStatsHTML() {
     return '<button class="arc-stat" id="arc-st-' + id + '" onclick="' + act + '"><b><i class="wv-skel skel"></i></b><span>' + label + '</span></button>';
   };
   return '<div class="arc-stats" aria-label="Archive at a glance">' +
-    tile('rel', 'releases saved', "arcSetView('all')") +
+    tile('rel', 'releases saved', "arcSetView('all', 'all')") +
     tile('art', 'creators', "arcSetView('artists')") +
     tile('era', 'eras', "navigate('/eras')") +
     tile('plays', 'plays', "arcSetView('all')") +
@@ -737,13 +810,13 @@ function arcPrefetchTop() {
 
 function arcLoadStats() {
   _arcStatSet = {};
-  api('/stats/totals').then(function (d) {
+  arcTotalsReq().then(function (d) {
     var n = d && d.totals && d.totals.archive_comps;
     if (typeof n === 'number') arcSetStat('rel', n);
     var pl = d && d.totals && d.totals.plays;
     if (typeof pl === 'number') arcSetStat('plays', pl);
   }).catch(function () {});
-  api('/archive/artists?limit=1').then(function (d) {
+  if (_arcView !== 'home') api('/archive/artists?limit=1').then(function (d) {
     if (d && typeof d.total === 'number') arcSetStat('art', d.total);
   }).catch(function () {});
   if (_arcView === 'home' || _arcView === 'top') arcPrefetchTop();
@@ -756,12 +829,13 @@ function arcSyncUrl(push) {
     var u = new URL(location.href);
     var set = function (k, v) { if (v) u.searchParams.set(k, v); else u.searchParams.delete(k); };
     var home = _arcView === 'home';
-    var listView = _arcView !== 'artists' && _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home;
-    var filtered = listView && (_arcSort !== 'likes' || _arcEra || _arcQuery || _arcSource);
-    set('view', home || (_arcView === 'all' && filtered) ? '' : _arcView);
-    set('sort', listView && _arcSort !== 'likes' ? _arcSort : '');
-    set('era', _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home ? _arcEra : '');
-    set('q', _arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && !home ? _arcQuery : '');
+    var listView = _arcView === 'all';
+    var filtered = listView && (_arcSort !== 'likes' || _arcEra || _arcQuery || _arcSource || _arcKind !== 'all');
+    set('view', home || (listView && filtered) ? '' : _arcView);
+    set('kind', listView && _arcKind !== 'all' ? _arcKind : '');
+    set('sort', listView && _arcSort !== 'likes' ? _arcSort : (_arcView === 'artists' && _arcArtistSort !== 'comps' ? _arcArtistSort : ''));
+    set('era', _arcView !== 'top' && _arcView !== 'trackers' && !home ? _arcEra : '');
+    set('q', _arcView !== 'top' && _arcView !== 'trackers' && !home ? _arcQuery : '');
     set('source', listView ? _arcSource : '');
     var next = u.pathname + u.search;
     if (next !== location.pathname + location.search) {
@@ -781,7 +855,7 @@ function arcWatchScroll() {
   var sc = arcScroller() || window;
   var onScroll = function () {
     var top = sc === window ? window.scrollY : sc.scrollTop;
-    var deep = _arcView === 'artists' ? _archiveArtists.length > 240 : (_arcView !== 'top' && _arcView !== 'trackers' && _arcView !== 'highlighted' && _arcItems.length >= _ARC_PAGE * 2);
+    var deep = _arcView === 'artists' ? _archiveArtists.length > 240 : (_arcView === 'all' && _arcItems.length >= _ARC_PAGE * 2);
     var btn = document.getElementById('arc-top-btn');
     if (btn) btn.classList.toggle('on', deep && top > 1400);
     var bar = document.getElementById('arc-filters');
@@ -985,7 +1059,7 @@ function arcRlLanded(gen) {
   if (p.external_likes) meta.push('♥ ' + Number(p.external_likes).toLocaleString());
   var res = el.querySelector('#arc-rl-res');
   res.innerHTML =
-    '<div class="arc-rl-t">' + escHtml(p.title || 'Untitled') + '</div>' +
+    '<div class="arc-rl-t">' + escHtml(ahT(p.title)) + '</div>' +
     '<div class="arc-rl-a">by ' + (slug ? '<a href="/archive-artist?a=' + encodeURIComponent(slug) + '" data-rl="artist">' + escHtml(who) + '</a>' : escHtml(who)) + '</div>' +
     (meta.length ? '<div class="arc-rl-m">' + escHtml(meta.join(' · ')) + '</div>' : '<div class="arc-rl-m">&nbsp;</div>') +
     '<div class="arc-rl-btns">' +
@@ -1002,7 +1076,7 @@ function arcRlPlay() {
   if (!rl || !rl.pick) return;
   var p = rl.pick;
   arcCloseRoulette();
-  if (typeof wvToast === 'function') wvToast('playing ' + (p.title || 'something'));
+  if (typeof wvToast === 'function') wvToast('playing ' + ahT(p.title));
   playCompById(p.id, { album: Object.assign({ is_archive: true }, p), quiet: true });
 }
 function arcRlOpen() {
@@ -1019,18 +1093,27 @@ function arcSortChange() {
   arcReload();
 }
 
+var ARC_ARTIST_SORTS = ['comps', 'plays', 'recent', 'name'];
+function arcArtistSortChange() {
+  var v = (document.getElementById('arc-artist-sort') || {}).value;
+  _arcArtistSort = ARC_ARTIST_SORTS.indexOf(v) >= 0 ? v : 'comps';
+  arcSyncUrl();
+  loadArtists(true);
+}
+
 // ── Artist index ─────────────────────────────────────────────────────────────
-var _artistsLoaded = false, _artistsLoading = false, _artistsTotal = 0, _artistsGen = 0;
+var _artistsLoaded = false, _artistsLoading = false, _artistsTotal = 0, _artistsGen = 0, _artistsKey = '';
 async function loadArtists(reset) {
   if (reset) { _artistsGen++; _archiveArtists = []; _artistsLoaded = false; _artistsTotal = 0; _artistsLoading = false; }
   else if (_artistsLoading) return;
   if (_artistsLoaded && _archiveArtists.length >= _artistsTotal) return;
   _artistsLoading = true;
   var gen = _artistsGen;
+  _artistsKey = _arcArtistSort + '|' + _arcQuery;
   var grid = document.getElementById('archive-grid');
   if (grid && !_archiveArtists.length && _arcView === 'artists') { grid.className = 'wv-tile-grid'; grid.innerHTML = arcSkel(12, true); }
   try {
-    var url = '/archive/artists?sort=comps&limit=120&offset=' + _archiveArtists.length + (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
+    var url = '/archive/artists?sort=' + encodeURIComponent(_arcArtistSort) + '&limit=120&offset=' + _archiveArtists.length + (_arcQuery ? '&q=' + encodeURIComponent(_arcQuery) : '');
     var d = await api(url);
     if (gen !== _artistsGen) return;
     _archiveArtists = _archiveArtists.concat((d && d.artists) || []);
@@ -1065,45 +1148,33 @@ function _arcMoreArtists() {
 }
 
 // ── View toggle ──────────────────────────────────────────────────────────────
-async function loadHighlighted() {
-  var grid = document.getElementById('archive-grid'); if (!grid) return;
-  var gen = _arcGen;
-  grid.className = 'wv-tile-grid';
-  grid.innerHTML = arcSkel(12);
-  try {
-    var d = await api('/archive/highlighted');
-    if (gen !== _arcGen || _arcView !== 'highlighted') return;
-    var items = (d && d.items) || [];
-    grid.innerHTML = items.length
-      ? '<div class="arc-hl-note" style="grid-column:1/-1;">' + items.length + (items.length === 1 ? ' pick' : ' picks') + ' from wavernrs staff</div>' + items.map(archiveCardHTML).join('')
-      : '<div class="wv-empty" style="grid-column:1/-1;">nothing highlighted yet</div>';
-  } catch (e) {
-    if (gen !== _arcGen) return;
-    if (typeof wvShowError === 'function') wvShowError(grid, e, 'loadHighlighted()'); else grid.innerHTML = '<div class="wv-empty" style="grid-column:1/-1;">couldnt load the highlighted comps</div>';
-  }
-}
-
-function arcSetView(view) {
-  if (view === _arcView) return;
+function arcSetView(view, kind) {
+  if (view === 'comps' || view === 'edits') { kind = view; view = 'all'; }
+  if (view === 'highlighted') view = 'home';
+  if (ARC_VIEWS.indexOf(view) < 0) view = 'all';
+  var nextKind = view === 'all' && (kind === 'all' || kind === 'comps' || kind === 'edits') ? kind : _arcKind;
+  if (view === _arcView && nextKind === _arcKind) return;
+  var kindChanged = nextKind !== _arcKind;
+  _arcKind = nextKind;
   _arcGen++;
   _arcLoading = false;
   _arcView = view;
   arcApplyView();
+  if (kindChanged) arcEraOptions();
   arcSyncUrl(true);
-  if (view === 'artists') { if (!_artistsLoaded) loadArtists(true); else renderArtists(); return; }
+  if (view === 'artists') { if (!_artistsLoaded || _artistsKey !== _arcArtistSort + '|' + _arcQuery) loadArtists(true); else renderArtists(); return; }
   if (view === 'top') return loadTopComps();
   if (view === 'trackers') return renderTrackerCards();
-  if (view === 'highlighted') return loadHighlighted();
   if (view === 'home') return arcHomeOpen();
-  _arcKind = view;
   arcReload();
 }
 
-var ARC_VIEWS = ['home', 'all', 'comps', 'edits', 'artists', 'top', 'trackers', 'highlighted'];
+var ARC_VIEWS = ['home', 'all', 'artists', 'top', 'trackers'];
 var ARC_SORTS = ['likes', 'newest', 'oldest', 'title', 'artist', 'plays'];
 
 function arcApplyView() {
   ARC_VIEWS.forEach(function(v) { var b = document.getElementById('arc-view-' + v); if (b) b.classList.toggle('on', _arcView === v); });
+  _arcKindMark();
   // The Top 150 and Trackers views are their own thing: the filter bar and the
   // endless grid do not apply to either.
   var root = document.getElementById('arc-root');
@@ -1111,12 +1182,14 @@ function arcApplyView() {
   var homeEl = document.getElementById('arc-home');
   if (homeEl) homeEl.style.display = _arcView === 'home' ? '' : 'none';
   if (_arcView === 'home' && typeof window.setPageBgImage === 'function') window.setPageBgImage('');
-  var curated = _arcView === 'top' || _arcView === 'trackers' || _arcView === 'highlighted';
+  var curated = _arcView === 'top' || _arcView === 'trackers';
   var listView = _arcView !== 'artists' && !curated;
   var sortEl = document.getElementById('arc-sort');
   if (sortEl) sortEl.style.display = listView ? '' : 'none';
-  var srcEl = document.getElementById('arc-source');
-  if (srcEl) srcEl.style.display = listView ? '' : 'none';
+  var aSortEl = document.getElementById('arc-artist-sort');
+  if (aSortEl) aSortEl.style.display = _arcView === 'artists' ? '' : 'none';
+  var chipsEl = document.getElementById('arc-chips');
+  if (chipsEl) chipsEl.style.display = listView ? '' : 'none';
   var eraEl = document.getElementById('arc-era');
   if (eraEl && (curated || _arcView === 'artists')) eraEl.style.display = 'none';
   else if (eraEl && _arcEras.length > 1) eraEl.style.display = '';
@@ -1284,15 +1357,16 @@ function topCard(i) {
   var click = missing
     ? ' onclick="navigate(\'/archive?q=' + encodeURIComponent(i.listed_as || i.title || '') + '\')"'
     : ' onclick="navigate(\'/album?id=' + i.album_id + '\')"';
+  var name = ahT(i.title);
   return '<div class="wv-top-card"' + click + '>' +
     '<div class="wv-top-rank">' + i.rank + '</div>' +
     '<div class="wv-top-art" style="background:' + bg + ';">' +
       (i.cover_url ? '<img src="' + escHtml(i.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
-      (missing ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(i.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + i.album_id + '\')">' +
+      (missing ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(name) + '" onclick="event.stopPropagation();playCompById(\'' + i.album_id + '\')">' +
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>') +
     '</div>' +
     '<div class="wv-top-meta">' +
-      '<div class="wv-top-title">' + escHtml(i.title || 'Untitled') + '</div>' +
+      '<div class="wv-top-title">' + escHtml(name) + '</div>' +
       '<div class="wv-top-sub">' + escHtml(sub) + '</div>' +
     '</div>' +
   '</div>';
@@ -1310,15 +1384,16 @@ function podiumCard(i) {
     ? ' onclick="navigate(\'/archive?q=' + encodeURIComponent(i.listed_as || i.title || '').replace(/'/g, '%27') + '\')"'
     : ' onclick="navigate(\'/album?id=' + encodeURIComponent(i.album_id) + '\')"';
   var r = Math.min(3, Math.max(1, i.rank));
+  var name = ahT(i.title);
   return '<div class="wv-top-card p' + r + '"' + click + '>' +
     '<div class="wv-top-art" style="background:' + bg + ';">' +
       '<span class="arc-medal m' + r + '" aria-label="Number ' + i.rank + '"><small>NO.</small>' + i.rank + '</span>' +
       (i.cover_url ? '<img src="' + escHtml(i.cover_url) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
-      (missing ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(i.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + escHtml(i.album_id) + '\')">' +
+      (missing ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(name) + '" onclick="event.stopPropagation();playCompById(\'' + escHtml(i.album_id) + '\')">' +
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>') +
     '</div>' +
     '<div class="wv-top-meta">' +
-      '<div class="wv-top-title">' + escHtml(i.title || 'Untitled') + '</div>' +
+      '<div class="wv-top-title">' + escHtml(name) + '</div>' +
       '<div class="wv-top-sub">' + escHtml(sub) + '</div>' +
       (nums.length ? '<div class="arc-pod-stats">' + escHtml(nums.join(' · ')) + '</div>' : '') +
     '</div>' +
@@ -1338,18 +1413,7 @@ async function playTop(n) {
   }
 
   // Eight at a time, so the long ranges do not hit the API all at once.
-  var lists = new Array(picks.length);
-  var next = 0;
-  async function worker() {
-    while (next < picks.length) {
-      var i = next++;
-      try {
-        var rows = await api('/albums/' + picks[i].album_id + '/tracks');
-        lists[i] = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
-      } catch (e) { lists[i] = []; }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(8, picks.length) }, worker));
+  var lists = await arcLoadTracks(picks.map(function (p) { return p.album_id; }));
 
   var queue = [];
   lists.forEach(function (tracks, i) {
@@ -1378,27 +1442,28 @@ async function playTop(n) {
 
 function artistCardHTML(a) {
   var bg = coverGradient(a.name || '');
+  var listedAs = a.generic && a.name && !/^unknown$/i.test(a.name) ? ' · listed as ' + a.name : '';
   return '<div class="wv-artist-tile" onclick="navigate(\'/archive-artist?a=' + encodeURIComponent(a.slug) + '\')">' +
     '<div class="av" style="background:' + bg + ';">' +
       (a.cover_url ? '<img src="' + escHtml(a.cover_url) + '" loading="lazy" decoding="async" onerror="this.style.opacity=0">' : '') +
     '</div>' +
-    '<div class="wv-artist-name">' + escHtml(a.name) + '</div>' +
-    '<div class="wv-artist-meta">' + Number(a.comp_count || 0).toLocaleString() + ' release' + (a.comp_count !== 1 ? 's' : '') + '</div></div>';
+    '<div class="wv-artist-name">' + escHtml(a.generic ? 'Uncredited' : a.name) + '</div>' +
+    '<div class="wv-artist-meta">' + Number(a.comp_count || 0).toLocaleString() + ' release' + (a.comp_count !== 1 ? 's' : '') + escHtml(listedAs) + '</div></div>';
 }
 
 function archiveCardHTML(item) {
   var bg = coverGradient(item.title || '');
   var artistName = item.archive_artist_name || (item.artists && item.artists.display_name) || 'Unknown';
+  var name = ahT(item.title);
   return '<div class="wv-comp-card" onclick="navigate(\'/album?id=' + item.id + '\')">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + bg + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18),inset 0 0 0 0.5px rgba(255,255,255,0.15);">' +
-    (item.is_archive === false ? '' : '<div style="position:absolute;top:8px;left:8px;padding:2px 8px;background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.96);font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:4px;text-transform:uppercase;">archived</div>') +
     (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
-    (item.track_count === 0 ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(item.title || '') + '" onclick="event.stopPropagation();playCompById(\'' + item.id + '\')">' +
+    (item.track_count === 0 ? '' : '<button class="wv-cover-play-btn" title="Play" aria-label="Play ' + escHtml(name) + '" onclick="event.stopPropagation();playCompById(\'' + item.id + '\')">' +
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg>' +
     '</button>') +
     (item.track_count === 0 ? '<div class="wv-upcoming-badge">Upcoming</div>' : '') +
     '</div></div>' +
-    '<div class="wv-comp-card-title">' + escHtml(item.title) + _onyxIcon(item.id) + '</div>' +
+    '<div class="wv-comp-card-title">' + escHtml(name) + _onyxIcon(item.id) + '</div>' +
     '<div class="wv-comp-card-artist">' + escHtml(artistName) +
       (item.era_tag && item.era_tag.name ? ' · ' + escHtml(item.era_tag.name) : '') +
       (item.original_date ? ' · ' + new Date(item.original_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '') +
@@ -1424,8 +1489,8 @@ var AH_PLAY = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColo
 var AH_DICE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor"/></svg>';
 
 function ahT(t) {
-  var s = String(t || '').replace(/<@[&!]?\d+>?/g, ' ').replace(/\|\|/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  return s || 'Untitled';
+  if (typeof window.wvCleanTitle === 'function') return window.wvCleanTitle(t);
+  return String(t || '').replace(/<@[&!]?\d+>?/g, ' ').replace(/\|\|/g, ' ').replace(/\\([\\`*_{}\[\]()#+\-.!|~>])/g, '$1').replace(/\s{2,}/g, ' ').trim() || 'Untitled';
 }
 function ahImg(u, w) { return u ? (typeof wvImg === 'function' ? wvImg(u, w) : u) : ''; }
 function ahCv(url, seed, w, extra) {
@@ -1490,8 +1555,8 @@ function arcHomeOpen() {
       '<p class="ah-lede">comps and edits the wavernrs team saved from discord and reddit. the people who made them arent on the site, but they were too good to lose.</p>' +
       '<div class="ah-stats" id="ah-stats">' +
         stat('rel', 'releases saved', '/archive?view=all', 'all') +
-        stat('comps', 'comps', '/archive?view=comps', 'comps') +
-        stat('edits', 'edits', '/archive?view=edits', 'edits') +
+        stat('comps', 'comps', '/archive?kind=comps', 'comps') +
+        stat('edits', 'edits', '/archive?kind=edits', 'edits') +
         stat('art', 'creators', '/archive?view=artists', 'artists') +
         stat('era', 'eras', '/eras', '') +
         stat('plays', 'plays', '/charts', '') +
@@ -1507,11 +1572,12 @@ function arcHomeOpen() {
       '<section class="ah-card" id="ah-top">' + ahHead('Top 150', 'the community ranking', { href: '/archive?view=top', view: 'top', label: 'full list' }) + ahSkRows(5) + '</section>' +
     '</div>' +
     '<section class="ah-sec" id="ah-new">' + ahHead('Just archived', 'the newest saves, as they come in', { href: '/archive?sort=newest', view: 'all', sort: 'newest' }) + ahSkRail(8) + '</section>' +
-    '<section class="ah-sec" id="ah-played">' + ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?view=comps&sort=plays', view: 'comps', sort: 'plays' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-played">' + ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?kind=comps&sort=plays', view: 'comps', sort: 'plays' }) + ahSkRail(8) + '</section>' +
     '<section class="ah-sec" id="ah-eras">' + ahHead('Browse by era', '', { href: '/eras', label: 'all eras' }) + ahSkRail(8) + '</section>' +
-    '<section class="ah-sec" id="ah-liked">' + ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?view=edits', view: 'edits', sort: 'likes' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-liked">' + ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?kind=edits', view: 'edits', sort: 'likes' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-hl" hidden></section>' +
     '<section class="ah-sec" id="ah-picks" hidden></section>' +
-    '<section class="ah-sec" id="ah-who">' + ahHead('Most played creators', '', { href: '/archive?view=artists', view: 'artists', label: 'every creator' }) + ahSkRail(8) + '</section>' +
+    '<section class="ah-sec" id="ah-who">' + ahHead('Most played creators', '', { href: '/archive?view=artists&sort=plays', view: 'artists', sort: 'plays', label: 'every creator' }) + ahSkRail(8) + '</section>' +
     '<section class="ah-sec" id="ah-explore">' + ahHead('Explore', '') + '<div class="ah-ex" id="ah-ex"></div></section>' +
     '<div class="ah-claim"><div><b>made one of these?</b> get them put under your name or your account, or report one someone else posted as theirs.</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="ah-ghost" href="/claim">Claim your comps</a><a class="ah-ghost" href="/claim?type=remove">Takedown request</a></div></div>';
@@ -1549,8 +1615,15 @@ function ahClick(h, e) {
     playCompById(id, it ? { album: Object.assign({ is_archive: true }, it), quiet: true } : undefined);
   } else if (k === 'view') {
     e.preventDefault();
-    ahFresh(t.getAttribute('data-sort'), '');
-    arcSetView(t.getAttribute('data-v'));
+    var v = t.getAttribute('data-v');
+    if (v === 'artists') {
+      var as = t.getAttribute('data-sort');
+      _arcArtistSort = ARC_ARTIST_SORTS.indexOf(as) >= 0 ? as : 'comps';
+      var ase = document.getElementById('arc-artist-sort');
+      if (ase) ase.value = _arcArtistSort;
+      ahFresh('', '');
+    } else ahFresh(t.getAttribute('data-sort'), '');
+    arcSetView(v);
     ahScrollTop();
   } else if (k === 'era') {
     e.preventDefault();
@@ -1583,6 +1656,9 @@ function ahFresh(sort, era) {
   _arcSource = '';
   _arcSourceMark();
   _arcEra = era || '';
+  _arcKind = 'all';
+  _arcKindMark();
+  arcEraOptions();
   var sel = document.getElementById('arc-era');
   if (sel) sel.value = _arcEra;
   if (!era) arcEraHero();
@@ -1608,7 +1684,7 @@ function arcHomeLoad(h) {
   var get = function (p) { return api(p).catch(function () { return null; }); };
   var remember = function (list) { (list || []).forEach(function (x) { if (x && x.id) h.items[x.id] = x; }); };
 
-  var S = get('/stats/totals');
+  var S = arcTotalsReq().catch(function () { return null; });
   var C = get('/archive?limit=14&offset=0&sort=plays&kind=comps');
   var E = get('/archive?limit=14&offset=0&sort=likes&kind=edits');
   var N = Promise.all([get('/archive/recent?kind=comps&limit=8'), get('/archive/recent?kind=edits&limit=12')]).then(function (r) {
@@ -1618,7 +1694,8 @@ function arcHomeLoad(h) {
     return { items: items };
   });
   var AR = get('/archive/artists?sort=plays&limit=14');
-  var ER = get('/archive/eras');
+  var ER = arcErasReq().catch(function () { return null; });
+  var HL = get('/archive/highlighted');
   var T = (_arcTopReq || api('/archive/top')).catch(function () { return null; });
 
   Promise.all([S, C, E]).then(function (r) {
@@ -1638,7 +1715,7 @@ function arcHomeLoad(h) {
     h.d.comps = items; remember(items);
     if (!items.length) return ahDrop('ah-played');
     var el = ahSec('ah-played');
-    el.innerHTML = ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?view=comps&sort=plays', view: 'comps', sort: 'plays' }) +
+    el.innerHTML = ahHead('Most played comps', 'what people keep coming back to', { href: '/archive?kind=comps&sort=plays', view: 'comps', sort: 'plays' }) +
       '<div class="ah-rail">' + items.map(function (x, i) {
         return ahCard(x, [x.archive_artist_name || 'Unknown', x.track_count > 1 ? x.track_count + ' tracks' : ''].filter(Boolean).join(' · '), '#' + (i + 1));
       }).join('') + '</div>';
@@ -1650,7 +1727,7 @@ function arcHomeLoad(h) {
     var items = (d && d.items) || [];
     h.d.edits = items; remember(items);
     if (!items.length) return ahDrop('ah-liked');
-    ahSec('ah-liked').innerHTML = ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?view=edits', view: 'edits', sort: 'likes' }) +
+    ahSec('ah-liked').innerHTML = ahHead('Most liked edits', 'the highest voted edits from discord and reddit', { href: '/archive?kind=edits', view: 'edits', sort: 'likes' }) +
       '<div class="ah-rail">' + items.map(function (x) {
         return ahCard(x, [x.archive_artist_name || 'Unknown', x.external_likes ? '♥ ' + ahNum(x.external_likes) : ''].filter(Boolean).join(' · '));
       }).join('') + '</div>';
@@ -1671,10 +1748,11 @@ function arcHomeLoad(h) {
   AR.then(function (d) {
     if (!live()) return;
     ahStat('art', d && d.total);
-    var list = ((d && d.artists) || []).filter(function (a) { return a && a.slug && !/^deleted[\s-]?user$/i.test(a.name || ''); }).slice(0, 12);
+    if (d && typeof d.total === 'number') arcSetStat('art', d.total);
+    var list = ((d && d.artists) || []).filter(function (a) { return a && a.slug && !a.generic && !/^deleted[\s-]?user$/i.test(a.name || ''); }).slice(0, 12);
     h.d.artists = list;
     if (!list.length) return ahDrop('ah-who');
-    ahSec('ah-who').innerHTML = ahHead('Most played creators', 'the people behind the comps people play most', { href: '/archive?view=artists', view: 'artists', label: 'every creator' }) +
+    ahSec('ah-who').innerHTML = ahHead('Most played creators', 'the people behind the comps people play most', { href: '/archive?view=artists&sort=plays', view: 'artists', sort: 'plays', label: 'every creator' }) +
       '<div class="ah-who">' + list.map(function (a) {
         var art = ahImg(a.cover_url, 160);
         return '<a href="/archive-artist?a=' + encodeURIComponent(a.slug) + '"><span class="av" style="background:' + coverGradient(a.name || '') + ';">' +
@@ -1684,11 +1762,26 @@ function arcHomeLoad(h) {
     arcHomeExplore();
   });
 
+  HL.then(function (d) {
+    if (!live()) return;
+    var items = ((d && d.items) || []).filter(function (x) { return x && x.id; });
+    if (items.length < 4) return ahDrop('ah-hl');
+    remember(items);
+    var el = ahSec('ah-hl');
+    if (!el) return;
+    el.hidden = false;
+    el.innerHTML = ahHead('Highlighted', 'picked by the wavernrs team') +
+      '<div class="ah-rail">' + items.map(function (x) {
+        var who = x.archive_artist_name || (x.artists && x.artists.display_name) || 'Unknown';
+        return ahCard(x, [who, x.era_tag && x.era_tag.name].filter(Boolean).join(' · '));
+      }).join('') + '</div>';
+  });
+
   ER.then(function (d) {
     if (!live()) return;
     var items = ((d && d.items) || []).filter(function (e) { return e && e.id && e.name; });
     if (items.length > 1) ahStat('era', items.length); else ahStat('era', 0);
-    if (!_arcEras.length && items.length) _arcEras = items;
+    if (!_arcEras.length && items.length) { _arcEras = items; arcEraOptions(); }
     var eras = items.filter(function (e) { return !/^other$/i.test(e.name); }).sort(function (a, b) { return (b.total || 0) - (a.total || 0); });
     h.d.eras = eras;
     if (!eras.length) { ahDrop('ah-eras'); ahDrop('ah-picks'); return; }
@@ -1750,6 +1843,9 @@ function arcHomeLoad(h) {
 }
 
 // The latest Yedits Edit of the Week, or this week's staff picks when there are any.
+function ahUnesc(s) {
+  return String(s || '').replace(/\\([\\`*_{}\[\]()#+\-.!|~>])|[`*]/g, function (m, c) { return c || ''; });
+}
 function ahParseDesc(desc) {
   var d = String(desc || ''), out = {};
   if (!d) return out;
@@ -1758,14 +1854,14 @@ function ahParseDesc(desc) {
   var v = d.match(/\*{0,2}(\d{1,3})%\*{0,2}\s*of\s*(?:the\s*)?votes/i);
   if (v && +v[1] > 0 && +v[1] <= 100) out.v = +v[1];
   var e = d.match(/\*\*Edit\*\*\s*-\s*\[(.+?)\]\(/i) || d.match(/\*\*Edit\*\*\s*-\s*([^\n]+)/i);
-  if (e) out.s = e[1].replace(/[`*]/g, '').replace(/\s{2,}/g, ' ').trim();
+  if (e) out.s = ahUnesc(e[1]).replace(/\s{2,}/g, ' ').trim();
   else {
     var lines = d.split('\n');
     for (var i = 0; i < lines.length; i++) {
       var ln = lines[i].replace(/^\s*(>|-#)\s*/, '').trim();
       if (!ln || /<@|Edit\s+Of\s+The|Editor|votes|https?:|Restored|^\*\*|^#/i.test(ln)) continue;
       var m = ln.match(/^(.+?)\s+-\s+(.+)$/) || ln.match(/^([^:]{2,80}):\s+(.+)$/);
-      if (m) { out.o = m[1].replace(/[`*]/g, '').trim(); out.s = m[2].replace(/[`*]/g, '').replace(/\s{2,}/g, ' ').trim(); break; }
+      if (m) { out.o = ahUnesc(m[1]).trim(); out.s = ahUnesc(m[2]).replace(/\s{2,}/g, ' ').trim(); break; }
     }
   }
   return out;
@@ -1782,17 +1878,18 @@ function ahEotw(h, live) {
   var drop = function () { if (live()) ahDrop('ah-eotw'); };
   Promise.all([
     api('/awards/current').catch(function () { return null; }),
-    api('/badges').catch(function () { return null; }),
+    (typeof getBadgeData === 'function' ? getBadgeData() : api('/badges')).catch(function () { return null; }),
   ]).then(function (r) {
     if (!live()) return;
-    var picks = ((r[0] && r[0].picks) || []).filter(function (p) { return p && p.album && p.album.id; });
+    var staffPicks = r[0] && r[0].source !== 'eotw';
+    var picks = staffPicks ? ((r[0] && r[0].picks) || []).filter(function (p) { return p && p.album && p.album.id; }) : [];
     if (picks.length) {
-      var wk = r[0].week ? new Date(r[0].week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
       var lead = picks[0], a = lead.album;
+      var wk = lead.week ? new Date(lead.week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
       var creator = typeof a.creator === 'string' ? a.creator : (a.creator && (a.creator.name || a.creator.display_name)) || a.archive_artist_name || '';
       h.items[a.id] = a;
       ahEotwRender(h, {
-        title: 'This week\'s picks', sub: wk ? 'week of ' + wk : 'picked by the wavernrs team',
+        title: lead.week && lead.week === r[0].week ? 'This week\'s picks' : 'Latest picks', sub: wk ? 'week of ' + wk : 'picked by the wavernrs team',
         kick: lead.label || 'pick of the week', id: a.id, name: ahT(a.title), cover: a.cover_url, by: creator,
         meta: lead.note || '', prev: picks.slice(1).map(function (p) { return p.album; })
       });
@@ -1819,7 +1916,7 @@ function ahEotw(h, live) {
         title: src === 'yedits' ? 'Edit of the Week' : 'Onyx Yedit of the Week',
         sub: src === 'yedits' ? 'the weekly vote in the yedits discord' : 'one yedit a week, hand picked',
         kick: 'latest winner', id: lead.id, name: ahEotwTitle(lead.title) || ahT(lead.title), cover: lead.cover_url,
-        by: lead.archive_artist_name || '', meta: [when, ahNum(all.length) + ' winners so far'].filter(Boolean).join(' · '),
+        by: lead.archive_artist_name || '', meta: [when, ahNum(all.length) + ' community winners'].filter(Boolean).join(' · '),
         prev: all.slice(1, 9)
       };
       ahEotwRender(h, base);
@@ -1832,7 +1929,7 @@ function ahEotw(h, live) {
         if (m.s) base.name = m.s;
         if (m.o) base.orig = m.o;
         base.kick = 'latest winner' + (m.w ? ' · ' + m.w : '');
-        base.meta = [when, m.v ? m.v + '% of the vote' : '', ahNum(all.length) + ' winners so far'].filter(Boolean).join(' · ');
+        base.meta = [when, m.v ? m.v + '% of the vote' : '', ahNum(all.length) + ' community winners'].filter(Boolean).join(' · ');
         ahEotwRender(h, base);
       }).catch(function () {});
     });
@@ -1915,8 +2012,8 @@ function arcHomeExplore() {
   var avs = cov(d.artists).slice(0, 5);
   var ico = function (path) { return '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>'; };
   var cards = [
-    ['/archive?view=comps', 'comps', 'Comps', 'full albums reimagined, era by era', q8(cov(d.comps)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">LP</span>', 'comps')],
-    ['/archive?view=edits', 'edits', 'Edits', 'single songs reworked, remixed and finished', q8(cov(d.edits)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">1/1</span>', 'edits')],
+    ['/archive?kind=comps', 'comps', 'Comps', 'full albums reimagined, era by era', q8(cov(d.comps)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">LP</span>', 'comps')],
+    ['/archive?kind=edits', 'edits', 'Edits', 'single songs reworked, remixed and finished', q8(cov(d.edits)) || ty('<span style="font-size:34px;font-weight:850;letter-spacing:-.04em;">1/1</span>', 'edits')],
     ['/archive?view=artists', 'artists', 'Creators', 'everyone with something saved here', avs.length >= 3 ? '<div class="ah-x-art avs">' + avs.map(function (u) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(u, 120)) + '&quot;)"></i>'; }).join('') + '</div>' : ty(ico('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'), 'creators')],
     ['/archive?view=top', 'top', 'Top 150', 'the community ranking of the best comps', q8(cov(d.top)) || ty('<span style="font-size:38px;font-weight:850;letter-spacing:-.05em;">150</span>', 'ranked')],
     ['/archive?view=trackers', 'trackers', 'Trackers', 'the yedits trackers, matched to the archive', (_trackers && _trackers.length >= 4 ? '<div class="ah-x-art q4" style="grid-template-rows:1fr;">' + _trackers.slice(0, 4).map(function (t) { return '<i style="background-image:url(&quot;' + escHtml(ahImg(t.cover, 200)) + '&quot;)"></i>'; }).join('') + '</div>' : '') || ty(ico('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>'), 'trackers')],

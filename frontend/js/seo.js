@@ -23,13 +23,12 @@
     charts: ['Charts: the most played comps and edits right now', 'What the wavernrs community is playing today, this week and all time.'],
     archive: ['The archive: every Ye comp ever made', 'Dig through tens of thousands of archived Ye comps and edits by era, yeditor and date.'],
     'archive-artist': ['Archive yeditors on wavernrs', 'Every yeditor in the wavernrs archive and the comps they made.'],
-    artists: ['Artists: the yeditors behind the comps', 'The yeditors and comp makers posting on wavernrs.'],
-    music: ['Featured artists on wavernrs', 'Every artist featured on Ye comps and edits, and where they show up.'],
+    artists: ['Editors: the yeditors behind the comps', 'The yeditors and comp makers posting on wavernrs.'],
+    music: ['Artists featured on Ye comps', 'Every artist featured on Ye comps and edits, and where they show up.'],
     eras: ['Eras: every Ye era on wavernrs', 'Comps and edits sorted era by era, from The College Dropout to Bully.'],
     tracker: ['Trackers: every comp and edit, era by era', 'The community trackers, matched to what you can play on wavernrs.'],
     resources: ['The Ye archive on wavernrs', 'Every Ye song, leak, tweet, tour and Yeezy piece, with credits and samples.'],
     community: ['Community on wavernrs', 'Posts, requests and finds from the wavernrs community.'],
-    radio: ['Radio: listen together on wavernrs', 'Live community stations playing Ye comps and edits around the clock.'],
     lp: ['Listening parties on wavernrs', 'Press play together: live listening parties for new comps and edits.'],
     playlists: ['Playlists on wavernrs', 'Community playlists of Ye comps and edits.'],
     stats: ['wavernrs by the numbers', 'Plays, uploads and eras across the whole site.'],
@@ -53,12 +52,12 @@
   var PARAMS = {
     album: ['id'], track: ['id'], artist: ['id'], playlist: ['id'], lp: ['id'],
     'archive-artist': ['a'], tracker: ['t'], music: ['a'], community: ['post'],
-    radio: ['s'], search: ['q'],
+    search: ['q'],
     resources: ['view', 'album', 'tweet', 'item', 't', 'year', 'era', 'sub', 'filter', 'tab']
   };
 
   var NOINDEX = {
-    settings: 1, dashboard: 1, adminpanel: 1, modpanel: 1, archivepanel: 1, archivetrackers: 1, radiopanel: 1,
+    settings: 1, dashboard: 1, adminpanel: 1, modpanel: 1, archivepanel: 1, archivetrackers: 1,
     claim: 1, 'auth-callback': 1, 'playlist-builder': 1, upload: 1, library: 1, history: 1,
     login: 1, register: 1, search: 1, '404': 1
   };
@@ -99,6 +98,10 @@
     if (key === 'album' || key === 'track' || key === 'artist' || key === 'playlist') return sp.get('id') || '';
     if (key === 'archive-artist' || key === 'music') return sp.get('a') || '';
     return '';
+  }
+
+  function cleanDesc(s) {
+    return s && typeof window.wvCleanDiscordText === 'function' ? window.wvCleanDiscordText(s) : s;
   }
 
   function clip(s, n) {
@@ -254,7 +257,7 @@
     var tracks = albumTracks(d);
     var n = Number(d.track_count) || tracks.length || 0;
     var era = d.era_tag && d.era_tag.name;
-    var desc = clip(d.description, 300) || joinParts([
+    var desc = clip(cleanDesc(d.description), 300) || joinParts([
       d.is_archive ? 'Archived comp' : 'Comp',
       who ? 'by ' + who.name : '',
       n ? n + (n === 1 ? ' track' : ' tracks') : '',
@@ -308,7 +311,7 @@
     var alb = d.albums && d.albums.title ? d.albums : null;
     var albumUrl = (alb && alb.id) || d.album_id ? SITE + '/album?id=' + encodeURIComponent((alb && alb.id) || d.album_id) : undefined;
     var cover = httpUrl(d.cover_url) || httpUrl(alb && alb.cover_url);
-    var desc = clip(d.description, 300) || joinParts([
+    var desc = clip(cleanDesc(d.description), 300) || joinParts([
       'Edit',
       who ? 'by ' + who.name : '',
       alb ? 'from ' + alb.title : '',
@@ -344,7 +347,7 @@
   function buildArtist(d, url) {
     var a = (d && d.artist) || d;
     var img = httpUrl(a.profile_image_url);
-    var desc = clip(a.bio, 300) || joinParts([
+    var desc = clip(cleanDesc(a.bio), 300) || joinParts([
       a.users && a.users.username ? '@' + a.users.username : 'Yeditor',
       num(a.track_count) ? num(a.track_count) + ' edits' : '',
       num(a.follower_count) ? num(a.follower_count) + ' followers' : '',
@@ -366,7 +369,7 @@
       image: img,
       imageAlt: img ? a.display_name : '',
       ogType: 'profile',
-      graph: [node, crumbs([['wavernrs', SITE + '/'], ['Artists', SITE + '/artists'], [a.display_name, url]])]
+      graph: [node, crumbs([['wavernrs', SITE + '/'], ['Editors', SITE + '/artists'], [a.display_name, url]])]
     };
   }
 
@@ -377,7 +380,7 @@
     var owner = (pl.owner && (pl.owner.username || pl.owner.display_name)) || '';
     var mosaic = Array.isArray(pl.mosaic) ? pl.mosaic.filter(Boolean) : [];
     var img = httpUrl(pl.cover_url) || httpUrl(mosaic[0]);
-    var desc = clip(pl.description, 300) || joinParts([
+    var desc = clip(cleanDesc(pl.description), 300) || joinParts([
       owner ? 'Playlist by @' + owner : 'Playlist',
       n ? n + (n === 1 ? ' song' : ' songs') : '',
       'on wavernrs'
@@ -449,7 +452,7 @@
       image: img,
       imageAlt: img ? a.name : '',
       ogType: 'profile',
-      graph: [node, crumbs([['wavernrs', SITE + '/'], ['Featured artists', SITE + '/music'], [a.name, url]])]
+      graph: [node, crumbs([['wavernrs', SITE + '/'], ['Artists', SITE + '/music'], [a.name, url]])]
     };
   }
 
@@ -523,8 +526,8 @@
   }
 
   var SECTION_NAMES = {
-    browse: 'Browse', charts: 'Charts', archive: 'Archive', artists: 'Artists', music: 'Featured artists',
-    eras: 'Eras', tracker: 'Trackers', resources: 'Ye archive', community: 'Community', radio: 'Radio',
+    browse: 'Browse', charts: 'Charts', archive: 'Archive', artists: 'Editors', music: 'Artists',
+    eras: 'Eras', tracker: 'Trackers', resources: 'Ye archive', community: 'Community',
     lp: 'Listening parties', playlists: 'Playlists', stats: 'Stats', about: 'About', awards: 'Hall of Fame',
     wrapped: 'Recap', whatsnew: "What's new", 'archive-artist': 'Archive'
   };

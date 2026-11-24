@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>About — wavernrs</title>
   <meta name="description" content="wavernrs is the home of Ye comps and edits: a live archive of community comps, the trackers, the Ye archive and the people who make it all.">
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .ab { max-width: 1080px; margin: 0 auto; --ab-r: 16px; }
     .ab a { color: inherit; text-decoration: none; }
@@ -277,10 +277,10 @@
 </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 (function () {
   window._pageCleanup = window._pageCleanup || [];
@@ -311,11 +311,9 @@
     list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
-    radio: '<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/>',
     head: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/>',
     folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
-    game: '<rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/>',
     people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2a5 5 0 0 1 5.5 4.8"/>',
     tracker: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
     arrow: '<path d="M7 17 17 7M8 7h9v9"/>'
@@ -405,7 +403,7 @@
       if (s.tour_shows) out.push({ n: s.tour_shows, label: 'tour shows', sub: 'with setlists you can jump through', icon: 'pin', href: '/resources?view=tours' });
     }
     var tr = yeTiles.tr;
-    if (tr && tr.entries) out.unshift({ wide: true, n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: 'comps and edits, sorted by era and playable right here', icon: 'tracker', href: '/tracker' });
+    if (tr && tr.entries) out.unshift({ wide: true, n: tr.entries, label: 'tracker entries across ' + tr.count + ' trackers', sub: 'comps and edits, sorted by era and playable right here', icon: 'tracker', href: '/archive?view=trackers' });
     if (yeTiles.eras) out.push({ n: yeTiles.eras, label: 'eras', sub: 'every comp sorted by the era it comes from', icon: 'grid', href: '/eras' });
     if (!out.length) { ye.remove(); return; }
     ye.innerHTML = out.map(tile).join('');
@@ -424,15 +422,17 @@
   }).catch(function () {}).then(yeDone);
 
   // ── status pill ───────────────────────────────────────────────────────
-  get('/site/status').then(function (s) {
+  (window._wvBoot ? window._wvBoot().then(function (b) { return (b && b.status) || get('/site/status'); }, function () { return get('/site/status'); }) : get('/site/status')).then(function (s) {
     if (!alive() || !s) return;
     var el = $('ab-status');
-    var st = String(s.state || 'ok').toLowerCase();
-    var cls = '', label = 'all systems normal';
-    if (/degrad|partial|minor|slow/.test(st)) { cls = 'warn'; label = s.headline || 'some things are slow'; }
-    else if (/down|outage|major|critical/.test(st)) { cls = 'bad'; label = s.headline || 'something is down'; }
-    else if (/maint/.test(st)) { cls = 'info'; label = s.headline || 'scheduled maintenance'; }
-    if (s.locked) { cls = 'bad'; label = s.headline || 'the site is locked'; }
+    var M = {
+      operational: ['', 'no incidents reported'],
+      degraded: ['warn', s.headline || 'degraded performance'],
+      maintenance: ['info', s.headline || 'scheduled maintenance'],
+      disruption: ['bad', s.headline || 'service disruption']
+    };
+    var pick = s.locked ? ['bad', s.headline || 'wavernrs is down'] : (M[String(s.state || '').toLowerCase()] || M.operational);
+    var cls = pick[0], label = pick[1];
     el.className = 'ab-pill' + (cls ? ' ' + cls : '');
     el.querySelector('.t').textContent = label;
     el.setAttribute('aria-label', 'site status: ' + label);
@@ -471,12 +471,11 @@
   var FEATS = [
     ['Archive', 'tens of thousands of community comps, searchable by era and creator', '/archive', 'archive', '#8b5cf6'],
     ['Ye archive', 'tweets, Yeezy, tours, the discography and on this day', '/resources', 'folder', '#ec4899'],
-    ['Trackers', 'the community trackers, era by era, playable where we have it', '/tracker', 'tracker', '#14b8a6'],
+    ['Trackers', 'the community trackers, era by era, playable where we have it', '/archive?view=trackers', 'tracker', '#14b8a6'],
     ['Charts', 'what everyone is playing this week and all time', '/charts', 'chart', '#f59e0b'],
     ['Listening parties', 'listen together in sync, with chat and live reactions', '/lp', 'head', '#3b82f6'],
     ['Playlists', 'mixes of comps and edits from you and everyone else', '/playlists', 'list', '#22c55e'],
     ['Hall of Fame', 'award winners and the best of wavernrs', '/awards', 'trophy', '#eab308'],
-    ['Games', 'guess the song and more', '/games', 'game', '#a855f7'],
     ['Community', 'posts, threads and what people are making', '/community', 'people', '#0ea5e9'],
     ['Eras', 'every comp sorted by the era it belongs to', '/eras', 'grid', '#f97316'],
     ['Search', 'comps, edits, editors and the whole Ye archive at once', '/search', 'disc', '#64748b']
@@ -507,47 +506,34 @@
   window._pageCleanup.push(function () { window.removeEventListener('wv-pwa-ready', onPwaReady); });
 
   // ── changelog (newest first) ──────────────────────────────────────────
-  var LOG = [
-    ['2026-09-30', 'new', 'wavernrs as an app, and every tour', [
-      ['add it to your home screen for a full-screen player with lock-screen controls'],
-      ['a proper offline screen, and a heads up when a new version is ready'],
-      ['tours: every performance with dates, venues and setlists', '/resources?view=tours']
-    ]],
-    ['2026-09-28', 'new', 'the Ye archive grows up', [
-      ['discography with producers, samples, credits and 30 second previews', '/resources?view=disco'],
-      ['song pages: every version, leak, live performance and edit of a song in one place', '/resources?view=song&t=Runaway'],
-      ['on this day and a month by month timeline', '/resources?view=today'],
-      ['the daily Ye quiz, with a shareable grid and streaks', '/resources?view=quiz']
-    ]],
-    ['2026-09-28', 'imp', 'sharing and search', [
-      ['share buttons on comps and song pages, with proper link previews'],
-      ['search now finds Ye songs, albums, tweets and Yeezy pieces too', '/search'],
-      ['follow a song to hear about new leaks']
-    ]],
-    ['2026-09-27', 'new', 'listening parties go live', [
-      ['start a listening party from any comp and listen together in sync', '/lp'],
-      ['live reactions, clickable links in chat, and notifications that open the party'],
-      ['tweets, Yeezy and tours tabs in the Ye archive', '/resources']
-    ]],
-    ['2026-09-22', 'imp', 'a livelier home page', [
-      ['see who else is on the site right now'],
-      ['browse the archive by era straight from home', '/eras'],
-      ['see which other comps a song shows up on']
-    ]],
-    ['2026-09-13', 'new', 'archive: Top 150 and trackers', [
-      ['a Top 150 tab and a trackers tab in the archive', '/archive'],
-      ['compare versions of a comp, plus listening stats and swipe gestures on phones']
-    ]]
-  ];
   function dateLabel(iso) {
     try { return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch (_) { return iso; }
   }
-  $('ab-log').innerHTML = LOG.map(function (e) {
-    return '<li class="ab-reveal"><div class="ab-log-d"><time datetime="' + esc(e[0]) + '">' + esc(dateLabel(e[0])) + '</time><span class="ab-tag' + (e[1] === 'imp' ? ' imp' : '') + '">' + (e[1] === 'imp' ? 'IMPROVED' : 'NEW') + '</span></div>' +
-      '<div class="ab-log-t">' + esc(e[2]) + '</div><ul>' + e[3].map(function (x) {
-        return '<li>' + (x[1] ? '<a href="' + esc(x[1]) + '">' + esc(x[0]) + '</a>' : esc(x[0])) + '</li>';
-      }).join('') + '</ul></li>';
-  }).join('');
+  function news() {
+    if (window.wvFooter && typeof window.wvFooter.news === 'function') return window.wvFooter.news();
+    return fetch('/whatsnew.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      var list = (d && Array.isArray(d.entries)) ? d.entries.filter(function (e) { return e && e.title && e.date; }) : [];
+      return list.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+    });
+  }
+  news().then(function (list) {
+    if (!alive()) return;
+    var days = [];
+    (list || []).slice(0, 8).forEach(function (e) {
+      var last = days[days.length - 1];
+      if (last && last.date === e.date) last.items.push(e); else days.push({ date: e.date, items: [e] });
+    });
+    var log = $('ab-log');
+    if (!log || !days.length) return;
+    log.innerHTML = days.map(function (g) {
+      return '<li class="ab-reveal"><div class="ab-log-d"><time datetime="' + esc(g.date) + '">' + esc(dateLabel(g.date)) + '</time></div>' +
+        '<div class="ab-log-t">' + esc(g.items.map(function (e) { return e.title; }).join(', ')) + '</div><ul>' + g.items.map(function (e) {
+          var txt = e.body || e.title;
+          return '<li>' + (e.href && /^\/(?!\/)/.test(e.href) ? '<a href="' + esc(e.href) + '">' + esc(txt) + '</a>' : esc(txt)) + '</li>';
+        }).join('') + '</ul></li>';
+    }).join('');
+    arm(log);
+  }).catch(function () {});
 
   // ── credits ───────────────────────────────────────────────────────────
   var CREDITS = [
@@ -567,7 +553,7 @@
     ['what’s a comp? what’s an edit?', 'a comp is a fan-made compilation, usually an era’s worth of songs put together the way someone thinks it should sound. an edit is a reworked version of a single song.'],
     ['how do i upload my stuff?', '<a href="/register">make an account</a>, then hit <a href="/upload">Upload</a>. comps and edits both work, and your uploads show up on your editor profile.'],
     ['where does the archive come from?', 'the archive collects comps shared around the community over the years, credited to whoever made them. if something’s credited to the wrong person you can report it from the comp’s page.'],
-    ['what are the trackers?', 'community-run lists of the best comps and edits, era by era. wavernrs links every entry it has to a version you can play right here. <a href="/tracker">open the trackers</a>.'],
+    ['what are the trackers?', 'community-run lists of the best comps and edits, era by era. wavernrs links every entry it has to a version you can play right here. <a href="/archive?view=trackers">open the trackers</a>.'],
     ['can i get it as an app?', 'yes. on Android and desktop Chrome or Edge use Install, on iPhone open wavernrs in Safari and pick Share, then Add to Home Screen. <a href="#community" data-ab-install>install now</a>.'],
     ['something’s broken, who do i tell?', 'check the <a href="/status">status page</a> first, then tell us in the <a href="https://discord.gg/j2jGmw5CZH" target="_blank" rel="noopener">discord</a>.']
   ];

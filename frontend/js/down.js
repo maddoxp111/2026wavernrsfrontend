@@ -2,7 +2,7 @@
   var PASS = 'waverunnersapp2026';
   var KEY = 'wv_down_bypass';
   var SEEN = 'wv_down_state';
-  if (/\/status(\.html)?$/.test(location.pathname)) return;
+  if (/\/(status|adminpanel|modpanel|archivepanel|archivetrackers)(\.html)?$/.test(location.pathname)) return;
   try { if (localStorage.getItem(KEY) === PASS) return; } catch (_) {}
 
   function remember(on) { try { localStorage.setItem(SEEN, on ? '1' : '0'); } catch (_) {} }

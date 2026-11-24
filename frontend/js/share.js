@@ -9,7 +9,7 @@
   if (window.wvShare && window.wvShare._v === 2) return;
 
   var FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable", "Segoe UI", Inter, Roboto, "Helvetica Neue", Helvetica, Arial, sans-serif';
-  var KIND_LABEL = { track: 'edit', album: 'comp', playlist: 'playlist', artist: 'artist' };
+  var KIND_LABEL = { track: 'edit', album: 'comp', playlist: 'playlist', artist: 'editor' };
   var KIND_PATH = { track: '/track?id=', album: '/album?id=', playlist: '/playlist?id=', artist: '/artist?id=' };
 
   function esc(s) {

@@ -10,6 +10,7 @@
   var _data = Object.assign({}, EMPTY);
   var _entityType = null;
   var _entityId = null;
+  var _loadedFor = null;
   var _saving = false;
   var _seq = 0;
   var _preview = 0;
@@ -279,13 +280,16 @@
         var errJson = {};
         try { errJson = await resp.json(); } catch (_) {}
         if (resp.status === 401) throw new Error('log in again to rate');
-        throw new Error(errJson.error || ('HTTP ' + resp.status));
+        var saveErr = new Error(errJson.error || ('HTTP ' + resp.status));
+        if (resp.status === 403 && errJson.error) saveErr.plain = true;
+        throw saveErr;
       }
     } catch (err) {
       _saving = false;
       if (type !== _entityType || id !== _entityId) return;
       _data.user_rating = prev;
-      _buildWidget('didnt save: ' + ((err && err.message) || 'try again'), true);
+      if (err && err.plain) toast(err.message, 'error');
+      _buildWidget(err && err.plain ? err.message : 'didnt save: ' + ((err && err.message) || 'try again'), true);
       setTimeout(function () { if (type === _entityType && id === _entityId && !_saving) _buildWidget(); }, 3200);
       return;
     }
@@ -376,10 +380,12 @@
 
   async function _load(entityType, entityId) {
     var my = ++_seq;
-    if (entityType !== _entityType || entityId !== _entityId) { _data = Object.assign({}, EMPTY); _saving = false; _preview = 0; }
+    if (entityType !== _entityType || entityId !== _entityId) { _data = Object.assign({}, EMPTY); _saving = false; _preview = 0; _loadedFor = null; }
     _entityType = entityType;
     _entityId = entityId;
+    var key = entityType + ':' + entityId;
     var next = Object.assign({}, EMPTY);
+    var ok = false;
     try {
       var t = token();
       var headers = t ? { Authorization: 'Bearer ' + t } : {};
@@ -391,14 +397,22 @@
           next.count = Math.max(0, parseInt(j.count, 10) || 0);
           next.user_rating = j.user_rating ? Number(j.user_rating) : null;
           next.dist = Array.isArray(j.dist) && j.dist.length === 5 ? j.dist : null;
+          ok = true;
         }
       }
-    } catch (e) { next = Object.assign({}, EMPTY); }
+    } catch (e) { ok = false; }
     if (my !== _seq) return;
     var wait = _popUntil - Date.now();
     if (wait > 0) { await new Promise(function (r) { setTimeout(r, wait); }); if (my !== _seq) return; }
-    _data = next;
-    if (!_saving) _buildWidget();
+    if (ok) {
+      _data = next;
+      _loadedFor = key;
+      if (!_saving) _buildWidget();
+      return;
+    }
+    if (_loadedFor === key) { if (!_saving) _buildWidget(); return; }
+    _data = Object.assign({}, EMPTY);
+    if (!_saving) _buildWidget('ratings didnt load');
   }
 
   window.loadRatings = function (type, id) { return _load(type, id); };

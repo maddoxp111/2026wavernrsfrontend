@@ -29,7 +29,7 @@ window._pageCleanup = [];
   var MAX_ENTRIES = 40;
 
   // Pages that are not in-app (no #view) or must never be served from cache.
-  var NO_SPA = /^\/(login|register|status|auth-callback)(\.html)?$/;
+  var NO_SPA = /^\/(login|register|status|games|auth-callback)(\.html)?$/;
   var NO_PREFETCH = /^\/(login|register|status|auth-callback|discover|games|logout|api)(\/|\.html$|$)/;
   var ALIASES = { '/discover': '/browse' };
   var WARM = ['/index', '/browse', '/charts', '/archive', '/album', '/track', '/artist',
@@ -625,7 +625,15 @@ window._pageCleanup = [];
     var path = target.pathname;
     var key = pageKey(path);
     // Standalone pages (auth, status) have no #view, so they always get a real load.
-    if (NO_SPA.test(path) || _standalone[key]) { location.assign(target.href); return; }
+    if (NO_SPA.test(path) || _standalone[key]) {
+      if (!fromPopstate && !/^\/(login|register|auth-callback)/.test(path) && typeof audio !== 'undefined' && audio && !audio.paused && !audio.ended) {
+        window.open(target.href, '_blank', 'noopener');
+        if (window.wvToast) window.wvToast('opened in a new tab so your music keeps playing');
+        return;
+      }
+      location.assign(target.href);
+      return;
+    }
 
     // New page generation: in-flight api() calls from the old page are dropped.
     var gen = window._wvNavGen = (window._wvNavGen || 0) + 1;
@@ -884,6 +892,7 @@ window._pageCleanup = [];
     var ps = location.pathname + location.search;
     // Only the #hash changed: the browser already scrolled to the anchor.
     if (ps === _lastPS && location.hash !== _lastHash) { _lastHash = location.hash; return; }
+    if (typeof window._wvPopIntercept === 'function' && window._wvPopIntercept(ps)) { _lastPS = ps; _lastHash = location.hash; return; }
     rememberScroll();
     var st = e.state;
     var key = st && typeof st === 'object' ? st.wvKey : null;

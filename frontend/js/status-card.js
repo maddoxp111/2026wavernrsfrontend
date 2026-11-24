@@ -244,13 +244,17 @@
       var tr = p.trackers.data || {};
       var parts = [];
       var worst = 'ok';
+      var why = '';
       ['uyt', 'green'].forEach(function (k) {
         var x = tr[k];
-        if (!x || !x.at) return;
-        parts.push((k === 'uyt' ? 'UYT' : 'green') + ' ' + ago(x.at, now));
-        if (k === 'uyt' && _age(x.at, now) > 24) worst = 'warn';
+        if (!x) return;
+        if (k === 'uyt' && (x.error || x.skipped)) { worst = 'warn'; why = 'UYT: ' + (x.error || x.skipped); }
+        var last = x.ok_at || x.at;
+        if (!last) return;
+        parts.push((k === 'uyt' ? 'UYT' : 'green') + ' ' + ago(last, now));
+        if (k === 'uyt' && _age(last, now) > 36) worst = 'warn';
       });
-      add('trackers', 'Trackers', parts.length ? worst : 'unknown', parts.length ? 'synced ' + parts.join(' · ') : 'no sync yet', p.trackers.ms);
+      add('trackers', 'Trackers', parts.length || why ? worst : 'unknown', why || (parts.length ? 'synced ' + parts.join(' · ') : 'no sync yet'), p.trackers.ms);
     }
     return list;
   }

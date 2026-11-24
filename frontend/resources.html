@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ye archive — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 
@@ -804,6 +804,7 @@
       <button role="tab" aria-selected="false" data-view="yews">Yews</button>
       <button role="tab" aria-selected="false" data-view="timeline">Timeline</button>
       <button role="tab" aria-selected="false" data-view="today">On this day</button>
+      <button role="tab" aria-selected="false" data-view="quiz">Quiz</button>
     </div>
   </div>
   <div id="ye-home" style="display:none;"></div>
@@ -825,10 +826,10 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 initPlayer();
 window._ytBooted = false;
@@ -1044,13 +1045,15 @@ window._ytBooted = false;
     renderBody();
   }
 
+  function rowNoun(n) { return (S.tab && /^unreleased$/i.test(S.tab.name) ? 'version' : 'song') + (n === 1 ? '' : 's'); }
+
   function renderBody() {
     var d = S.d, body = document.getElementById('yt-body'); if (!body) return;
     var q = S.q.toLowerCase();
     if (S.era) {
       var g = d.byEra[S.era];
       var rows = q ? g.rows.filter(function (it) { return hay(it).indexOf(q) !== -1; }) : g.rows;
-      body.innerHTML = eraHero(g) + (q ? '<div class="yt-count">' + rows.length + ' of ' + g.rows.length + ' songs</div>' : '') +
+      body.innerHTML = eraHero(g) + (q ? '<div class="yt-count">' + rows.length + ' of ' + g.rows.length + ' ' + rowNoun(g.rows.length) + '</div>' : '') +
         (rows.length ? '<div class="yt-list">' + rows.slice(0, S.limit).map(rowHtml).join('') + '</div>' + more(rows.length) : empty('no matches', 'try something else'));
       wire(body, rows);
       paintEraLink();
@@ -1059,9 +1062,9 @@ window._ytBooted = false;
       return;
     }
     if (!q) {
-      body.innerHTML = (S.tab && /^unreleased$/i.test(S.tab.name) ? '<div id="yt-latest"></div>' : '') + '<div class="yt-count">' + d.eras.length + ' eras · ' + d.items.length.toLocaleString() + ' songs</div><div class="yt-eras">' + d.eras.map(function (e) {
+      body.innerHTML = (S.tab && /^unreleased$/i.test(S.tab.name) ? '<div id="yt-latest"></div>' : '') + '<div class="yt-count">' + d.eras.length + ' eras · ' + d.items.length.toLocaleString() + ' ' + rowNoun(d.items.length) + '</div><div class="yt-eras">' + d.eras.map(function (e) {
         var g = d.byEra[e], n = g.rows.length, pl = g.rows.filter(function (it) { return rowAudio(it); }).length;
-        return '<div class="yt-era" data-era="' + esc(e) + '">' + cover(g.art, e, '', 400) + '<div class="yt-era-n">' + esc(e) + '</div><div class="yt-era-s">' + n + ' song' + (n === 1 ? '' : 's') + (pl ? ' · ' + pl + ' playable' : '') + '</div></div>';
+        return '<div class="yt-era" data-era="' + esc(e) + '">' + cover(g.art, e, '', 400) + '<div class="yt-era-n">' + esc(e) + '</div><div class="yt-era-s">' + n + ' ' + rowNoun(n) + (pl ? ' · ' + pl + ' playable' : '') + '</div></div>';
       }).join('') + '</div>';
       body.querySelectorAll('[data-era]').forEach(function (el) { el.onclick = function () { S.era = el.getAttribute('data-era'); S.q = ''; S.limit = 250; setUrl(true); render(); window.scrollTo(0, 0); var c = document.getElementById('wv-content'); if (c) c.scrollTop = 0; }; });
       fillLatest();
@@ -1101,7 +1104,7 @@ window._ytBooted = false;
     return '<button class="yt-back" id="yt-back">← all eras</button>' +
       '<div class="yt-hero">' + cover(g.art, g.name, '', 600) + '<div class="yt-hero-i"><div class="yt-hero-k">ERA · ' + esc((S.tab && S.tab.name || '').toUpperCase()) + '</div>' +
       '<div class="yt-hero-t">' + esc(g.name) + '</div>' + (inf.aka ? '<div class="yt-hero-a">aka ' + esc(inf.aka) + '</div>' : '') +
-      '<div class="yt-stats"><span class="yt-stat"><b>' + songs + '</b> songs</span>' + (pl ? '<span class="yt-stat"><b>' + pl + '</b> playable</span>' : '') +
+      '<div class="yt-stats"><span class="yt-stat"><b>' + songs + '</b> ' + rowNoun(songs) + '</span>' + (pl ? '<span class="yt-stat"><b>' + pl + '</b> playable</span>' : '') +
       st.map(function (s) { var m = s.match(/^(\d+)\s+(.*)$/); return m && m[1] !== '0' ? '<span class="yt-stat"><b>' + esc(m[1]) + '</b> ' + esc(m[2].toLowerCase()) + '</span>' : ''; }).join('') + '</div><div class="yt-links" id="yt-hero-links" style="justify-content:flex-start;margin-top:12px;"></div></div></div>' +
       (inf.desc || (inf.timeline && inf.timeline.length) ? (function () {
         var long = String(inf.desc || '').length > 380 || (inf.timeline && inf.timeline.length > 3);
@@ -1357,7 +1360,9 @@ window._ytBooted = false;
 // ── Ye archive views: Tracker / Tweets / Yeezy ──────────────────
 (function () {
   var P = new URLSearchParams(location.search);
-  var views = { home: 'ye-home', tracker: 'ye-tracker', tweets: 'ye-tweets', insta: 'ye-insta', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', yews: 'ye-yews', today: 'ye-today', song: 'ye-song' };
+  var views = { home: 'ye-home', tracker: 'ye-tracker', tweets: 'ye-tweets', insta: 'ye-insta', yeezy: 'ye-yeezy', tours: 'ye-tours', disco: 'ye-disco', timeline: 'ye-timeline', yews: 'ye-yews', today: 'ye-today', song: 'ye-song', quiz: 'ye-quiz' };
+  var VIEW_TITLES = { tracker: 'Tracker', tweets: 'Tweets', insta: 'Instagram', yeezy: 'Yeezy', tours: 'Tours', disco: 'Discography', yews: 'Yews', timeline: 'Timeline', today: 'On this day', quiz: 'Quiz' };
+  function yeTitle(t) { if (typeof window._wvRestoreTabTitle === 'function') window._wvRestoreTabTitle(t); else document.title = t; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   window.yeVideo = function (v, title) {
     if (!v || !v.preview) return;
@@ -1416,10 +1421,11 @@ window._ytBooted = false;
     Object.keys(views).forEach(function (k) { var el = document.getElementById(views[k]); if (el) el.style.display = k === v ? '' : 'none'; });
     document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { var on = b.getAttribute('data-view') === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
     var yv = document.getElementById('ye-views'), yb = yv && yv.querySelector('.on'); if (yb && yb.offsetLeft + yb.offsetWidth > yv.scrollLeft + yv.clientWidth) yv.scrollLeft = yb.offsetLeft + yb.offsetWidth - yv.clientWidth + 12;
+    yeTitle(VIEW_TITLES[v] ? VIEW_TITLES[v] + ' — Ye archive — wavernrs' : 'Ye archive — wavernrs');
     if (v === 'tracker') { if (typeof window._ytBoot === 'function') window._ytBoot(); if (push && typeof window._ytSetUrl === 'function') window._ytSetUrl(); return; }
     if (push) { try { history.replaceState(history.state, '', location.pathname + (v === 'home' ? '' : '?view=' + v)); } catch (_) {} }
     if (v !== 'song' && v !== 'disco' && typeof window.setPageBgImage === 'function') window.setPageBgImage('');
-    if (v === 'home') HM.open(); else if (v === 'tweets') TW.open(); else if (v === 'insta') IG.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else if (v === 'yews') YW.open(); else if (v === 'today') OD.open(); else if (v === 'song') SG.open(); else YZ.open();
+    if (v === 'home') HM.open(); else if (v === 'tweets') TW.open(); else if (v === 'insta') IG.open(); else if (v === 'tours') TR.open(); else if (v === 'disco') DS.open(); else if (v === 'timeline') TL.open(); else if (v === 'yews') YW.open(); else if (v === 'today') OD.open(); else if (v === 'song') SG.open(); else if (v === 'quiz') QZ.open(); else YZ.open();
   }
   document.querySelectorAll('#ye-views [data-view]').forEach(function (b) { b.onclick = function () { setView(b.getAttribute('data-view'), true); }; });
 
@@ -1435,7 +1441,11 @@ window._ytBooted = false;
       h = h.replace(/(^|\s)@(\w{1,15})/g, '$1<a href="https://x.com/$2" target="_blank" rel="noopener nofollow">@$2</a>');
       return h.replace(/\n/g, '<br>');
     }
-    function when(iso) { var d = new Date(iso); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }); }
+    function when(iso, tz) {
+      var d = new Date(iso), od = { month: 'short', day: 'numeric', year: 'numeric' }, ot = { hour: 'numeric', minute: '2-digit' };
+      if (tz) { od = Object.assign({ timeZone: tz }, od); ot = Object.assign({ timeZone: tz }, ot); }
+      return d.toLocaleDateString(undefined, od) + ' · ' + d.toLocaleTimeString(undefined, ot) + (tz ? ' CT' : '');
+    }
     function media(m) {
       if (!m || !m.length) return '';
       return '<div class="tw-media n' + Math.min(m.length, 4) + '">' + m.slice(0, 4).map(function (x) {
@@ -1443,14 +1453,14 @@ window._ytBooted = false;
         return '<a href="' + esc(x.image_url) + '" target="_blank" rel="noopener"><img src="' + esc(x.image_url) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()"></a>';
       }).join('') + '</div>';
     }
-    function card(t) {
+    function card(t, tz) {
       var pr = st.profiles[t.year] || {};
       var hasMedia = !!(t.media && t.media.length);
       var poll = t.poll ? '<div class="tw-poll">' + (t.poll.choices || []).map(function (c) { return '<div class="tw-pc"><div class="tw-pb" style="width:' + (c.percentage || 0) + '%"></div><span>' + esc(c.label) + '</span><b>' + (c.percentage || 0) + '%</b></div>'; }).join('') + '<div class="tw-pt">' + num(t.poll.total_votes) + ' votes</div></div>' : '';
       var quote = t.quote ? '<div class="tw-quote"><div class="tw-qh"><b>' + esc(t.quote.full_name || '') + '</b> <span>@' + esc(t.quote.username || '') + '</span></div><div>' + linkify(t.quote.text || '', false) + '</div></div>' : '';
       return '<article class="tw">' +
         '<img class="tw-pfp" src="' + esc(pr.pfp || '') + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">' +
-        '<div class="tw-b"><div class="tw-h"><b>' + esc(pr.name || 'ye') + '</b><span>@' + esc(pr.username || 'kanyewest') + ' · ' + esc(when(t.created_at)) + '</span>' + (t.banger ? '<span class="tw-tag">banger</span>' : '') + '</div>' +
+        '<div class="tw-b"><div class="tw-h"><b>' + esc(pr.name || 'ye') + '</b><span>@' + esc(pr.username || 'kanyewest') + ' · ' + esc(when(t.created_at, tz)) + '</span>' + (t.banger ? '<span class="tw-tag">banger</span>' : '') + '</div>' +
         (t.in_reply_to_username ? '<div class="tw-reply">replying to ' + [].concat(t.in_reply_to_username).map(function (u) { return '@' + esc(u); }).join(' ') + '</div>' : '') +
         '<div class="tw-t">' + linkify(t.text || '', hasMedia) + '</div>' + media(t.media) + quote + poll +
         '<div class="tw-s"><span title="replies">💬 ' + num(t.replies) + '</span><span title="retweets">🔁 ' + num(t.retweets) + '</span><span title="likes">♥ ' + num(t.likes) + '</span>' + (t.views ? '<span title="views">👁 ' + num(t.views) + '</span>' : '') +
@@ -1514,13 +1524,13 @@ window._ytBooted = false;
     }
     root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share]'); if (b) { e.preventDefault(); shareTweet(b.getAttribute('data-share')); } });
     return { open: function () { if (st.started) return; st.started = true; shell(); if (P.get('tweet')) loadOne(P.get('tweet')); load(false); },
-      card: function (t, profiles) { if (profiles) Object.keys(profiles).forEach(function (k) { if (!st.profiles[k]) st.profiles[k] = profiles[k]; }); return card(t); },
+      card: function (t, profiles, tz) { if (profiles) Object.keys(profiles).forEach(function (k) { if (!st.profiles[k]) st.profiles[k] = profiles[k]; }); return card(t, tz); },
       share: shareTweet };
   })();
 
   var IG = (function () {
     var root = document.getElementById('ye-insta');
-    var JS = '/js/igx.js?v=94b29db58d28', CSS = '/css/igx.css?v=94b29db58d28';
+    var JS = '/js/igx.js?v=261967381b39', CSS = '/css/igx.css?v=261967381b39';
     var ctl = null, loading = null;
     function assets() {
       if (window.igx) return Promise.resolve();
@@ -1587,7 +1597,7 @@ window._ytBooted = false;
       if (sub) st.sub = sub;
       if (!SUBS.some(function (x) { return x[0] === st.sub; })) st.sub = 'albums';
       if (typeof window.setPageBgImage === 'function' && cur === 'disco') window.setPageBgImage('');
-      document.title = 'Discography — Ye archive — wavernrs';
+      yeTitle('Discography — Ye archive — wavernrs');
       url(push);
       root.innerHTML = '<div class="yt-tabs" id="ds-subs">' + SUBS.map(function (x) { return '<button class="yt-tab' + (st.sub === x[0] ? ' on' : '') + '" data-sub="' + x[0] + '">' + x[1] + '</button>'; }).join('') + '</div><div id="ds-body"></div>' +
         '<div class="ye-credit">credits from <a href="' + esc(st.d.source.url) + '" target="_blank" rel="noopener">MusicBrainz</a> and Wikipedia, cover art from the Cover Art Archive and Apple Music</div>';
@@ -1743,7 +1753,7 @@ window._ytBooted = false;
       catch (e) { root.innerHTML = '<button class="yt-back" id="ds-back">← discography</button><div class="yt-empty"><b>couldnt load that album</b></div>'; document.getElementById('ds-back').onclick = function () { grid('albums'); }; return; }
       if (st.album !== slug) return;
       var a = r.album; st.cur = a; st.nav = { prev: r.prev, next: r.next };
-      document.title = a.title + ' — Ye archive — wavernrs';
+      yeTitle(a.title + ' — Ye archive — wavernrs');
       if (typeof window.setPageBgImage === 'function') window.setPageBgImage(a.cover || a.cover_sm || '', a.title);
       var all = [];
       a.discs.forEach(function (d, di) { d.tracks.forEach(function (t, ti) { all.push({ t: t, key: di + '-' + ti }); }); });
@@ -2254,7 +2264,7 @@ window._ytBooted = false;
         d = r[0]; site = r[1];
       } catch (e) { if (my === st.seq) root.innerHTML = '<button class="yt-back" id="sg-back">← back</button><div class="yt-empty"><b>couldnt load that song</b>' + esc(e.message || '') + '</div>'; wireBack(); return; }
       if (my !== st.seq) return;
-      document.title = d.title + ' — Ye archive — wavernrs';
+      yeTitle(d.title + ' — Ye archive — wavernrs');
       var rel = d.released[0] || null;
       var art = rel ? rel.cover : ((d.tracker.find(function (x) { return x.art; }) || {}).art || '');
       if (art && typeof window.setPageBgImage === 'function') window.setPageBgImage(art, d.title);
@@ -2277,7 +2287,7 @@ window._ytBooted = false;
           '<div class="yt-hero-i"><div class="yt-hero-k">SONG</div><div class="yt-hero-t">' + esc(d.title) + '</div><div class="yt-hero-a">' + esc(sub) + '</div>' +
           '<div class="sg-chips">' + (rel ? '<a class="sg-era" href="/resources?view=disco&album=' + encodeURIComponent(rel.slug) + '"><img src="' + esc(thumb(rel.cover, 80)) + '" alt="" onerror="this.remove()">' + esc(rel.album) + ' <span>' + esc(rel.year) + '</span></a>' : '') +
             (unr.length ? (rel && nk(rel.album) === nk(era) ? '<a class="sg-era sg-era-all" href="/resources?tab=Unreleased&era=' + encodeURIComponent(era) + '">the ' + esc(era) + ' era on the tracker ›</a>' : '<a class="sg-era" href="/resources?tab=Unreleased&era=' + encodeURIComponent(era) + '">' + (eraArt ? '<img src="' + esc(thumb(eraArt, 80)) + '" alt="" onerror="this.remove()">' : '') + esc(era) + ' <span>era</span></a>') : '') + '</div>' +
-          '<div class="yt-stats">' + (unr.length ? '<span class="yt-stat"><b>' + unr.length + '</b> version' + (unr.length === 1 ? '' : 's') + '</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (queue.length ? '<span class="yt-stat"><b>' + queue.length + '</b> playable</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + (d.live && d.live.length ? '<span class="yt-stat">live at <b>' + d.live.length + '</b> shows</span>' : '') + '</div>' +
+          '<div class="yt-stats">' + (d.tracker.length ? '<span class="yt-stat"><b>' + d.tracker.length + '</b> version' + (d.tracker.length === 1 ? '' : 's') + '</span>' : '') + (leaked.length ? '<span class="yt-stat"><b>' + leaked.length + '</b> leaked</span>' : '') + (queue.length ? '<span class="yt-stat"><b>' + queue.length + '</b> playable</span>' : '') + (rel && rel.sampled_by_count ? '<span class="yt-stat">sampled by <b>' + rel.sampled_by_count + '</b></span>' : '') + (d.live && d.live.length ? '<span class="yt-stat">live at <b>' + d.live.length + '</b> shows</span>' : '') + '</div>' +
           '<div class="sg-acts">' + (queue.length ? '<button class="wv-btn-play" id="sg-all"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.9 19 12 7.5 19.1Z"/></svg>' + (queue.length > 1 ? 'play every version' : 'play it') + '</button>' : '') +
             (rel && rel.preview ? '<button class="sg-btn" id="sg-pv">▶ 30s preview</button>' : '') + (rel && rel.video ? '<button class="sg-btn" id="sg-vid">▶ music video</button>' : '') +
             '<button class="sg-btn" id="sg-share" aria-label="share this song"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>share</button>' +
@@ -2507,7 +2517,7 @@ window._ytBooted = false;
       catch (e) { if (my !== st.seq) return; root.innerHTML = '<button class="yt-back" id="yw-back">‹ every edition</button><div class="yt-empty"><b>couldnt load that edition</b>' + esc(e.message || '') + '</div>'; document.getElementById('yw-back').onclick = back; return; }
       if (my !== st.seq) return;
       var e = r.edition;
-      document.title = 'YEWS · ' + longDate(e.date) + (e.time ? ' ' + e.time : '') + ' | wavernrs';
+      yeTitle('YEWS · ' + longDate(e.date) + (e.time ? ' ' + e.time : '') + ' — Ye archive — wavernrs');
       root.innerHTML = '<button class="yt-back" id="yw-back">‹ every edition</button>' +
         '<div class="yw-ed-nav"><div class="yw-ed-date">YEWS · ' + esc(e.time || '') + '<small>' + esc(longDate(e.date)) + ' · edition ' + r.index + ' of ' + r.total + '</small></div>' +
         '<div class="ye-chips" style="margin:0;">' + (r.prev ? '<button class="ye-chip" data-go-e="' + esc(r.prev.id) + '">‹ older</button>' : '') + (r.next ? '<button class="ye-chip" data-go-e="' + esc(r.next.id) + '">newer ›</button>' : '') +
@@ -2524,7 +2534,7 @@ window._ytBooted = false;
       if (st.n) { var a = document.getElementById('yw-a' + st.n); if (a) { a.scrollIntoView({ block: 'start' }); a.classList.add('flash'); } }
     }
     function back() {
-      st.e = ''; st.n = 0; url(true); document.title = 'Ye archive | wavernrs'; load();
+      st.e = ''; st.n = 0; url(true); yeTitle(VIEW_TITLES.yews + ' — Ye archive — wavernrs'); load();
     }
     return { open: function () { if (st.started) return; st.started = true; load(); } };
   })();
@@ -2558,7 +2568,7 @@ window._ytBooted = false;
       if (d.yeezy && d.yeezy.length) html += '<h3 class="ds-h">yeezy on this day</h3><div class="tl-pics">' + d.yeezy.map(function (x) { return '<img src="' + esc(thumb(x.img, 200)) + '" alt="' + esc(x.title) + '" title="' + esc(x.title + ' · ' + x.year) + '" data-go="/resources?view=yeezy&item=' + esc(encodeURIComponent(x.id)) + '" loading="lazy" style="cursor:pointer;" onerror="this.remove()">'; }).join('') + '</div>';
       if (d.years && d.years.length) {
         html += '<h3 class="ds-h">tweeted on this day <span class="od-n">' + d.tweets + '</span></h3>';
-        html += d.years.map(function (y) { return '<div class="tw-day">' + esc(y.year) + (y.count > 1 ? ' <span class="od-n">' + y.count + ' tweets</span>' : '') + '</div>' + y.items.map(function (t) { return TW.card(t, d.profiles); }).join(''); }).join('');
+        html += d.years.map(function (y) { return '<div class="tw-day">' + esc(y.year) + (y.count > 1 ? ' <span class="od-n">' + y.count + ' tweets</span>' : '') + '</div>' + y.items.map(function (t) { return TW.card(t, d.profiles, 'America/Chicago'); }).join(''); }).join('');
       }
       var el = document.getElementById('od-body'); if (!el) return;
       el.innerHTML = html || '<div class="yt-empty"><b>nothing on ' + esc(label(md)) + '</b>try another day</div>';
@@ -2622,7 +2632,7 @@ window._ytBooted = false;
       var wrap = document.createElement('div'); wrap.className = 'yz-modal'; wrap.innerHTML = '<div class="yz-box"><div class="loading"><div class="spinner"></div></div></div>';
       document.body.appendChild(wrap);
       var setItem = function (v) { if (cur !== 'yeezy') return; try { history.replaceState(history.state, '', location.pathname + '?view=yeezy' + (st.section ? '&section=' + encodeURIComponent(st.section) : '') + (v ? '&item=' + encodeURIComponent(v) : '')); } catch (_) {} };
-      var closeIt = function () { wrap.remove(); document.removeEventListener('keydown', onKey); setItem(''); document.title = 'Ye archive — wavernrs'; if (opener && opener.isConnected && opener.focus) try { opener.focus(); } catch (_) {} };
+      var closeIt = function () { wrap.remove(); document.removeEventListener('keydown', onKey); setItem(''); yeTitle(VIEW_TITLES.yeezy + ' — Ye archive — wavernrs'); if (opener && opener.isConnected && opener.focus) try { opener.focus(); } catch (_) {} };
       var opener = document.activeElement;
       var onKey = function (e) { if (e.key === 'Escape') closeIt(); };
       document.addEventListener('keydown', onKey);
@@ -2641,7 +2651,7 @@ window._ytBooted = false;
         row('in', (x.collections || []).length ? esc(x.collections.join(', ')) : '') + '</div>' +
         (x.desc ? '<div class="yz-desc">' + esc(x.desc) + '</div>' : '') +
         '<div class="yt-links" style="justify-content:flex-start;margin-top:14px;"><button class="yt-l" id="yz-share" style="border:0;cursor:pointer;font-family:inherit;">share</button><a class="yt-l" href="' + esc(x.url || 'https://yeezyarchive.net') + '" target="_blank" rel="noopener">view on YEEZY ARCHIVE ↗</a></div></div>';
-      document.title = x.title + ' — Yeezy — wavernrs';
+      yeTitle(x.title + ' — Ye archive — wavernrs');
       wrap.querySelector('.yz-x').onclick = closeIt;
       wrap.querySelector('#yz-share').onclick = function () { yeShare('/resources?view=yeezy&item=' + encodeURIComponent(x.id || id), x.title); };
       wrap.querySelectorAll('.yz-thumbs img').forEach(function (t) { t.onclick = function () { document.getElementById('yz-main').src = t.getAttribute('data-full'); wrap.querySelectorAll('.yz-thumbs img').forEach(function (o) { o.classList.toggle('on', o === t); }); }; });
@@ -2954,17 +2964,7 @@ window._ytBooted = false;
           try { v.currentTime = t; v.play(); } catch (_) {}
         };
       });
-      if (x.comps && x.comps.length) {
-        Promise.all(x.comps.slice(0, 8).map(function (id) { return api('/albums/' + encodeURIComponent(id)).then(function (d) { return d.album || d; }).catch(function () { return null; }); })).then(function (list) {
-          var box = w.querySelector('#tr-comps'); if (!box) return;
-          list = list.filter(function (a) { return a && a.id && a.title; });
-          box.innerHTML = list.length ? list.map(function (a) {
-            var by = a.is_archive ? (a.archive_artist_name || '') : ((a.artists && a.artists.display_name) || '');
-            return '<a class="tr-comp" href="/album?id=' + encodeURIComponent(a.id) + '"><span class="tr-comp-art" style="background:' + (window.coverGradient ? coverGradient(a.title) : 'var(--surface-3)') + ';">' + (a.cover_url ? '<img src="' + esc(thumb(a.cover_url, 120)) + '" alt="" onerror="this.remove()">' : '') + '</span><span style="min-width:0;"><b>' + esc(a.title) + '</b><i>' + esc(by) + (a.track_count ? ' · ' + a.track_count + ' tracks' : '') + '</i></span><span class="tr-comp-go">play ›</span></a>';
-          }).join('') : '<div class="yz-sub">couldnt load the comps</div>';
-          box.querySelectorAll('a.tr-comp').forEach(function (el) { el.onclick = function (e) { e.preventDefault(); w.querySelector('.yz-x').click(); navigate(el.getAttribute('href')); }; });
-        });
-      }
+      loadComps(x, w);
       return w;
     }
     function merchModal(m) {
@@ -3091,7 +3091,7 @@ window._ytBooted = false;
       (d.years || []).forEach(function (y) { (y.items || []).forEach(function (t) { if (!top || (t.likes || 0) > (top.likes || 0)) top = t; }); });
       if (top) {
         var txt = String(top.text || '').replace(/\s*https?:\/\/\S+/g, '').trim();
-        if (txt) { html += '<div class="yh-lbl">top tweet on this day</div><div class="yh-tw" data-go="/resources?view=tweets&tweet=' + encodeURIComponent(top.id) + '"><div class="yh-tw-t">' + esc(txt) + '</div><div class="yh-tw-m">@kanyewest · ' + esc(new Date(top.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })) + (top.likes ? ' · ♥ ' + num(top.likes) : '') + (d.tweets > 1 ? ' · ' + d.tweets + ' tweets that day' : '') + '</div></div>'; any = true; }
+        if (txt) { html += '<div class="yh-lbl">top tweet on this day</div><div class="yh-tw" data-go="/resources?view=tweets&tweet=' + encodeURIComponent(top.id) + '"><div class="yh-tw-t">' + esc(txt) + '</div><div class="yh-tw-m">@kanyewest · ' + esc(new Date(top.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' })) + (top.likes ? ' · ♥ ' + num(top.likes) : '') + (d.tweets > 1 ? ' · ' + d.tweets + ' tweets that day' : '') + '</div></div>'; any = true; }
       }
       var lk = (d.leaks && d.leaks.items) || [];
       if (lk.length) {
@@ -3178,6 +3178,8 @@ window._ytBooted = false;
         ['tours', 'Tours', s.tour_shows ? s.tour_shows + ' shows' : '', 'full shows with setlists you can jump through', q4(x.shows || st.shows || []) || typo('<span class="big">LIVE</span><span class="sm">setlists · merch · yedia</span>')],
         ['timeline', 'Timeline', '', 'three decades, month by month', typo('<span class="big">1977 → ' + new Date().getFullYear() + '</span><div class="yh-line"><i></i><i></i><i></i><i></i><i></i><i></i></div>')],
         ['today', 'On this day', '', 'what happened on any day of the year', typo('<div class="yh-cal"><div class="m">' + esc(mon) + '</div><div class="d">' + (+md.slice(3)) + '</div></div>')],
+        ['insta', 'Instagram', s.instagram ? num(s.instagram) + ' posts' : '', 'every post and reel, archived', typo('<span class="big">IG</span>')],
+        ['yews', 'Yews', '', 'ye’s own news feed, every edition', typo('<span class="big">YEWS</span>')],
         ['surprise', 'Surprise me', '', 'a random leak from a random era', '<div class="yh-x-art yh-typo yh-shuf"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg><span class="sm">random song</span></div>'],
       ];
       el.innerHTML = cards.map(function (c) { return '<button class="yh-x" data-view="' + c[0] + '">' + c[4] + '<div class="yh-x-b"><b>' + esc(c[1]) + (c[2] ? '<span>' + esc(c[2]) + '</span>' : '') + '</b><p>' + esc(c[3]) + '</p></div></button>'; }).join('');
@@ -3233,7 +3235,7 @@ window._ytBooted = false;
       tw: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.9 2H22l-7.2 8.2L23 22h-6.6l-5.1-6.7L5.4 22H2.3l7.7-8.8L2 2h6.7l4.6 6.1Zm-1.1 18h1.7L7.3 3.9H5.5Z"/></svg>',
       go: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
     };
-    var VIEWS = [['home', 'Archive home'], ['tracker', 'Tracker'], ['disco', 'Discography'], ['tweets', 'Tweets'], ['insta', 'Instagram'], ['yeezy', 'Yeezy'], ['tours', 'Tours'], ['timeline', 'Timeline'], ['today', 'On this day']];
+    var VIEWS = [['home', 'Archive home'], ['tracker', 'Tracker'], ['disco', 'Discography'], ['tweets', 'Tweets'], ['insta', 'Instagram'], ['yeezy', 'Yeezy'], ['tours', 'Tours'], ['timeline', 'Timeline'], ['today', 'On this day'], ['yews', 'Yews'], ['quiz', 'Quiz']];
     function recent() { try { var r = JSON.parse(localStorage.getItem('wv_ye_recent') || '[]'); return Array.isArray(r) ? r.filter(function (x) { return typeof x === 'string'; }).slice(0, 6) : []; } catch (_) { return []; } }
     function saveRecent(q) { q = String(q || '').trim(); if (q.length < 2) return; try { var r = recent().filter(function (x) { return x.toLowerCase() !== q.toLowerCase(); }); r.unshift(q); localStorage.setItem('wv_ye_recent', JSON.stringify(r.slice(0, 6))); } catch (_) {} }
     function fold(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, ''); }

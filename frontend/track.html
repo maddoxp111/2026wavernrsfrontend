@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — edit</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <title>wavernrs — edit</title>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .trk-page { padding-bottom: 56px; }
     .trk-sk { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
@@ -45,6 +45,9 @@
     .trk-byline a { color: var(--text); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
     .trk-byline a:hover { text-decoration: underline; text-underline-offset: 3px; }
     .trk-byline .trk-comp-a { color: var(--text-2); font-weight: 600; }
+    .trk-feat { margin-top: 6px; font-size: 13px; color: var(--text-2); }
+    .trk-feat a { color: var(--text-2); font-weight: 600; text-decoration: none; }
+    .trk-feat a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
     .trk-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; display: inline-grid; place-items: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,.92); }
     .trk-dot { color: var(--text-3); }
     .trk-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; font-size: 13.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -246,12 +249,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
-<script src="/js/ratings.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
+<script src="/js/ratings.js?v=261967381b39"></script>
 <script>
   initPlayer();
   if (!Array.isArray(window._pageCleanup)) window._pageCleanup = [];
@@ -354,9 +357,13 @@
       return;
     }
     if (!_trkAlive()) return;
+    if (track && track.id && track.id !== trackId) {
+      trackId = track.id;
+      try { var _u = new URLSearchParams(location.search); _u.set('id', trackId); history.replaceState(history.state, '', location.pathname + '?' + _u.toString() + location.hash); } catch (_) {}
+    }
     try {
       liked = !!track.user_liked;
-      document.title = `${track.title} — wavernrs stream`;
+      document.title = `${track.title} — wavernrs`;
       if (typeof window.setPageBgImage === 'function') window.setPageBgImage(_trkCover());
       renderTrack();
       var _q = new URLSearchParams(location.search);
@@ -370,6 +377,7 @@
       loadLyrics();
       loadComments();
       loadMoreLikeThis();
+      loadMoreFromComp();
       loadAlsoOn();
       loadYeOriginals();
       loadYeOfficial();
@@ -467,7 +475,8 @@
     var added = '';
     try { if (track.created_at) added = new Date(track.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); } catch (_) {}
     var year = '';
-    try { if (track.created_at) year = String(new Date(track.created_at).getFullYear()); } catch (_) {}
+    var yd = (album && album.original_date) || (creator.archive ? null : track.created_at);
+    try { if (yd) year = String(new Date(yd).getFullYear()); } catch (_) {}
     var desc = track.description ? (typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(track.description) : String(track.description)) : '';
     desc = desc.replace(/^[ \t]*(-#|#{1,3})[ \t]+/gm, '').replace(/\*\*(.+?)\*\*/g, '$1').trim();
     var coverImg = cover
@@ -494,6 +503,11 @@
               (album && String(album.title || '').trim().toLowerCase() !== String(track.title || '').trim().toLowerCase() ? '<span class="trk-dot">•</span><a class="trk-comp-a" href="/album?id=' + _te(album.id) + '">' + _te(album.title) + '</a>' : '') +
               (year ? '<span class="trk-dot">•</span><span>' + _te(year) + '</span>' : '') +
             '</div>' +
+            (function () {
+              var fn = typeof window.wvFeatNames === 'function' ? window.wvFeatNames(track.title) : [];
+              if (!fn || !fn.length) return '';
+              return '<div class="trk-feat">with ' + fn.map(function (n) { return '<a href="/music?a=' + encodeURIComponent(n.key) + '">' + _te(n.name) + '</a>'; }).join(', ') + '</div>';
+            })() +
             '<div class="trk-stats" id="trk-stats"></div>' +
             '<div class="trk-rate"><div id="rating-widget"><div style="display:flex;align-items:center;gap:6px;opacity:.55;">' + [1,2,3,4,5].map(function () { return '<span style="padding:4px;line-height:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.6"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>'; }).join('') + '</div></div></div>' +
             (_trk.deepT ? '<button type="button" class="trk-deep" id="trk-deep" onclick="trkPlayFrom()">' + _TI.play + '<span>Play from ' + fmtT(_trk.deepT) + '</span> <small>shared moment</small></button>' : '') +
@@ -546,7 +560,7 @@
                       '<button id="ts-toggle" onclick="toggleTsComment()" title="pin your comment to this exact part of the song" style="display:none;align-items:center;gap:5px;min-height:34px;padding:5px 12px;border-radius:20px;border:1px solid var(--hair-strong);background:transparent;color:var(--text-3);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">⏱ at 0:00</button>' +
                       '<button class="btn btn-primary btn-sm" onclick="postComment()" style="margin-left:auto;">Post</button>' +
                     '</div></div>'
-                : '<p style="font-size:14px;color:var(--text-2);"><a href="/login" style="color:var(--brand);font-weight:600;">Log in</a> to leave a comment</p>') +
+                : '<p style="font-size:14px;color:var(--text-2);"><a href="/login?next=' + encodeURIComponent(location.pathname + location.search) + '" style="color:var(--brand);font-weight:600;">Log in</a> to leave a comment</p>') +
             '</div>' +
             '<div id="comments-list"><div style="display:flex;flex-direction:column;gap:14px;">' +
               '<div style="display:flex;gap:12px;"><div class="trk-sk" style="width:34px;height:34px;border-radius:50%;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="trk-sk" style="width:120px;height:12px"></div><div class="trk-sk" style="width:70%;height:14px"></div></div></div>' +
@@ -559,7 +573,7 @@
             ? '<a class="trk-card trk-comp" href="/album?id=' + _te(album.id) + '">' +
                 (album.cover_url ? '<img class="trk-comp-cover" src="' + _te(_trkImg(album.cover_url, 128)) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '<span class="trk-comp-cover" style="background:' + _te(coverGradient(album.title || '')) + '"></span>') +
                 '<div style="min-width:0"><div class="trk-k">From the comp</div><div class="trk-comp-t">' + _te(album.title) + '</div>' +
-                (track.track_position ? '<div class="trk-comp-s">track ' + _te(track.track_position) + '</div>' : '') + '</div>' +
+                (track.track_position != null ? '<div class="trk-comp-s">track ' + (Number(track.track_position) + 1) + (album.track_count ? ' of ' + album.track_count : '') + '</div>' : '') + '</div>' +
                 '<span class="trk-chev">' + _TI.chev + '</span></a>'
             : '') +
           '<div class="trk-card trk-about' + (desc ? '' : ' trk-about-nodesc') + '">' +
@@ -580,6 +594,7 @@
       '<div class="trk-below">' +
         '<div id="ye-official" style="margin-top:44px;"></div>' +
         '<div id="ye-originals" style="margin-top:44px;"></div>' +
+        '<div id="more-from-comp" style="margin-top:44px;" hidden></div>' +
         '<div id="also-on" style="margin-top:44px;"></div>' +
         '<div id="more-like-this" style="margin-top:48px;"></div>' +
       '</div>';
@@ -882,8 +897,10 @@
     } catch (_) {}
   }
 
+  function _loginHere() { navigate('/login?next=' + encodeURIComponent(location.pathname + location.search)); }
+
   async function toggleLike() {
-    if (!isLoggedIn()) return navigate('/login');
+    if (!isLoggedIn()) return _loginHere();
     if (!track) return;
     var before = liked;
     liked = !liked;
@@ -950,14 +967,21 @@
     if (!L.lines.length) {
       if (tools) tools.hidden = true;
       if (src) src.hidden = true;
-      body.innerHTML = '<div class="trk-lyr-empty"><b>no lyrics yet</b>' +
-        '<span>open it in the full player to pull them in, or check back once the creator adds them.</span>' +
-        '<button type="button" class="trk-pill" onclick="trkOpenFull()">' + _TI.expand + '<span>Open full player</span></button></div>';
+      body.innerHTML = isLoggedIn()
+        ? '<div class="trk-lyr-empty"><b>no lyrics yet</b>' +
+          '<span>open it in the full player to pull them in, or check back once the creator adds them.</span>' +
+          '<button type="button" class="trk-pill" onclick="trkOpenFull()">' + _TI.expand + '<span>Open full player</span></button></div>'
+        : '<div class="trk-lyr-empty"><b>no lyrics yet</b>' +
+          '<span>log in and open the full player to pull them in.</span>' +
+          '<a class="trk-pill" href="/login?next=' + encodeURIComponent(location.pathname + location.search) + '">Log in</a></div>';
       return;
     }
     if (tools) tools.hidden = false;
     if (src) {
-      var label = L.synced ? (L.source === 'manual' ? 'synced by the creator' : L.source === 'embedded' ? 'synced · from the file' : 'synced') : 'not synced';
+      var label = (L.source === 'auto' || L.source === 'regen') ? 'auto-transcribed · might have mistakes'
+        : L.source === 'manual' ? (L.synced ? 'synced by the creator' : 'from the creator')
+        : L.source === 'embedded' ? (L.synced ? 'synced · from the file' : 'from the file')
+        : (L.synced ? 'synced' : 'not synced');
       src.textContent = label;
       src.hidden = false;
     }
@@ -1110,8 +1134,14 @@
         el.innerHTML = `<div style="padding:18px 0 8px;"><div style="font-size:15px;font-weight:700;color:var(--text);">no comments yet</div><div style="font-size:13.5px;color:var(--text-2);margin-top:4px;">be the first to say something about this one.</div></div>`;
         return;
       }
+      const me = (typeof getUser === 'function' && getUser()) || null;
+      let isMod = false;
+      try { isMod = sessionStorage.getItem('wv_is_mod') === 'true'; } catch (_) {}
+      const actStyle = 'background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:3px 6px;font-family:inherit;';
       el.innerHTML = '<div style="display:flex;flex-direction:column;gap:2px;">' +
         comments.map(c => {
+          _tcText[c.id] = c.content || '';
+          const mine = !!(me && me.id && c.user_id === me.id);
           const upvotes = c.upvotes || 0;
           const downvotes = c.downvotes || 0;
           const myVote = myVotes[c.id] || 0;
@@ -1128,8 +1158,9 @@
               <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
                 <span data-wv-uid="${escHtml(c.user_id || '')}" style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(username)}</span>
                 <span style="font-size:11.5px;color:var(--text-3);">${timeAgo(c.created_at)}</span>
+                ${c.edited_at ? '<span class="tc-edited" style="font-size:10.5px;color:var(--text-3);">(edited)</span>' : ''}
               </div>
-              <div style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="jump to this part" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
+              <div id="cbody-${escHtml(c.id)}" style="font-size:14px;color:var(--text);line-height:1.55;word-break:break-word;">${c.track_time != null ? `<button onclick="seekToComment(${Number(c.track_time)})" title="jump to this part" style="display:inline-flex;align-items:center;padding:1px 8px;margin-right:6px;border-radius:12px;border:1px solid var(--brand);background:var(--brand-bg);color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;vertical-align:middle;">@ ${fmtT(c.track_time)}</button>` : ''}${escHtml(c.content)}</div>
               <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
                 <button id="vote-up-btn-${escHtml(c.id)}" onclick="voteComment('${escHtml(c.id)}', 1)" aria-label="Upvote"
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${upActive ? 'var(--brand)' : 'var(--hair-strong)'};background:${upActive ? 'var(--brand-bg)' : 'transparent'};color:${upActive ? 'var(--brand)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
@@ -1139,7 +1170,10 @@
                   style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;border:1px solid ${downActive ? 'var(--red)' : 'var(--hair-strong)'};background:${downActive ? 'rgba(248,113,113,0.12)' : 'transparent'};color:${downActive ? 'var(--red)' : 'var(--text-3)'};font-size:12px;font-weight:500;cursor:pointer;transition:all 0.12s;font-family:inherit;">
                   ▼ <span id="vote-down-${escHtml(c.id)}">${downvotes}</span>
                 </button>
+                ${mine ? `<button onclick="trkEditComment('${escHtml(c.id)}')" style="${actStyle}margin-left:6px;">Edit</button>` : ''}
+                ${mine || isMod ? `<button onclick="trkDeleteComment('${escHtml(c.id)}')" style="${actStyle}">Delete</button>` : ''}
               </div>
+              <div id="cedit-${escHtml(c.id)}" style="display:none;margin-top:10px;"></div>
             </div>
           </div>`;
         }).join('') +
@@ -1174,7 +1208,7 @@
   }
 
   async function voteComment(commentId, vote) {
-    if (!isLoggedIn()) return navigate('/login');
+    if (!isLoggedIn()) return _loginHere();
     try {
       const res = await api(`/tracks/${trackId}/comments/${commentId}/vote`, {
         method: 'POST',
@@ -1197,6 +1231,61 @@
       _applyVoteStyle(upBtn, myVotes[commentId] === 1, true);
       _applyVoteStyle(downBtn, myVotes[commentId] === -1, false);
     } catch (_) {}
+  }
+
+  var _tcText = {};
+  function trkEditComment(commentId) {
+    var bodyEl = document.getElementById('cbody-' + commentId);
+    var box = document.getElementById('cedit-' + commentId);
+    if (!bodyEl || !box) return;
+    bodyEl.style.display = 'none';
+    box.style.display = '';
+    box.innerHTML = '<textarea id="cedit-input-' + escHtml(commentId) + '" class="wv-input" rows="3" style="width:100%;resize:vertical;">' + escHtml(_tcText[commentId] || '') + '</textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:6px;">' +
+        '<button class="btn btn-primary btn-sm" onclick="trkSaveComment(\'' + escHtml(commentId) + '\')">Save</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="trkCancelEdit(\'' + escHtml(commentId) + '\')">Cancel</button>' +
+      '</div>';
+    var ta = document.getElementById('cedit-input-' + commentId);
+    if (ta) setTimeout(function () { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 50);
+  }
+  function trkCancelEdit(commentId) {
+    var bodyEl = document.getElementById('cbody-' + commentId);
+    var box = document.getElementById('cedit-' + commentId);
+    if (bodyEl) bodyEl.style.display = '';
+    if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+  }
+  async function trkSaveComment(commentId) {
+    var ta = document.getElementById('cedit-input-' + commentId);
+    var content = ta ? ta.value.trim() : '';
+    if (!content) return;
+    var btn = document.querySelector('#cedit-' + commentId + ' .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      await api(`/tracks/${trackId}/comments/${commentId}`, { method: 'PATCH', body: JSON.stringify({ content: content }) });
+      loadComments();
+    } catch (err) {
+      if (err && err.navAborted) return;
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      if (typeof wvToast === 'function') wvToast(err.message || 'couldnt save that', 'error');
+    }
+  }
+  async function trkDeleteComment(commentId) {
+    if (!confirm('delete this comment?')) return;
+    try {
+      await api(`/tracks/${trackId}/comments/${commentId}`, { method: 'DELETE' });
+      var row = document.getElementById('comment-' + commentId);
+      if (row) row.remove();
+      delete _tcText[commentId];
+      _tsComments = _tsComments.filter(function (c) { return c.id !== commentId; });
+      if (_trk.commentsN) _trk.commentsN--;
+      _trkPaintStats();
+      var cc = document.getElementById('trk-ccount');
+      if (cc) cc.textContent = _trk.commentsN ? fmtNum(_trk.commentsN) : '';
+      renderTsTimeline();
+    } catch (err) {
+      if (err && err.navAborted) return;
+      if (typeof wvToast === 'function') wvToast(err.message || 'couldnt delete it', 'error');
+    }
   }
 
   async function postComment() {
@@ -1490,6 +1579,54 @@
     }
   }
 
+  async function loadMoreFromComp() {
+    var el = document.getElementById('more-from-comp');
+    var alb = track && track.albums && track.albums.id ? track.albums : null;
+    if (!el || !alb) return;
+    if (alb.track_count != null && Number(alb.track_count) <= 1) return;
+    var tid = track.id;
+    var rows;
+    try { rows = await api('/albums/' + encodeURIComponent(alb.id) + '/tracks'); } catch (_) { return; }
+    if (!_trkAlive() || !track || track.id !== tid) return;
+    var list = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.id && t.id !== tid; });
+    list.sort(function (a, b) { return (Number(a.track_position) || 0) - (Number(b.track_position) || 0); });
+    var pos = Number(track.track_position) || 0;
+    var after = list.filter(function (t) { return (Number(t.track_position) || 0) > pos; });
+    var pick = (after.length ? after : list).slice(0, 5);
+    if (!pick.length) return;
+    var creator = trackCreator();
+    _trk.compNext = {};
+    el.innerHTML = '<h2 class="section-title" style="margin-top:0;">More from ' + escHtml(alb.title || 'the comp') + '</h2>' +
+      '<div class="track-list">' + pick.map(function (t) {
+        var safeId = String(t.id).replace(/[^A-Za-z0-9_-]/g, '');
+        _trk.compNext[safeId] = t;
+        var cv = t.cover_url || alb.cover_url || '';
+        var who = creator.archive ? creator.name : ((t.artists && t.artists.display_name) || creator.name || '');
+        return '<a class="track-row" href="/track?id=' + encodeURIComponent(t.id) + '" style="text-decoration:none;color:inherit;">' +
+          '<span class="track-row-num">' + ((Number(t.track_position) || 0) + 1) + '</span>' +
+          '<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:' + _te(coverGradient(t.title || '')) + ';">' + (cv ? '<img src="' + _te(_trkImg(cv, 96)) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">' : '') + '</div>' +
+          '<div class="track-row-info"><div class="track-row-title">' + _te(t.title || 'Untitled') + '</div><div class="track-row-artist">' + _te(who) + '</div></div>' +
+          (t.ia_url ? '<button type="button" class="trk-ib" aria-label="' + _te('Play ' + (t.title || '')) + '" onclick="event.preventDefault();event.stopPropagation();trkPlayCompRow(\'' + safeId + '\')">' + _TI.play + '</button>' : '') +
+        '</a>';
+      }).join('') + '</div>' +
+      '<a class="trk-pill" href="/album?id=' + encodeURIComponent(alb.id) + '" style="margin-top:14px;display:inline-flex;">See the whole comp →</a>';
+    el.hidden = false;
+  }
+
+  function trkPlayCompRow(id) {
+    var t = _trk.compNext && _trk.compNext[id];
+    var alb = track && track.albums;
+    if (!t || !alb || typeof playTrack !== 'function') { navigate('/track?id=' + id); return; }
+    var creator = trackCreator();
+    playTrack(Object.assign({}, t, {
+      artist_name: creator.archive ? creator.name : ((t.artists && t.artists.display_name) || creator.name || ''),
+      _archive_artist: creator.archive ? creator.name : null,
+      _album_id: alb.id,
+      _album_title: alb.title || null,
+      _album_cover: alb.cover_url || null,
+    }));
+  }
+
   function trkAlsoAll(btn) {
     document.querySelectorAll('#trk-also-grid > [hidden]').forEach(function (el) { el.hidden = false; });
     if (btn) btn.remove();
@@ -1504,6 +1641,28 @@
       var artistId = artist.id;
       var eraTagId = track.era_tag ? track.era_tag.id : track.era_tag_id;
       var creator = trackCreator();
+
+      if (creator.archive && track.albums && track.albums.id) {
+        var rel = await api('/albums/' + track.albums.id + '/related').catch(function () { return null; });
+        var toCard = function (a) {
+          var who = a.is_archive ? (a.archive_artist_name || '') : ((a.artists && a.artists.display_name) || a.archive_artist_name || '');
+          return Object.assign({}, a, { _type: 'album', artists: { display_name: who } });
+        };
+        var relBy = ((rel && rel.by_creator) || []).slice(0, 4).map(toCard);
+        var relEra = ((rel && rel.same_era) || []).slice(0, 4).map(toCard);
+        var rh = '';
+        if (relBy.length) {
+          rh += '<h2 class="section-title" style="margin-top:0;">More by ' + escHtml((rel && rel.creator) || creator.name) + '</h2>';
+          rh += '<div class="wv-comp-grid wv-comp-grid-4">' + relBy.map(function (item) { return renderMoreCard(item); }).join('') + '</div>';
+        }
+        if (relEra.length) {
+          var relEraName = (track.era_tag && track.era_tag.name) || '';
+          rh += '<h2 class="section-title" style="margin-top:' + (relBy.length ? '32px' : '0') + ';">More from ' + (relEraName ? escHtml(relEraName) : 'this era') + '</h2>';
+          rh += '<div class="wv-comp-grid wv-comp-grid-4">' + relEra.map(function (item) { return renderMoreCard(item); }).join('') + '</div>';
+        }
+        if (document.getElementById('more-like-this') && track) el.innerHTML = rh;
+        return;
+      }
 
       // Fetch more by same artist + same era tag in parallel
       var results = await Promise.all([

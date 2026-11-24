@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — search</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     @media (min-width: 769px) { .wv-topbar .wv-topbar-search { visibility: hidden; } }
     .sx { max-width: 1240px; margin: 0 auto; }
@@ -198,6 +198,9 @@
       .sx-browse .wv-browse-tile { font-size: 17px; padding: 12px; }
       .sx-trk { grid-template-columns: 1fr; }
       .sx-empty { padding-top: 40px; }
+      .sx-sec-h { flex-wrap: wrap; row-gap: 4px; }
+      .sx-sec-t small { display: none; }
+      .sx-row .sx-note { white-space: normal; max-width: 34vw; text-align: right; line-height: 1.25; font-size: 11.5px; }
     }
     @media (hover: none) {
       .sx-ib { opacity: 1; }
@@ -215,10 +218,10 @@
 <body>
 <div id="view"></div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -231,9 +234,13 @@
       { k: 'archive', l: 'Archive' },
       { k: 'artists', l: 'Artists' },
       { k: 'editors', l: 'Editors' },
+      { k: 'playlists', l: 'Playlists' },
       { k: 'ye', l: 'Ye' }
     ];
-    var EMPTY_LABEL = { songs: 'no songs', comps: 'no comps', archive: 'nothing in the archive', artists: 'no artists', editors: 'no editors', ye: 'nothing from the ye archive' };
+    var EMPTY_LABEL = { songs: 'no songs', comps: 'no comps', archive: 'nothing in the archive', artists: 'no artists', editors: 'no editors', playlists: 'no playlists', ye: 'nothing from the ye archive' };
+    var PAGE_LIST = { songs: 'tracks', comps: 'albums', archive: 'archived', atracks: 'archive_tracks', editors: 'artists' };
+    var PAGE_CAP = { songs: 20, comps: 10, archive: 20, atracks: 20, editors: 10 };
+    var PAGE_N = 50;
     var IC = {
       search: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
       x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -249,7 +256,7 @@
 
     var st = window._sx = {
       q: '', seq: 0, filter: 'all', d: null, sel: -1, html: {}, raf: 0, coreTimer: 0,
-      top: null, topLocked: false
+      top: null, topLocked: false, pg: {}
     };
 
     function esc(s) { return escHtml(s == null ? '' : String(s)); }
@@ -268,6 +275,8 @@
       if (t.indexOf(nq) === 0) return 60;
       if ((' ' + t + ' ').indexOf(' ' + nq + ' ') >= 0) return 45;
       if ((' ' + t).indexOf(' ' + nq) >= 0) return 40;
+      var ws = nq.split(' ');
+      if (ws.length > 1 && ws.every(function (w) { return (' ' + t + ' ').indexOf(' ' + w) >= 0; })) return 35;
       if (t.indexOf(nq) >= 0) return 20;
       var tc = t.replace(/ /g, ''), qc = nq.replace(/ /g, '');
       if (qc.length >= 3 && tc.indexOf(qc) >= 0) return 15;
@@ -303,21 +312,34 @@
       return out + esc(text.slice(last));
     }
 
+    function qsApi(fn) { return window.wvQuickSearch && typeof window.wvQuickSearch[fn] === 'function' ? window.wvQuickSearch : null; }
     function readRecent() {
+      var qs = qsApi('recent');
+      if (qs) { try { var r = qs.recent(); if (Array.isArray(r)) return r.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 10); } catch (_) {} }
       try { var v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(v) ? v.filter(function (x) { return typeof x === 'string' && x.trim(); }).slice(0, 10) : []; } catch (_) { return []; }
     }
     function writeRecent(list) { try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 10))); } catch (_) {} }
     function addRecent(q) {
       q = String(q || '').trim().slice(0, 80);
       if (q.length < 2) return;
+      var qs = qsApi('remember');
+      if (qs) { try { qs.remember(q); return; } catch (_) {} }
       var lc = q.toLowerCase();
       var list = readRecent().filter(function (x) { return x.toLowerCase() !== lc; });
       list.unshift(q);
       writeRecent(list);
     }
     function removeRecent(q) {
+      var qs = qsApi('forget');
+      if (qs) { try { qs.forget(q); return; } catch (_) {} }
       var lc = String(q || '').toLowerCase();
       writeRecent(readRecent().filter(function (x) { return x.toLowerCase() !== lc; }));
+    }
+
+    function clearRecent() {
+      var qs = qsApi('clearRecent');
+      if (qs) { try { qs.clearRecent(); return; } catch (_) {} }
+      writeRecent([]);
     }
 
     function cssUrl(u) { return String(u || '').replace(/[\\'"()\s]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); }); }
@@ -369,14 +391,14 @@
       });
       var comps = rank(site.albums || [], function (a) { return matchScore(a.title, nq) + pop(a.play_count) + ((a.track_count || 0) > 0 ? 5 : 0); }, function (a) { return a.id; });
       var archived = (site.archived || []).slice();
-      if (!site.top) archived = rank(archived, function (a) { return Math.max(matchScore(a.title, nq), matchScore(a.archive_artist_name, nq) * 0.6) + pop(a.play_count) + (a._tracker ? 8 : 0); }, function (a) { return a.id; });
-      var aTracks = rank(site.archive_tracks || d.arcTracks || [], function (t) { return matchScore(t.title, nq) + pop(t.play_count) + (t.ia_url ? 5 : 0); }, function (t) { return norm(t.title) + '|' + norm(t.album_title) + '|' + norm(t.archive_artist_name); });
+      var aTracks = rank(site.archive_tracks || [], function (t) { return matchScore(t.title, nq) + pop(t.play_count) + (t.ia_url ? 5 : 0); }, function (t) { return norm(t.title) + '|' + norm(t.album_title) + '|' + norm(t.archive_artist_name); });
       var ma = ((d.ma && d.ma.items) || []).filter(function (a) { return a && a.name && (a.photo || (a.tracks || 0) >= 10 || matchScore(a.name, nq) >= 96); });
       var artists = ma.map(function (a) {
         return { kind: 'artist', id: a.artist_key, name: a.name, art: a.photo, href: '/music?a=' + encodeURIComponent(a.artist_key), label: 'Artist', meta: (a.tracks ? num(a.tracks) + ' song' + (a.tracks === 1 ? '' : 's') : ''), s: matchScore(a.name, nq) + pop(a.tracks, 20) + (a.photo ? 5 : 0) };
       });
       ((d.aa && d.aa.artists) || []).forEach(function (a) {
         if (!a || !a.name || !a.slug) return;
+        if (/^unknown$/i.test(String(a.name).trim())) return;
         if ((a.comp_count || 0) < 2 && norm(a.name) !== nq) return;
         artists.push({ kind: 'creator', id: a.slug, name: a.name, art: a.cover_url, href: '/archive-artist?a=' + encodeURIComponent(a.slug), label: 'Creator', meta: (a.comp_count ? num(a.comp_count) + ' comp' + (a.comp_count === 1 ? '' : 's') : ''), s: matchScore(a.name, nq) + pop(a.comp_count, 12) });
       });
@@ -389,17 +411,20 @@
       var res = (d.res && d.res.results) || [];
       var ya = d.ye || {};
       var yaItems = [];
+      (ya.eras || []).forEach(function (e) { yaItems.push({ k: 'era', art: e.art, title: e.era, sub: 'tracker era · ' + e.songs + ' songs · ' + e.leaked + ' leaked', href: '/resources?era=' + encodeURIComponent(e.era), note: 'era' }); });
       (ya.albums || []).forEach(function (a) { yaItems.push({ k: 'album', art: a.cover_sm, title: a.title, sub: 'album · ' + a.year + ' · ' + a.tracks + ' songs', href: '/resources?view=disco&album=' + encodeURIComponent(a.slug), note: 'discography', raw: a }); });
       (ya.songs || []).forEach(function (t) { yaItems.push({ k: 'song', art: t.cover, title: t.title, sub: t.album + ' · ' + t.year + (t.producers && t.producers.length ? ' · prod. ' + t.producers.join(', ') : ''), href: '/resources?view=song&t=' + encodeURIComponent(t.title), note: 'song', raw: t }); });
       (ya.samples || []).forEach(function (x) { yaItems.push({ k: 'sample', art: x.cover, title: x.t + (x.a ? ' — ' + x.a : ''), sub: 'sampled on ' + x.song + ' (' + x.album + ')', href: '/resources?view=disco&album=' + encodeURIComponent(x.slug), note: 'sample' }); });
       (ya.credits || []).forEach(function (c) { var prod = (c.roles || []).indexOf('produced') >= 0; yaItems.push({ k: 'credit', art: c.cover, title: c.title, sub: c.artist + (c.album && c.album !== c.title ? ' · ' + c.album : '') + (c.year ? ' · ' + c.year : ''), href: '/resources?view=disco&sub=' + (prod ? 'produced' : 'featured'), note: prod ? 'ye produced' : 'ye featured' }); });
       (ya.yeezy || []).forEach(function (x) { yaItems.push({ k: 'yeezy', art: x.img, title: x.title, sub: 'yeezy' + (x.year ? ' · ' + x.year : ''), href: '/resources?view=yeezy&item=' + encodeURIComponent(x.id), note: 'yeezy' }); });
+      (ya.shows || []).forEach(function (s) { yaItems.push({ k: 'show', art: s.image, title: s.name, sub: s.song ? 'live · plays ' + s.song + (s.time ? ' at ' + s.time : '') : 'live · ' + [s.date || s.year, s.venue, s.city].filter(Boolean).join(' · '), href: '/resources?view=tours&year=' + encodeURIComponent(s.year) + '&show=' + encodeURIComponent(s.id) + (s.time ? '&at=' + encodeURIComponent(s.time) : ''), note: 'live show' }); });
       (ya.tweets || []).forEach(function (t) { yaItems.push({ k: 'tweet', art: null, title: String(t.text || '').replace(/\s*https?:\/\/\S+/g, '').slice(0, 140) || 'tweet', sub: 'tweet · ' + new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), href: '/resources?view=tweets&tweet=' + encodeURIComponent(t.id), note: t.likes ? (t.likes >= 1000 ? Math.round(t.likes / 1000) + 'K' : t.likes) + ' likes' : '' }); });
       var trackers = [];
       if (d.trackers && nq.length >= 2) {
         trackers = d.trackers.filter(function (t) { return (' ' + norm([t.name, t.slug].join(' '))).indexOf(' ' + nq) >= 0 || (nq.length >= 5 && (' ' + norm(t.blurb) + ' ').indexOf(' ' + nq + ' ') >= 0); });
       }
-      return { nq: nq, songs: songs, comps: comps, archived: archived, aTracks: aTracks, artists: artists, editors: editors, res: res, resTotal: (d.res && d.res.total) || res.length, yaItems: yaItems, tweetCount: ya.tweet_count || 0, trackers: trackers, badges: badges };
+      var playlists = (d.pl && Array.isArray(d.pl.items)) ? d.pl.items.filter(function (p) { return p && p.id; }) : [];
+      return { nq: nq, songs: songs, comps: comps, archived: archived, aTracks: aTracks, artists: artists, editors: editors, playlists: playlists, res: res, resTotal: (d.res && d.res.total) || res.length, yaItems: yaItems, tweetCount: ya.tweet_count || 0, trackers: trackers, badges: badges };
     }
 
     function pickTop(S) {
@@ -479,11 +504,20 @@
     function albumCard(a, q, B, archived) {
       var who = archived ? (a.archive_artist_name || '') : ((a.artists && a.artists.display_name) || a.archive_artist_name || '');
       var sub = (archived ? 'Archive' : 'Comp') + (who ? ' · ' + who : '') + (a.track_count > 1 ? ' · ' + a.track_count + ' tracks' : '');
-      var badge = archived ? (a._tracker ? 'on tracker' : 'archive') : '';
+      var badge = a._tracker ? 'on tracker' : (archived ? 'archive' : '');
       return '<div class="sx-card sx-nav" data-nav>' +
         '<div class="sx-card-artw"><div class="sx-card-art" style="background:' + grad(a.title) + ';">' + (a.cover_url ? '<img src="' + esc(img(a.cover_url, 320)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + (badge ? '<span class="sx-card-badge">' + esc(badge) + '</span>' : '') + '</div>' +
         '<button type="button" class="sx-play" data-act="comp" data-id="' + esc(a.id) + '" aria-label="Play ' + esc(a.title) + '">' + IC.play + '</button></div>' +
         '<div class="sx-card-t">' + (archived ? '' : badgeTags(a.id, 'album', B)) + '<a href="/album?id=' + encodeURIComponent(a.id) + '" data-primary>' + hl(a.title, q) + '</a></div>' +
+        '<div class="sx-card-s">' + esc(sub) + '</div></div>';
+    }
+    function playlistCard(p, q) {
+      var cover = p.cover_url || (Array.isArray(p.mosaic) && typeof p.mosaic[0] === 'string' ? p.mosaic[0] : '');
+      var who = p.owner && p.owner.username ? p.owner.username : '';
+      var sub = 'Playlist' + (who ? ' · ' + who : '') + (p.track_count ? ' · ' + p.track_count + (p.track_count === 1 ? ' track' : ' tracks') : '');
+      return '<div class="sx-card sx-nav" data-nav>' +
+        '<div class="sx-card-artw"><div class="sx-card-art" style="background:' + grad(p.title) + ';">' + (cover ? '<img src="' + esc(img(cover, 320)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '</div></div>' +
+        '<div class="sx-card-t"><a href="/playlist?id=' + encodeURIComponent(p.id) + '" data-primary>' + hl(p.title || 'Untitled', q) + '</a></div>' +
         '<div class="sx-card-s">' + esc(sub) + '</div></div>';
     }
     function personCard(a, q) {
@@ -518,6 +552,20 @@
     }
     function moreBtn(filter, label) { return '<button type="button" class="sx-more" data-act="filter" data-id="' + filter + '">' + esc(label || 'Show all') + '</button>'; }
     function moreLink(href, label) { return '<a class="sx-more" href="' + esc(href) + '">' + esc(label) + '</a>'; }
+    function pageMore(type) {
+      var pg = st.pg[type];
+      if (pg && typeof pg.more === 'boolean') return pg.more;
+      var site = (st.d && st.d.site) || {};
+      return (site[PAGE_LIST[type]] || []).length >= PAGE_CAP[type];
+    }
+    function pageBtn(type) {
+      if (!pageMore(type)) return '';
+      var busy = st.pg[type] && st.pg[type].busy;
+      return '<div style="margin-top:6px;"><button type="button" class="sx-more" data-act="page" data-id="' + type + '"' + (busy ? ' disabled' : '') + '>' + (busy ? 'Loading…' : 'Show more') + '</button></div>';
+    }
+    function errInline() {
+      return ['err-inline', '<div class="sx-sec"><div class="sx-note" style="white-space:normal">couldnt load songs and comps right now <button type="button" class="sx-more" data-act="retry">Try again</button></div></div>'];
+    }
     function playAllBtn(act, label) { return '<button type="button" class="wv-btn-play" data-act="' + act + '" style="padding:8px 18px;font-size:13px;">' + IC.playSm + esc(label || 'Play all') + '</button>'; }
 
     function skelRows(n) { var s = ''; for (var i = 0; i < n; i++) s += '<div class="sx-skel-row"><div class="wv-skel a"></div><div><div class="wv-skel l1"></div><div class="wv-skel l2"></div></div></div>'; return s; }
@@ -537,16 +585,25 @@
         archive: S.archived.length + S.aTracks.length,
         artists: S.artists.length,
         editors: S.editors.length,
-        ye: S.res.length + S.yaItems.length
+        playlists: S.playlists.length,
+        ye: S.resTotal + S.yaItems.length
       };
+    }
+    function chipCapped(k) {
+      if (k === 'songs') return pageMore('songs') || pageMore('atracks');
+      if (k === 'comps') return pageMore('comps');
+      if (k === 'archive') return pageMore('archive') || pageMore('atracks');
+      if (k === 'editors') return pageMore('editors');
+      return false;
     }
     function chipPending(k) {
       var p = st.pending || {};
-      if (k === 'songs') return p.site || p.arc;
+      if (k === 'songs') return p.site;
       if (k === 'comps') return p.site;
-      if (k === 'archive') return p.site || p.arc;
+      if (k === 'archive') return p.site;
       if (k === 'artists') return p.ma || p.aa;
       if (k === 'editors') return p.site;
+      if (k === 'playlists') return p.pl;
       if (k === 'ye') return p.res || p.ye;
       return false;
     }
@@ -557,7 +614,7 @@
         var n = c[f.k], pend = chipPending(f.k);
         if (f.k !== 'all' && !pend && !n && st.filter !== f.k) return '';
         return '<button type="button" class="sx-chip' + (st.filter === f.k ? ' on' : '') + '" role="tab" aria-selected="' + (st.filter === f.k) + '" data-act="filter" data-id="' + f.k + '">' + esc(f.l) +
-          (f.k === 'all' ? '' : (pend && !n ? '<span class="dot" aria-hidden="true"></span>' : '<span class="n">' + n + '</span>')) + '</button>';
+          (f.k === 'all' ? '' : (pend && !n ? '<span class="dot" aria-hidden="true"></span>' : '<span class="n">' + n + (n && chipCapped(f.k) ? '+' : '') + '</span>')) + '</button>';
       }).join('');
       if (chipsEl._h !== html) { chipsEl._h = html; chipsEl.innerHTML = html; }
     }
@@ -587,35 +644,41 @@
             (right ? '<div>' + right + '</div>' : '') + '</div></div>']);
         }
         var people = S.artists.slice(0, 8).concat(S.editors.slice(0, 4)).sort(function (a, b) { return b.s - a.s; });
-        if (people.length) out.push(['people', '<div class="sx-sec">' + secHead('Artists', '', (S.artists.length + S.editors.length > 6 ? moreBtn(S.artists.length ? 'artists' : 'editors') : '')) + '<div class="sx-cards one">' + people.map(function (a) { return personCard(a, q); }).join('') + '</div></div>']);
+        var hasEd = people.some(function (p) { return p.kind === 'editor'; }), hasArt = people.some(function (p) { return p.kind !== 'editor'; });
+        if (people.length) out.push(['people', '<div class="sx-sec">' + secHead(hasEd && hasArt ? 'Artists & editors' : hasEd ? 'Editors' : 'Artists', '', (S.artists.length + S.editors.length > 6 ? moreBtn(S.artists.length ? 'artists' : 'editors') : '')) + '<div class="sx-cards one">' + people.map(function (a) { return personCard(a, q); }).join('') + '</div></div>']);
         else if (st.pending && (st.pending.ma || st.pending.aa)) out.push(['people', '<div class="sx-sec"><div class="wv-skel sx-skel-h"></div>' + skelCards(6, true) + '</div>']);
         if (S.comps.length) out.push(['comps', '<div class="sx-sec">' + secHead('Comps', '', S.comps.length > 5 ? moreBtn('comps') : '') + '<div class="sx-cards one">' + S.comps.map(function (a) { return albumCard(a, q, B, false); }).join('') + '</div></div>']);
+        if (S.playlists.length) out.push(['pl', '<div class="sx-sec">' + secHead('Playlists', '', S.playlists.length > 5 ? moreBtn('playlists') : '') + '<div class="sx-cards one">' + S.playlists.map(function (p) { return playlistCard(p, q); }).join('') + '</div></div>']);
         if (S.archived.length) out.push(['arch', '<div class="sx-sec">' + secHead('From the archive', '', moreBtn('archive')) + '<div class="sx-cards one">' + S.archived.map(function (a) { return albumCard(a, q, B, true); }).join('') + '</div></div>']);
         if (S.aTracks.length && S.songs.length) out.push(['atracks', '<div class="sx-sec">' + secHead('Songs in archive comps', '', S.aTracks.length > 5 ? moreBtn('archive') : '') + '<div class="sx-list">' + S.aTracks.slice(0, 5).map(function (t, i) { return aTrackRow(t, i, q); }).join('') + '</div></div>']);
         if (S.trackers.length) out.push(['trk', trackersSec(S.trackers, q)]);
         if (S.res.length) out.push(['res', resSec(S, q, 5)]);
         if (S.yaItems.length) out.push(['ya', yaSec(S, q, 6)]);
         if (anyPending()) out.push(['pend', '<div class="sx-sec" aria-hidden="true"><div class="wv-skel sx-skel-h"></div>' + skelRows(3) + '</div>']);
-        if (!out.length || (!hasSite && !S.artists.length && !S.res.length && !S.yaItems.length && !S.trackers.length && !anyPending())) return null;
+        if (!out.length || (!hasSite && !S.artists.length && !S.playlists.length && !S.res.length && !S.yaItems.length && !S.trackers.length && !anyPending())) return null;
+        if (st.err && out.length) out.unshift(errInline());
         return out;
       }
       if (f === 'songs') {
-        if (S.songs.length) out.push(['songs', '<div class="sx-sec">' + secHead('Songs', S.songs.length + '', S.songs.some(function (t) { return t.ia_url; }) ? playAllBtn('songs-all') : '') + '<div class="sx-list">' + S.songs.map(function (t, i) { return songRow(t, i, q, B, true); }).join('') + '</div></div>']);
-        if (S.aTracks.length) out.push(['atracks', '<div class="sx-sec">' + secHead('In archive comps', S.aTracks.length + '', playAllBtn('atracks-all')) + '<div class="sx-list">' + S.aTracks.map(function (t, i) { return aTrackRow(t, i, q, true); }).join('') + '</div></div>']);
+        if (S.songs.length) out.push(['songs', '<div class="sx-sec">' + secHead('Songs', S.songs.length + '', S.songs.some(function (t) { return t.ia_url; }) ? playAllBtn('songs-all') : '') + '<div class="sx-list">' + S.songs.map(function (t, i) { return songRow(t, i, q, B, true); }).join('') + '</div>' + pageBtn('songs') + '</div>']);
+        if (S.aTracks.length) out.push(['atracks', '<div class="sx-sec">' + secHead('In archive comps', S.aTracks.length + '', playAllBtn('atracks-all')) + '<div class="sx-list">' + S.aTracks.map(function (t, i) { return aTrackRow(t, i, q, true); }).join('') + '</div>' + pageBtn('atracks') + '</div>']);
       } else if (f === 'comps') {
-        if (S.comps.length) out.push(['comps', '<div class="sx-sec">' + secHead('Comps', S.comps.length + '', moreLink('/browse?tab=comps', 'Browse comps')) + '<div class="sx-cards">' + S.comps.map(function (a) { return albumCard(a, q, B, false); }).join('') + '</div></div>']);
+        if (S.comps.length) out.push(['comps', '<div class="sx-sec">' + secHead('Comps', S.comps.length + '', moreLink('/browse?tab=comps', 'Browse comps')) + '<div class="sx-cards">' + S.comps.map(function (a) { return albumCard(a, q, B, false); }).join('') + '</div>' + pageBtn('comps') + '</div>']);
       } else if (f === 'archive') {
-        if (S.archived.length) out.push(['arch', '<div class="sx-sec">' + secHead('Archived comps', S.archived.length + '', moreLink('/archive?q=' + encodeURIComponent(q), 'Search the full archive')) + '<div class="sx-cards">' + S.archived.map(function (a) { return albumCard(a, q, B, true); }).join('') + '</div></div>']);
-        if (S.aTracks.length) out.push(['atracks', '<div class="sx-sec">' + secHead('Songs in archive comps', S.aTracks.length + '', playAllBtn('atracks-all')) + '<div class="sx-list">' + S.aTracks.map(function (t, i) { return aTrackRow(t, i, q, true); }).join('') + '</div></div>']);
+        if (S.archived.length) out.push(['arch', '<div class="sx-sec">' + secHead('Archived comps', S.archived.length + '', moreLink('/archive?q=' + encodeURIComponent(q), 'Search the full archive')) + '<div class="sx-cards">' + S.archived.map(function (a) { return albumCard(a, q, B, true); }).join('') + '</div>' + pageBtn('archive') + '</div>']);
+        if (S.aTracks.length) out.push(['atracks', '<div class="sx-sec">' + secHead('Songs in archive comps', S.aTracks.length + '', playAllBtn('atracks-all')) + '<div class="sx-list">' + S.aTracks.map(function (t, i) { return aTrackRow(t, i, q, true); }).join('') + '</div>' + pageBtn('atracks') + '</div>']);
         if (S.trackers.length) out.push(['trk', trackersSec(S.trackers, q)]);
       } else if (f === 'artists') {
         if (S.artists.length) out.push(['people', '<div class="sx-sec">' + secHead('Artists', S.artists.length + '', moreLink('/music', 'All artists')) + '<div class="sx-cards">' + S.artists.map(function (a) { return personCard(a, q); }).join('') + '</div></div>']);
       } else if (f === 'editors') {
-        if (S.editors.length) out.push(['eds', '<div class="sx-sec">' + secHead('Editors', S.editors.length + '', moreLink('/artists', 'All editors')) + '<div class="sx-cards">' + S.editors.map(function (a) { return personCard(a, q); }).join('') + '</div></div>']);
+        if (S.editors.length) out.push(['eds', '<div class="sx-sec">' + secHead('Editors', S.editors.length + '', moreLink('/artists', 'All editors')) + '<div class="sx-cards">' + S.editors.map(function (a) { return personCard(a, q); }).join('') + '</div>' + pageBtn('editors') + '</div>']);
+      } else if (f === 'playlists') {
+        if (S.playlists.length) out.push(['pl', '<div class="sx-sec">' + secHead('Playlists', S.playlists.length + '', moreLink('/playlists', 'All playlists')) + '<div class="sx-cards">' + S.playlists.map(function (p) { return playlistCard(p, q); }).join('') + '</div></div>']);
       } else if (f === 'ye') {
         if (S.res.length) out.push(['res', resSec(S, q, 0)]);
         if (S.yaItems.length) out.push(['ya', yaSec(S, q, 0)]);
       }
+      if (st.err && out.length && (f === 'songs' || f === 'comps' || f === 'archive' || f === 'editors')) out.unshift(errInline());
       if (chipPending(f)) out.push(['pend', '<div class="sx-sec" aria-hidden="true"><div class="wv-skel sx-skel-h"></div>' + skelRows(4) + '</div>']);
       if (!out.length && st.err) return null;
       if (!out.length) out.push(['none', '<div class="sx-empty"><div class="sx-empty-ic">' + IC.bigSearch + '</div><h2>' + esc(EMPTY_LABEL[f] || 'nothing here') + ' for “' + esc(q) + '”</h2><p>the other tabs might have something.</p><div class="sx-pills"><button type="button" class="sx-rp" data-act="filter" data-id="all">' + IC.arrow + '<span>see all results</span></button></div></div>']);
@@ -630,7 +693,7 @@
     }
     function resSec(S, q, max) {
       var list = max ? S.res.slice(0, max) : S.res;
-      var more = max ? (S.res.length > max ? moreBtn('ye') : '') : (S.resTotal > list.length ? moreLink('/resources?q=' + encodeURIComponent(q), 'See all ' + num(S.resTotal) + ' on the tracker') : '');
+      var more = max ? (S.res.length > max ? moreBtn('ye') : '') : (S.resTotal > list.length ? moreLink('/resources?q=' + encodeURIComponent(q), 'See all ' + num(S.resTotal)) : '');
       return '<div class="sx-sec">' + secHead('From the Ye tracker', max ? '' : list.length + (S.resTotal > list.length ? ' of ' + num(S.resTotal) : ''), more) + '<div class="sx-list">' + list.map(function (r) {
         var href = '/resources?tab=' + encodeURIComponent(r.tab) + '&era=' + encodeURIComponent(r.era) + '&q=' + encodeURIComponent(r.title);
         return linkRow(r.art, r.era, r.title, [r.era, String(r.tab || '').toLowerCase(), r.sub].filter(Boolean).join(' · '), href, [r.avail, r.quality].filter(Boolean).join(' · '), q);
@@ -695,7 +758,7 @@
       st.announced = st.seq;
       var el = document.getElementById('sx-status');
       if (!el) return;
-      var n = S.songs.length + S.comps.length + S.archived.length + S.aTracks.length + S.artists.length + S.editors.length + S.res.length + S.yaItems.length;
+      var n = S.songs.length + S.comps.length + S.archived.length + S.aTracks.length + S.artists.length + S.editors.length + S.playlists.length + S.res.length + S.yaItems.length;
       el.textContent = n ? n + ' results for ' + st.q + '. use the arrow keys to move through them.' : 'no results for ' + st.q;
     }
 
@@ -712,7 +775,7 @@
         '<p>check the spelling, use fewer words, or try a song, a comp, an era or an editor’s name.</p>' +
         (tips.length ? '<div class="sx-pills">' + tips.map(function (t) { return '<button type="button" class="sx-rp" data-act="search" data-id="' + esc(t) + '">' + IC.trend + '<span>' + esc(t) + '</span></button>'; }).join('') + '</div>' : '') +
         '</div>' +
-        (ed.length ? '<div class="sx-sec">' + secHead('Top editors in the archive', '', moreLink('/archive', 'Open the archive')) + '<div class="sx-cards one">' + ed.map(function (a) {
+        (ed.length ? '<div class="sx-sec">' + secHead('Top creators in the archive', '', moreLink('/archive', 'Open the archive')) + '<div class="sx-cards one">' + ed.map(function (a) {
           return personCard({ kind: 'creator', id: a.slug, name: a.name, art: a.cover_url, href: '/archive-artist?a=' + encodeURIComponent(a.slug), label: 'Creator', meta: num(a.comp_count) + ' comps' }, '');
         }).join('') + '</div></div>' : '');
     }
@@ -720,7 +783,7 @@
       var z = window._sxZero = window._sxZero || {};
       if (z.edLoading || z.topEditors) return;
       z.edLoading = true;
-      api('/archive/artists?sort=comps&limit=8').then(function (d) { z.topEditors = (d && d.artists) || []; schedule(); }).catch(function () { z.topEditors = []; });
+      api('/archive/artists?sort=comps&limit=9').then(function (d) { z.topEditors = ((d && d.artists) || []).filter(function (a) { return a && a.name && !/^unknown$/i.test(String(a.name).trim()); }).slice(0, 8); schedule(); }).catch(function () { z.topEditors = []; });
       loadZeroData();
     }
 
@@ -806,12 +869,12 @@
       var same = st.q === q && st.d && !opts.force;
       if (same) return;
       var my = ++st.seq;
-      st.q = q; st.sel = -1; st.err = null; st.top = null; st.topLocked = false; st.washed = false; st.graceOver = false;
+      st.q = q; st.sel = -1; st.err = null; st.top = null; st.topLocked = false; st.washed = false; st.graceOver = false; st.pg = {};
       if (opts.resetFilter) st.filter = 'all';
       var hadResults = !!st.lastQ && resultsEl.children.length > 0;
       st.lastQ = q;
-      st.d = { site: null, ma: null, aa: null, res: null, ye: null, badges: null, arcTracks: null, trackers: window._sxTrackers || null };
-      st.pending = { site: true, ma: true, aa: true, res: true, ye: true, arc: true };
+      st.d = { site: null, ma: null, aa: null, res: null, ye: null, pl: null, badges: null, trackers: window._sxTrackers || null };
+      st.pending = { site: true, ma: true, aa: true, res: true, ye: true, pl: true };
       document.title = '“' + q + '” — wavernrs';
       setUrl(q, !!opts.push);
       clearTimeout(st.coreTimer);
@@ -829,20 +892,13 @@
       api('/search?q=' + enc).then(function (d) {
         if (my !== st.seq) return;
         d = d || {};
-        if (!Array.isArray(d.archive_tracks)) {
-          api('/archive?kind=edits&q=' + enc + '&limit=1').then(function (a) {
-            if (my !== st.seq) return;
-            st.d.arcTracks = (a && a.tracks) || [];
-            st.pending.arc = false; schedule();
-          }).catch(function (e) { if (e && e.navAborted) return; if (my !== st.seq) return; st.pending.arc = false; schedule(); });
-        } else { st.pending.arc = false; }
+        if (d.partial) st.err = 'some results couldnt load';
         st.coreTimer = setTimeout(function () { if (my !== st.seq) return; st.graceOver = true; schedule(); }, 1200);
         done('site', d);
       }).catch(function (e) {
         if (e && e.navAborted) return;
         if (my !== st.seq) return;
         st.err = (e && e.message) || 'search didnt work';
-        st.pending.arc = false;
         st.graceOver = true;
         done('site', {});
       });
@@ -850,6 +906,7 @@
       api('/archive/artists?q=' + enc + '&limit=8').then(function (d) { done('aa', d); }).catch(fail('aa', null));
       api('/resources/search?q=' + enc).then(function (d) { done('res', d); }).catch(fail('res', null));
       api('/ye/search?q=' + enc).then(function (d) { done('ye', d); }).catch(fail('ye', null));
+      api('/playlists/published?q=' + enc + '&limit=6').then(function (d) { done('pl', d); }).catch(fail('pl', null));
       if (typeof getBadgeData === 'function') getBadgeData().then(function (b) { if (my === st.seq) { st.d.badges = b || {}; schedule(); } }).catch(function () {});
       if (!window._sxTrackers) {
         api('/trackers').then(function (d) { window._sxTrackers = (d && d.trackers) || []; if (my === st.seq) { st.d.trackers = window._sxTrackers; schedule(); } }).catch(function () {});
@@ -863,7 +920,7 @@
       clearTimeout(window._searchDebounce);
       clearTimeout(st.coreTimer);
       st.seq++;
-      st.q = ''; st.d = null; st.pending = {}; st.sel = -1; st.filter = 'all'; st.lastQ = '';
+      st.q = ''; st.d = null; st.pending = {}; st.sel = -1; st.filter = 'all'; st.lastQ = ''; st.pg = {};
       input.value = '';
       bar.classList.remove('has-q');
       document.title = 'wavernrs — search';
@@ -962,13 +1019,43 @@
       if (act === 'filter') { setFilter(id); return; }
       if (act === 'search') { doSearchImpl(id, { remember: true, push: true, resetFilter: true }); if (!window.matchMedia('(hover: none)').matches) input.focus(); return; }
       if (act === 'rm-recent') { removeRecent(id); render(); return; }
-      if (act === 'clear-recent') { writeRecent([]); render(); return; }
+      if (act === 'clear-recent') { clearRecent(); render(); return; }
       if (act === 'retry') { doSearchImpl(st.q, { force: true }); return; }
+      if (act === 'page') { loadPage(id); return; }
       if (st.q) addRecent(st.q);
       runPlay(act, id);
     }
     resultsEl.addEventListener('click', onClick);
     chipsEl.addEventListener('click', onClick);
+
+    function loadPage(type) {
+      var site = st.d && st.d.site;
+      if (!PAGE_LIST[type] || !st.q || !site) return;
+      var pg = st.pg[type] = st.pg[type] || { offset: 0 };
+      if (pg.busy || pg.more === false) return;
+      var my = st.seq;
+      pg.busy = true;
+      schedule();
+      api('/search?q=' + encodeURIComponent(st.q) + '&type=' + type + '&offset=' + pg.offset + '&limit=' + PAGE_N).then(function (d) {
+        if (my !== st.seq) return;
+        pg.busy = false;
+        var items = (d && Array.isArray(d.items)) ? d.items : [];
+        var key = PAGE_LIST[type];
+        var list = (site[key] || []).slice(), have = {}, added = 0;
+        list.forEach(function (x) { if (x && x.id) have[x.id] = 1; });
+        items.forEach(function (x) { if (x && x.id && !have[x.id]) { have[x.id] = 1; list.push(x); added++; } });
+        site[key] = list;
+        pg.offset += PAGE_N;
+        pg.more = !!(d && d.has_more) && added > 0 && pg.offset <= 500;
+        schedule();
+      }).catch(function (e) {
+        if (e && e.navAborted) return;
+        if (my !== st.seq) return;
+        pg.busy = false;
+        if (typeof wvToast === 'function') wvToast('couldnt load more', 'error');
+        schedule();
+      });
+    }
 
     function setFilter(k) {
       if (!FILTERS.some(function (f) { return f.k === k; })) k = 'all';

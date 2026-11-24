@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>what's new - wavernrs</title>
   <meta name="description" content="everything added to wavernrs lately">
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .wn { max-width: 760px; }
     .wn h1 { font-size: 28px; font-weight: 800; margin: 8px 0 4px; }
@@ -31,16 +31,16 @@
 </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 (function () {
   var feed = document.getElementById('wn-feed');
   if (!feed) { if (typeof initPlayer === 'function') initPlayer(); return; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function label(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toLowerCase(); }
+  function label(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase(); }
   fetch('/whatsnew.json', { cache: 'no-cache' }).then(function (r) { return r.json(); }).then(function (d) {
     var list = (d.entries || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
     var html = '', cur = '';
@@ -51,6 +51,7 @@
     });
     if (cur) html += '</ul></div>';
     feed.innerHTML = html || '<div class="wn-msg">nothing here yet</div>';
+    if (window.wvFooter && window.wvFooter.markSeen && list.length) window.wvFooter.markSeen(list[0].date);
   }).catch(function () { feed.innerHTML = '<div class="wn-msg">couldnt load this rn, try again in a sec</div>'; });
   try { localStorage.setItem('wv_whatsnew_seen', new Date().toISOString().slice(0, 10)); } catch (_) {}
   if (typeof initPlayer === 'function') initPlayer();

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — charts</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .ch-wrap { container-type: inline-size; container-name: ch; display: flex; flex-direction: column; min-width: 0; }
     .ch-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
@@ -227,11 +227,11 @@
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
 var CH_TABS = ['hot', 'alltime', 'new'];
 var CH_TYPES = ['edits', 'comps', 'archive'];
@@ -241,7 +241,7 @@ var CH_TYPE_LABELS = { edits: 'Edits', comps: 'Comps', archive: 'Archive' };
 var CH_PAGE = 20, CH_MAX = 50;
 var _ch = window._ch = {
   tab: 'hot', hot: null, hotState: 'loading', charts: null, chartsState: 'idle', chartsWait: null,
-  minRatings: 5, type: { alltime: 'edits', 'new': 'edits' }, sort: { alltime: 'plays', 'new': 'plays' },
+  minRatings: 2, type: { alltime: 'edits', 'new': 'edits' }, sort: { alltime: 'plays', 'new': 'plays' },
   expanded: { hot: false, alltime: false, 'new': false }, queues: { alltime: [], 'new': [] }, lists: {}, animate: true
 };
 initPlayer();
@@ -307,7 +307,7 @@ function initCharts() {
       '<div class="ch-head">' +
         '<div style="min-width:0;">' +
           '<h1 class="wv-page-title">Charts</h1>' +
-          '<p class="ch-sub">what wavernrs is actually listening to, ranked</p>' +
+          '<p class="ch-sub" id="ch-sub">what wavernrs is actually listening to, ranked</p>' +
         '</div>' +
         '<button class="ch-share" id="ch-share" type="button" data-act="share" aria-label="Copy a link to this chart">' + chIcon('link', 16) + '<span class="lbl">Copy link</span></button>' +
       '</div>' +
@@ -342,6 +342,8 @@ function chSyncTabs() {
   });
   var panel = document.getElementById('ch-panel');
   if (panel) panel.setAttribute('aria-labelledby', 'ch-tab-' + _ch.tab);
+  var sub = document.getElementById('ch-sub');
+  if (sub) sub.textContent = _ch.tab === 'hot' ? 'the most played comps on wavernrs, ranked' : 'what wavernrs is actually listening to, ranked';
 }
 
 function chSetTab(tab, focus) {
@@ -646,7 +648,7 @@ function chRenderHot(panel) {
         '</div>' +
         '<div class="ch-stats">' +
           '<div class="ch-stat"><b>' + chNum(top.plays_7d) + '</b><span>plays this week</span></div>' +
-          '<div class="ch-stat"><b>' + chNum(top.listeners_7d) + '</b><span>listeners</span></div>' +
+          '<div class="ch-stat"><b>' + chNum(chDayAvg(top)) + '</b><span>listeners a day</span></div>' +
           change +
         '</div>' +
         '<div class="ch-hero-actions">' +
@@ -665,7 +667,7 @@ function chRenderHot(panel) {
   var meta = '<div class="ch-meta">' +
     '<span class="ch-live">live</span>' +
     '<span>rolling 7 days' + (d.generated_at ? ' &middot; updated ' + chEsc(chAgo(d.generated_at)) : '') + '</span>' +
-    (tot.plays_7d ? '<span><b>' + chNum(tot.plays_7d) + '</b> plays across <b>' + chNum(d.charting || items.length) + '</b> releases this week</span>' : '') +
+    (tot.plays_7d ? '<span><b>' + chNum(tot.plays_7d) + '</b> plays across <b>' + chNum(d.charting || items.length) + '</b> comps this week</span>' : '') +
   '</div>';
 
   var rest = items.slice(1);
@@ -689,7 +691,7 @@ function chRenderHot(panel) {
       '</div>' +
       '<div class="ch-lw" title="last week">' + (it.prev_rank ? '#' + chNum(it.prev_rank) : '&ndash;') + '</div>' +
       '<div class="ch-spark">' + chSpark(it.series, 132, 34) + '</div>' +
-      '<div class="ch-metric"><b>' + chNum(it.plays_7d) + '</b><span>' + chNum(it.listeners_7d) + ' listeners</span></div>' +
+      '<div class="ch-metric"><b>' + chNum(it.plays_7d) + '</b><span>' + chNum(chDayAvg(it)) + ' a day</span></div>' +
     '</div>';
   }).join('');
 
@@ -703,6 +705,10 @@ function chRenderHot(panel) {
       rows +
     '</div>' + more;
   _ch.animate = false;
+}
+
+function chDayAvg(it) {
+  return it.listeners_day_avg != null ? it.listeners_day_avg : Math.round((it.listeners_7d || 0) / 7);
 }
 
 function chPlayHot(i) {
@@ -775,8 +781,8 @@ function chRankList(list, sort) {
 }
 
 function chMetric(t, sort) {
-  if (sort === 'liked') return '<b>' + chNum(t.like_count) + '</b><span>' + chNum(t.play_count) + ' streams</span>';
-  if (sort === 'ratings') return '<b><span class="star">★</span> ' + (t.rating_avg != null ? Number(t.rating_avg).toFixed(1) : '–') + '</b><span>' + chNum(t.rating_count) + ' ratings</span>';
+  if (sort === 'liked') return '<b>' + chNum(t.like_count) + '</b><span>' + chNum(t.play_count) + ' streams' + (t.stars > 0 ? ' · ★' + chNum(t.stars) + ' on the original post' : '') + '</span>';
+  if (sort === 'ratings') return '<b><span class="star">★</span> ' + (t.rating_avg != null ? Number(t.rating_avg).toFixed(1) : '–') + '</b><span>' + chNum(t.rating_count) + ' ratings' + (t.rating_weighted != null ? ' · score ' + Number(t.rating_weighted).toFixed(2) : '') + '</span>';
   if (sort === 'score') return '<b>' + chNum(t.wavernrs_score) + '<span class="of"> /100</span></b><span>' + chNum(t.play_count) + ' streams</span>';
   return '<b>' + chNum(t.play_count) + '</b><span>' + (t.like_count ? chNum(t.like_count) + (t.like_count === 1 ? ' like' : ' likes') : '&nbsp;') + '</span>';
 }

@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — signing in…</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
   <link rel="icon" type="image/x-icon" href="/icon.ico">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 <div class="wv-auth-page" id="auth-root">
@@ -21,7 +21,7 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
 <script>
   try {
     if (localStorage.getItem('wv_theme_dark_default') !== '1') {
@@ -33,17 +33,50 @@
   document.getElementById('auth-root').className = 'wv-auth-page theme-' + _t;
 
   var params = new URLSearchParams(location.search);
-  var token   = params.get('token');
+  var hashParams = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  var token   = hashParams.get('token') || params.get('token');
+  var isNew   = (hashParams.get('new') || params.get('new')) === '1';
   var linked  = params.get('linked');
   var errCode = params.get('error');
+  if (token) { try { history.replaceState(null, '', '/auth-callback'); } catch (_) {} }
 
   var errorMessages = {
     invalid_state:   'login took too long...try again',
     oauth_failed:    'sign in didnt work...try again',
     create_failed:   'couldnt make your account...try again',
     already_linked:  'that account is already linked to someone else',
-    not_set_up:      'reddit linking isnt set up yet',
+    not_set_up:      'last.fm linking isnt set up yet',
   };
+
+  function _nextTarget() {
+    var next = null;
+    try { next = sessionStorage.getItem('wv_next'); sessionStorage.removeItem('wv_next'); } catch (_) {}
+    if (next) {
+      try {
+        var u = new URL(next, location.origin);
+        if (u.origin === location.origin && !/^\/(login|register|auth-callback)(\.html)?$/.test(u.pathname)) return u.pathname + u.search + u.hash;
+      } catch (_) {}
+    }
+    return '/index';
+  }
+
+  function _tokenName(t) {
+    try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).username || ''; } catch (_) { return ''; }
+  }
+
+  function showNewAccount(name, target) {
+    var status = document.getElementById('cb-status');
+    status.innerHTML = '<div style="text-align:left;line-height:1.55;">we made you a new account' + (name ? ' (@' + escHtml(name) + ')' : '') +
+      '. already have a wavernrs account? log out, log in with your password and connect Discord/Google in Settings</div>' +
+      '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px;">' +
+      '<button class="wv-pill brand" id="cb-continue">Continue</button>' +
+      '<button class="wv-pill" id="cb-other">Use my other account</button></div>';
+    document.getElementById('cb-continue').onclick = function () { location.replace(target); };
+    document.getElementById('cb-other').onclick = function () {
+      try { localStorage.removeItem('token'); localStorage.removeItem('user'); } catch (_) {}
+      location.replace('/login?next=%2Fsettings');
+    };
+  }
 
   (async function () {
     if (errCode) {
@@ -56,22 +89,26 @@
     }
 
     if (linked) {
-      // Came back from a link flow — just close/redirect to settings
-      var claimed = parseInt(params.get('claimed') || '0', 10);
-      document.getElementById('cb-status').textContent = (linked === 'discord' ? 'Discord' : linked === 'reddit' ? 'Reddit' : linked === 'lastfm' ? 'Last.fm' : 'Google') + ' account linked!!' + (claimed ? ' ' + claimed + ' comp' + (claimed === 1 ? '' : 's') + ' from the archive got moved to your profile' : '');
-      setTimeout(function () { location.href = '/settings'; }, 1200);
+      document.getElementById('cb-status').textContent = (linked === 'discord' ? 'Discord' : linked === 'reddit' ? 'Reddit' : linked === 'lastfm' ? 'Last.fm' : 'Google') + ' account linked!!';
+      var dest = (linked === 'discord' || linked === 'reddit') ? '/settings#claimable-box' : '/settings';
+      setTimeout(function () { location.replace(dest); }, 1200);
       return;
     }
 
     if (token) {
       localStorage.setItem('token', token);
-      localStorage.removeItem('wv_countdown_bypass');
+      var me = null;
       try {
-        var me = await api('/auth/me');
+        me = await api('/auth/me');
         localStorage.setItem('user', JSON.stringify({ id: me.id, username: me.username }));
       } catch (_) {}
+      var target = _nextTarget();
+      if (isNew) {
+        showNewAccount((me && me.username) || _tokenName(token), target);
+        return;
+      }
       document.getElementById('cb-status').textContent = 'Signed in! Redirecting…';
-      setTimeout(function () { location.href = '/index'; }, 600);
+      setTimeout(function () { location.replace(target); }, 600);
       return;
     }
 

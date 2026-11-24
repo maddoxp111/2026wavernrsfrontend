@@ -18,8 +18,8 @@ function _clearAuthStorage() {
   localStorage.removeItem('wv_roles');
   sessionStorage.removeItem('wv_is_mod');
   sessionStorage.removeItem('wv_is_archiver');
-  sessionStorage.removeItem('wv_is_radio');
   sessionStorage.removeItem('wv_can_at');
+  sessionStorage.removeItem('wv_review_none');
   sessionStorage.removeItem('mod_reauth_ok');
 }
 
@@ -249,25 +249,6 @@ function navSearch(q) {
     doSearch(q);
   } else {
     navigate('/search?q=' + encodeURIComponent(q));
-  }
-}
-
-// Update nav based on auth state
-function updateNav() {
-  const user = getUser();
-  const navRight = document.getElementById('nav-right');
-  if (!navRight) return;
-
-  if (user) {
-    navRight.innerHTML = `
-      <a href="/dashboard" class="btn btn-ghost btn-sm">Dashboard</a>
-      <button onclick="logout()" class="btn btn-secondary btn-sm">Log out</button>
-    `;
-  } else {
-    navRight.innerHTML = `
-      <a href="/login" class="btn btn-secondary btn-sm">Log in</a>
-      <a href="/register" class="btn btn-primary btn-sm">Sign up</a>
-    `;
   }
 }
 
@@ -592,8 +573,46 @@ function archiveArtistSlug(name) {
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
     .replace(/\s+/g, ' ');
+  if (!key) key = _wvUnicodeArtistKey(name);
   return key ? key.replace(/ /g, '-') : '';
 }
+var _WV_NON_NAME = null;
+try { _WV_NON_NAME = new RegExp('[^\\p{L}\\p{N}\\p{Extended_Pictographic}]+', 'gu'); } catch (_) {}
+function _wvUnicodeArtistKey(name) {
+  if (!_WV_NON_NAME) return '';
+  var s = String(name == null ? '' : name);
+  try { s = s.normalize('NFKC'); } catch (_) {}
+  return s.toLowerCase().replace(_WV_NON_NAME, ' ').trim().replace(/\s+/g, ' ');
+}
+
+window.wvFeatNames = (function () {
+  var FEAT_RE = /(?:[(\[](?:feat\.?|ft\.?|featuring|with)|\s(?:feat\.?|ft\.?|featuring))\s+([^)\]]+)/gi;
+  var FEAT_GATE = /(\s|[(\[])(feat\.?|ft\.?|featuring)\s|[(\[]with\s/i;
+  var FEAT_SPLIT = /\s*(?:,\s*and\s+|,|&|\+|\s+x\s+|\s+and\s+|\s+_\s+|\/)\s*/i;
+  var FEAT_SKIP = /(remix|prod|version|edit|demo|remaster|intro|outro|live|bonus|instrumental)/i;
+  var ALIAS = { ye: 'kanyewest', kanye: 'kanyewest', yeezy: 'kanyewest', traviscott: 'travisscott', aaprocky: 'asaprocky', aapferg: 'asapferg', '2chains': '2chainz' };
+  function featKey(n) {
+    var k = String(n || '').replace(/\$/g, 's').replace(/&/g, 'and').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    return ALIAS[k] || k;
+  }
+  return function (title) {
+    title = String(title || '');
+    if (!FEAT_GATE.test(title)) return [];
+    var out = [], seen = {}, re = new RegExp(FEAT_RE.source, 'gi'), m;
+    while ((m = re.exec(title))) {
+      m[1].replace(/tyler,\s*the\s+creator/gi, 'Tyler The Creator').split(FEAT_SPLIT).forEach(function (raw) {
+        var x = raw.replace(/^[\s.-]+|[\s.-]+$/g, '').replace(/^(?:and|with)\s+/i, '');
+        if (/^<[@#!]/.test(x)) return;
+        if (x.length < 2 || x.length > 40 || FEAT_SKIP.test(x)) return;
+        var k = featKey(x);
+        if (!k || k === 'kanyewest' || seen[k]) return;
+        seen[k] = 1;
+        out.push({ name: x, key: k });
+      });
+    }
+    return out;
+  };
+})();
 
 // A comp made of other people's edits is a playlist: the comp stays credited to
 // whoever put it together, and each track goes to the editor named at the end of
@@ -685,51 +704,4 @@ function showAlert(containerId, message, type = 'error') {
 function clearAlert(containerId) {
   const el = document.getElementById(containerId);
   if (el) el.innerHTML = '';
-}
-
-// Load active site banners (public endpoint)
-async function loadActiveBanners() {
-  try {
-    const res = await fetch(`${API_BASE}/site/banners`);
-    if (!res.ok) return [];
-    const data = await res.json().catch(() => []);
-    return Array.isArray(data) ? data : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-// Render banners above nav
-async function renderSiteBanners() {
-  if (document.getElementById('site-banners')) return;
-  const banners = await loadActiveBanners();
-  if (!banners.length) return;
-  const container = document.createElement('div');
-  container.id = 'site-banners';
-  banners.forEach(b => {
-    const el = document.createElement('div');
-    el.className = `site-banner ${b.type || 'info'}`;
-    // Links in a banner become real links; everything else stays escaped text.
-    const esc = t => String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    el.innerHTML = esc(b.message).replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)]/g, u => `<a href="${u}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;font-weight:600;">${u.replace(/^https?:\/\/(www\.)?/, '')}</a>`);
-    container.appendChild(el);
-  });
-  document.body.insertBefore(container, document.body.firstChild);
-}
-
-// Shared nav HTML
-function renderNav(activePage = '') {
-  return `
-  <nav>
-    <a href="/index" class="nav-logo">wavernrs stream</a>
-    <div class="nav-links">
-      <a href="/index" class="${activePage === 'home' ? 'active' : ''}">Home</a>
-      <a href="/discover" class="${activePage === 'discover' ? 'active' : ''}">Discover</a>
-    </div>
-    <div style="flex:1;max-width:260px;" class="nav-search-wrap">
-      <input type="text" id="nav-search" placeholder="search edits, artists…"
-        onkeydown="if(event.key==='Enter'){const q=this.value.trim();if(q.length>=2)location.href='/search?q='+encodeURIComponent(q);}">
-    </div>
-    <div class="nav-right" id="nav-right"></div>
-  </nav>`;
 }

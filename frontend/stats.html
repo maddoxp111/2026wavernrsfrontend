@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — stats</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .st-wrap { min-width: 0; padding-bottom: 32px; }
     .st-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -30,6 +30,8 @@
     .st-kpi .d b { font-weight: 700; color: var(--text); }
     .st-up { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 5px; border-radius: var(--r-pill); font-weight: 700; font-size: 12px;
       color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+    .st-down { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: var(--r-pill); font-weight: 700; font-size: 12px;
+      color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); }
     .st-flat { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: var(--r-pill); font-weight: 700; font-size: 12px; color: var(--text-2); background: var(--surface-2); }
     .st-vs { color: var(--text-3); font-size: 11.5px; }
     .st-spark { position: absolute; right: 12px; top: 14px; width: 42%; max-width: 120px; height: 34px; pointer-events: none; }
@@ -162,7 +164,7 @@
     .st-new { display: inline-block; margin-top: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-text, var(--brand)); }
 
     #st-ye > .st-card { margin-top: 14px; }
-    .st-ye { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .st-ye { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
     .st-yt { background: var(--surface-2); border-radius: 12px; padding: 14px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 4px; min-width: 0; transition: background 140ms var(--ease); }
     .st-yt:hover { background: var(--surface-3); }
     .st-yt .ic { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--text); margin-bottom: 6px; }
@@ -248,10 +250,10 @@
     </div>
   </div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 initPlayer();
 if (typeof window.setPageWash === 'function') window.setPageWash('stats');
@@ -315,7 +317,8 @@ function stSpark(vals) {
 
 function stDelta(now, prev, unit) {
   if (now == null) return '';
-  var pill = now > 0 ? '<span class="st-up">' + ST_ICONS.up + stNum(now) + '</span>' : '<span class="st-flat">0</span>';
+  var cls = prev == null || now === prev ? 'st-flat' : (now > prev ? 'st-up' : 'st-down');
+  var pill = now > 0 ? '<span class="' + cls + '">' + (cls === 'st-up' ? ST_ICONS.up : '') + '+' + stNum(now) + '</span>' : '<span class="st-flat">0</span>';
   var vs = prev != null ? '<span class="st-vs">vs ' + stNum(prev) + ' last wk</span>' : '';
   return pill + '<span>' + (unit || 'this week') + '</span>' + vs;
 }
@@ -564,11 +567,13 @@ function stEraMode(m, btn) {
 function stYe(y) {
   var box = document.getElementById('st-ye'); if (!box || !y) return;
   var tiles = [];
-  if (y.tweets) tiles.push({ ic: ST_ICONS.chat, v: y.tweets, k: 'Tweets', d: 'every ye tweet', href: '/resources' });
-  if (y.yeezy) tiles.push({ ic: ST_ICONS.shirt, v: y.yeezy, k: 'Yeezy pieces', d: 'the full catalog', href: '/resources' });
-  if (y.disco) tiles.push({ ic: ST_ICONS.album, v: y.disco, k: 'Albums', d: stNum(y.disco_songs || 0) + ' songs with credits', href: '/resources' });
-  if (y.credits) tiles.push({ ic: ST_ICONS.people, v: y.credits, k: 'Songs with others', d: 'produced or featured', href: '/resources' });
-  if (y.tour_shows) tiles.push({ ic: ST_ICONS.mic, v: y.tour_shows, k: 'Tour shows', d: y.tour_years ? 'across ' + stNum(y.tour_years) + ' years' : 'every show we have', href: '/resources' });
+  if (y.tracker_songs) tiles.push({ ic: ST_ICONS.wave, v: y.tracker_songs, k: 'Tracker songs', d: stNum(y.tracker_eras || 0) + ' eras', href: '/resources?view=tracker' });
+  if (y.tweets) tiles.push({ ic: ST_ICONS.chat, v: y.tweets, k: 'Tweets', d: 'every ye tweet', href: '/resources?view=tweets' });
+  if (y.yeezy) tiles.push({ ic: ST_ICONS.shirt, v: y.yeezy, k: 'Yeezy pieces', d: 'the full catalog', href: '/resources?view=yeezy' });
+  if (y.instagram) tiles.push({ ic: ST_ICONS.star, v: y.instagram, k: 'Instagram posts', d: 'every ye post we have', href: '/resources?view=insta' });
+  if (y.disco) tiles.push({ ic: ST_ICONS.album, v: y.disco, k: 'Albums', d: stNum(y.disco_songs || 0) + ' songs with credits', href: '/resources?view=disco' });
+  if (y.credits) tiles.push({ ic: ST_ICONS.people, v: y.credits, k: 'Songs with others', d: 'produced or featured', href: '/resources?view=disco&sub=produced' });
+  if (y.tour_shows) tiles.push({ ic: ST_ICONS.mic, v: y.tour_shows, k: 'Tour shows', d: y.tour_years ? 'across ' + stNum(y.tour_years) + ' years' : 'every show we have', href: '/resources?view=tours' });
   if (!tiles.length) return;
   var synced = y.tweets_at ? 'tweets synced ' + stAgo(y.tweets_at) : '';
   box.innerHTML = '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/resources">The Ye archive</a></h2><p>everything we track outside the edits' + (synced ? ' · ' + stEsc(synced) : '') + '</p></div><a class="more" href="/resources">Open</a></div>' +
@@ -585,11 +590,15 @@ function stRender(d) {
   var gb = Array.isArray(d.engagement_by_week) ? d.engagement_by_week : null;
   function last12(arr, f) { return arr ? arr.slice(-12).map(f) : null; }
   var uploads = (t.edits || 0) + (t.comps || 0);
+  var hasEd = t.editors != null;
+  var edN = hasEd ? t.editors : t.artists;
+  var edNow = tw ? (hasEd ? tw.editors : tw.artists) : null;
+  var edPrev = pw ? (hasEd ? pw.editors : pw.artists) : null;
   var kpis = [
     { k: 'Plays', v: t.plays, icon: ST_ICONS.play, href: '/charts', d: uploads ? '<span>about <b>' + stNum(Math.round((t.plays || 0) / uploads)) + '</b> per upload</span>' : '<span>on every edit and comp</span>' },
-    { k: 'Edits', v: t.edits, icon: ST_ICONS.wave, href: '/browse', d: tw ? stDelta(tw.edits, pw && pw.edits) : '<span>standalone edits</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.edits || 0; })) : '' },
-    { k: 'Comps', v: t.comps, icon: ST_ICONS.disc, href: '/browse', d: tw ? stDelta(tw.comps, pw && pw.comps) : '<span>full comps</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.comps || 0; })) : '' },
-    { k: 'Editors', v: t.artists, icon: ST_ICONS.user, href: '/artists', d: tw ? stDelta(tw.artists, pw && pw.artists, 'joined') : '<span>on wavernrs</span>', spark: eb ? stSpark(last12(eb, function (r) { return r.count || 0; })) : '' },
+    { k: 'Edits', v: t.edits, icon: ST_ICONS.wave, href: '/browse?tab=edits', d: tw ? stDelta(tw.edits, pw && pw.edits) : '<span>standalone edits</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.edits || 0; })) : '' },
+    { k: 'Comps', v: t.comps, icon: ST_ICONS.disc, href: '/browse?tab=comps', d: tw ? stDelta(tw.comps, pw && pw.comps) : '<span>full comps</span>', spark: ub ? stSpark(last12(ub, function (r) { return r.comps || 0; })) : '' },
+    { k: 'Editors', v: edN, icon: ST_ICONS.user, href: '/artists', d: (tw ? stDelta(edNow, edPrev, hasEd ? 'new' : 'joined') : '') + (hasEd ? '<span class="st-vs">' + stNum(t.artists || 0) + ' members</span>' : (tw ? '' : '<span>on wavernrs</span>')), spark: eb ? stSpark(last12(eb, function (r) { return r.count || 0; })) : '' },
     { k: 'Likes', v: t.likes, icon: ST_ICONS.heart, d: tw ? stDelta(tw.likes, pw && pw.likes) : '<span>on edits and comps</span>', spark: gb ? stSpark(last12(gb, function (r) { return r.likes || 0; })) : '' },
     { k: 'Follows', v: t.follows, icon: ST_ICONS.plus, href: '/artists', d: tw ? stDelta(tw.follows, pw && pw.follows) : '<span>editors followed</span>', spark: gb ? stSpark(last12(gb, function (r) { return r.follows || 0; })) : '' },
     { k: 'Archive comps', v: t.archive_comps, icon: ST_ICONS.box, href: '/archive', d: '<span>in the yedits archive</span>' },
@@ -614,7 +623,7 @@ function stRender(d) {
     html += '<div class="st-grid2">';
     if (eb) {
       var eTot = eb.reduce(function (s, r) { return s + (r.count || 0); }, 0);
-      html += stChartCard('st-c-ed', 'New editors', stNum(eTot) + ' joined in the last ' + eb.length + ' weeks', '') ;
+      html += stChartCard('st-c-ed', 'New editors', stNum(eTot) + (hasEd ? ' started uploading' : ' joined') + ' in the last ' + eb.length + ' weeks', '') ;
     }
     if (gb) {
       var lTot = gb.reduce(function (s, r) { return s + (r.likes || 0); }, 0);
@@ -627,7 +636,7 @@ function stRender(d) {
   }
   var tc = Array.isArray(d.top_comps) ? d.top_comps.filter(function (c) { return c && c.id; }) : [];
   if (tc.length) {
-    html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/charts">Most played comps</a></h2><p>all time, by plays</p></div><a class="more" href="/charts">Charts</a></div><div class="st-comps">' +
+    html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/charts?tab=alltime&type=comps&sort=plays">Most played comps</a></h2><p>all time, by plays</p></div><a class="more" href="/charts?tab=alltime&type=comps&sort=plays">Charts</a></div><div class="st-comps">' +
       tc.slice(0, 10).map(function (c, i) {
         return '<a class="st-comp" href="/album?id=' + encodeURIComponent(c.id) + '" aria-label="#' + (i + 1) + ' ' + stEsc(c.title) + (c.artist_name ? ' by ' + stEsc(c.artist_name) : '') + ', ' + stNum(c.plays) + ' plays">' +
           '<div class="art" style="background:' + (typeof coverGradient === 'function' ? coverGradient(c.title || c.id) : 'var(--surface-2)') + '">' + (c.cover_url ? '<img src="' + stEsc(stImg(c.cover_url, 240)) + '" alt="" loading="lazy" decoding="async" onerror="this.remove()">' : '') + '<span class="rk">' + (i + 1) + '</span></div>' +
@@ -670,9 +679,10 @@ function stRender(d) {
   if (ne.length) {
     html += '<div class="st-card st-fade"><div class="st-ch"><div><h2><a href="/artists">Newest editors</a></h2><p>say hi to the latest people on wavernrs</p></div><a class="more" href="/artists">Directory</a></div><div class="st-eds">' +
       ne.slice(0, 6).map(function (a) {
-        var fresh = Date.now() - Date.parse(a.created_at) < 48 * 3600e3;
+        var at = a.first_upload_at || a.created_at;
+        var fresh = Date.now() - Date.parse(at) < 48 * 3600e3;
         return '<a class="st-ed" href="/artist?id=' + encodeURIComponent(a.id) + '">' + stAvatar(a.display_name, a.profile_image_url, 'av', 128) +
-          '<div class="nm">' + stEsc(a.display_name || 'new editor') + '</div><div class="wh">joined ' + stEsc(stAgo(a.created_at)) + '</div>' +
+          '<div class="nm">' + stEsc(a.display_name || 'new editor') + '</div><div class="wh">' + (a.first_upload_at ? 'first drop ' : 'joined ') + stEsc(stAgo(at)) + '</div>' +
           (fresh ? '<span class="st-new">new</span>' : (a.uploads ? '<span class="wh">' + stNum(a.uploads) + ' uploads</span>' : '')) + '</a>';
       }).join('') + '</div></div>';
   }
@@ -691,7 +701,7 @@ function stRender(d) {
     c1.setAttribute('aria-label', 'Uploads per week chart. Use left and right arrow keys to read each week.');
     stColumns(c1, { rows: ub, keys: [{ k: 'comps', label: 'comps' }, { k: 'edits', label: 'edits' }], h: 230, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } });
   }
-  if (eb) { var c2 = document.getElementById('st-c-ed'); if (c2) { c2.setAttribute('aria-label', 'New editors per week chart'); stColumns(c2, { rows: eb, keys: [{ k: 'count', label: 'joined' }], h: 170, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } }); } }
+  if (eb) { var c2 = document.getElementById('st-c-ed'); if (c2) { c2.setAttribute('aria-label', 'New editors per week chart'); stColumns(c2, { rows: eb, keys: [{ k: 'count', label: hasEd ? 'started uploading' : 'joined' }], h: 170, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } }); } }
   if (gb) { var c3 = document.getElementById('st-c-lk'); if (c3) { c3.setAttribute('aria-label', 'Likes per week chart'); stColumns(c3, { rows: gb, keys: [{ k: 'likes', label: 'likes' }], h: 170, titleFor: function (r) { return 'week of ' + stWeekLabel(r.week); } }); } }
   stWireHeat(el);
   if (window._stState.ye) stYe(window._stState.ye);

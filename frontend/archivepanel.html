@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive panel</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
   <style>
     /* Narrow screens: the source cards (Discord servers, subreddits, MEGA
        jobs) put name + chips on the left and the big count on the right.
@@ -17,8 +17,8 @@
       #view h1 { font-size: 30px !important; }
     }
   </style>
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="cr-style">
     #cr-card .cr-sub { font-size: 12px; color: var(--text-3); line-height: 1.55; }
     #cr-card .cr-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0 14px; }
@@ -278,10 +278,10 @@
   <div class="loading"><div class="spinner"></div></div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -295,7 +295,7 @@
     })
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        if (!d || !d.is_archiver) {
+        if (!d || !(d.is_archiver || d.is_mod)) {
           document.getElementById('view').innerHTML =
             '<div style="padding:48px 24px;text-align:center;">' +
             '<div style="font-size:18px;font-weight:700;color:var(--red);margin-bottom:8px;">Access denied</div>' +
@@ -316,9 +316,21 @@
     document.getElementById('view').innerHTML =
       '<div style="max-width:720px;">' +
         '<h1 style="font-size:28px;font-weight:800;margin:0 0 4px;">Archive Panel</h1>' +
-        '<p style="font-size:14px;color:var(--text-2);margin:0 0 28px;line-height:1.55;">upload archive comps here...good stuff by artists who arent on wavernrs, saved so it doesnt get lost.</p>' +
+        '<p style="font-size:14px;color:var(--text-2);margin:0 0 16px;line-height:1.55;">upload archive comps here...good stuff by artists who arent on wavernrs, saved so it doesnt get lost.</p>' +
 
-        '<div class="wv-card" style="padding:18px 22px;margin-bottom:16px;">' +
+        '<div id="arc-jump" class="no-scrollbar" style="position:sticky;top:0;z-index:6;display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;padding:8px 0;margin:0 0 16px;background:color-mix(in srgb, var(--page-bg-base) 88%, transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);">' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-claims-card\')">Claims</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-manage-card\')">Manage</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-ov-card\')">Imports</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-upload-card\')">Upload</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-mega-card\')">MEGA</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-reddit-card\')">Reddit</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-discord-card\')">Discord</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'cr-card\')">Credit rules</button>' +
+          '<button type="button" class="wv-chip" style="border:0;cursor:pointer;font-family:inherit;font-size:12px;padding:5px 11px;" onclick="arcJump(\'arc-audit-card\')">Audit</button>' +
+        '</div>' +
+
+        '<div class="wv-card" id="arc-ov-card" style="padding:18px 22px;margin-bottom:16px;">' +
           '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;">' +
             '<div><div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);">Everything left to import</div>' +
             '<div id="ov-total" style="font-size:38px;font-weight:900;letter-spacing:-.03em;line-height:1.05;">…</div>' +
@@ -368,7 +380,7 @@
           '<div id="ov-recent" style="display:flex;flex-direction:column;gap:4px;">…</div>' +
         '</div>' +
 
-        '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
+        '<div class="wv-card" id="arc-upload-card" style="padding:20px 24px;margin-bottom:20px;border-left:4px solid var(--purple);">' +
           '<div style="font-size:13px;font-weight:700;color:var(--purple-light);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Archive uploads</div>' +
           '<p style="margin:0;font-size:14px;color:var(--text-2);line-height:1.6;">' +
             'archive comps are comps by artists who are <strong style="color:var(--text-1);">not on the site</strong> but are too good to lose. ' +
@@ -396,7 +408,7 @@
           '<div style="font-size:14px;font-weight:700;margin-bottom:10px;">Manual upload</div>' +
           '<div class="wv-form-field" style="margin-bottom:10px;">' +
             '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Comp title *</label>' +
-            '<input type="text" id="arc-title" class="wv-input" placeholder="Comp name" style="max-width:400px;">' +
+            '<input type="text" id="arc-title" class="wv-input" placeholder="Comp name" style="max-width:400px;" oninput="_arcUpReset()">' +
           '</div>' +
           '<div class="wv-form-field" style="margin-bottom:10px;">' +
             '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label>' +
@@ -408,7 +420,7 @@
           '</div>' +
           '<div class="wv-form-field" style="margin-bottom:12px;">' +
             '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Audio files *</label>' +
-            '<input type="file" id="arc-files" accept="audio/*" multiple class="wv-input" style="padding:8px 12px;max-width:400px;" onchange="arcRenderQueue()">' +
+            '<input type="file" id="arc-files" accept="audio/*" multiple class="wv-input" style="padding:8px 12px;max-width:400px;" onchange="_arcUpReset();arcRenderQueue()">' +
           '</div>' +
           '<div id="arc-queue" style="margin-bottom:14px;"></div>' +
           '<button class="wv-pill brand" id="arc-upload-btn" onclick="startArchiveUpload()">Upload Archive Comp</button>' +
@@ -426,7 +438,7 @@
           '<div id="arc-bulk-status" style="margin-top:12px;font-size:13px;display:none;"></div>' +
         '</div>' +
 
-        '<div class="wv-card" style="padding:20px 24px;margin-top:20px;border-left:4px solid var(--purple);">' +
+        '<div class="wv-card" id="arc-mega-card" style="padding:20px 24px;margin-top:20px;border-left:4px solid var(--purple);">' +
           '<div style="font-size:14px;font-weight:700;margin-bottom:6px;">MEGA folder bulk import</div>' +
           '<div style="font-size:12px;color:var(--text-3);margin-bottom:14px;">' +
             'paste a <b>main MEGA folder</b> where each folder inside it is one comp. ' +
@@ -455,7 +467,7 @@
         '<div class="wv-card" style="padding:20px 24px;margin-bottom:20px;" id="arc-mega-jobs-card">' +
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">' +
             '<div><div style="font-size:14px;font-weight:700;">MEGA imports in progress</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">every bulk MEGA run on the server, live...refreshes every 5 seconds</div></div>' +
+            '<div style="font-size:12px;color:var(--text-3);">every bulk MEGA run on the server, live...refreshes every 10 seconds</div></div>' +
             '<span id="mj-summary" class="wv-chip">…</span>' +
           '</div>' +
           '<div id="mj-list" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
@@ -522,7 +534,7 @@
             '<div id="mg-bulk" style="display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;padding:8px 12px;background:var(--surface-2);border-radius:var(--r-md);font-size:12.5px;">' +
               '<b id="mg-selcount">0 selected</b>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulk(\'set_artist\')">Set artist name</button>' +
-              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkProfile()">Move to profile</button>' +
+              '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkProfile(this)">Move to profile</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;" onclick="mgBulkMerge()">Merge into one</button>' +
               '<button class="wv-pill" style="font-size:12px;padding:4px 10px;color:var(--red);" onclick="mgBulk(\'delete\')">Delete</button>' +
               '<button class="wv-see-all" onclick="mgClearSel()">Clear</button>' +
@@ -559,6 +571,10 @@
           '</div>' +
           '<div id="mg-deleted" style="display:none;">' +
             '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">comps that got deleted from the site. the last 60 stay in the recycle bin and come back right away. anything older can be pulled from the nightly backups, likes and comments too.</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12.5px;">' +
+              '<span id="mg-backup-status" style="color:var(--text-3);">checking the backups…</span>' +
+              '<button class="wv-pill" id="mg-backup-btn" style="font-size:12px;padding:5px 12px;" onclick="mgBackupNow()">Back up now</button>' +
+            '</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">' +
               '<input id="mg-restore-id" class="wv-input" placeholder="paste the link or ID of a deleted comp..." style="flex:1;min-width:240px;padding:8px 12px;font-size:13px;">' +
               '<button class="wv-pill brand" style="font-size:12.5px;padding:7px 14px;" onclick="mgRestore()">Restore</button>' +
@@ -584,11 +600,14 @@
               '<div style="font-size:12px;color:var(--text-3);margin-bottom:12px;">the picture and description each tracker shows on the archive page. for the cover upload a file or paste an image link...either way we save our own copy so it wont break later.</div>' +
               '<div id="mg-tcovers" style="display:flex;flex-direction:column;gap:10px;"><div class="loading"><div class="spinner"></div></div></div>' +
             '</div>' +
-            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">tracker comps that dont have an album on the site yet. search for the right comp and hit Match...the album gets the title and creator name from the tracker plus the tracker badge. if the comp is on its own creators profile it stays there. if someone else claimed it, it goes back to the archive.</div>' +
+            '<div style="font-size:12px;color:var(--text-3);margin-bottom:10px;">tracker comps that dont have an album on the site yet. pick one of the suggestions or search for the right comp and hit Match...the album gets the tracker badge. tick the box below to also rename it to the title and creator from the tracker (then if the comp is on its own creators profile it stays there, and if someone else claimed it, it goes back to the archive). <b>Not on the site</b> takes it off this list. sure matches also get linked on their own every few hours.</div>' +
             '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">' +
               '<input id="mg-tq" class="wv-input" placeholder="filter tracker entries..." style="flex:1;min-width:200px;max-width:380px;padding:8px 12px;font-size:13.5px;" oninput="mgTrackersRender()">' +
+              '<button class="wv-pill brand" id="mg-tauto" style="font-size:12.5px;padding:7px 14px;" onclick="mgTrackerAuto(this)">Match the sure ones</button>' +
+              '<button class="wv-pill" style="font-size:12.5px;padding:7px 14px;" onclick="mgTrackerImport(null, this)">Import everything with a link</button>' +
               '<span id="mg-tcount" style="font-size:12px;color:var(--text-3);"></span>' +
             '</div>' +
+            '<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--text-2);margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="mg-trename" style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> rename the comp to the tracker title and creator</label>' +
             '<div id="mg-tlist" style="display:flex;flex-direction:column;gap:6px;"></div>' +
           '</div>' +
           '<div id="mg-otw" style="display:none;">' +
@@ -638,6 +657,8 @@
     })();
     if (typeof window.crInit === 'function') window.crInit();
     if (typeof window.qcInit === 'function') window.qcInit();
+    if (typeof window.mgLoad === 'function') window.mgLoad();
+    dcSweepPoll();
 
     arcBulkAddRow();
     arcBulkAddRow();
@@ -655,6 +676,13 @@
     if (!window._dcPoll) window._dcPoll = setInterval(apPoll('dc', 'dc-servers', function() { dcLoad(true); }), 60000);
   }
 
+  window.arcJump = function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.scrollMarginTop = '60px';
+    el.scrollIntoView({ behavior: 'smooth' });
+  };
+
   // ── MEGA bulk imports (live) ─────────────────────────────────────────────
   function _mjAgo(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return Math.floor(d) + 's ago'; if (d < 3600) return Math.floor(d / 60) + 'm ago'; return Math.floor(d / 3600) + 'h ' + Math.floor((d % 3600) / 60) + 'm ago'; }
   function _mjDur(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; return d < 3600 ? Math.floor(d / 60) + ' min' : Math.floor(d / 3600) + 'h ' + Math.floor((d % 3600) / 60) + 'm'; }
@@ -670,7 +698,7 @@
         sum.textContent = live.length ? live.length + ' running · ' + done + ' / ' + tot + ' comps' : 'nothing running';
         sum.className = 'wv-chip ' + (live.length ? 'acc' : '');
       }
-      if (!jobs.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">no MEGA bulk import has run since the server last restarted...start one from the "Bulk MEGA folder" section above</div>'; return; }
+      if (!jobs.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">no MEGA bulk import has run since the server last restarted...start one from "MEGA folder bulk import" above</div>'; return; }
       el.innerHTML = jobs.slice(0, 12).map(function(j) {
         var pct = j.total ? Math.round(((j.done || 0) + (j.failed || 0)) / j.total * 100) : 0;
         var tp = j.progress && j.progress.n ? Math.round(j.progress.i / j.progress.n * 100) : 0;
@@ -700,7 +728,7 @@
   // ── Overview + Reddit ───────────────────────────────────────────────────
   function _rate(d, n, unit) { return (!n && d.measuring) ? 'measuring (just restarted)' : n + ' ' + unit + '/min'; }
   function _fmtEta(min) { if (min == null) return 'estimating'; if (min < 1) return 'under a minute'; if (min < 60) return '~' + min + ' min'; var h = Math.floor(min / 60), m = min % 60; return '~' + h + 'h ' + (m ? m + 'm' : ''); }
-  var LABEL = { rvideo: 'Reddit videos', dfiles: 'Discord files', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA folders', megafile: 'MEGA files', megaedit: 'MEGA edits', megafolder: 'MEGA comps', pillow: 'Pillows', gofile: 'gofile', gdrive: 'Google Drive', other: 'Other' };
+  var LABEL = { rvideo: 'Reddit videos', dfiles: 'Discord files', untitled: 'untitled.stream', samply: 'Samply', mega: 'MEGA folders', megafile: 'MEGA files', megaedit: 'MEGA edits', megafolder: 'MEGA comps', pillow: 'Pillows', pixeldrain: 'pixeldrain', igg: 'imgur.gg', dpairs: 'Discord pairs', gofile: 'gofile', gdrive: 'Google Drive', other: 'Other' };
   function _n(v) { return (v || 0).toLocaleString(); }
   function _finishAt(min) {
     if (min == null || min <= 0) return '';
@@ -728,7 +756,7 @@
       set('ov-eta', d.total_remaining
         ? (d.eta_min ? _fmtEta(d.eta_min).replace('~', 'about ') + ' left · ' + _finishAt(d.eta_min) : 'still figuring out the speed')
         : 'everything in the queue is imported');
-      set('ov-live', '<b>' + _n(l.done_last_5m + (m.done_last_5m || 0) + (e.done_last_5m || 0)) + '</b> in the last 5 min · <b>' + _n(l.done_last_30m + (m.done_last_30m || 0) + (e.done_last_30m || 0)) + '</b> in 30 min · <b>' + _n(l.done_last_24h + (m.done_last_3h || 0) + (e.done_last_24h || 0)) + '</b> in 24h');
+      set('ov-live', '<b>' + _n(l.done_last_5m + (m.done_last_5m || 0) + (e.done_last_5m || 0)) + '</b> in the last 5 min · <b>' + _n(l.done_last_30m + (m.done_last_30m || 0) + (e.done_last_30m || 0)) + '</b> in 30 min · <b>' + _n((l.done_last_24h || 0) + (m.done_last_24h || 0) + (e.done_last_24h || 0)) + '</b> in 24h');
       set('ov-tracked', _n(arc.albums) + ' comps and ' + _n(arc.tracks) + ' tracks in the archive · ' + _n(arc.edits) + ' MEGA edits · ' + _n(arc.mega_comps) + ' MEGA comps · server up ' + Math.floor((d.uptime_sec || 0) / 3600) + 'h ' + Math.floor(((d.uptime_sec || 0) % 3600) / 60) + 'm');
 
       var bars = [];
@@ -812,7 +840,10 @@
           '<span style="color:var(--text-3);font-size:12px;">' + (x.since ? 'running ' + _mjDur(x.since) : '') + (x.last ? ' · ' + escHtml(String(x.last).slice(0, 90)) + (x.last_at ? ' (' + _mjAgo(x.last_at) + ')' : '') : '') + '</span></div>';
       });
       set('ov-now', rows.length ? rows.join('') + (now.fast_path ? '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">untitled.stream fast path: ' + now.fast_path.hits + ' direct · ' + now.fast_path.misses + ' via browser</div>' : '') : '<span style="color:var(--text-3);">nothing going rn</span>');
-    } catch (err) {}
+    } catch (err) {
+      var ovEta = document.getElementById('ov-eta');
+      if (ovEta) ovEta.innerHTML = '<span style="color:var(--red);">couldnt load the import stats: ' + escHtml(err.message || String(err)) + '</span>';
+    }
   };
   window.rdLoad = async function(quiet) {
     var el = document.getElementById('rd-list'); if (!el) return;
@@ -948,16 +979,17 @@
       var rows = d.log || [];
       if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">nothing here</div>'; return; }
       el.innerHTML = rows.map(function(r) {
-        var col = { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
+        var empty = r.status === 'done' && !r.imported_count;
+        var col = empty ? 'bad' : { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
         var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
         return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
-          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(r.status) + '</span>' +
+          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(empty ? '0 tracks' : r.status) + '</span>' +
           '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
           '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
             '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
           (r.album_id ? '<a class="wv-see-all" href="/album?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
+          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
+          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
           '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
         '</div>';
       }).join('');
@@ -989,7 +1021,6 @@
     if (st.status === 'running') _sweepTimer = setTimeout(dcSweepPoll, 4000);
     else dcLoad();
   }
-  dcSweepPoll();
   window.dcDel = async function(id) { if (!confirm('remove this log entry? if the link gets posted again itll get imported like its new')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
 
   // ── Audit ────────────────────────────────────────────────────────────────
@@ -1000,448 +1031,9 @@
     var out = document.getElementById('arc-audit-out'); out.innerHTML = '';
     try {
       var d = await api('/archive/audit');
-      var bad = d.comps.filter(function(c) { return c.issues.length; });
-      _auditIssueIds = bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
-      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues', d.with_issues ? 'var(--orange)' : 'var(--green)');
-      document.getElementById('arc-fix-dupes-btn').style.display = _auditIssueIds.length ? '' : 'none';
-      if (!bad.length) { out.innerHTML = '<div style="font-size:13px;color:var(--green);">everything looks good</div>'; return; }
-      out.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
-        Object.keys(d.counts).map(function(k) { return '<span class="wv-chip">' + escHtml(ISSUE_LABEL[k] || k) + ' ' + d.counts[k] + '</span>'; }).join('') + '</div>' +
-        '<div style="max-height:420px;overflow:auto;">' + bad.map(function(c) {
-          return '<div style="padding:9px 0;border-top:1px solid var(--hair);font-size:13px;">' +
-            '<a href="/album?id=' + escHtml(c.id) + '" style="font-weight:700;">' + escHtml(c.title || 'Untitled') + '</a>' +
-            '<span style="color:var(--text-3);"> · ' + escHtml(c.artist || 'no artist') + ' · ' + c.track_count + ' tracks</span>' +
-            '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">' + c.issues.map(function(i) { return '<span class="wv-chip warn">' + escHtml(ISSUE_LABEL[i] || i) + '</span>'; }).join('') + '</div>' +
-            (c.duplicates.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Dupes: ' + c.duplicates.map(function(x) { return escHtml(x.title); }).join(', ') + '</div>' : '') +
-            (c.missing_audio.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">No audio: ' + c.missing_audio.map(escHtml).join(', ') + '</div>' : '') +
-          '</div>';
-        }).join('') + '</div>';
-    } catch (e) { _arcStatus('arc-audit-status', 'Audit failed: ' + (e.message || e), 'var(--red)'); }
-  };
-  window.fixArchiveDuplicates = async function() {
-    if (!_auditIssueIds.length) return;
-    if (!confirm('delete the duplicate copies in ' + _auditIssueIds.length + ' comp(s)? the first copy of each track stays')) return;
-    try {
-      var r = await api('/archive/audit/fix-duplicates', { method: 'POST', body: JSON.stringify({ album_ids: _auditIssueIds }) });
-      _arcStatus('arc-audit-status', 'Deleted ' + r.deleted + ' duplicate track(s)...running the audit again', 'var(--green)');
-      runArchiveAudit();
-    } catch (e) { _arcStatus('arc-audit-status', 'Fix failed: ' + (e.message || e), 'var(--red)'); }
-  };
-
-  // ── Discord servers panel ────────────────────────────────────────────────
-  var _dc = { guild: null, status: '', q: '', data: null };
-  function _dcTime(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return 'just now'; if (d < 3600) return Math.floor(d / 60) + 'm ago'; if (d < 86400) return Math.floor(d / 3600) + 'h ago'; return Math.floor(d / 86400) + 'd ago'; }
-  function _pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
-  window.dcLoad = async function(quiet) {
-    try {
-      var d = await api('/discord/servers');
-      _dc.data = d;
-      var st = document.getElementById('dc-bot-state');
-      if (st) { st.textContent = d.online ? 'Online · ' + (d.bot || 'bot') : 'Bot offline'; st.className = 'wv-chip ' + (d.online ? 'ok' : 'bad'); }
-      var q = d.queue || {};
-      var qEl = document.getElementById('dc-queue');
-      if (qEl) qEl.innerHTML = (q.stopped ? '<span class="wv-chip bad">Queue stopped</span> ' : '') +
-        (q.currentSourceUrl ? 'Importing now: <a href="' + escHtml(q.currentSourceUrl) + '" target="_blank" rel="noopener">' + escHtml(q.currentSourceUrl.replace(/^https?:\/\//, '')) + '</a> · ' : 'Idle · ') +
-        (q.queueLength || 0) + ' waiting';
-      dcRenderServers(d.guilds || []);
-      if (_dc.guild) dcLoadLog();
-    } catch (e) { if (!quiet) { var el = document.getElementById('dc-servers'); if (el) el.innerHTML = '<div style="font-size:13px;color:var(--red);">couldnt load: ' + escHtml(e.message || e) + '</div>'; } }
-  };
-  function dcRenderServers(guilds) {
-    var el = document.getElementById('dc-servers'); if (!el) return;
-    if (!guilds.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">the bot isnt in any server yet</div>'; return; }
-    el.innerHTML = guilds.map(function(g) {
-      var c = g.counts || {};
-      var sc = g.scan;
-      var scanHtml = '';
-      if (sc && sc.status === 'running') {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Scanning history · ' + sc.channelsDone + '/' + sc.channelsTotal + ' channels · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.currentChannel ? ' · ' + escHtml(sc.currentChannel) : '') + '</div>' +
-          '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden;"><div style="height:100%;width:' + _pct(sc.channelsDone, sc.channelsTotal) + '%;background:var(--brand);"></div></div>';
-      } else if (sc) {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-3);">Last scan ' + escHtml(sc.status) + ' ' + _dcTime(sc.finishedAt) + ' · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.channelsSkipped ? ' · ' + sc.channelsSkipped + ' unreadable channels' : '') + '</div>';
-      }
-      var perm = g.gone ? '<span class="wv-chip">Bot removed</span>'
-        : g.read_only ? '<span class="wv-chip ok">Read-only ✓</span>'
-        : g.can_send ? '<span class="wv-chip warn">Can send messages</span>' : '<span class="wv-chip warn">Limited access</span>';
-      var watch = g.gone ? '' : (g.watched ? '<span class="wv-chip acc">Watching all channels</span>' : (g.channel_rows ? '<span class="wv-chip">Watching ' + g.channel_rows + ' channel(s)</span>' : '<span class="wv-chip bad">Paused</span>'));
-      var pct = c.total ? _pct(c.done, c.total) : 0;
-      return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
-        '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:44px;height:44px;border-radius:12px;background:var(--surface-3);overflow:hidden;flex-shrink:0;display:grid;place-items:center;font-weight:800;">' + (g.icon ? '<img src="' + escHtml(g.icon) + '" style="width:100%;height:100%;object-fit:cover;">' : escHtml((g.name || '?').charAt(0))) + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(g.name) + '</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">' + (g.member_count ? g.member_count.toLocaleString() + ' members · ' : '') + (g.channels_readable != null ? g.channels_readable + '/' + g.channels_total + ' channels readable · ' : '') + (g.joined_at ? 'joined ' + _dcTime(g.joined_at) : '') + '</div>' +
-            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' + perm + watch + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;flex-shrink:0;">' +
-            '<div style="font-size:22px;font-weight:900;letter-spacing:-.02em;">' + (c.done || 0) + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> / ' + (c.total || 0) + '</span></div>' +
-            '<div style="font-size:11px;color:var(--text-3);">comps imported · ' + (c.tracks || 0) + ' tracks</div>' +
-          '</div>' +
-        '</div>' +
-        (c.total ? '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:10px;overflow:hidden;display:flex;"><div style="width:' + _pct(c.done, c.total) + '%;background:var(--green);"></div><div style="width:' + _pct(c.running + c.queued, c.total) + '%;background:var(--brand);"></div><div style="width:' + _pct(c.failed, c.total) + '%;background:var(--red);"></div></div>' +
-          '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">' + (c.done || 0) + ' done · ' + ((c.queued || 0) + (c.running || 0)) + ' pending · ' + (c.failed || 0) + ' failed' + (c.deleted ? ' · ' + c.deleted + ' removed' : '') + '</div>' : '') +
-        scanHtml +
-        (g.gone ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
-          (sc && sc.status === 'running'
-            ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
-            : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
-          (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
-                     : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="checks each failed link...the ones that still load get queued again and the rest get marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
-        '</div>') +
-      '</div>';
-    }).join('');
-  }
-  window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
-    catch (e) { alert(e.message || 'Failed'); }
-  };
-  window.dcLeave = async function(gid, name) {
-    if (!confirm('leave "' + name + '"? the bot stops reading it but imported comps stay')) return;
-    dcAct(gid, 'leave');
-  };
-  window.dcGlobal = async function(a) { try { await api('/discord/' + a, { method: 'POST' }); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcShowLog = function(gid, name) {
-    _dc.guild = gid || '*'; document.getElementById('dc-log-wrap').style.display = '';
-    document.getElementById('dc-log-title').textContent = 'Imports from ' + name;
-    dcLoadLog(); if (_dc.data) dcRenderServers(_dc.data.guilds || []);
-    document.getElementById('dc-log-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-  window.dcFilter = function(s) { _dc.status = s; document.querySelectorAll('#dc-log-filter button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); }); dcLoadLog(); };
-  var _dcT = null; window.dcLogDebounce = function() { clearTimeout(_dcT); _dcT = setTimeout(function() { _dc.q = document.getElementById('dc-log-q').value.trim(); dcLoadLog(); }, 300); };
-  async function dcLoadLog() {
-    var el = document.getElementById('dc-log'); if (!el || !_dc.guild) return;
-    try {
-      var d = await api('/discord/active-jobs?limit=300' + (_dc.guild !== '*' ? '&guild=' + encodeURIComponent(_dc.guild) : '') + (_dc.status ? '&status=' + _dc.status : '') + (_dc.q ? '&q=' + encodeURIComponent(_dc.q) : ''));
-      var rows = d.log || [];
-      if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">nothing here</div>'; return; }
-      el.innerHTML = rows.map(function(r) {
-        var col = { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
-        var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
-        return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
-          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(r.status) + '</span>' +
-          '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
-          '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
-            '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
-          (r.album_id ? '<a class="wv-see-all" href="/album?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
-          '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
-        '</div>';
-      }).join('');
-    } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
-  }
-  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcDel = async function(id) { if (!confirm('remove this log entry? if the link gets posted again itll get imported like its new')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-
-  // ── Audit ────────────────────────────────────────────────────────────────
-  var _auditIssueIds = [];
-  var ISSUE_LABEL = { empty: 'Empty comp', duplicate_tracks: 'Duplicate tracks', missing_audio: 'Missing audio', no_cover: 'No cover', no_artist: 'No artist', artist_looks_like_format: 'Artist looks like a format tag', title_needs_cleanup: 'Title needs cleanup', untitled_tracks: 'Untitled tracks' };
-  window.runArchiveAudit = async function() {
-    _arcStatus('arc-audit-status', 'scanning every archive comp...');
-    var out = document.getElementById('arc-audit-out'); out.innerHTML = '';
-    try {
-      var d = await api('/archive/audit');
-      var bad = d.comps.filter(function(c) { return c.issues.length; });
-      _auditIssueIds = bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
-      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues', d.with_issues ? 'var(--orange)' : 'var(--green)');
-      document.getElementById('arc-fix-dupes-btn').style.display = _auditIssueIds.length ? '' : 'none';
-      if (!bad.length) { out.innerHTML = '<div style="font-size:13px;color:var(--green);">everything looks good</div>'; return; }
-      out.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
-        Object.keys(d.counts).map(function(k) { return '<span class="wv-chip">' + escHtml(ISSUE_LABEL[k] || k) + ' ' + d.counts[k] + '</span>'; }).join('') + '</div>' +
-        '<div style="max-height:420px;overflow:auto;">' + bad.map(function(c) {
-          return '<div style="padding:9px 0;border-top:1px solid var(--hair);font-size:13px;">' +
-            '<a href="/album?id=' + escHtml(c.id) + '" style="font-weight:700;">' + escHtml(c.title || 'Untitled') + '</a>' +
-            '<span style="color:var(--text-3);"> · ' + escHtml(c.artist || 'no artist') + ' · ' + c.track_count + ' tracks</span>' +
-            '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">' + c.issues.map(function(i) { return '<span class="wv-chip warn">' + escHtml(ISSUE_LABEL[i] || i) + '</span>'; }).join('') + '</div>' +
-            (c.duplicates.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Dupes: ' + c.duplicates.map(function(x) { return escHtml(x.title); }).join(', ') + '</div>' : '') +
-            (c.missing_audio.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">No audio: ' + c.missing_audio.map(escHtml).join(', ') + '</div>' : '') +
-          '</div>';
-        }).join('') + '</div>';
-    } catch (e) { _arcStatus('arc-audit-status', 'Audit failed: ' + (e.message || e), 'var(--red)'); }
-  };
-  window.fixArchiveDuplicates = async function() {
-    if (!_auditIssueIds.length) return;
-    if (!confirm('delete the duplicate copies in ' + _auditIssueIds.length + ' comp(s)? the first copy of each track stays')) return;
-    try {
-      var r = await api('/archive/audit/fix-duplicates', { method: 'POST', body: JSON.stringify({ album_ids: _auditIssueIds }) });
-      _arcStatus('arc-audit-status', 'Deleted ' + r.deleted + ' duplicate track(s)...running the audit again', 'var(--green)');
-      runArchiveAudit();
-    } catch (e) { _arcStatus('arc-audit-status', 'Fix failed: ' + (e.message || e), 'var(--red)'); }
-  };
-
-  // ── Discord servers panel ────────────────────────────────────────────────
-  var _dc = { guild: null, status: '', q: '', data: null };
-  function _dcTime(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return 'just now'; if (d < 3600) return Math.floor(d / 60) + 'm ago'; if (d < 86400) return Math.floor(d / 3600) + 'h ago'; return Math.floor(d / 86400) + 'd ago'; }
-  function _pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
-  window.dcLoad = async function(quiet) {
-    try {
-      var d = await api('/discord/servers');
-      _dc.data = d;
-      var st = document.getElementById('dc-bot-state');
-      if (st) { st.textContent = d.online ? 'Online · ' + (d.bot || 'bot') : 'Bot offline'; st.className = 'wv-chip ' + (d.online ? 'ok' : 'bad'); }
-      var q = d.queue || {};
-      var qEl = document.getElementById('dc-queue');
-      if (qEl) qEl.innerHTML = (q.stopped ? '<span class="wv-chip bad">Queue stopped</span> ' : '') +
-        (q.currentSourceUrl ? 'Importing now: <a href="' + escHtml(q.currentSourceUrl) + '" target="_blank" rel="noopener">' + escHtml(q.currentSourceUrl.replace(/^https?:\/\//, '')) + '</a> · ' : 'Idle · ') +
-        (q.queueLength || 0) + ' waiting';
-      dcRenderServers(d.guilds || []);
-      if (_dc.guild) dcLoadLog();
-    } catch (e) { if (!quiet) { var el = document.getElementById('dc-servers'); if (el) el.innerHTML = '<div style="font-size:13px;color:var(--red);">couldnt load: ' + escHtml(e.message || e) + '</div>'; } }
-  };
-  function dcRenderServers(guilds) {
-    var el = document.getElementById('dc-servers'); if (!el) return;
-    if (!guilds.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">the bot isnt in any server yet</div>'; return; }
-    el.innerHTML = guilds.map(function(g) {
-      var c = g.counts || {};
-      var sc = g.scan;
-      var scanHtml = '';
-      if (sc && sc.status === 'running') {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Scanning history · ' + sc.channelsDone + '/' + sc.channelsTotal + ' channels · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.currentChannel ? ' · ' + escHtml(sc.currentChannel) : '') + '</div>' +
-          '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden;"><div style="height:100%;width:' + _pct(sc.channelsDone, sc.channelsTotal) + '%;background:var(--brand);"></div></div>';
-      } else if (sc) {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-3);">Last scan ' + escHtml(sc.status) + ' ' + _dcTime(sc.finishedAt) + ' · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.channelsSkipped ? ' · ' + sc.channelsSkipped + ' unreadable channels' : '') + '</div>';
-      }
-      var perm = g.gone ? '<span class="wv-chip">Bot removed</span>'
-        : g.read_only ? '<span class="wv-chip ok">Read-only ✓</span>'
-        : g.can_send ? '<span class="wv-chip warn">Can send messages</span>' : '<span class="wv-chip warn">Limited access</span>';
-      var watch = g.gone ? '' : (g.watched ? '<span class="wv-chip acc">Watching all channels</span>' : (g.channel_rows ? '<span class="wv-chip">Watching ' + g.channel_rows + ' channel(s)</span>' : '<span class="wv-chip bad">Paused</span>'));
-      var pct = c.total ? _pct(c.done, c.total) : 0;
-      return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
-        '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:44px;height:44px;border-radius:12px;background:var(--surface-3);overflow:hidden;flex-shrink:0;display:grid;place-items:center;font-weight:800;">' + (g.icon ? '<img src="' + escHtml(g.icon) + '" style="width:100%;height:100%;object-fit:cover;">' : escHtml((g.name || '?').charAt(0))) + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(g.name) + '</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">' + (g.member_count ? g.member_count.toLocaleString() + ' members · ' : '') + (g.channels_readable != null ? g.channels_readable + '/' + g.channels_total + ' channels readable · ' : '') + (g.joined_at ? 'joined ' + _dcTime(g.joined_at) : '') + '</div>' +
-            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' + perm + watch + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;flex-shrink:0;">' +
-            '<div style="font-size:22px;font-weight:900;letter-spacing:-.02em;">' + (c.done || 0) + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> / ' + (c.total || 0) + '</span></div>' +
-            '<div style="font-size:11px;color:var(--text-3);">comps imported · ' + (c.tracks || 0) + ' tracks</div>' +
-          '</div>' +
-        '</div>' +
-        (c.total ? '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:10px;overflow:hidden;display:flex;"><div style="width:' + _pct(c.done, c.total) + '%;background:var(--green);"></div><div style="width:' + _pct(c.running + c.queued, c.total) + '%;background:var(--brand);"></div><div style="width:' + _pct(c.failed, c.total) + '%;background:var(--red);"></div></div>' +
-          '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">' + (c.done || 0) + ' done · ' + ((c.queued || 0) + (c.running || 0)) + ' pending · ' + (c.failed || 0) + ' failed' + (c.deleted ? ' · ' + c.deleted + ' removed' : '') + '</div>' : '') +
-        scanHtml +
-        (g.gone ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
-          (sc && sc.status === 'running'
-            ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
-            : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
-          (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
-                     : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="checks each failed link...the ones that still load get queued again and the rest get marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
-        '</div>') +
-      '</div>';
-    }).join('');
-  }
-  window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
-    catch (e) { alert(e.message || 'Failed'); }
-  };
-  window.dcLeave = async function(gid, name) {
-    if (!confirm('leave "' + name + '"? the bot stops reading it but imported comps stay')) return;
-    dcAct(gid, 'leave');
-  };
-  window.dcGlobal = async function(a) { try { await api('/discord/' + a, { method: 'POST' }); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcShowLog = function(gid, name) {
-    _dc.guild = gid || '*'; document.getElementById('dc-log-wrap').style.display = '';
-    document.getElementById('dc-log-title').textContent = 'Imports from ' + name;
-    dcLoadLog(); if (_dc.data) dcRenderServers(_dc.data.guilds || []);
-    document.getElementById('dc-log-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-  window.dcFilter = function(s) { _dc.status = s; document.querySelectorAll('#dc-log-filter button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); }); dcLoadLog(); };
-  var _dcT = null; window.dcLogDebounce = function() { clearTimeout(_dcT); _dcT = setTimeout(function() { _dc.q = document.getElementById('dc-log-q').value.trim(); dcLoadLog(); }, 300); };
-  async function dcLoadLog() {
-    var el = document.getElementById('dc-log'); if (!el || !_dc.guild) return;
-    try {
-      var d = await api('/discord/active-jobs?limit=300' + (_dc.guild !== '*' ? '&guild=' + encodeURIComponent(_dc.guild) : '') + (_dc.status ? '&status=' + _dc.status : '') + (_dc.q ? '&q=' + encodeURIComponent(_dc.q) : ''));
-      var rows = d.log || [];
-      if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">nothing here</div>'; return; }
-      el.innerHTML = rows.map(function(r) {
-        var col = { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
-        var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
-        return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
-          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(r.status) + '</span>' +
-          '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
-          '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
-            '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
-          (r.album_id ? '<a class="wv-see-all" href="/album?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
-          (r.status !== 'done' && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
-          '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
-        '</div>';
-      }).join('');
-    } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
-  }
-  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcDel = async function(id) { if (!confirm('remove this log entry? if the link gets posted again itll get imported like its new')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-
-  // ── Audit ────────────────────────────────────────────────────────────────
-  var _auditIssueIds = [];
-  var ISSUE_LABEL = { empty: 'Empty comp', duplicate_tracks: 'Duplicate tracks', missing_audio: 'Missing audio', no_cover: 'No cover', no_artist: 'No artist', artist_looks_like_format: 'Artist looks like a format tag', title_needs_cleanup: 'Title needs cleanup', untitled_tracks: 'Untitled tracks' };
-  window.runArchiveAudit = async function() {
-    _arcStatus('arc-audit-status', 'scanning every archive comp...');
-    var out = document.getElementById('arc-audit-out'); out.innerHTML = '';
-    try {
-      var d = await api('/archive/audit');
-      var bad = d.comps.filter(function(c) { return c.issues.length; });
-      _auditIssueIds = bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
-      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues', d.with_issues ? 'var(--orange)' : 'var(--green)');
-      document.getElementById('arc-fix-dupes-btn').style.display = _auditIssueIds.length ? '' : 'none';
-      if (!bad.length) { out.innerHTML = '<div style="font-size:13px;color:var(--green);">everything looks good</div>'; return; }
-      out.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
-        Object.keys(d.counts).map(function(k) { return '<span class="wv-chip">' + escHtml(ISSUE_LABEL[k] || k) + ' ' + d.counts[k] + '</span>'; }).join('') + '</div>' +
-        '<div style="max-height:420px;overflow:auto;">' + bad.map(function(c) {
-          return '<div style="padding:9px 0;border-top:1px solid var(--hair);font-size:13px;">' +
-            '<a href="/album?id=' + escHtml(c.id) + '" style="font-weight:700;">' + escHtml(c.title || 'Untitled') + '</a>' +
-            '<span style="color:var(--text-3);"> · ' + escHtml(c.artist || 'no artist') + ' · ' + c.track_count + ' tracks</span>' +
-            '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">' + c.issues.map(function(i) { return '<span class="wv-chip warn">' + escHtml(ISSUE_LABEL[i] || i) + '</span>'; }).join('') + '</div>' +
-            (c.duplicates.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:4px;">Dupes: ' + c.duplicates.map(function(x) { return escHtml(x.title); }).join(', ') + '</div>' : '') +
-            (c.missing_audio.length ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">No audio: ' + c.missing_audio.map(escHtml).join(', ') + '</div>' : '') +
-          '</div>';
-        }).join('') + '</div>';
-    } catch (e) { _arcStatus('arc-audit-status', 'Audit failed: ' + (e.message || e), 'var(--red)'); }
-  };
-  window.fixArchiveDuplicates = async function() {
-    if (!_auditIssueIds.length) return;
-    if (!confirm('delete the duplicate copies in ' + _auditIssueIds.length + ' comp(s)? the first copy of each track stays')) return;
-    try {
-      var r = await api('/archive/audit/fix-duplicates', { method: 'POST', body: JSON.stringify({ album_ids: _auditIssueIds }) });
-      _arcStatus('arc-audit-status', 'Deleted ' + r.deleted + ' duplicate track(s)...running the audit again', 'var(--green)');
-      runArchiveAudit();
-    } catch (e) { _arcStatus('arc-audit-status', 'Fix failed: ' + (e.message || e), 'var(--red)'); }
-  };
-
-  // ── Discord servers panel ────────────────────────────────────────────────
-  var _dc = { guild: null, status: '', q: '', data: null };
-  function _dcTime(iso) { if (!iso) return ''; var d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return 'just now'; if (d < 3600) return Math.floor(d / 60) + 'm ago'; if (d < 86400) return Math.floor(d / 3600) + 'h ago'; return Math.floor(d / 86400) + 'd ago'; }
-  function _pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
-  window.dcLoad = async function(quiet) {
-    try {
-      var d = await api('/discord/servers');
-      _dc.data = d;
-      var st = document.getElementById('dc-bot-state');
-      if (st) { st.textContent = d.online ? 'Online · ' + (d.bot || 'bot') : 'Bot offline'; st.className = 'wv-chip ' + (d.online ? 'ok' : 'bad'); }
-      var q = d.queue || {};
-      var qEl = document.getElementById('dc-queue');
-      if (qEl) qEl.innerHTML = (q.stopped ? '<span class="wv-chip bad">Queue stopped</span> ' : '') +
-        (q.currentSourceUrl ? 'Importing now: <a href="' + escHtml(q.currentSourceUrl) + '" target="_blank" rel="noopener">' + escHtml(q.currentSourceUrl.replace(/^https?:\/\//, '')) + '</a> · ' : 'Idle · ') +
-        (q.queueLength || 0) + ' waiting';
-      dcRenderServers(d.guilds || []);
-      if (_dc.guild) dcLoadLog();
-    } catch (e) { if (!quiet) { var el = document.getElementById('dc-servers'); if (el) el.innerHTML = '<div style="font-size:13px;color:var(--red);">couldnt load: ' + escHtml(e.message || e) + '</div>'; } }
-  };
-  function dcRenderServers(guilds) {
-    var el = document.getElementById('dc-servers'); if (!el) return;
-    if (!guilds.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">the bot isnt in any server yet</div>'; return; }
-    el.innerHTML = guilds.map(function(g) {
-      var c = g.counts || {};
-      var sc = g.scan;
-      var scanHtml = '';
-      if (sc && sc.status === 'running') {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-2);">Scanning history · ' + sc.channelsDone + '/' + sc.channelsTotal + ' channels · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.currentChannel ? ' · ' + escHtml(sc.currentChannel) : '') + '</div>' +
-          '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:6px;overflow:hidden;"><div style="height:100%;width:' + _pct(sc.channelsDone, sc.channelsTotal) + '%;background:var(--brand);"></div></div>';
-      } else if (sc) {
-        scanHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-3);">Last scan ' + escHtml(sc.status) + ' ' + _dcTime(sc.finishedAt) + ' · ' + sc.messages.toLocaleString() + ' messages · ' + sc.linksFound + ' links' + (sc.channelsSkipped ? ' · ' + sc.channelsSkipped + ' unreadable channels' : '') + '</div>';
-      }
-      var perm = g.gone ? '<span class="wv-chip">Bot removed</span>'
-        : g.read_only ? '<span class="wv-chip ok">Read-only ✓</span>'
-        : g.can_send ? '<span class="wv-chip warn">Can send messages</span>' : '<span class="wv-chip warn">Limited access</span>';
-      var watch = g.gone ? '' : (g.watched ? '<span class="wv-chip acc">Watching all channels</span>' : (g.channel_rows ? '<span class="wv-chip">Watching ' + g.channel_rows + ' channel(s)</span>' : '<span class="wv-chip bad">Paused</span>'));
-      var pct = c.total ? _pct(c.done, c.total) : 0;
-      return '<div style="background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px;">' +
-        '<div style="display:flex;gap:12px;align-items:center;">' +
-          '<div style="width:44px;height:44px;border-radius:12px;background:var(--surface-3);overflow:hidden;flex-shrink:0;display:grid;place-items:center;font-weight:800;">' + (g.icon ? '<img src="' + escHtml(g.icon) + '" style="width:100%;height:100%;object-fit:cover;">' : escHtml((g.name || '?').charAt(0))) + '</div>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(g.name) + '</div>' +
-            '<div style="font-size:12px;color:var(--text-3);">' + (g.member_count ? g.member_count.toLocaleString() + ' members · ' : '') + (g.channels_readable != null ? g.channels_readable + '/' + g.channels_total + ' channels readable · ' : '') + (g.joined_at ? 'joined ' + _dcTime(g.joined_at) : '') + '</div>' +
-            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">' + perm + watch + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;flex-shrink:0;">' +
-            '<div style="font-size:22px;font-weight:900;letter-spacing:-.02em;">' + (c.done || 0) + '<span style="font-size:12px;color:var(--text-3);font-weight:600;"> / ' + (c.total || 0) + '</span></div>' +
-            '<div style="font-size:11px;color:var(--text-3);">comps imported · ' + (c.tracks || 0) + ' tracks</div>' +
-          '</div>' +
-        '</div>' +
-        (c.total ? '<div style="height:4px;background:var(--surface-3);border-radius:2px;margin-top:10px;overflow:hidden;display:flex;"><div style="width:' + _pct(c.done, c.total) + '%;background:var(--green);"></div><div style="width:' + _pct(c.running + c.queued, c.total) + '%;background:var(--brand);"></div><div style="width:' + _pct(c.failed, c.total) + '%;background:var(--red);"></div></div>' +
-          '<div style="font-size:11.5px;color:var(--text-3);margin-top:4px;">' + (c.done || 0) + ' done · ' + ((c.queued || 0) + (c.running || 0)) + ' pending · ' + (c.failed || 0) + ' failed' + (c.deleted ? ' · ' + c.deleted + ' removed' : '') + '</div>' : '') +
-        scanHtml +
-        (g.gone ? '' : '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">' +
-          (sc && sc.status === 'running'
-            ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan/cancel\')">Cancel scan</button>'
-            : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'scan\')">Scan all history</button>') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcChannels(\'' + g.id + '\')">Channels ' + g.channels_readable + '/' + g.channels_total + '</button>' +
-          (g.watched ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'pause\')">Pause server</button>'
-                     : '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'resume\')">Watch all channels</button>') +
-          (c.failed ? '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcAct(\'' + g.id + '\',\'retry-working\')" title="checks each failed link...the ones that still load get queued again and the rest get marked gone">Retry ' + c.failed + ' failed that still work</button>' : '') +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="dcShowLog(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">' + (_dc.guild === g.id ? 'Showing imports' : 'View imports') + '</button>' +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;margin-left:auto;color:var(--red);" onclick="dcLeave(\'' + g.id + '\',\'' + escHtml(g.name).replace(/\'/g, '') + '\')">Leave</button>' +
-        '</div>') +
-      '</div>';
-    }).join('');
-  }
-  window.dcAct = async function(gid, action) {
-    try { await api('/discord/servers/' + gid + '/' + action, { method: 'POST' }); dcLoad(true); if (action === 'retry-working' && typeof dcSweepPoll === 'function') dcSweepPoll(); }
-    catch (e) { alert(e.message || 'Failed'); }
-  };
-  window.dcLeave = async function(gid, name) {
-    if (!confirm('leave "' + name + '"? the bot stops reading it but imported comps stay')) return;
-    dcAct(gid, 'leave');
-  };
-  window.dcGlobal = async function(a) { try { await api('/discord/' + a, { method: 'POST' }); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcShowLog = function(gid, name) {
-    _dc.guild = gid || '*'; document.getElementById('dc-log-wrap').style.display = '';
-    document.getElementById('dc-log-title').textContent = 'Imports from ' + name;
-    dcLoadLog(); if (_dc.data) dcRenderServers(_dc.data.guilds || []);
-    document.getElementById('dc-log-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
-  window.dcFilter = function(s) { _dc.status = s; document.querySelectorAll('#dc-log-filter button').forEach(function(b) { b.classList.toggle('on', b.dataset.s === s); }); dcLoadLog(); };
-  var _dcT = null; window.dcLogDebounce = function() { clearTimeout(_dcT); _dcT = setTimeout(function() { _dc.q = document.getElementById('dc-log-q').value.trim(); dcLoadLog(); }, 300); };
-  async function dcLoadLog() {
-    var el = document.getElementById('dc-log'); if (!el || !_dc.guild) return;
-    try {
-      var d = await api('/discord/active-jobs?limit=300' + (_dc.guild !== '*' ? '&guild=' + encodeURIComponent(_dc.guild) : '') + (_dc.status ? '&status=' + _dc.status : '') + (_dc.q ? '&q=' + encodeURIComponent(_dc.q) : ''));
-      var rows = d.log || [];
-      if (!rows.length) { el.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">nothing here</div>'; return; }
-      el.innerHTML = rows.map(function(r) {
-        var empty = r.status === 'done' && !r.imported_count;
-        var col = empty ? 'bad' : { done: 'ok', failed: 'bad', running: 'acc', queued: '', deleted: '' }[r.status] || '';
-        var short = (r.source_url || '').replace(/^https?:\/\/(www\.)?/, '');
-        return '<div style="display:flex;gap:10px;align-items:center;padding:7px 10px;background:var(--surface);border-radius:var(--r-md);font-size:12.5px;">' +
-          '<span class="wv-chip ' + col + '" style="min-width:58px;text-align:center;">' + escHtml(empty ? '0 tracks' : r.status) + '</span>' +
-          '<span class="wv-chip" style="text-transform:capitalize;">' + escHtml(r.provider) + '</span>' +
-          '<div style="flex:1;min-width:0;"><a href="' + escHtml(r.source_url) + '" target="_blank" rel="noopener" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">' + escHtml(short) + '</a>' +
-            '<div style="font-size:11px;color:var(--text-3);">' + (r.discord_username ? '@' + escHtml(r.discord_username) + ' · ' : '') + _dcTime(r.created_at) + (r.imported_count ? ' · ' + r.imported_count + ' tracks' : '') + (r.attempts ? ' · attempt ' + r.attempts : '') + (r.error_message ? ' · <span style="color:var(--red);">' + escHtml(String(r.error_message).slice(0, 140)) + '</span>' : '') + '</div></div>' +
-          (r.album_id ? '<a class="wv-see-all" href="/album?id=' + escHtml(r.album_id) + '" target="_blank">Open</a>' : '') +
-          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" onclick="dcRetry(\'' + r.id + '\')">Retry</button>' : '') +
-          ((r.status !== 'done' || empty) && r.status !== 'running' ? '<button class="wv-see-all" style="color:var(--brand);" title="move it to the front of the queue and start it now" onclick="dcNow(\'' + r.id + '\')">▲ Now</button>' : '') +
-          '<button class="wv-see-all" style="color:var(--text-3);" onclick="dcDel(\'' + r.id + '\')">✕</button>' +
-        '</div>';
-      }).join('');
-    } catch (e) { el.innerHTML = '<div style="font-size:13px;color:var(--red);">' + escHtml(e.message || e) + '</div>'; }
-  }
-  window.dcNow = async function(id) { try { await api('/discord/prioritize', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); dcLoad(true); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcRetry = async function(id) { try { await api('/discord/retry', { method: 'POST', body: JSON.stringify({ id: id }) }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-  window.dcDel = async function(id) { if (!confirm('remove this log entry? if the link gets posted again itll get imported like its new')) return; try { await api('/discord/log/' + id, { method: 'DELETE' }); dcLoadLog(); } catch (e) { alert(e.message || 'Failed'); } };
-
-  // ── Audit ────────────────────────────────────────────────────────────────
-  var _auditIssueIds = [];
-  var ISSUE_LABEL = { empty: 'Empty comp', duplicate_tracks: 'Duplicate tracks', missing_audio: 'Missing audio', no_cover: 'No cover', no_artist: 'No artist', artist_looks_like_format: 'Artist looks like a format tag', title_needs_cleanup: 'Title needs cleanup', untitled_tracks: 'Untitled tracks' };
-  window.runArchiveAudit = async function() {
-    _arcStatus('arc-audit-status', 'scanning every archive comp...');
-    var out = document.getElementById('arc-audit-out'); out.innerHTML = '';
-    try {
-      var d = await api('/archive/audit');
-      var bad = d.comps.filter(function(c) { return c.issues.length; });
-      _auditIssueIds = bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
-      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues', d.with_issues ? 'var(--orange)' : 'var(--green)');
+      var bad = (d.comps || []).filter(function(c) { return c.issues.length; });
+      _auditIssueIds = Array.isArray(d.duplicate_ids) ? d.duplicate_ids.slice() : bad.filter(function(c) { return c.issues.indexOf('duplicate_tracks') !== -1; }).map(function(c) { return c.id; });
+      _arcStatus('arc-audit-status', d.total + ' comps · ' + d.tracks + ' tracks · ' + d.with_issues + ' with issues' + (d.truncated ? ' (first 500 shown)' : ''), d.with_issues ? 'var(--orange)' : 'var(--green)');
       document.getElementById('arc-fix-dupes-btn').style.display = _auditIssueIds.length ? '' : 'none';
       if (!bad.length) { out.innerHTML = '<div style="font-size:13px;color:var(--green);">everything looks good</div>'; return; }
       out.innerHTML = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
@@ -1586,7 +1178,7 @@
       var evt = await _arcStreamJob(resp.jobId, function(msg) { _arcStatus('arc-import-status', msg); });
       var msg = 'archived ' + evt.imported + ' track' + (evt.imported === 1 ? '' : 's') + (evt.failed && evt.failed.length ? ', ' + evt.failed.length + ' failed' : '') + '...opening it';
       _arcStatus('arc-import-status', msg, 'var(--green)');
-      setTimeout(function() { navigate('/album?id=' + evt.albumId); }, 900);
+      setTimeout(function() { navigate(evt.trackId ? '/track?id=' + evt.trackId : '/album?id=' + evt.albumId); }, 900);
     } catch (err) {
       _arcStatus('arc-import-status', 'import failed: ' + (err.message || 'something went wrong'), 'var(--red)');
       btn.disabled = false;
@@ -1654,6 +1246,14 @@
     btn.disabled = false;
   }
 
+  var _arcUp = null;
+
+  function _arcUpReset() {
+    _arcUp = null;
+    var btn = document.getElementById('arc-upload-btn');
+    if (btn) btn.textContent = 'Upload Archive Comp';
+  }
+
   async function startArchiveUpload() {
     var common = _arcValidateCommon();
     if (common.error) { _arcStatus('arc-upload-status', common.error, 'var(--red)'); return; }
@@ -1665,33 +1265,41 @@
 
     var btn = document.getElementById('arc-upload-btn');
     btn.disabled = true;
+    var up = _arcUp;
     try {
-      _arcStatus('arc-upload-status', 'making the archive comp...');
-      var albumForm = new FormData();
-      albumForm.append('title', title);
-      albumForm.append('is_archive', '1');
-      albumForm.append('archive_artist_name', common.artist);
-      var desc = ((document.getElementById('arc-desc') || {}).value || '').trim();
-      if (desc) albumForm.append('description', desc);
-      var coverInput = document.getElementById('arc-cover');
-      if (coverInput && coverInput.files && coverInput.files[0]) albumForm.append('cover_file', coverInput.files[0]);
-      var album = await apiUpload('/albums', albumForm);
+      if (!up) {
+        _arcStatus('arc-upload-status', 'making the archive comp...');
+        var albumForm = new FormData();
+        albumForm.append('title', title);
+        albumForm.append('is_archive', '1');
+        albumForm.append('archive_artist_name', common.artist);
+        var desc = ((document.getElementById('arc-desc') || {}).value || '').trim();
+        if (desc) albumForm.append('description', desc);
+        var coverInput = document.getElementById('arc-cover');
+        if (coverInput && coverInput.files && coverInput.files[0]) albumForm.append('cover_file', coverInput.files[0]);
+        var album = await apiUpload('/albums', albumForm);
+        up = _arcUp = { albumId: album.id, next: 0 };
+      }
 
-      for (var i = 0; i < files.length; i++) {
+      for (var i = up.next; i < files.length; i++) {
         _arcStatus('arc-upload-status', 'Uploading ' + (i + 1) + '/' + files.length + ': ' + files[i].name + '…');
         var form = new FormData();
         form.append('file', files[i]);
         form.append('title', _arcCleanTitle(files[i].name));
-        form.append('album_id', album.id);
+        form.append('album_id', up.albumId);
         form.append('track_position', String(i));
         await apiUpload('/tracks', form);
+        up.next = i + 1;
       }
 
+      var doneId = up.albumId;
+      if (_arcUp === up) _arcUpReset();
       _arcStatus('arc-upload-status', '✓ archive comp uploaded...opening it', 'var(--green)');
-      setTimeout(function() { navigate('/album?id=' + album.id); }, 900);
+      setTimeout(function() { navigate('/album?id=' + doneId); }, 900);
     } catch (err) {
       _arcStatus('arc-upload-status', 'Failed: ' + (err.message || 'Upload error'), 'var(--red)');
       btn.disabled = false;
+      if (up && _arcUp === up) btn.textContent = 'Resume upload (' + (files.length - up.next) + ' left)';
     }
   }
 
@@ -1978,7 +1586,30 @@
   };
 
   // ── Deleted comps: recycle bin and restore from backup ───────────────
+  function _mgBackupPaint(st) {
+    var el = document.getElementById('mg-backup-status'); if (!el) return;
+    if (!st || st.ready === false) { el.style.color = 'var(--orange)'; el.textContent = 'backups arent set up' + (st && st.reason ? ': ' + st.reason : ''); return; }
+    if (st.running) { el.style.color = 'var(--text-2)'; el.textContent = 'backing up now…'; return; }
+    if (st.newest_age_h == null) { el.style.color = 'var(--red)'; el.textContent = 'no backup found yet'; return; }
+    el.style.color = st.newest_age_h > 30 ? 'var(--red)' : 'var(--text-3)';
+    el.textContent = 'last backup ' + st.newest_age_h + 'h ago';
+  }
+  window.mgBackupLoad = async function() {
+    var el = document.getElementById('mg-backup-status'); if (!el) return;
+    try { _mgBackupPaint(await api('/archive-manage/backup')); }
+    catch (e) { el.style.color = 'var(--red)'; el.textContent = 'couldnt check the backups: ' + (e.message || 'failed'); }
+  };
+  window.mgBackupNow = async function() {
+    var btn = document.getElementById('mg-backup-btn'), el = document.getElementById('mg-backup-status');
+    if (btn) btn.disabled = true;
+    if (el) { el.style.color = 'var(--text-2)'; el.textContent = 'backing up now…'; }
+    try { await api('/archive-manage/backup', { method: 'POST', body: '{}' }); }
+    catch (e) { if (el) { el.style.color = 'var(--red)'; el.textContent = 'backup failed: ' + (e.message || 'failed'); } if (btn) btn.disabled = false; return; }
+    if (btn) btn.disabled = false;
+    mgBackupLoad();
+  };
   window.mgBinLoad = async function() {
+    mgBackupLoad();
     var box = document.getElementById('mg-bin'); if (!box) return;
     box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
@@ -2428,17 +2059,38 @@
   window.mgTrackersLoad = async function() {
     var list = document.getElementById('mg-tlist'); if (!list) return;
     list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try { var d = await api('/trackers/unmatched'); _mg.trackers = d.items || []; }
-    catch (e) { list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    var cnt = document.getElementById('mg-tcount'); if (cnt) cnt.textContent = 'finding matches...';
+    var ac = typeof AbortController === 'function' ? new AbortController() : null;
+    var acT = ac ? setTimeout(function() { ac.abort(); }, 120000) : null;
+    var impP = api('/trackers/imports').catch(function() { return null; });
+    try {
+      var d = await api('/trackers/unmatched/suggest', ac ? { signal: ac.signal } : {});
+      _mg.trackers = d.items || [];
+      var ip = await impP;
+      _mg.timp = Object.assign({}, _mg.timp || {}, (ip && ip.pending) || {});
+    }
+    catch (e) { clearTimeout(acT); list.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; if (cnt) cnt.textContent = ''; return; }
+    clearTimeout(acT);
     mgTrackersRender();
   };
+  function _mgTCand(key, a) {
+    var on = _mg.tpick[key] === a.id;
+    return '<div onclick="mgTrackerPick(this,\'' + a.id + '\')" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;' + (on ? 'background:var(--brand);color:#14121c;' : 'background:var(--surface-3);') + '">' + _mgCover(a.cover_url) +
+      '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + (a.sure ? ' <span style="font-size:10.5px;font-weight:800;letter-spacing:.04em;">SURE</span>' : '') + '</div>' +
+      '<div style="font-size:11.5px;opacity:.75;">' + escHtml(a.owner ? 'on ' + a.owner + 's profile' : (a.creator || 'Unknown')) + ' · ' + (a.tracks || 0) + ' track' + (a.tracks === 1 ? '' : 's') + '</div></div>' +
+      '<a href="/album?id=' + a.id + '" target="_blank" onclick="event.stopPropagation()" style="font-size:11.5px;">open</a></div>';
+  }
   window.mgTrackersRender = function() {
     var list = document.getElementById('mg-tlist'); if (!list || !_mg.trackers) return;
     var q = ((document.getElementById('mg-tq') || {}).value || '').toLowerCase().trim();
     var items = _mg.trackers.filter(function(e) { return !q || (e.name + ' ' + e.creator + ' ' + e.era + ' ' + e.tracker_name).toLowerCase().indexOf(q) >= 0; });
-    document.getElementById('mg-tcount').textContent = items.length + ' of ' + _mg.trackers.length + ' unmatched';
-    if (!items.length) { list.innerHTML = '<div class="wv-empty">every tracker comp is matched</div>'; return; }
+    var sure = _mg.trackers.filter(function(e) { return (e.suggestions || []).some(function(a) { return a.sure; }); }).length;
+    document.getElementById('mg-tcount').textContent = items.length + ' of ' + _mg.trackers.length + ' unmatched · ' + sure + ' sure';
+    if (!items.length) { list.innerHTML = '<div class="wv-empty">' + (_mg.trackers.length ? 'nothing matches that filter' : 'every tracker comp is matched') + '</div>'; return; }
+    var imp = _mg.timp || {};
     list.innerHTML = items.map(function(e) {
+      var sugg = e.suggestions || [];
+      var im = imp[e.key];
       var links = (e.links || []).map(function(u) { return '<a href="' + escHtml(u) + '" target="_blank" rel="noopener" style="font-size:11.5px;">' + escHtml(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 34)) + '</a>'; }).join(' · ');
       return '<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--r-md);" data-tkey="' + escHtml(e.key) + '">' +
         '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;">' +
@@ -2447,10 +2099,14 @@
         '</div>' +
         (e.description ? '<div style="font-size:12px;color:var(--text-3);margin-top:3px;">' + escHtml(String(e.description).slice(0, 220)) + '</div>' : '') +
         (links ? '<div style="margin-top:3px;">' + links + '</div>' : '') +
+        (sugg.length ? '<div class="mg-tsugg" style="display:flex;flex-direction:column;gap:3px;margin-top:8px;">' + sugg.map(function(a) { return _mgTCand(e.key, a); }).join('') + '</div>' : '') +
         '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
           '<input class="wv-input" placeholder="search the archive for this comp..." style="flex:1;min-width:200px;max-width:420px;padding:6px 10px;font-size:13px;" oninput="mgTrackerSearch(this)">' +
-          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgTrackerMatch(this)" disabled>Match</button>' +
+          '<button class="wv-pill brand" data-tmatch="1" style="font-size:12px;padding:5px 12px;" onclick="mgTrackerMatch(this)"' + (_mg.tpick[e.key] ? '' : ' disabled') + '>Match</button>' +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgTrackerImport(this.closest(\'[data-tkey]\').getAttribute(\'data-tkey\'), this)">' + (im ? (im.failed ? 'Import failed, retry' : 'Importing...') : 'Import from link') + '</button>' +
+          '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgTrackerSkip(this)">Not on the site</button>' +
         '</div>' +
+        (im && im.failed ? '<div style="font-size:11.5px;color:var(--red);margin-top:5px;">' + escHtml(String(im.failed).slice(0, 200)) + '</div>' : '') +
         '<div class="mg-tresults" style="display:none;flex-direction:column;gap:3px;margin-top:6px;"></div>' +
       '</div>';
     }).join('');
@@ -2475,21 +2131,57 @@
   window.mgTrackerPick = function(el, id) {
     var row = el.closest('[data-tkey]'); var key = row.getAttribute('data-tkey');
     _mg.tpick[key] = id;
-    row.querySelectorAll('.mg-tresults > div').forEach(function(x) { x.style.background = 'var(--surface-3)'; x.style.color = ''; });
+    row.querySelectorAll('.mg-tresults > div, .mg-tsugg > div').forEach(function(x) { x.style.background = 'var(--surface-3)'; x.style.color = ''; });
     el.style.background = 'var(--brand)'; el.style.color = '#14121c';
-    row.querySelector('button').disabled = false;
+    var mb = row.querySelector('[data-tmatch]'); if (mb) mb.disabled = false;
   };
+  function _mgTDrop(key) { delete _mg.tpick[key]; _mg.trackers = _mg.trackers.filter(function(x) { return x.key !== key; }); mgTrackersRender(); }
   window.mgTrackerMatch = async function(btn) {
     var row = btn.closest('[data-tkey]'); var key = row.getAttribute('data-tkey'); var id = _mg.tpick[key];
     if (!id) return;
     var e = _mg.trackers.find(function(x) { return x.key === key; }) || {};
-    if (!confirm('match this album to "' + e.name + '" by ' + (e.creator || 'Unknown') + '?\n\nthe album gets renamed to the title and creator from the tracker, tagged with the tracker, and taken off any user profile.')) return;
+    var rename = !!(document.getElementById('mg-trename') || {}).checked;
+    if (!confirm('match this album to "' + e.name + '" by ' + (e.creator || 'Unknown') + '?\n\n' + (rename
+      ? 'the album gets renamed to the title and creator from the tracker, tagged with the tracker, and taken off any user profile.'
+      : 'the album gets the tracker badge and keeps its own title and creator.'))) return;
     btn.disabled = true; btn.textContent = 'Matching…';
     try {
-      await api('/trackers/match', { method: 'POST', body: JSON.stringify({ key: key, album_id: id }) });
-      _mg.trackers = _mg.trackers.filter(function(x) { return x.key !== key; });
-      mgTrackersRender();
+      await api('/trackers/match', { method: 'POST', body: JSON.stringify({ key: key, album_id: id, keep_title: !rename }) });
+      _mgTDrop(key);
     } catch (err) { alert(err.message || 'Match failed'); btn.disabled = false; btn.textContent = 'Match'; }
+  };
+  window.mgTrackerSkip = async function(btn) {
+    var row = btn.closest('[data-tkey]'); var key = row.getAttribute('data-tkey');
+    btn.disabled = true;
+    try {
+      await api('/trackers/unmatch', { method: 'POST', body: JSON.stringify({ key: key, suppress: true }) });
+      _mgTDrop(key);
+    } catch (err) { btn.disabled = false; alert(err.message || 'Failed'); }
+  };
+  window.mgTrackerImport = async function(key, btn) {
+    btn.disabled = true; var was = btn.textContent; btn.textContent = key ? 'Queuing...' : 'Finding links...';
+    _mg.timp = _mg.timp || {};
+    try {
+      var d = await api('/trackers/import-missing', { method: 'POST', body: JSON.stringify(key ? { keys: [key] } : {}) });
+      if (key) {
+        var it = (d.items || [])[0];
+        if (!it || !it.url) { btn.textContent = 'No usable link'; return; }
+        _mg.timp[key] = { url: it.url }; btn.textContent = 'Importing...';
+      } else {
+        btn.textContent = 'Queued ' + (d.queued || 0) + (d.no_link ? ' · ' + d.no_link + ' had no usable link' : '');
+        (d.items || []).forEach(function(x) { if (x.url) _mg.timp[x.key] = { url: x.url }; });
+        setTimeout(mgTrackersRender, 1500);
+      }
+    } catch (e) { btn.disabled = false; btn.textContent = was; alert(e.message || 'Failed'); }
+  };
+  window.mgTrackerAuto = async function(btn) {
+    btn.disabled = true; btn.textContent = 'Matching...';
+    try {
+      var d = await api('/trackers/automatch', { method: 'POST', body: '{}' });
+      btn.textContent = d.matched ? 'Matched ' + d.matched : 'Nothing sure left';
+      await mgTrackersLoad();
+    } catch (e) { btn.textContent = 'Match the sure ones'; alert(e.message || 'Failed'); }
+    setTimeout(function() { btn.disabled = false; btn.textContent = 'Match the sure ones'; }, 2500);
   };
   window.mgSearchInput = function() { clearTimeout(_mg.timer); _mg.timer = setTimeout(function() { mgLoad(); }, 250); };
   window.mgLoad = async function(more) {
@@ -2516,19 +2208,49 @@
   window.mgToggle = function(id, on) { if (on) _mg.sel[id] = true; else delete _mg.sel[id]; mgSelRender(); };
   window.mgClearSel = function() { _mg.sel = {}; mgLoad(); };
   function mgSelRender() { var n = Object.keys(_mg.sel).length; var b = document.getElementById('mg-bulk'); if (b) b.style.display = n ? 'flex' : 'none'; var c = document.getElementById('mg-selcount'); if (c) c.textContent = n + ' selected'; }
-  async function _mgPickAccount() {
-    var q = prompt('which account should it move to? type part of the artist name'); if (!q) return null;
-    var d = await api('/archive-manage/accounts?q=' + encodeURIComponent(q));
-    var list = d.accounts || []; if (!list.length) { alert('no account matches "' + q + '"'); return null; }
-    var pick = prompt(list.map(function(a, i) { return (i + 1) + '. ' + a.display_name + (a.users && a.users.username ? ' (@' + a.users.username + ')' : ''); }).join('\n') + '\n\nnumber:');
-    var idx = parseInt(pick, 10) - 1; return list[idx] || null;
+  function _mgPicker(anchor, o) {
+    var prev = document.getElementById('mg-picker');
+    if (prev && prev._done) prev._done(null);
+    return new Promise(function(resolve) {
+      var host = (anchor && anchor.closest && anchor.closest('div')) || document.getElementById('mg-comps');
+      var pop = document.createElement('div');
+      pop.id = 'mg-picker';
+      pop.style.cssText = 'margin:6px 0 8px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--hair-strong);border-radius:var(--r-md);';
+      pop.innerHTML = '<div style="font-size:12.5px;font-weight:700;margin-bottom:6px;">' + escHtml(o.label) + '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;"><input class="wv-input" placeholder="' + escHtml(o.placeholder || 'search...') + '" style="flex:1;min-width:0;padding:6px 10px;font-size:13px;"><button type="button" class="wv-see-all">Cancel</button></div>' +
+        '<div class="mg-tresults" style="display:none;flex-direction:column;gap:3px;margin-top:6px;max-height:300px;overflow:auto;"></div>';
+      host.insertAdjacentElement('afterend', pop);
+      var inp = pop.querySelector('input'), box = pop.querySelector('.mg-tresults'), timer = null, gen = 0;
+      pop._done = function(v) { clearTimeout(timer); pop._done = null; if (pop.parentNode) pop.parentNode.removeChild(pop); resolve(v); };
+      pop.querySelector('button').addEventListener('click', function(e) { e.stopPropagation(); if (pop._done) pop._done(null); });
+      inp.addEventListener('keydown', function(e) { if (e.key === 'Escape') { e.stopPropagation(); if (pop._done) pop._done(null); } });
+      inp.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(async function() {
+          var q = inp.value.trim(), my = ++gen;
+          if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+          var items = [];
+          try { items = await o.search(q); } catch (e) { items = []; }
+          if (my !== gen || !pop._done) return;
+          var extra = o.extra ? o.extra(q, items) : null;
+          var all = extra ? items.concat([extra]) : items;
+          box.style.display = 'flex';
+          box.innerHTML = all.length ? all.map(function(it, i) {
+            return '<div data-i="' + i + '" style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;background:var(--surface-3);">' + o.row(it) + '</div>';
+          }).join('') : '<div style="font-size:12px;color:var(--text-3);padding:4px 8px;">nothing found</div>';
+          Array.prototype.forEach.call(box.querySelectorAll('[data-i]'), function(el) {
+            el.addEventListener('click', function(e) { e.stopPropagation(); if (pop._done) pop._done(all[+el.getAttribute('data-i')]); });
+          });
+        }, 250);
+      });
+      inp.focus();
+    });
   }
   window.mgBulk = async function(action) {
     var ids = Object.keys(_mg.sel); if (!ids.length) return;
     var value;
-    if (action === 'delete') { if (!confirm('delete ' + ids.length + ' comp(s) and all their tracks? you cant undo this')) return; }
+    if (action === 'delete') { if (!confirm('delete ' + ids.length + ' comp(s) and all their tracks? it goes to the recycle bin (Archive panel > Deleted). only the last 60 deleted comps can be restored')) return; }
     if (action === 'set_artist') { value = prompt('new artist name for ' + ids.length + ' comp(s)'); if (!value) return; }
-    if (action === 'assign_account') { var acc = await _mgPickAccount(); if (!acc) return; value = acc.id; }
     try { var r = await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: action, value: value }) }); _mg.sel = {}; mgLoad(); if (_mg.editing && ids.indexOf(_mg.editing) >= 0) mgCloseEditor(); }
     catch (e) { alert(e.message || 'Failed'); }
   };
@@ -2549,7 +2271,13 @@
     ed.onclick = function(e) { if (e.target === ed) mgCloseEditor(); };
     document.body.style.overflow = 'hidden';
     var a; try { a = await api('/archive-manage/comps/' + id); } catch (e) { ed.innerHTML = '<div class="wv-empty">' + escHtml(e.message) + '</div>'; return; }
+    if (!_mg.eras) { try { _mg.eras = await api('/eratags'); } catch (e) { _mg.eras = null; } }
     var acct = a.artists ? a.artists.display_name : '—';
+    var eraField = Array.isArray(_mg.eras)
+      ? '<label style="font-size:11.5px;color:var(--text-3);">Era<select id="mg-f-era" data-orig="' + escHtml(a.era_tag_id || '') + '" class="wv-input" style="width:100%;padding:8px 10px;font-size:13px;"><option value="">none</option>' +
+          _mg.eras.map(function(t) { return '<option value="' + escHtml(t.id) + '"' + (t.id === a.era_tag_id ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; }).join('') +
+        '</select></label>'
+      : '';
     ed.innerHTML = '<div style="background:var(--elevated, var(--surface));border-radius:var(--r-lg);padding:0 18px 18px;max-width:860px;margin:0 auto 90px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">' +
       '<div style="position:sticky;top:0;z-index:2;background:var(--elevated, var(--surface));display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0 10px;margin-bottom:6px;"><div style="font-size:14px;font-weight:700;">Editing comp</div><button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgCloseEditor()">✕ Close</button></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
@@ -2560,11 +2288,12 @@
           '<label style="font-size:11.5px;color:var(--text-3);">Artist name (as shown in the archive)<input id="mg-f-artist" class="wv-input" value="' + escHtml(a.archive_artist_name || '') + '" style="width:100%;padding:8px 10px;font-size:13.5px;"></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Description<textarea id="mg-f-desc" class="wv-input" style="width:100%;min-height:56px;padding:8px 10px;font-size:13px;">' + escHtml(a.description || '') + '</textarea></label>' +
           '<label style="font-size:11.5px;color:var(--text-3);">Source link<input id="mg-f-src" class="wv-input" value="' + escHtml(a.source_url || '') + '" style="width:100%;padding:8px 10px;font-size:12.5px;"></label>' +
-          '<div style="font-size:12px;color:var(--text-2);">Profile: <b>' + escHtml(a.archive_artist_name || 'Unknown') + '</b> · <button class="wv-see-all" onclick="mgMoveProfile(\'' + a.id + '\')">Move to another profile</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
+          eraField +
+          '<div style="font-size:12px;color:var(--text-2);">Profile: <b>' + escHtml(a.archive_artist_name || 'Unknown') + '</b> · <button class="wv-see-all" onclick="mgMoveProfile(\'' + a.id + '\', this)">Move to another profile</button> · <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;"><input type="checkbox" id="mg-f-arch" ' + (a.is_archive ? 'checked' : '') + ' style="width:16px;height:16px;flex:0 0 auto;margin:0;padding:0;accent-color:var(--brand);"> archive comp (untick to make it a normal comp on the account)</label></div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">' +
             '<button class="wv-pill brand" style="font-size:12px;padding:5px 12px;" onclick="mgSave(\'' + a.id + '\')">Save changes</button>' +
             '<button class="wv-pill" id="mg-hl-btn" style="font-size:12px;padding:5px 12px;' + (a.highlighted ? 'color:var(--brand);' : '') + '" onclick="mgHighlight(\'' + a.id + '\', ' + (a.highlighted ? 'false' : 'true') + ')">' + (a.highlighted ? '★ Highlighted (remove)' : '☆ Highlight on wavernrs') + '</button>' +
-            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\')">Merge this into another comp…</button>' +
+            '<button class="wv-pill" style="font-size:12px;padding:5px 12px;" onclick="mgMergeInto(\'' + a.id + '\', this)">Merge this into another comp…</button>' +
             '<button class="wv-pill" style="font-size:12px;padding:5px 12px;color:var(--red);" onclick="mgDelete(\'' + a.id + '\')">Delete comp</button>' +
           '</div>' +
         '</div>' +
@@ -2575,7 +2304,7 @@
           '<span style="font-size:11px;color:var(--text-3);width:22px;text-align:right;">' + (i + 1) + '</span>' +
           '<input class="wv-input mg-t-title" value="' + escHtml(t.title) + '" style="flex:1 1 auto;width:auto;min-width:0;padding:5px 8px;font-size:12.5px;" onchange="mgTrackTitle(\'' + t.id + '\', this.value)">' +
           '<button class="wv-see-all" title="Move up" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',-1)">▲</button><button class="wv-see-all" title="Move down" onclick="mgTrackMove(\'' + a.id + '\',\'' + t.id + '\',1)">▼</button>' +
-          '<button class="wv-see-all" title="Move to another comp" onclick="mgTrackToComp(\'' + t.id + '\')">→ comp</button>' +
+          '<button class="wv-see-all" title="Move to another comp" onclick="mgTrackToComp(\'' + t.id + '\', this)">→ comp</button>' +
           '<button class="wv-see-all" style="color:var(--red);" onclick="mgTrackDelete(\'' + a.id + '\',\'' + t.id + '\')">✕</button></div>';
       }).join('') + '</div>' +
     '</div>';
@@ -2585,44 +2314,52 @@
 
   window.mgSave = async function(id) {
     var body = { title: document.getElementById('mg-f-title').value, archive_artist_name: document.getElementById('mg-f-artist').value, description: document.getElementById('mg-f-desc').value, source_url: document.getElementById('mg-f-src').value, is_archive: document.getElementById('mg-f-arch').checked };
+    var eraSel = document.getElementById('mg-f-era');
+    if (eraSel && (eraSel.value || '') !== (eraSel.getAttribute('data-orig') || '')) body.era_tag_id = eraSel.value || null;
     try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify(body) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Save failed'); }
   };
-  async function _mgPickProfile() {
-    var q = prompt('which profile should it move to? type part of the archive artist name (or a new name to make one)'); if (!q) return null;
-    var d = await api('/archive-manage/artists?q=' + encodeURIComponent(q));
-    var list = d.artists || [];
-    if (!list.length) return confirm('no profile matches "' + q + '"...make it?') ? q : null;
-    var pick = prompt(list.slice(0, 20).map(function(g, i) { return (i + 1) + '. ' + g.name + ' (' + g.comps + ' comps)'; }).join('\n') + '\n0. make a new profile called "' + q + '"\n\nnumber:');
-    if (pick === '0') return q;
-    var g = list[parseInt(pick, 10) - 1]; return g ? g.name : null;
+  function _mgPickProfile(anchor) {
+    return _mgPicker(anchor, {
+      label: 'move to which profile? type part of the archive artist name, or a new name to make one',
+      placeholder: 'archive artist name...',
+      search: async function(q) { var d = await api('/archive-manage/artists?q=' + encodeURIComponent(q)); return (d.artists || []).slice(0, 20); },
+      extra: function(q, list) { var k = q.toLowerCase(); return list.some(function(g) { return String(g.name || '').toLowerCase() === k; }) ? null : { name: q, isNew: true }; },
+      row: function(g) {
+        return '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(g.isNew ? 'make a new profile called "' + g.name + '"' : g.name) + '</div>' +
+          (g.isNew ? '' : '<div style="font-size:11.5px;opacity:.75;">' + g.comps + ' comp' + (g.comps === 1 ? '' : 's') + '</div>') + '</div>';
+      },
+    }).then(function(g) { return g ? g.name : null; });
   }
-  window.mgMoveProfile = async function(id) { var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ archive_artist_name: name }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
-  window.mgBulkProfile = async function() { var ids = Object.keys(_mg.sel); if (!ids.length) return; var name = await _mgPickProfile(); if (!name) return; try { await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: 'set_artist', value: name }) }); _mg.sel = {}; mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
-  window.mgMoveAccount = async function(id) { var acc = await _mgPickAccount(); if (!acc) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ artist_id: acc.id }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgMoveProfile = async function(id, btn) { var name = await _mgPickProfile(btn); if (!name) return; try { await api('/archive-manage/comps/' + id, { method: 'PATCH', body: JSON.stringify({ archive_artist_name: name }) }); mgLoad(); mgOpen(id); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgBulkProfile = async function(btn) { var ids = Object.keys(_mg.sel); if (!ids.length) return; var name = await _mgPickProfile(btn); if (!name) return; try { await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: 'set_artist', value: name }) }); _mg.sel = {}; mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgHighlight = async function(id, on) {
     var b = document.getElementById('mg-hl-btn'); if (b) b.disabled = true;
     try { await api('/archive-manage/comps/' + id + '/highlight', { method: 'POST', body: JSON.stringify({ value: on }) }); mgOpen(id); }
     catch (e) { if (b) b.disabled = false; alert(e.message || 'Failed'); }
   };
-  window.mgDelete = async function(id) { if (!confirm('delete this comp and all its tracks? you cant undo this')) return; try { await api('/archive-manage/comps/' + id, { method: 'DELETE' }); mgCloseEditor(); mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
-  async function _mgPickComp(label) {
-    var q = prompt(label + ' type part of the comp title'); if (!q) return null;
-    var d = await api('/archive-manage/comps?limit=15&q=' + encodeURIComponent(q));
-    var list = (d.items || []).filter(function(a) { return a.id !== _mg.editing; }); if (!list.length) { alert('no comp matches "' + q + '"'); return null; }
-    var pick = prompt(list.map(function(a, i) { return (i + 1) + '. ' + a.title + ' by ' + (a.archive_artist_name || '') + ' (' + a.track_count + ' tracks)'; }).join('\n') + '\n\nnumber:');
-    return list[parseInt(pick, 10) - 1] || null;
+  window.mgDelete = async function(id) { if (!confirm('delete this comp and all its tracks? it goes to the recycle bin (Archive panel > Deleted). only the last 60 deleted comps can be restored')) return; try { await api('/archive-manage/comps/' + id, { method: 'DELETE' }); mgCloseEditor(); mgLoad(); } catch (e) { alert(e.message || 'Failed'); } };
+  function _mgPickComp(label, anchor) {
+    return _mgPicker(anchor, {
+      label: label + ' type part of the comp title',
+      placeholder: 'comp title...',
+      search: async function(q) { var d = await api('/archive-manage/comps?limit=15&q=' + encodeURIComponent(q)); return (d.items || []).filter(function(a) { return a.id !== _mg.editing; }); },
+      row: function(a) {
+        return _mgCover(a.cover_url) + '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(a.title) + '</div>' +
+          '<div style="font-size:11.5px;opacity:.75;">' + escHtml(a.archive_artist_name || 'Unknown') + ' · ' + (a.track_count || 0) + ' tracks</div></div>';
+      },
+    });
   }
-  window.mgMergeInto = async function(id) { var into = await _mgPickComp('merge into which comp?'); if (!into) return; if (!confirm('move every track in this comp into "' + into.title + '" and delete this one?')) return; try { await api('/archive-manage/comps/merge', { method: 'POST', body: JSON.stringify({ from_id: id, into_id: into.id }) }); mgLoad(); mgOpen(into.id); } catch (e) { alert(e.message || 'Merge failed'); } };
+  window.mgMergeInto = async function(id, btn) { var into = await _mgPickComp('merge into which comp?', btn); if (!into) return; if (!confirm('move every track in this comp into "' + into.title + '" and delete this one?')) return; try { await api('/archive-manage/comps/merge', { method: 'POST', body: JSON.stringify({ from_id: id, into_id: into.id }) }); mgLoad(); mgOpen(into.id); } catch (e) { alert(e.message || 'Merge failed'); } };
   window.mgCover = async function(id, input) { var f = input.files && input.files[0]; if (!f) return; var fd = new FormData(); fd.append('cover', f); try { await apiUpload('/archive-manage/comps/' + id + '/cover', fd); mgOpen(id); mgLoad(); } catch (e) { alert(e.message || 'Upload failed'); } };
   window.mgTrackTitle = async function(tid, v) { try { await api('/archive-manage/tracks/' + tid, { method: 'PATCH', body: JSON.stringify({ title: v }) }); } catch (e) { alert(e.message || 'Rename failed'); } };
-  window.mgTrackDelete = async function(aid, tid) { if (!confirm('delete this track?')) return; try { await api('/archive-manage/tracks/' + tid, { method: 'DELETE' }); mgOpen(aid); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgTrackDelete = async function(aid, tid) { if (!confirm('delete this track? this cant be undone')) return; try { await api('/archive-manage/tracks/' + tid, { method: 'DELETE' }); mgOpen(aid); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgTrackMove = async function(aid, tid, dir) {
     var rows = Array.prototype.slice.call(document.querySelectorAll('#mg-tracks [data-tid]')); var ids = rows.map(function(r) { return r.getAttribute('data-tid'); });
     var i = ids.indexOf(tid), j = i + dir; if (i < 0 || j < 0 || j >= ids.length) return;
     ids.splice(i, 1); ids.splice(j, 0, tid);
     try { await api('/archive-manage/comps/' + aid + '/tracklist', { method: 'PUT', body: JSON.stringify({ tracks: ids.map(function(x, k) { return { track_id: x, position: k }; }) }) }); mgOpen(aid); } catch (e) { alert(e.message || 'Failed'); }
   };
-  window.mgTrackToComp = async function(tid) { var into = await _mgPickComp('move this track to which comp?'); if (!into) return; try { await api('/archive-manage/tracks/move', { method: 'POST', body: JSON.stringify({ track_ids: [tid], to_album_id: into.id }) }); mgOpen(_mg.editing); } catch (e) { alert(e.message || 'Failed'); } };
+  window.mgTrackToComp = async function(tid, btn) { var into = await _mgPickComp('move this track to which comp?', btn); if (!into) return; try { await api('/archive-manage/tracks/move', { method: 'POST', body: JSON.stringify({ track_ids: [tid], to_album_id: into.id }) }); mgOpen(_mg.editing); } catch (e) { alert(e.message || 'Failed'); } };
 
   // Artists tab
   window.mgArtistsInput = function() { clearTimeout(_mg.atimer); _mg.atimer = setTimeout(mgArtistsLoad, 250); };
@@ -2649,8 +2386,6 @@
   function _mgSelSpellings() { var out = []; Object.keys(_mg.asel).forEach(function(k) { var g = _mg.artists.find(function(x) { return x.key === k; }); if (g) out = out.concat(Object.keys(g.spellings)); }); return out; }
   window.mgArtistRename = async function(key) { var g = _mg.artists.find(function(x) { return x.key === key; }); if (!g) return; var to = prompt('rename "' + g.name + '" (' + g.comps + ' comps) to what?', g.name); if (!to || to === g.name) return; try { var r = await api('/archive-manage/artists/rename', { method: 'POST', body: JSON.stringify({ from: Object.keys(g.spellings), to: to }) }); mgArtistsLoad(); } catch (e) { alert(e.message || 'Failed'); } };
   window.mgArtistMerge = async function() { var from = _mgSelSpellings(); if (!from.length) return; var to = prompt('merge ' + Object.keys(_mg.asel).length + ' artist(s) into one name. every comp under them will show this name', from[0]); if (!to) return; try { var r = await api('/archive-manage/artists/rename', { method: 'POST', body: JSON.stringify({ from: from, to: to }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.updated + ' comps are under "' + r.to + '" now'); } catch (e) { alert(e.message || 'Failed'); } };
-  window.mgArtistAssign = async function() { var names = _mgSelSpellings(); if (!names.length) return; var acc = await _mgPickAccount(); if (!acc) return; try { var r = await api('/archive-manage/artists/assign', { method: 'POST', body: JSON.stringify({ names: names, artist_id: acc.id }) }); _mg.asel = {}; mgArtistsLoad(); alert(r.comps + ' comps moved under ' + acc.display_name); } catch (e) { alert(e.message || 'Failed'); } };
-  mgLoad();
 
   // ── Comp claims ──────────────────────────────────────────────────────────
   var CL_LABEL = { rename: 'Wrong name, rename', transfer: 'Move to their account', stolen: 'Posted by someone else', remove: 'Take down', other: 'Other' };
@@ -2779,12 +2514,6 @@
   window.clSet = async function(id, status) {
     var note = prompt(status === 'approved' ? 'note for them (what you did)' : status === 'rejected' ? 'why it got declined (they will see this)' : 'note', '');
     if (note === null) return;
-    if (status === 'approved') {
-      try {
-        var r = await api('/claims/' + id + '/ai-apply', { method: 'POST', body: JSON.stringify({ mode: 'approve', note: note }) });
-        _clDone(id, 'Approved' + (r && r.done && r.done.length ? ' · ' + r.done.length + ' change(s) made' : '')); return;
-      } catch (e) { if (!confirm((e.message || 'couldnt apply the changes') + '\n\nmark it approved anyway without changing any comps?')) return; }
-    }
     try { await api('/claims/' + id, { method: 'PATCH', body: JSON.stringify({ status: status, staff_note: note }) }); clLoad(status === 'open' ? 'open' : 'open'); } catch (e) { alert(e.message || 'Failed'); }
   };
   window.clOpenComps = async function(id) {
@@ -2837,7 +2566,6 @@
     for (var i = 0; i < btns.length; i++) await clRefix(btns[i].getAttribute('data-refix'), btns[i]);
     if (typeof mgLoad === 'function') mgLoad();
   };
-  clLoad('open');
 </script>
 <script>
   (function () {
@@ -3254,6 +2982,10 @@
         if (dl && dl.ai) dline += ' · AI: ' + num(dl.ai.merged || 0) + ' merged, ' + num((dl.ai.different || 0) + (dl.ai.versions || 0)) + ' not the same' + (dl.ai.review ? ', ' + num(dl.ai.review) + ' for you' : '');
         lines.push('<div>' + dline + '</div>');
         if (dl && dl.error) lines.push('<div class="is-bad">duplicate check error: ' + esc(dl.error) + '</div>');
+        if (dd) {
+          var ddc = dd.config || {}, ddOff = ddc.enabled === false || ddc.phase === 'paused';
+          lines.push('<div class="qc-btns" style="margin-top:2px;"><button class="wv-pill" data-qc-act="dd-toggle">' + (ddOff ? 'resume duplicate merging' : 'pause duplicate merging') + '</button>' + (ddOff ? '' : '<button class="wv-pill" data-qc-act="dd-now">check for duplicates now</button>') + '</div>');
+        }
       }
       var total = c ? (Number(c.unchecked) || 0) + (Number(c.ok) || 0) + review + second + (Number(c.hidden) || 0) : 0;
       var w = function (n) { return total ? Math.max(0, Math.min(100, (Number(n) || 0) / total * 100)).toFixed(2) : 0; };
@@ -3311,6 +3043,17 @@
       else if (a === 'now') {
         b.disabled = true;
         post('/run-now').then(function (d) { toast(d && d.busy ? 'its already working on it' : 'checking now'); setTimeout(function () { qcStatus(true); }, 2500); }).catch(function (e) { toast(emsg(e), 'error'); }).then(function () { b.disabled = false; });
+      }
+      else if (a === 'dd-toggle') {
+        var ddc = ((s.dedupe || {}).config) || {}, ddPaused = ddc.enabled === false || ddc.phase === 'paused';
+        if (ddPaused && ddc.phase === 'paused' && !confirm('let the duplicate merger go through the whole archive? merged copies can be brought back from the Removed list')) return;
+        var ddPatch = ddPaused ? (ddc.phase === 'paused' ? { enabled: true, phase: 'full' } : { enabled: true }) : { enabled: false };
+        b.disabled = true;
+        post('/dedupe/config', ddPatch).then(function () { toast(ddPaused ? 'duplicate merging resumed' : 'duplicate merging paused'); return qcStatus(true); }).catch(function (e) { if (!(e && e.navAborted)) toast(emsg(e), 'error'); }).then(function () { b.disabled = false; });
+      }
+      else if (a === 'dd-now') {
+        b.disabled = true;
+        post('/dedupe/run-now').then(function (d) { toast(d && d.busy ? 'its already working on it' : 'looking for duplicates now'); setTimeout(function () { qcStatus(true); }, 2500); }).catch(function (e) { if (!(e && e.navAborted)) toast(emsg(e), 'error'); }).then(function () { b.disabled = false; });
       }
       else if (a === 'save') {
         var rm = parseFloat(($('qc-set-rm') || {}).value), kp = parseFloat(($('qc-set-keep') || {}).value), mx = parseFloat(($('qc-set-max') || {}).value);

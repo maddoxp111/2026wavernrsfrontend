@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — community</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="cm-page-style">
     .cm-wrap { container-type: inline-size; max-width: 1180px; margin: 0 auto; padding: 14px 0 88px; }
     .cm-wrap *, .cm-wrap *::before, .cm-wrap *::after { box-sizing: border-box; }
@@ -245,6 +245,9 @@
     .cm-c.flash > .cm-c-row > .cm-c-main > .cm-c-bubble { background: var(--brand-bg); box-shadow: 0 0 0 8px var(--brand-bg); }
     .cm-c-head { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-3); min-height: 28px; flex-wrap: wrap; }
     .cm-c-head .cm-name { font-weight: 700; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+    .cm-at { color: var(--brand); font-weight: 700; }
+    .cm-edited { color: var(--text-3); font-size: 12px; }
+    .cm-edit-form { margin-top: 12px; }
     .cm-op { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; color: var(--brand); background: var(--brand-bg); padding: 1px 6px; border-radius: 4px; line-height: 1.5; }
     .cm-newdot { width: 7px; height: 7px; border-radius: 50%; background: var(--brand); display: inline-block; }
     .cm-replying { font-size: 12px; color: var(--text-3); }
@@ -302,10 +305,10 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -384,6 +387,7 @@
     trash: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a2 2 0 0 0 2 1.8h7a2 2 0 0 0 2-1.8l1-12M9 7V4.5h6V7"/></svg>',
     shield: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7.5 3v5.6c0 4.4-3.1 8.2-7.5 9.4-4.4-1.2-7.5-5-7.5-9.4V6z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>',
     reply: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 8.5L4.5 13l5 4.5"/><path d="M4.5 13h9.5a5.5 5.5 0 0 1 5.5 5.5V19"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0 0-3l-1.2-1.2a2.1 2.1 0 0 0-3 0L4 15.8z"/><path d="M13.5 6.5l4 4"/></svg>',
     pen: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4.2L19.4 8.8a2.1 2.1 0 0 0 0-3l-1.2-1.2a2.1 2.1 0 0 0-3 0L4 15.8z"/><path d="M13.5 6.5l4 4"/></svg>',
     trophy: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/></svg>',
     spark: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.3 5.2 5.2 2.3-5.2 2.3L12 18.5l-2.3-5.2L4.5 11l5.2-2.3z"/></svg>',
@@ -401,6 +405,8 @@
   function scroller() { return document.getElementById('wv-content') || document.scrollingElement || document.documentElement; }
   function reducedMotion() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
   function toast(msg, kind) { if (typeof wvToast === 'function') wvToast(msg, kind); }
+  function authUrl(p) { return '/' + (p || 'login') + '?next=' + encodeURIComponent(location.pathname + location.search); }
+  function editedTag(x) { return x && x.edited_at ? '<span class="cm-sep">·</span><span class="cm-edited" title="edited ' + esc(absTime(x.edited_at)) + '">edited</span>' : ''; }
 
   function renderMd(text) {
     if (!text) return '';
@@ -411,6 +417,11 @@
     s = s.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, function (m, pre, u) {
       var tail = (u.match(/[).,!?]+$/) || [''])[0]; u = u.slice(0, u.length - tail.length);
       return pre + '<a href="' + u + '" target="_blank" rel="noopener nofollow ugc" class="comm-link">' + u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60) + (u.length > 70 ? '…' : '') + '</a>' + tail;
+    });
+    s = s.replace(/(^|\s)@([A-Za-z0-9_.-]{2,32})/g, function (m, pre, u) {
+      var tail = (u.match(/\.+$/) || [''])[0]; u = u.slice(0, u.length - tail.length);
+      if (u.length < 2) return m;
+      return pre + '<span class="cm-at">@' + u + '</span>' + tail;
     });
     s = s.replace(/\n/g, '<br>');
     return s;
@@ -510,6 +521,9 @@
         else if (path === '/track' && q.get('id')) { var t = await api('/tracks/' + encodeURIComponent(q.get('id'))); if (t && t.title) c = { t: t.title, s: 'edit · ' + ((t.artists && t.artists.display_name) || ''), img: t.cover_url || (t.albums && t.albums.cover_url), href: '/track?id=' + encodeURIComponent(t.id) }; }
         else if (path === '/resources' && q.get('view') === 'song' && q.get('t')) { var sg = await api('/ye/song?t=' + encodeURIComponent(q.get('t'))); var r = sg.released && sg.released[0]; c = { t: sg.title, s: 'ye song · ' + (r ? r.album + ' ' + r.year : (sg.tracker || []).length + ' versions on the tracker'), img: r ? r.cover : ((sg.tracker || []).find(function (x) { return x.art; }) || {}).art, href: '/resources?view=song&t=' + encodeURIComponent(sg.title) }; }
         else if (path === '/resources' && q.get('view') === 'disco' && q.get('album')) { var al = (await api('/ye/disco/' + encodeURIComponent(q.get('album')))).album; c = { t: al.title, s: 'ye album · ' + al.year, img: al.cover_sm, href: '/resources?view=disco&album=' + encodeURIComponent(al.slug) }; }
+        else if (path === '/lp' && q.get('id')) { var lid = q.get('id'); var d = await api('/lp/' + encodeURIComponent(lid) + '?lite=1'); if (d && d.lp) c = { t: d.lp.title, s: 'listening party · ' + (d.lp.status === 'live' ? 'live now' : d.lp.status === 'ended' ? 'ended' : 'lobby open'), img: d.now && d.now.track ? d.now.track.cover_url : null, href: '/lp?id=' + encodeURIComponent(lid) }; }
+        else if (path === '/playlist' && q.get('id')) { var pl = await api('/playlists/' + encodeURIComponent(q.get('id'))); if (pl && pl.title) c = { t: pl.title, s: 'playlist · ' + (pl.owner && pl.owner.username ? '@' + pl.owner.username + ' · ' : '') + plural(pl.track_count || 0, 'song'), img: pl.cover_url || (pl.mosaic && pl.mosaic[0]) || null, href: '/playlist?id=' + encodeURIComponent(pl.id || q.get('id')) }; }
+        else if (path === '/artist' && q.get('id')) { var ar = await api('/artists/' + encodeURIComponent(q.get('id'))); if (ar && ar.display_name) c = { t: ar.display_name, s: 'creator · ' + plural(ar.follower_count || 0, 'follower'), img: ar.profile_image_url || null, href: '/artist?id=' + encodeURIComponent(ar.id || q.get('id')) }; }
         else if (path === '/resources' && q.get('view') === 'tweets' && q.get('tweet')) { var tw = (await api('/ye/tweets/' + encodeURIComponent(q.get('tweet')))).tweet; c = { t: String(tw.text || '').replace(/\s*https?:\/\/\S+/g, '').slice(0, 120), s: 'ye tweet · ' + new Date(tw.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }), img: null, href: '/resources?view=tweets&tweet=' + encodeURIComponent(tw.id) }; }
       } catch (e) { if (e && e.navAborted) { delete CM.links[url]; } c = null; }
       return c;
@@ -680,6 +694,7 @@
     if (!CM.awards || Date.now() - (CM.awardsAt || 0) > 300000) {
       api('/awards/current').then(function (d) {
         CM.awards = ((d && d.picks) || []).filter(function (p) { return p && (p.album || p.editor); });
+        CM.awardsSrc = (d && d.source) || 'picks';
         CM.awardsAt = Date.now();
         renderRail();
       }).catch(function () {});
@@ -743,7 +758,7 @@
     var html;
     if (!posts.length) {
       html = '<div class="cm-state"><div class="cm-state-ic">' + IC.chat + '</div><div class="cm-state-t">no posts yet</div><div class="cm-state-d">be the first one to post something. new comps, hot takes, questions, all good.</div>' +
-        (me ? '<button class="cm-btn cm-btn-primary" onclick="openComposer()">Start a post</button>' : '<a class="cm-btn cm-btn-primary" href="/login">Log in to post</a>') + '</div>';
+        (me ? '<button class="cm-btn cm-btn-primary" onclick="openComposer()">Start a post</button>' : '<a class="cm-btn cm-btn-primary" href="' + esc(authUrl()) + '">Log in to post</a>') + '</div>';
     } else if (!list.length) {
       html = '<div class="cm-state"><div class="cm-state-ic">' + IC.search.replace('width="16" height="16"', 'width="24" height="24"') + '</div><div class="cm-state-t">nothing matches “' + esc(_q.trim()) + '”</div><div class="cm-state-d">try another word, or search older posts too.</div>' +
         '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' + (CM.hasMore ? '<button class="cm-btn cm-btn-primary" onclick="searchServer()">Search older posts</button>' : '') + '<button class="cm-btn cm-btn-outline" onclick="clearSearch()">Clear search</button></div></div>';
@@ -779,12 +794,13 @@
     var newReplies = visit && cc > visit.n ? cc - visit.n : 0;
     var badges = (isNew(p) ? '<span class="cm-pill-new">new</span>' : '') + (isHot(p) ? '<span class="cm-hot" title="lots of activity lately">' + IC.flame + 'hot</span>' : '');
     var tools = '';
-    if (isOwner) tools += '<button class="cm-act danger" onclick="event.stopPropagation();deletePost(\'' + id + '\')" aria-label="Delete your post">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
+    if (isOwner) tools += '<button class="cm-act" onclick="event.stopPropagation();editPost(\'' + id + '\')" aria-label="Edit your post">' + IC.edit + '<span class="cm-act-label">Edit</span></button>' +
+      '<button class="cm-act danger" onclick="event.stopPropagation();deletePost(\'' + id + '\')" aria-label="Delete your post">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
     else if (isMod) tools += '<button class="cm-act danger" onclick="event.stopPropagation();modTakeDownPost(\'' + id + '\')" aria-label="Take down post (mod)">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
     var uv = p.user_vote || 0;
     return '<article class="cm-post" id="post-row-' + id + '" tabindex="0" aria-label="' + esc(p.title) + '" onclick="openPost(\'' + id + '\')" onkeydown="if(event.key===\'Enter\'&&event.target===this)openPost(\'' + id + '\')">' +
       '<div class="cm-post-meta">' + avatarHTML(p.username, p.profile_image_url, 28) + usernameLink(p.username, p.artist_id, p.user_id) +
-        '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '">' + esc(ago(p.created_at)) + '</time>' + badges + '</div>' +
+        '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '">' + esc(ago(p.created_at)) + '</time>' + editedTag(p) + badges + '</div>' +
       '<h3 class="cm-post-title">' + highlight(p.title, _q) + '</h3>' +
       (preview ? '<p class="cm-post-body">' + highlight(preview, _q) + '</p>' : '') +
       (link ? '<div class="cm-unfurl" data-fallback="1" data-url="' + esc(link) + '"></div>' : '') +
@@ -851,7 +867,7 @@
   function awardsCard() {
     var picks = CM.awards || [];
     if (!picks.length) return '';
-    return '<div class="cm-card"><div class="cm-card-h">' + IC.trophy + 'This week’s picks</div>' + picks.slice(0, 4).map(function (p) {
+    return '<div class="cm-card"><div class="cm-card-h">' + IC.trophy + (CM.awardsSrc === 'eotw' ? 'Latest Edit of the Week winners' : 'This week’s picks') + '</div>' + picks.slice(0, 4).map(function (p) {
       if (p.editor) {
         var slug = typeof archiveArtistSlug === 'function' ? archiveArtistSlug(p.editor.name) : p.editor.name;
         var href = '/archive-artist?a=' + encodeURIComponent(slug);
@@ -915,7 +931,7 @@
   function composerHTML() {
     if (!me) {
       return '<div class="cm-join"><div class="cm-join-ic">' + IC.chat + '</div><div style="min-width:0;flex:1 1 180px;"><div class="cm-join-t">join the conversation</div><div class="cm-join-d">log in to post, vote and reply to people.</div></div>' +
-        '<div class="cm-join-actions"><a class="cm-btn cm-btn-outline" href="/register">Sign up</a><a class="cm-btn cm-btn-primary" href="/login">Log in</a></div></div>';
+        '<div class="cm-join-actions"><a class="cm-btn cm-btn-outline" href="' + esc(authUrl('register')) + '">Sign up</a><a class="cm-btn cm-btn-primary" href="' + esc(authUrl()) + '">Log in</a></div></div>';
     }
     var d = readDraft();
     var draftTitle = d && (d.title || '').trim();
@@ -953,7 +969,7 @@
   }
 
   function openComposer() {
-    if (!me) { navigate('/login'); return; }
+    if (!me) { navigate(authUrl()); return; }
     var bar = document.getElementById('cm-composer-bar');
     var body = document.getElementById('cm-composer-body');
     var box = document.getElementById('cm-composer');
@@ -1187,7 +1203,7 @@
   }
 
   async function votePost(id, vote) {
-    if (!isLoggedIn()) { navigate('/login'); return; }
+    if (!isLoggedIn()) { navigate(authUrl()); return; }
     var post = posts.find(function (p) { return p.id === id; }) || (currentPost && currentPost.id === id ? currentPost : null);
     if (!post) return;
     var twin = (currentPost && currentPost.id === id && post !== currentPost) ? currentPost : null;
@@ -1214,7 +1230,7 @@
       if (twin) { twin.net_votes = prev; twin.user_vote = prevVote; }
       _updatePostScore(id);
       _paintVote('post', id, prevVote);
-      if (err && err.status === 401) navigate('/login');
+      if (err && err.status === 401) navigate(authUrl());
       else if (!(err && err.navAborted)) toast((err && err.message) || 'couldnt save your vote', 'error');
     }
   }
@@ -1318,12 +1334,15 @@
 
   function openPost(id) {
     if (currentView === 'list') { var s = scroller(); CM.listScroll = s ? s.scrollTop : 0; }
-    history.pushState(null, '', location.pathname + '?post=' + encodeURIComponent(id));
+    CM.fromList = (currentView === 'list');
+    history.pushState({ wvCommPost: 1 }, '', location.pathname + '?post=' + encodeURIComponent(id));
     loadPost(id);
   }
   function goBackToList() {
     CM.restore = true;
-    history.pushState(null, '', location.pathname);
+    if (CM.fromList && history.state && history.state.wvCommPost) { CM.fromList = false; history.back(); return; }
+    CM.fromList = false;
+    history.replaceState(null, '', location.pathname);
     loadPosts();
   }
 
@@ -1343,6 +1362,8 @@
 
   async function loadPost(id) {
     currentView = 'post';
+    var editAfter = CM.editAfter;
+    CM.editAfter = null;
     var view = document.getElementById('view');
     if (!view) return;
     renderPostSkeleton();
@@ -1360,6 +1381,7 @@
       unfurlPost();
       writeVisit(currentPost.id, currentComments.length);
       focusCommentFromUrl();
+      if (editAfter && editAfter === sid(currentPost.id)) editPost(editAfter);
       if (!CM.posts) {
         api('/community/posts?limit=' + PAGE_SIZE).then(function (rows) {
           if (!Array.isArray(rows) || CM.posts) return;
@@ -1391,7 +1413,7 @@
     var cards = await Promise.all(urls.map(function (u) { return resolveLink(u); }));
     box = document.getElementById('post-cards');
     if (!box || !currentPost || currentPost.id !== pid) return;
-    box.innerHTML = cards.map(function (c, i) { return c ? miniCardHTML(c, urls[i]) : ''; }).join('');
+    box.innerHTML = cards.map(function (c, i) { return miniCardHTML(c, urls[i]); }).join('');
   }
 
   function renderPost() {
@@ -1401,7 +1423,8 @@
     var id = sid(p.id);
     var isOwner = me && me.id === p.user_id;
     var tools = '';
-    if (isOwner) tools = '<button class="cm-act danger" onclick="deletePost(\'' + id + '\')">' + IC.trash + '<span class="cm-act-label">Delete post</span></button>';
+    if (isOwner) tools = '<button class="cm-act" onclick="editPost(\'' + id + '\')">' + IC.edit + '<span class="cm-act-label">Edit post</span></button>' +
+      '<button class="cm-act danger" onclick="deletePost(\'' + id + '\')">' + IC.trash + '<span class="cm-act-label">Delete post</span></button>';
     else if (isMod) tools = '<button class="cm-act danger" onclick="modTakeDownPost(\'' + id + '\')">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
     var badges = (isNew(p) ? '<span class="cm-pill-new">new</span>' : '') + (isHot(Object.assign({ comment_count: currentComments.length }, p)) ? '<span class="cm-hot">' + IC.flame + 'hot</span>' : '');
 
@@ -1415,7 +1438,7 @@
               '<div class="cm-foot-actions"><button class="cm-btn cm-btn-primary" id="top-comment-submit" onclick="submitTopComment()" disabled>Comment</button></div></div>' +
           '</div>' +
         '</div>'
-      : '<div class="cm-login-cta">' + IC.comment + '<span>log in to join the conversation</span><a class="cm-btn cm-btn-primary" href="/login">Log in</a></div>';
+      : '<div class="cm-login-cta">' + IC.comment + '<span>log in to join the conversation</span><a class="cm-btn cm-btn-primary" href="' + esc(authUrl()) + '">Log in</a></div>';
 
     view.innerHTML =
       '<div class="cm-wrap is-post">' +
@@ -1424,7 +1447,7 @@
           '<article class="cm-full">' +
             '<div class="cm-post-meta">' + avatarHTML(p.username, p.profile_image_url, 36) +
               '<span style="display:flex;flex-direction:column;min-width:0;gap:1px;">' + usernameLink(p.username, p.artist_id, p.user_id) +
-              '<time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '" style="font-size:12px;">' + esc(ago(p.created_at)) + '</time></span>' + badges + '</div>' +
+              '<span style="display:flex;align-items:center;gap:6px;font-size:12px;"><time class="cm-time" datetime="' + esc(p.created_at) + '" title="' + esc(absTime(p.created_at)) + '">' + esc(ago(p.created_at)) + '</time>' + editedTag(p) + '</span></span>' + badges + '</div>' +
             '<h1 class="cm-full-title">' + esc(p.title) + '</h1>' +
             (p.body ? '<div class="cm-md">' + renderMd(p.body) + '</div><div id="post-cards"></div>' : '') +
             '<div class="cm-actions">' + voteHTML('post', id, netScore(p), p.user_vote || 0) +
@@ -1450,7 +1473,7 @@
 
   function focusComposer() {
     var ta = document.getElementById('top-comment-body');
-    if (!ta) { if (!isLoggedIn()) navigate('/login'); return; }
+    if (!ta) { if (!isLoggedIn()) navigate(authUrl()); return; }
     ta.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
     setTimeout(function () { ta.focus(); }, reducedMotion() ? 0 : 250);
   }
@@ -1497,7 +1520,8 @@
       var actions = voteHTML('comment', id, netScore(c), c.user_vote || 0);
       if (isLoggedIn()) actions += '<button class="cm-act" onclick="toggleReplyForm(\'' + id + '\')" aria-label="Reply to @' + esc(c.username || '') + '">' + IC.reply + '<span class="cm-act-label">Reply</span></button>';
       actions += '<button class="cm-act" id="cshare-' + id + '" onclick="sharePost(\'' + sid(currentPost.id) + '\',\'' + id + '\')" aria-label="Copy link to comment">' + IC.share + '<span class="cm-act-label">Share</span></button>';
-      if (isOwner) actions += '<button class="cm-act danger" onclick="deleteComment(\'' + id + '\')" aria-label="Delete your comment">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
+      if (isOwner) actions += '<button class="cm-act" onclick="editComment(\'' + id + '\')" aria-label="Edit your comment">' + IC.edit + '<span class="cm-act-label">Edit</span></button>' +
+        '<button class="cm-act danger" onclick="deleteComment(\'' + id + '\')" aria-label="Delete your comment">' + IC.trash + '<span class="cm-act-label">Delete</span></button>';
       else if (isMod) actions += '<button class="cm-act danger" onclick="modDeleteComment(\'' + id + '\')" aria-label="Take down comment (mod)">' + IC.shield + '<span class="cm-act-label">Take down</span></button>';
       var collapsed = !!CM.collapsed[c.id];
       return '<div class="cm-c' + (collapsed ? ' collapsed' : '') + '" id="c-' + id + '" data-depth="' + depth + '">' +
@@ -1508,7 +1532,7 @@
             '<div class="cm-c-bubble">' +
               '<div class="cm-c-head">' + usernameLink(c.username, c.artist_id, c.user_id) +
                 (postAuthor && c.user_id === postAuthor ? '<span class="cm-op" title="original poster">OP</span>' : '') +
-                '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(c.created_at) + '" title="' + esc(absTime(c.created_at)) + '">' + esc(ago(c.created_at)) + '</time>' +
+                '<span class="cm-sep">·</span><time class="cm-time" datetime="' + esc(c.created_at) + '" title="' + esc(absTime(c.created_at)) + '">' + esc(ago(c.created_at)) + '</time>' + editedTag(c) +
                 (fresh ? '<span class="cm-newdot" title="new since your last visit"></span>' : '') +
                 (flat && parentName ? '<span class="cm-replying">replying to @' + esc(parentName) + '</span>' : '') +
                 '<button class="cm-c-collapsed-note" onclick="toggleThread(\'' + id + '\')">' + (nested && desc ? '+' + plural(desc, 'reply', 'replies') : 'show') + '</button>' +
@@ -1667,7 +1691,7 @@
   }
 
   async function voteComment(id, vote) {
-    if (!isLoggedIn()) { navigate('/login'); return; }
+    if (!isLoggedIn()) { navigate(authUrl()); return; }
     var c = currentComments.find(function (x) { return sid(x.id) === id; });
     if (!c) return;
     var prev = netScore(c);
@@ -1691,7 +1715,7 @@
       c.user_vote = prevVote;
       if (el) el.textContent = Math.max(0, netScore(c));
       _paintVote('comment', id, prevVote);
-      if (err && err.status === 401) navigate('/login');
+      if (err && err.status === 401) navigate(authUrl());
       else if (!(err && err.navAborted)) toast((err && err.message) || 'couldnt save your vote', 'error');
     }
   }
@@ -1728,6 +1752,144 @@
       dropComment(id);
       toast('comment taken down');
     } catch (err) { toast('couldnt take it down: ' + ((err && err.message) || 'error'), 'error'); }
+  }
+
+  function editPost(id) {
+    if (!me) { navigate(authUrl()); return; }
+    if (currentView !== 'post' || !currentPost || sid(currentPost.id) !== id) { CM.editAfter = id; openPost(id); return; }
+    if (me.id !== currentPost.user_id) return;
+    var full = document.querySelector('.cm-full');
+    var meta = full && full.querySelector(':scope > .cm-post-meta');
+    if (!full || !meta || document.getElementById('ep-form')) return;
+    full.querySelectorAll(':scope > .cm-full-title, :scope > .cm-md, :scope > #post-cards, :scope > .cm-actions').forEach(function (el) { el.hidden = true; el.setAttribute('data-ep-hide', '1'); });
+    var form = document.createElement('div');
+    form.id = 'ep-form';
+    form.className = 'cm-edit-form';
+    form.innerHTML =
+      '<label class="cm-sr" for="ep-title">Title</label>' +
+      '<input id="ep-title" class="cm-field cm-title-input" type="text" maxlength="200" placeholder="title — whats it about?" autocomplete="off" oninput="editPostInput()" onkeydown="editPostKey(event)">' +
+      '<label class="cm-sr" for="ep-body">Body</label>' +
+      '<textarea id="ep-body" class="cm-textarea" maxlength="10000" style="margin-top:10px;" oninput="editPostInput()" onkeydown="editPostKey(event)"></textarea>' +
+      '<div id="ep-error" class="cm-err" role="alert"></div>' +
+      '<div class="cm-composer-foot"><div class="cm-meta-line"><span class="cm-count" id="ep-title-count">0/200</span><span class="cm-count" id="ep-body-count">0/10,000</span></div>' +
+        '<div class="cm-foot-actions"><button type="button" class="cm-btn cm-btn-quiet" onclick="cancelEditPost()">Cancel</button>' +
+        '<button type="button" class="cm-btn cm-btn-primary" id="ep-submit" onclick="saveEditPost()">Save</button></div></div>';
+    meta.insertAdjacentElement('afterend', form);
+    var t = document.getElementById('ep-title'), b = document.getElementById('ep-body');
+    t.value = currentPost.title || '';
+    b.value = currentPost.body || '';
+    editPostInput();
+    setTimeout(function () { t.focus(); }, 30);
+  }
+
+  function editPostInput() {
+    var t = document.getElementById('ep-title'), b = document.getElementById('ep-body');
+    if (!t || !b) return;
+    setCount(document.getElementById('ep-title-count'), t.value.length, 200);
+    setCount(document.getElementById('ep-body-count'), b.value.length, 10000);
+    var btn = document.getElementById('ep-submit');
+    if (btn && !btn.getAttribute('data-busy')) btn.disabled = !t.value.trim() || t.value.length > 200 || b.value.length > 10000;
+    autosize(b);
+  }
+
+  function editPostKey(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditPost(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelEditPost(); }
+  }
+
+  function cancelEditPost() {
+    var form = document.getElementById('ep-form');
+    if (form) form.remove();
+    document.querySelectorAll('.cm-full [data-ep-hide]').forEach(function (el) { el.hidden = false; el.removeAttribute('data-ep-hide'); });
+  }
+
+  async function saveEditPost() {
+    var t = document.getElementById('ep-title'), b = document.getElementById('ep-body');
+    var errEl = document.getElementById('ep-error'), btn = document.getElementById('ep-submit');
+    if (!t || !b || !currentPost) return;
+    var title = t.value.trim(), body = b.value.trim();
+    if (!title) { if (errEl) errEl.textContent = 'you need a title'; t.focus(); return; }
+    if (btn && btn.getAttribute('data-busy')) return;
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.setAttribute('data-busy', '1'); btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Saving'; }
+    var pid = currentPost.id;
+    try {
+      var r = await api('/community/posts/' + encodeURIComponent(pid), { method: 'PATCH', body: JSON.stringify({ title: title, body: body }) });
+      if (!currentPost || currentPost.id !== pid) return;
+      currentPost.title = r && r.title != null ? r.title : title;
+      currentPost.body = r && r.body !== undefined ? r.body : (body || null);
+      currentPost.edited_at = (r && r.edited_at) || new Date().toISOString();
+      var listCopy = posts.find(function (p) { return p.id === pid; });
+      if (listCopy) { listCopy.title = currentPost.title; listCopy.body = currentPost.body; listCopy.edited_at = currentPost.edited_at; }
+      var top = document.getElementById('top-comment-body');
+      var draft = top ? top.value : '';
+      renderPost();
+      unfurlPost();
+      var top2 = document.getElementById('top-comment-body');
+      if (top2 && draft) { top2.value = draft; replyInput('top-comment-body', 'top-comment-count', 'top-comment-submit'); }
+      toast('post updated');
+    } catch (err) {
+      if (errEl) errEl.textContent = (err && err.message) || 'couldnt save that';
+      if (btn) { btn.removeAttribute('data-busy'); btn.innerHTML = 'Save'; editPostInput(); }
+    }
+  }
+
+  function editComment(id) {
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
+    var node = document.getElementById('c-' + id);
+    var bodyEl = node && node.querySelector(':scope > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-c-body');
+    if (!c || !bodyEl || !me || me.id !== c.user_id || document.getElementById('edit-form-' + id)) return;
+    bodyEl.hidden = true;
+    var form = document.createElement('div');
+    form.className = 'cm-inline-reply';
+    form.id = 'edit-form-' + id;
+    form.innerHTML =
+      '<label class="cm-sr" for="edit-body-' + id + '">Edit comment</label>' +
+      '<textarea id="edit-body-' + id + '" class="cm-textarea" maxlength="5000" oninput="replyInput(\'edit-body-' + id + '\',\'edit-count-' + id + '\',\'edit-submit-' + id + '\')" onkeydown="editCommentKey(event,\'' + id + '\')"></textarea>' +
+      '<div id="edit-error-' + id + '" class="cm-err" role="alert"></div>' +
+      '<div class="cm-inline-foot"><div class="cm-meta-line"><span class="cm-count" id="edit-count-' + id + '">0/5,000</span></div>' +
+        '<div class="cm-foot-actions"><button class="cm-btn cm-btn-quiet" onclick="cancelEditComment(\'' + id + '\')">Cancel</button>' +
+        '<button class="cm-btn cm-btn-primary" id="edit-submit-' + id + '" onclick="saveEditComment(\'' + id + '\')">Save</button></div></div>';
+    bodyEl.insertAdjacentElement('afterend', form);
+    var ta = document.getElementById('edit-body-' + id);
+    ta.value = c.body || '';
+    replyInput('edit-body-' + id, 'edit-count-' + id, 'edit-submit-' + id);
+    setTimeout(function () { ta.focus(); }, 20);
+  }
+
+  function editCommentKey(e, id) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditComment(id); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelEditComment(id); }
+  }
+
+  function cancelEditComment(id) {
+    var form = document.getElementById('edit-form-' + id);
+    if (form) form.remove();
+    var node = document.getElementById('c-' + id);
+    var bodyEl = node && node.querySelector(':scope > .cm-c-row > .cm-c-main > .cm-c-bubble > .cm-c-body');
+    if (bodyEl) bodyEl.hidden = false;
+  }
+
+  async function saveEditComment(id) {
+    var c = currentComments.find(function (x) { return sid(x.id) === id; });
+    var ta = document.getElementById('edit-body-' + id);
+    var errEl = document.getElementById('edit-error-' + id), btn = document.getElementById('edit-submit-' + id);
+    if (!c || !ta) return;
+    var body = ta.value.trim();
+    if (!body) { if (errEl) errEl.textContent = 'write something first'; return; }
+    if (btn && btn.getAttribute('data-busy')) return;
+    if (errEl) errEl.textContent = '';
+    if (btn) { btn.setAttribute('data-busy', '1'); btn.disabled = true; btn.innerHTML = '<span class="cm-spin"></span>Saving'; }
+    try {
+      var r = await api('/community/comments/' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify({ body: body }) });
+      c.body = r && r.body != null ? r.body : body;
+      c.edited_at = (r && r.edited_at) || new Date().toISOString();
+      rerenderComments();
+      toast('comment updated');
+    } catch (err) {
+      if (errEl) errEl.textContent = (err && err.message) || 'couldnt save that';
+      if (btn) { btn.removeAttribute('data-busy'); btn.innerHTML = 'Save'; btn.disabled = false; }
+    }
   }
 
   window._wvCommKeys = function (e) {

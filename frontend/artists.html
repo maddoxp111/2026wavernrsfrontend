@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — editors</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="ed-css">
     .ed-sub { font-size: 14px; color: var(--text-2); margin: -6px 0 22px; }
     .ed-podium { display: grid; grid-template-columns: 1fr 1.12fr 1fr; gap: 14px; align-items: end; margin-bottom: 30px; }
@@ -87,10 +87,10 @@
     <div class="wv-skel-card"><div class="wv-skel art" style="border-radius:50%"></div><div class="wv-skel l1"></div></div>
   </div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 initPlayer();
 var _artists = [];
@@ -130,7 +130,7 @@ window.clearArtistSearch = function() {
 
 async function loadArtists() {
   try {
-    var d = await api('/stats/artists');
+    var d = await api('/stats/artists?active=1');
     _artists = (d && d.items) || [];
     _arLoaded = true;
     renderPodium();
@@ -183,6 +183,9 @@ window.renderArtists = function() {
     return;
   }
   var list = _artists.filter(function(a) { return !q || String(a.display_name || '').toLowerCase().indexOf(q) !== -1; });
+  var podWrap = document.getElementById('ed-podium-wrap');
+  var podK = (podWrap && podWrap.getAttribute('data-k')) || 'off';
+  var onPodium = (!q && _arSort === 'plays' && podK !== 'off') ? podK.split('|')[0].split(',') : [];
   list.sort(function(a, b) {
     if (_arSort === 'latest') return String(b.latest || b.created_at || '').localeCompare(String(a.latest || a.created_at || ''));
     return (b[_arSort] || 0) - (a[_arSort] || 0) || (b.plays || 0) - (a.plays || 0);
@@ -195,14 +198,15 @@ window.renderArtists = function() {
     return;
   }
   var ver = (_badges.verified_artists || []);
-  grid.innerHTML = list.map(function(a) {
+  grid.innerHTML = list.filter(function(a) { return onPodium.indexOf(a.id) === -1; }).map(function(a) {
     var img = a.profile_image_url || a.cover;
     var meta = _arSort === 'followers' ? fmtNum(a.followers || 0) + ' follower' + (a.followers === 1 ? '' : 's')
              : _arSort === 'uploads' ? (a.uploads || 0) + ' upload' + (a.uploads === 1 ? '' : 's')
              : _arSort === 'latest' && a.latest ? 'new ' + timeAgo(a.latest)
              : fmtNum(a.plays || 0) + ' plays';
     return '<a class="wv-artist-tile" href="/artist?id=' + encodeURIComponent(a.id) + '" style="text-decoration:none;color:inherit;display:block;">' +
-      '<div class="av" style="background:' + coverGradient(a.display_name || '') + ';">' +
+      '<div class="av" style="background:' + coverGradient(a.display_name || '') + ';display:grid;place-items:center;font-weight:900;font-size:32px;color:rgba(255,255,255,.92);">' +
+        escHtml(((a.display_name || '?')[0] || '?').toUpperCase()) +
         (img ? '<img src="' + escHtml(arImg(img, 240)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
       '</div>' +
       '<div class="wv-artist-name">' + escHtml(a.display_name || 'Unknown') + (ver.indexOf(a.id) !== -1 ? '<span class="wv-verified-icon">✓</span>' : '') + '</div>' +

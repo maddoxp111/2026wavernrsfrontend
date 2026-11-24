@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — comp</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <title>wavernrs — comp</title>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     /* ── comp page: skeleton ─────────────────────────────── */
     .alb-sk { padding: 28px 0; }
@@ -76,6 +76,13 @@
     .alb-rt { white-space: nowrap; }
     .wv-btn-play .alb-pi { width: 12px; height: 12px; }
     #alb-play { min-width: 118px; justify-content: center; }
+    .wv-icon-btn.alb-mob { display: none; }
+    @media (max-width: 640px) {
+      #album-container .alb-mhide { display: none !important; }
+      #album-container .wv-icon-btn.alb-mob { display: inline-grid; }
+      #album-container .alb-act2 { display: none; }
+      #album-container .alb-act2:has(#staff-cover-btn, #staff-thread-btn) { display: flex; }
+    }
     #like-btn.wv-icon-btn { width: auto; min-width: 36px; height: 36px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     /* ── sticky compact header ────────────────────────────── */
@@ -140,12 +147,12 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
-<script src="/js/ratings.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
+<script src="/js/ratings.js?v=261967381b39"></script>
 <script>
   // The comp's own date: for uploads the upload date; for archive comps the
   // date the source gave (Reddit post, last edit on untitled/Samply, file
@@ -180,15 +187,20 @@
         try { history.replaceState(null, '', '/album?id=' + albumId + location.hash); } catch (_) {}
       }
     } catch (err) {
+      if (err && err.navAborted) return;
       if (err && err.data && err.data.removed) { showRemovedComp(); return; }
-      document.getElementById('album-container').innerHTML =
-        `<div class="empty-state"><div class="empty-title">couldnt find this comp</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`;
+      var gone = err && (err.status === 404 || err.status === 400);
+      var _ac = document.getElementById('album-container');
+      if (!_ac) return;
+      _ac.innerHTML = gone
+        ? `<div class="empty-state"><div class="empty-title">couldnt find this comp</div><div class="empty-desc">it may have been taken down, or the link is off by a character or two.</div><a href="/index" class="btn btn-primary" style="margin-top:16px">Go home</a></div>`
+        : `<div class="empty-state"><div class="empty-title">this comp didnt load</div><div class="empty-desc">wavernrs might be busy right now. give it a second and try again.</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;"><button class="btn btn-primary" onclick="document.getElementById('album-container').innerHTML='<div class=&quot;loading&quot;><div class=&quot;spinner&quot;></div></div>';loadAlbum()">Retry</button><a href="/index" class="btn btn-secondary">Go home</a></div></div>`;
       return;
     }
     try {
       albumTracks = (album.album_tracks || []).sort((a, b) => a.position - b.position);
       _credits = (typeof wvAlbumCredits === 'function' && wvAlbumCredits(album)) || {};
-      document.title = `${album.title} — wavernrs stream`;
+      document.title = `${album.title} — wavernrs`;
       await renderAlbum();
       var _q = new URLSearchParams(location.search);
       if (_q.get('dl') === '1') {
@@ -210,6 +222,13 @@
       loadAwardPills(album.id);
       showDisown(album);
       showAddCover(album);
+      if (location.hash === '#owner-tools') {
+        var _ot = document.getElementById('owner-tools');
+        if (_ot && _ot.style.display === 'none') {
+          toggleOwnerTools();
+          try { _ot.scrollIntoView({ block: 'start' }); } catch (_) {}
+        }
+      }
     } catch (err) {
       console.error('album render error', err);
     }
@@ -273,6 +292,14 @@
     }
 
     const coverBg = (typeof coverGradient === 'function') ? coverGradient(album.title || '') : 'linear-gradient(135deg,#1a0a2e,#2d1b6e)';
+    const _desc = (function () {
+      var d = album.description ? String(album.description) : '';
+      if (!d) return '';
+      var nl = d.indexOf('\n');
+      var first = (nl === -1 ? d : d.slice(0, nl)).replace(/^\s*#+\s*/, '').trim();
+      if (first && first.toLowerCase() === String(album.title || '').trim().toLowerCase()) d = nl === -1 ? '' : d.slice(nl + 1);
+      return d.trim() ? d : '';
+    })();
     const coverInner = album.cover_url
       ? `<img src="${escHtml(album.cover_url)}" alt="cover" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;object-fit:cover;">`
       : '';
@@ -284,6 +311,7 @@
 
     document.getElementById('album-container').innerHTML = `
       <div style="padding:28px 0;">
+        ${_playable ? `<div class="alb-stk-wrap"><div class="alb-stk" id="alb-stk" aria-hidden="true"><button class="alb-stk-play" id="alb-stk-play" onclick="albumHeroPlay()" tabindex="-1" aria-label="Play"></button><div class="alb-stk-cv" style="background:${coverBg}">${album.cover_url ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(album.cover_url, 96) : album.cover_url) + '" alt="">' : ''}</div><button class="alb-stk-tx" onclick="albumScrollTop()" tabindex="-1"><div class="alb-stk-t">${escHtml(album.title)}</div><div class="alb-stk-s" id="alb-stk-s"></div></button></div></div>` : ''}
         <div id="qc-banner" class="qc-banner" role="status" hidden></div>
         ${freshBanner}
         <div id="staff-bar" class="wv-staff-bar" style="display:none;"></div>
@@ -308,7 +336,7 @@
             <div class="wv-hero-meta">${eraName ? (album.era_tag && album.era_tag.id
                 ? '<a href="/eras" onclick="event.preventDefault();event.stopPropagation();navigate(\'/archive?era=' + encodeURIComponent(album.era_tag.id) + '\')" style="color:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer;">' + escHtml(eraName) + '</a>'
                 : escHtml(eraName)) + ' · ' : ''}${albumTracks.length ? albumTracks.length + ' edit' + (albumTracks.length !== 1 ? 's' : '') : 'Upcoming'}<span class="alb-rt" id="alb-runtime"></span>${_isUpcoming ? ' · Out ' + escHtml(_outLabel) : ''}${album.play_count ? ' · ' + fmtNum(album.play_count) + ' plays' : ''} · ${compDateLabel(album)}</div>
-            ${album.description ? `<div class="wv-hero-desc">${escHtml(typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(album.description) : album.description)}</div>` : ''}
+            ${_desc ? `<div class="wv-hero-desc">${escHtml(typeof wvCleanDiscordText === 'function' ? wvCleanDiscordText(_desc) : _desc)}</div>` : ''}
             ${_isDraft && _isOwner ? '<div class="wv-release-note draft">this is a draft...only you and staff can see it. release it when its ready</div>' : ''}
             ${_isUpcoming ? '<div class="wv-release-note">Out ' + escHtml(_outLabel) + ' <span id="wv-countdown" data-at="' + _releaseAt.getTime() + '"></span>' + (_isOwner ? ' · you can already play it since its yours' : '') + '</div>' : ''}
             <div class="wv-hero-actions">
@@ -320,31 +348,34 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>Shuffle
               </button>
               <button class="wv-icon-btn" id="like-btn" onclick="toggleLike()" title="${album.external_likes ? 'this counts ' + fmtNum(album.external_likes) + ' likes from where it was first posted (reddit upvotes and discord ⭐)' : 'Like'}">${album.user_liked ? '♥' : '♡'} ${fmtNum(album.like_count || 0)}</button>${(function(){ _albumLikeCount = album.like_count || 0; return ''; })()}
+              <button type="button" class="wv-icon-btn alb-mob" onclick="copyLink()" title="Share" aria-label="Share"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>
+              ${_playable ? '<button type="button" class="wv-icon-btn alb-mob" onclick="wvDownloadComp(albumId)" title="Download" aria-label="Download"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg></button>' : ''}
+              <button type="button" class="wv-icon-btn alb-mob alb-mob-more" onclick="albumHeroMenu(this)" title="More" aria-label="More options" aria-haspopup="menu" aria-expanded="false"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
               <div id="rating-widget">${ratingPlaceholder}</div>
-              ${album.discord_thread ? '<button class="wv-btn-ghost wv-dt-btn" onclick="openAlbumThread()"><svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.445.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>Discord thread</button>' : ''}
+              ${album.discord_thread ? '<button class="wv-btn-ghost wv-dt-btn alb-mhide" onclick="openAlbumThread()"><svg width="15" height="15" viewBox="0 0 24 24" fill="#5865F2" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.445.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.028C.533 9.046-.32 13.58.099 18.058a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>Discord thread</button>' : ''}
             </div>
-            <div class="wv-hero-actions" style="margin-top:10px;">
-              <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost" id="download-comp-btn"${_playable ? '' : ' style="display:none"'}>
+            <div class="wv-hero-actions alb-act2" style="margin-top:10px;">
+              <a href="${API_BASE}/albums/${albumId}/download" class="wv-btn-ghost alb-mhide" id="download-comp-btn"${_playable ? '' : ' style="display:none"'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                 Download Zip
               </a>
-              <button class="wv-btn-ghost" onclick="addAlbumToQueue('${albumId}')" title="add every track to the queue"${_playable ? '' : ' style="display:none"'}>
+              <button class="wv-btn-ghost alb-mhide" onclick="addAlbumToQueue('${albumId}')" title="add every track to the queue"${_playable ? '' : ' style="display:none"'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
                 Add to queue
               </button>
-              <button class="wv-btn-ghost" onclick="hostLpWithComp()" title="start a listening party with this comp"${_playable ? '' : ' style="display:none"'}>
+              <button class="wv-btn-ghost alb-mhide" onclick="hostLpWithComp()" title="start a listening party with this comp"${_playable ? '' : ' style="display:none"'}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                 Listen together
               </button>
-              <button class="wv-btn-ghost" id="share-btn" onclick="copyLink()">
+              <button class="wv-btn-ghost alb-mhide" id="share-btn" onclick="copyLink()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 Share
               </button>
-              ${_isOwner ? '<button class="wv-btn-ghost" onclick="toggleOwnerTools()" id="owner-tools-btn">Manage comp</button>' : ''}
+              ${_isOwner ? '<button class="wv-btn-ghost alb-mhide" onclick="toggleOwnerTools()" id="owner-tools-btn">Manage comp</button>' : ''}
               <span id="staff-cover-slot"></span>
               <span id="staff-thread-slot"></span>
-              ${album.origin && album.origin.url && !(album.discord_thread && /^Discord thread$/.test(album.origin.label || '')) ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
-              ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
+              ${album.origin && album.origin.url && !(album.discord_thread && /^Discord thread$/.test(album.origin.label || '')) ? `<a href="${escHtml(album.origin.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost alb-mhide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.origin.label)}</a>` : ''}
+              ${album.source && album.source.url ? `<a href="${escHtml(album.source.url)}" target="_blank" rel="noopener noreferrer" class="wv-btn-ghost alb-mhide"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> ${escHtml(album.source.label)}</a>` : ''}
             </div>
           </div>
         </div>
@@ -404,7 +435,7 @@
                 </div>
               </div>
             ` : `<p style="font-size:14px;color:var(--text-2);">
-              <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment
+              <a href="/login?next=${encodeURIComponent(location.pathname + location.search)}" style="color:var(--brand);font-weight:500;">Log in</a> to leave a comment
             </p>`}
           </div>
           <div id="album-comments-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -428,7 +459,7 @@
 
   var _albumLikeCount = 0;
   async function toggleLike() {
-    if (!isLoggedIn()) { navigate('/login'); return; }
+    if (!isLoggedIn()) { _loginHere(); return; }
     try {
       const res = await api(`/albums/${albumId}/like`, { method: 'POST' });
       albumLiked = res.liked;
@@ -437,8 +468,11 @@
       const btn = document.getElementById('like-btn');
       if (btn) btn.innerHTML = `${albumLiked ? '♥' : '♡'} ${fmtNum(_albumLikeCount)}`;
       if (typeof wvToast === 'function') wvToast(albumLiked ? 'added to your likes' : 'removed from your likes');
+      if (typeof window.refreshSidebarLibrary === 'function') window.refreshSidebarLibrary();
     } catch (e) { if (typeof wvToast === 'function') wvToast('couldnt save that like...try again', 'error'); }
   }
+
+  function _loginHere() { navigate('/login?next=' + encodeURIComponent(location.pathname + location.search)); }
 
   // Staff can pull a missing cover from where the comp was imported from
   // (Drive, MEGA, Samply), for archive comps that came in without one.
@@ -636,7 +670,7 @@
   // ── Removed from the site (soft): staff banner + remove / bring back ────
   function _qcIcon(px) { return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18v3H3z"/><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/><path d="M10 14h4"/></svg>'; }
   function showRemovedComp() {
-    document.title = 'removed — wavernrs stream';
+    document.title = 'removed — wavernrs';
     var el = document.getElementById('album-container'); if (!el) return;
     el.innerHTML = '<div class="empty-state qc-removed"><div class="empty-icon">' + _qcIcon(26) + '</div>' +
       '<div class="empty-title">this was removed from the site</div>' +
@@ -921,13 +955,10 @@
   };
 
   async function _threadRepair(body) {
-    await api('/import/thread-repair', { method: 'POST', body: JSON.stringify(body) });
-    var st = null;
-    for (var i = 0; i < 150; i++) {
-      await new Promise(function (r) { setTimeout(r, 2000); });
-      st = await api('/import/thread-repair');
-      if (!st || st.status !== 'running') break;
-    }
+    var b = Object.assign({}, body, { album_id: (body && body.album_ids && body.album_ids[0]) || (album && album.id) });
+    delete b.album_ids; delete b.limit;
+    var st = await api('/import/thread-repair/one', { method: 'POST', body: JSON.stringify(b) });
+    if (st && st.error) throw new Error(st.error);
     return st;
   }
 
@@ -1046,15 +1077,12 @@
     if (!btn || !a) return;
     btn.disabled = true; btn.textContent = 'Looking…';
     try {
-      await api('/import/source-cover-backfill', { method: 'POST', body: JSON.stringify({ album_ids: [a.id], limit: 1, all: true }) });
-      var st = null;
-      for (var i = 0; i < 60; i++) {
-        await new Promise(function (r) { setTimeout(r, 2000); });
-        st = await api('/import/source-cover-backfill');
-        if (!st || st.status !== 'running') break;
-      }
+      var st = await api('/import/source-cover/one', { method: 'POST', body: JSON.stringify({ album_id: a.id, all: true }) });
       if (st && st.fixed > 0) { if (typeof wvToast === 'function') wvToast('found a cover!!'); location.reload(); return; }
-      btn.textContent = st && st.status === 'running' ? 'Still looking…' : 'No cover found at the source';
+      if (st && st.error) throw new Error(st.error);
+      var bad = st && st.failed > 0 && (st.samples || []).find(function (s) { return s && s.err; });
+      if (bad) throw new Error(bad.err);
+      btn.textContent = 'No cover found at the source';
     } catch (e) {
       btn.disabled = false; btn.textContent = 'Get cover from source';
       if (typeof wvToast === 'function') wvToast((e && e.message) || 'couldnt start that', 'error');
@@ -1275,10 +1303,14 @@
       '</div>' +
       '<div class="wv-cmp-body" id="wv-cmp-body"><div class="loading"><div class="spinner"></div></div></div>' +
     '</div>';
+    var esc = function (e) { if (e.key === 'Escape') close(); };
+    function close() { wrap.remove(); document.removeEventListener('keydown', esc); if (window._albCmpClose === close) window._albCmpClose = null; }
+    window._albCmpClose = close;
     wrap.addEventListener('click', function (e) {
-      if (e.target === wrap || e.target.classList.contains('wv-cmp-close')) wrap.remove();
+      if (e.target === wrap || e.target.classList.contains('wv-cmp-close')) close();
     });
-    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { wrap.remove(); document.removeEventListener('keydown', esc); } });
+    document.addEventListener('keydown', esc);
+    (window._pageCleanup = window._pageCleanup || []).push(close);
     document.body.appendChild(wrap);
     document.getElementById('wv-cmp-pick').addEventListener('change', function () { renderCompare(this.value); });
     renderCompare(0);
@@ -1320,7 +1352,7 @@
         '</div>' +
         '<div class="wv-cmp-foot">' +
           '<button class="wv-btn-ghost" onclick="playCompById(\'' + other.id + '\')">Play ' + escHtml(other.title) + '</button>' +
-          '<a class="wv-btn-ghost" href="/album?id=' + other.id + '" onclick="document.getElementById(\'wv-cmp\').remove();">Open it →</a>' +
+          '<a class="wv-btn-ghost" href="/album?id=' + other.id + '" onclick="if(window._albCmpClose)window._albCmpClose();">Open it →</a>' +
         '</div>';
     } catch (e) {
       body.innerHTML = '<div class="wv-empty">couldnt load that tracklist</div>';
@@ -1367,16 +1399,21 @@
     var timeStr = c.created_at ? new Date(c.created_at).toLocaleDateString() : '';
     var editedMark = c.edited_at ? '<span style="font-size:10px;color:var(--text-3);margin-left:4px;">(edited)</span>' : '';
     var isMine = _acMe && c.user_id === _acMe.id;
+    var isMod = false;
+    try { isMod = sessionStorage.getItem('wv_is_mod') === 'true'; } catch (_) {}
 
     var actionBtns = '<button onclick="acShowReply(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Reply</button>';
     if (isMine) {
       actionBtns +=
-        '<button onclick="acStartEdit(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Edit</button>' +
+        '<button onclick="acStartEdit(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Edit</button>';
+    }
+    if (isMine || isMod) {
+      actionBtns +=
         '<button onclick="deleteAlbumComment(\'' + escHtml(c.id) + '\')" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);padding:2px 6px;font-family:inherit;">Delete</button>';
     }
 
     var indent = isReply ? 'margin-left:44px;' : '';
-    return '<div id="albumcomment-' + escHtml(c.id) + '" style="' + indent + '">' +
+    return '<div id="albumcomment-' + escHtml(c.id) + '"' + (isReply && c.parent_id ? ' data-parent="' + escHtml(c.parent_id) + '"' : '') + ' style="' + indent + '">' +
       '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:12px;transition:background 0.12s;" onmouseenter="this.style.background=\'var(--hair)\'" onmouseleave="this.style.background=\'transparent\'">' +
         _acAvatar(uname) +
         '<div style="flex:1;min-width:0;">' +
@@ -1631,7 +1668,7 @@
     var box = document.getElementById('acreply-box-' + parentId);
     if (!box) return;
     if (box.style.display !== 'none') { box.style.display = 'none'; return; }
-    if (!isLoggedIn()) { navigate('/login'); return; }
+    if (!isLoggedIn()) { _loginHere(); return; }
     box.style.display = '';
     box.innerHTML =
       '<div style="display:flex;gap:8px;">' +
@@ -1715,6 +1752,7 @@
   }
 
   async function voteAlbumComment(commentId, vote) {
+    if (!isLoggedIn()) { _loginHere(); return; }
     try {
       var res = await api('/albums/' + albumId + '/comments/' + commentId + '/vote', { method: 'POST', body: JSON.stringify({ vote: vote }) });
       albumMyVotes[commentId] = albumMyVotes[commentId] === vote ? 0 : vote;
@@ -1726,7 +1764,9 @@
       var downBtn = document.getElementById('acvote-down-btn-' + commentId);
       if (upBtn) upBtn.style.cssText = upBtn.style.cssText.replace(/color:[^;]+/, albumMyVotes[commentId] === 1 ? 'color:var(--brand)' : 'color:var(--text-3)');
       if (downBtn) downBtn.style.cssText = downBtn.style.cssText.replace(/color:[^;]+/, albumMyVotes[commentId] === -1 ? 'color:var(--red)' : 'color:var(--text-3)');
-    } catch(err) {}
+    } catch(err) {
+      if (typeof wvToast === 'function') wvToast((err && err.message) || 'couldnt save that vote', 'error');
+    }
   }
 
   async function deleteAlbumComment(commentId) {
@@ -1736,6 +1776,7 @@
       // Remove the comment row and any reply rows beneath it
       var el = document.getElementById('albumcomment-' + commentId);
       if (el) el.remove();
+      document.querySelectorAll('[data-parent="' + commentId + '"]').forEach(function (e) { e.remove(); });
     } catch(err) { alert(err.message || 'couldnt delete it'); }
   }
 
@@ -1783,6 +1824,7 @@
       return;
     }
 
+    if (!album.from_import) return;
     var me = null;
     try { me = JSON.parse(localStorage.getItem('user')); } catch (_) {}
     if (!me || !album.artists || album.artists.user_id !== me.id) return;
@@ -1843,6 +1885,7 @@
     var trackOpts = function (sel) { return albumTracks.map(function (t, i) { var td = t.tracks || t; return '<option value="' + i + '"' + (i === sel ? ' selected' : '') + '>' + (i + 1) + '. ' + escHtml(td.title || '') + '</option>'; }).join(''); };
     var collabs = Array.isArray(album.collaborators) ? album.collaborators : [];
     box.innerHTML =
+      '<div class="wv-ot-sec"><div class="wv-ot-title">Details</div><a class="wv-pill" href="/dashboard?edit=' + encodeURIComponent(album.id) + '">Edit title, cover & track order →</a></div>' +
       '<div class="wv-ot-sec"><div class="wv-ot-title">Release</div>' +
         '<div class="wv-ot-sub">Now: <b>' + escHtml(stLabel) + '</b></div>' +
         '<div class="wv-ot-row">' +
@@ -2103,7 +2146,7 @@
     if (m && m._off) m._off();
     if (m) m.remove();
     var ov = document.getElementById('alb-menu-ov'); if (ov) ov.remove();
-    document.querySelectorAll('#tracklist .alb-more[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+    document.querySelectorAll('#tracklist .alb-more[aria-expanded="true"], .alb-mob-more[aria-expanded="true"]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
   }
   function _albTrackUrl(id) { return location.origin + '/track?id=' + encodeURIComponent(id); }
   function _albCopy(text, msg) {
@@ -2111,37 +2154,28 @@
     var bad = function () { if (typeof wvToast === 'function') wvToast('couldnt copy the link', 'error'); };
     try { navigator.clipboard.writeText(text).then(ok, bad); } catch (_) { bad(); }
   }
-  function albumRowMenu(i, anchor, x, y) {
-    var t = _albTrackObj(i);
-    if (!t) return;
-    var wasOpen = document.getElementById('alb-menu');
-    if (wasOpen && wasOpen.getAttribute('data-i') === String(i) && anchor && anchor.getAttribute('aria-expanded') === 'true') { albumCloseMenu(); return; }
+  function _albIc(p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; }
+  function albumSheet(items, o) {
+    o = o || {};
     albumCloseMenu();
-    var row = document.getElementById('trow-' + i);
+    var anchor = o.anchor || null, x = o.x, y = o.y;
     var mobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-    var ic = function (p) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; };
-    var items = [
-      ['next', 'Play next', ic('<path d="M4 6h10M4 12h10M4 18h6"/><path d="m16 15 5 3-5 3z" fill="currentColor"/>')],
-      ['queue', 'Add to queue', ic('<path d="M4 6h16M4 12h16M4 18h9"/><path d="M18 15v6M15 18h6"/>')],
-      ['playlist', 'Add to playlist', ic('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>')],
-      '-',
-      ['download', 'Download', ic('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/>')],
-      '-',
-      ['track', 'Go to track', ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>')],
-      ['copy', 'Copy link', ic('<path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1"/><path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/>')],
-      ['share', 'Share', ic('<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>')]
-    ];
-    var cover = t.cover_url || album.cover_url || '';
+    var acts = {};
+    var cover = o.cover || '';
     var m = document.createElement('div');
     m.id = 'alb-menu';
     m.className = 'alb-menu';
     m.setAttribute('role', 'menu');
-    m.setAttribute('data-i', String(i));
-    m.setAttribute('aria-label', 'options for ' + (t.title || 'track'));
-    m.innerHTML = '<div class="alb-menu-hd"><div class="cv" style="background:' + (typeof coverGradient === 'function' ? coverGradient(t.title || '') : 'var(--surface-2)') + ';">' +
+    m.setAttribute('data-i', String(o.key == null ? '' : o.key));
+    m.setAttribute('aria-label', o.label || 'options');
+    m.innerHTML = '<div class="alb-menu-hd"><div class="cv" style="background:' + (typeof coverGradient === 'function' ? coverGradient(o.title || '') : 'var(--surface-2)') + ';">' +
         (cover ? '<img src="' + escHtml(typeof wvImg === 'function' ? wvImg(cover, 120) : cover) + '" alt="" onerror="this.remove()">' : '') + '</div>' +
-        '<div style="min-width:0;"><div class="t">' + escHtml(t.title || '') + '</div><div class="s">' + escHtml(t.artist_name || '') + '</div></div></div>' +
-      items.map(function (it) { return it === '-' ? '<hr>' : '<button type="button" role="menuitem" data-a="' + it[0] + '">' + it[2] + '<span>' + it[1] + '</span></button>'; }).join('');
+        '<div style="min-width:0;"><div class="t">' + escHtml(o.title || '') + '</div><div class="s">' + escHtml(o.sub || '') + '</div></div></div>' +
+      items.map(function (it) {
+        if (it === '-') return '<hr>';
+        acts[it[0]] = it[3];
+        return '<button type="button" role="menuitem" data-a="' + it[0] + '">' + it[2] + '<span>' + escHtml(it[1]) + '</span></button>';
+      }).join('');
     if (mobile) {
       var ov = document.createElement('div');
       ov.id = 'alb-menu-ov'; ov.className = 'alb-menu-ov';
@@ -2157,27 +2191,16 @@
       m.style.left = Math.max(10, Math.min(left, innerWidth - w - 10)) + 'px';
       m.style.top = Math.max(10, top) + 'px';
     }
-    var more = row && row.querySelector('.alb-more');
-    if (more) more.setAttribute('aria-expanded', 'true');
+    if (o.expand) o.expand.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(function () { m.classList.add('in'); });
     var btns = Array.prototype.slice.call(m.querySelectorAll('button[role="menuitem"]'));
     setTimeout(function () { if (btns[0]) btns[0].focus({ preventScroll: true }); }, 0);
-    var returnTo = anchor || row;
+    var returnTo = o.returnTo || anchor;
     m.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-a]'); if (!b) return;
-      var a = b.getAttribute('data-a');
+      var fn = acts[b.getAttribute('data-a')];
       albumCloseMenu();
-      if (a === 'next' && typeof playNextInQueue === 'function') playNextInQueue(t);
-      else if (a === 'queue' && typeof addToQueue === 'function') addToQueue(t);
-      else if (a === 'playlist' && typeof openAddToPlaylist === 'function') openAddToPlaylist({ id: t.id, title: t.title || '', cover_url: t.cover_url || '', ia_url: t.ia_url || '', artist_name: t.artist_name || '' });
-      else if (a === 'download') wvDownloadTrack(t.id);
-      else if (a === 'track') navigate('/track?id=' + encodeURIComponent(t.id));
-      else if (a === 'copy') _albCopy(_albTrackUrl(t.id));
-      else if (a === 'share') {
-        if (typeof window.wvShare === 'function') window.wvShare({ kind: 'track', id: t.id, title: t.title || '', artist: t.artist_name || '', cover: t.cover_url || '' });
-        else if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) navigator.share({ title: t.title || 'wavernrs', url: _albTrackUrl(t.id) }).catch(function () {});
-        else _albCopy(_albTrackUrl(t.id));
-      }
+      if (typeof fn === 'function') fn();
     });
     m.addEventListener('keydown', function (e) {
       var k = btns.indexOf(document.activeElement);
@@ -2200,6 +2223,64 @@
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', albumCloseMenu);
     };
+    return m;
+  }
+  function albumRowMenu(i, anchor, x, y) {
+    var t = _albTrackObj(i);
+    if (!t) return;
+    var wasOpen = document.getElementById('alb-menu');
+    if (wasOpen && wasOpen.getAttribute('data-i') === String(i) && anchor && anchor.getAttribute('aria-expanded') === 'true') { albumCloseMenu(); return; }
+    var row = document.getElementById('trow-' + i);
+    var ic = _albIc;
+    var items = [
+      ['next', 'Play next', ic('<path d="M4 6h10M4 12h10M4 18h6"/><path d="m16 15 5 3-5 3z" fill="currentColor"/>'), function () { if (typeof playNextInQueue === 'function') playNextInQueue(t); }],
+      ['queue', 'Add to queue', ic('<path d="M4 6h16M4 12h16M4 18h9"/><path d="M18 15v6M15 18h6"/>'), function () { if (typeof addToQueue === 'function') addToQueue(t); }],
+      ['playlist', 'Add to playlist', ic('<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>'), function () { if (typeof openAddToPlaylist === 'function') openAddToPlaylist({ id: t.id, title: t.title || '', cover_url: t.cover_url || '', ia_url: t.ia_url || '', artist_name: t.artist_name || '' }); }],
+      '-',
+      ['download', 'Download', ic('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/>'), function () { wvDownloadTrack(t.id); }],
+      '-',
+      ['track', 'Go to track', ic('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>'), function () { navigate('/track?id=' + encodeURIComponent(t.id)); }],
+      ['copy', 'Copy link', ic('<path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1"/><path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/>'), function () { _albCopy(_albTrackUrl(t.id)); }],
+      ['share', 'Share', ic('<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/>'), function () {
+        if (typeof window.wvShare === 'function') window.wvShare({ kind: 'track', id: t.id, title: t.title || '', artist: t.artist_name || '', cover: t.cover_url || '' });
+        else if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) navigator.share({ title: t.title || 'wavernrs', url: _albTrackUrl(t.id) }).catch(function () {});
+        else _albCopy(_albTrackUrl(t.id));
+      }]
+    ];
+    albumSheet(items, {
+      key: i, label: 'options for ' + (t.title || 'track'), title: t.title || '', sub: t.artist_name || '',
+      cover: t.cover_url || album.cover_url || '', anchor: anchor, x: x, y: y,
+      expand: row && row.querySelector('.alb-more'), returnTo: anchor || row
+    });
+  }
+  function albumHeroMenu(anchor) {
+    if (!album) return;
+    var wasOpen = document.getElementById('alb-menu');
+    if (wasOpen && wasOpen.getAttribute('data-i') === 'hero') { albumCloseMenu(); return; }
+    var ic = _albIc;
+    var ext = ic('<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>');
+    var playable = albumTracks.length > 0 && !window._albumLocked;
+    var items = [];
+    if (playable) {
+      items.push(['queue', 'Add to queue', ic('<path d="M4 6h16M4 12h16M4 18h9"/><path d="M18 15v6M15 18h6"/>'), function () { if (typeof addAlbumToQueue === 'function') addAlbumToQueue(albumId); }]);
+      items.push(['lp', 'Listen together', ic('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>'), function () { hostLpWithComp(); }]);
+    }
+    items.push(['copy', 'Copy link', ic('<path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1 1"/><path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1-1"/>'), function () { _albCopy(location.origin + '/album?id=' + encodeURIComponent(album.id)); }]);
+    var links = [];
+    var origin = album.origin, source = album.source;
+    if (origin && origin.url && !(album.discord_thread && /^Discord thread$/.test(origin.label || ''))) links.push(['origin', origin.label || 'Original post', ext, function () { window.open(origin.url, '_blank', 'noopener'); }]);
+    if (source && source.url) links.push(['source', source.label || 'Source', ext, function () { window.open(source.url, '_blank', 'noopener'); }]);
+    if (album.discord_thread) links.push(['thread', 'Discord thread', ic('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'), function () { if (typeof openAlbumThread === 'function') openAlbumThread(); }]);
+    if (links.length) items = items.concat(['-'], links);
+    if (document.getElementById('owner-tools-btn')) {
+      items.push('-', ['manage', 'Manage comp', ic('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'), function () {
+        var ot = document.getElementById('owner-tools');
+        if (ot && ot.style.display === 'none') toggleOwnerTools();
+        if (ot && ot.style.display !== 'none') { try { ot.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (_) {} }
+      }]);
+    }
+    var who = album.is_archive ? (album.archive_artist_name || 'Unknown') : ((album.artists && album.artists.display_name) || '');
+    albumSheet(items, { key: 'hero', label: 'more options for ' + (album.title || 'this comp'), title: album.title || '', sub: who, cover: album.cover_url || '', anchor: anchor, expand: anchor, returnTo: anchor });
   }
 
   // ── deep link: ?track=5&t=90 (or t=1:30) ──

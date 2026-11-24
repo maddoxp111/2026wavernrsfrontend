@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — playlist</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <title>wavernrs — playlist</title>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .plp { --plp-h: 262; --plp-h2: 300; position: relative; }
     .plp-sk { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
@@ -196,11 +196,11 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -264,7 +264,7 @@
       playlist = await api('/playlists/' + plPid);
       if (!plStillHere()) return;
       tracks = Array.isArray(playlist.items) ? playlist.items.filter(function (x) { return x && (x.type === 'clip' ? x.clip_id : x.id); }) : (playlist.tracks || []);
-      document.title = playlist.title + ' — wavernrs stream';
+      document.title = playlist.title + ' — wavernrs';
       var me = await meP;
       var owner = playlist.owner || {};
       isOwner = !!(me && owner.id && me.id === owner.id);
@@ -425,13 +425,21 @@
       (isOwner ? '<div class="plp-addmore"><span><b>want more in here?</b> search songs and whole comps in the builder</span><button class="plp-pill" onclick="plOpenBuilder()">' + PL_IC.copy + 'Add songs</button></div>' : '');
   }
 
+  function plBadgeHtml() {
+    if (playlist.is_public && !playlist.published_at && isOwner) return '<span class="plp-lock">Link only</span>';
+    return playlist.is_public ? '' : '<span class="plp-lock">' + PL_IC.lock + ' Private</span>';
+  }
+  function plPaintBadge() {
+    var eb = document.querySelector('#plp-root .plp-eyebrow');
+    if (eb) eb.innerHTML = '<span>' + (playlist.published_at ? 'Community playlist' : 'Playlist') + '</span>' + plBadgeHtml();
+  }
+
   function renderPlaylist() {
     var firstCover = playlist.cover_url || (playlist.mosaic && playlist.mosaic[0]) || (tracks.length && (tracks[0].cover_url || tracks[0].cover) ? (tracks[0].cover_url || tracks[0].cover) : '');
     if (typeof window.setPageBgImage === 'function') window.setPageBgImage(firstCover);
 
     var eyebrow = playlist.published_at ? 'Community playlist' : 'Playlist';
-    var badge = playlist.is_public ? '' : '<span class="plp-lock">' + PL_IC.lock + ' Private</span>';
-    if (playlist.is_public && !playlist.published_at && isOwner) badge = '<span class="plp-lock">Link only</span>';
+    var badge = plBadgeHtml();
 
     var bar = '<button class="plp-play" onclick="plPlayToggle()" aria-label="Play ' + escHtml(playlist.title) + '"><span class="ic-play" style="display:contents">' + PL_IC.play + '</span><span class="ic-pause" style="display:none">' + PL_IC.pause + '</span><span>Play</span></button>' +
       '<div class="plp-mini" aria-hidden="true"><div class="plp-mini-c">' + coverHtml() + '</div><span>' + escHtml(playlist.title) + '</span></div>' +
@@ -583,14 +591,16 @@
           show: { id: t.show_id, year: t.year, name: t.show_name }, youtube: t.youtube || null, video: t.youtube ? null : t.video,
           offset: 0, cover: t.cover || null, setlist: [], start: t.start, end: t.end, title: t.song,
           ctx: { pl: playlistId, clip_id: t.clip_id }
-        }
+        },
+        _ctx: 'Playlist · ' + (playlist.title || 'Untitled')
       };
     }
     return {
       id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null,
       artist_name: t.artist_name || '', album_id: t.album_id || null,
       artist_id: (t.artists && t.artists.id) || null,
-      _archive_artist: t.is_archive ? (t.artist_name || null) : null
+      _archive_artist: t.is_archive ? (t.artist_name || null) : null,
+      _ctx: 'Playlist · ' + (playlist.title || 'Untitled')
     };
   }
   function plCanClip() { return !!(window.wvShow && typeof window.playQueueIndex === 'function'); }
@@ -603,8 +613,9 @@
   }
 
   function playAll() {
-    if (!tracks.length) { plToast('nothing in this playlist yet'); return; }
-    playAtIndex(0);
+    var p = plPlayable();
+    if (!p.length) { plToast('nothing in this playlist can play yet'); return; }
+    playAtIndex(tracks.indexOf(p[0]));
   }
 
   function shufflePlaylist() {
@@ -659,7 +670,8 @@
     if (!isLoggedIn()) { location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
     if (_plSaving || !playlist) return;
     var ids = tracks.filter(function (t) { return t.type !== 'clip'; }).map(function (t) { return t.id; }).filter(Boolean);
-    if (!ids.length) { plToast('theres nothing to copy yet'); return; }
+    var clips = tracks.filter(function (t) { return t.type === 'clip'; });
+    if (!ids.length && !clips.length) { plToast('theres nothing to copy yet'); return; }
     var btn = document.getElementById('plp-savecopy');
     _plSaving = true;
     if (btn) { btn.disabled = true; btn.lastElementChild.textContent = 'Saving…'; }
@@ -673,12 +685,26 @@
           is_public: false
         })
       });
-      await api('/playlists/' + encodeURIComponent(created.id) + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: ids }) });
+      if (ids.length) await api('/playlists/' + encodeURIComponent(created.id) + '/tracks', { method: 'POST', body: JSON.stringify({ track_ids: ids }) });
+      var clipFails = 0;
+      for (var ci = 0; ci < clips.length; ci++) {
+        var c = clips[ci];
+        try {
+          await api('/playlists/' + encodeURIComponent(created.id) + '/clips', {
+            method: 'POST',
+            body: JSON.stringify({
+              show_id: c.show_id, year: c.year, show_name: c.show_name, song: c.song, by: c.by || null,
+              start: c.start, end: c.end == null ? null : c.end, youtube: c.youtube || null,
+              video: c.youtube ? null : (c.video || null), cover: c.cover || null
+            })
+          });
+        } catch (_) { clipFails++; }
+      }
       if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
       if (btn) { btn.classList.add('is-done'); btn.innerHTML = PL_IC.check + '<span>Saved</span>'; }
       var href = '/playlist-builder?id=' + encodeURIComponent(created.id);
       plToast('saved to your playlists', 'success', 5200, {
-        title: 'saved to your playlists', body: 'its private until you publish it', action: 'Open',
+        title: 'saved to your playlists', body: 'its private until you publish it' + (clipFails ? ' (some live clips didnt copy)' : ''), action: 'Open',
         onClick: function () { navigate(href); }
       });
     } catch (e) {
@@ -690,8 +716,28 @@
   }
 
   function sharePlaylist() {
+    if (!playlist.is_public && isOwner) {
+      plToast('this playlist is private', null, 6000, {
+        title: 'this playlist is private', body: 'only you can open the link right now', action: 'Make link-shareable',
+        onClick: plMakeShareable
+      });
+      return;
+    }
+    plShareNow();
+  }
+
+  function plMakeShareable() {
+    api('/playlists/' + plPid, { method: 'PUT', body: JSON.stringify({ is_public: true }) }).then(function (upd) {
+      playlist.is_public = true;
+      if (upd && upd.published_at !== undefined) playlist.published_at = upd.published_at || null;
+      plPaintBadge();
+      if (typeof invalidatePlaylistCache === 'function') invalidatePlaylistCache();
+      plShareNow();
+    }).catch(function (e) { plToast((e && e.message) || 'couldnt change who can open it', 'error'); });
+  }
+
+  function plShareNow() {
     var url = location.origin + '/playlist?id=' + plPid;
-    if (!playlist.is_public && isOwner) plToast('this playlist is private...make it public if you want other people to open it');
     if (typeof window.wvShare === 'function') {
       try {
         window.wvShare({ kind: 'playlist', id: playlistId, url: url, title: playlist.title || 'Playlist',

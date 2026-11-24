@@ -17,9 +17,9 @@
   <meta name="twitter:title" content="wavernrs: Ye comps, edits and the archive">
   <meta name="twitter:description" content="Where yeditors post their Ye comps and edits. Stream new drops, dig through a 90k+ comp archive and catch every leak as it lands.">
   <meta name="twitter:image" content="https://www.wavernrs.com/og-image.jpg">
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     /* ── Home: motion ───────────────────────────────────────── */
     .hm-in { animation: hmIn 220ms var(--ease) both; }
@@ -261,11 +261,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
 initPlayer();
 
@@ -274,7 +274,7 @@ initPlayer();
 // _hState its status (loading | ok | err). Slots redraw from this cache, so
 // switching filters never refetches.
 window._homeGen = (window._homeGen || 0) + 1;
-var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [], justAdded: [], eras: [], playlists: [], awards: [] };
+var _home = { recent: [], trending: [], highlighted: [], charts: null, archive: [], justAdded: [], eras: [], playlists: [], awards: [], awardsSource: '', awardsWeek: '' };
 var _homeFilter = 'all';      // all | comps | edits
 var _badges = { verified_artists: [], highlighted_albums: [], exclusive_albums: [], highlighted_tracks: [], exclusive_tracks: [] };
 var _allItems = {};           // id -> item, for play buttons
@@ -295,8 +295,6 @@ var HM_ICON = {
   arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
   alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
-  archive: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h15A1.5 1.5 0 0 1 21 4.5v2A1.5 1.5 0 0 1 19.5 8h-15A1.5 1.5 0 0 1 3 6.5zM4 9.5h16V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm5 3a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2z"/></svg>',
-  discord: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.6 5.2A17 17 0 0 0 15.4 4l-.5 1a15.7 15.7 0 0 0-5.8 0l-.5-1a17 17 0 0 0-4.2 1.3A17.6 17.6 0 0 0 1.3 17a17.2 17.2 0 0 0 5.2 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12.2 12.2 0 0 0 11.4 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.8a17.2 17.2 0 0 0 5.2-2.6 17.5 17.5 0 0 0-3.1-11.8zM8.5 14.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1z"/></svg>',
 };
 
 function _hEsc(s) { return escHtml(s == null ? '' : String(s)); }
@@ -334,8 +332,17 @@ var HOME_SRC = {
   eras:        function () { return api('/archive/eras'); },
   playlists:   function () { return api('/playlists/published?limit=16'); },
   justadded:   function () { return api('/archive/recent?limit=14'); },
-  archive:     function () { return api('/archive?limit=12'); },
-  presence:    function () { return api('/site/presence'); },
+  archive:     function () { return api('/archive/random?n=12'); },
+  presence:    function () {
+    var w = window._wvPresence;
+    if (w && w.d && Date.now() - w.at < 60000) return Promise.resolve(w.d);
+    return new Promise(function (resolve) {
+      var timer = 0;
+      function on(e) { clearTimeout(timer); document.removeEventListener('wv-presence', on); resolve(e && e.detail ? e.detail : api('/site/presence')); }
+      document.addEventListener('wv-presence', on);
+      timer = setTimeout(function () { document.removeEventListener('wv-presence', on); resolve(api('/site/presence')); }, 3000);
+    });
+  },
   charts:      function () {
     function viaCharts() {
       return api('/charts').then(function (c) {
@@ -352,7 +359,7 @@ function _hApply(key, d) {
   if (key === 'discover') { _home.recent = (d && d.recent) || []; _home.trending = (d && d.trending) || []; }
   else if (key === 'badges') { if (d) _badges = d; }
   else if (key === 'highlighted') _home.highlighted = Array.isArray(d) ? d : [];
-  else if (key === 'awards') _home.awards = (d && d.picks) || [];
+  else if (key === 'awards') { _home.awards = (d && d.picks) || []; _home.awardsSource = (d && d.source) || 'picks'; _home.awardsWeek = (d && d.week) || ''; }
   else if (key === 'eras') _home.eras = (d && d.items) || [];
   else if (key === 'playlists') _home.playlists = (d && d.items) || [];
   else if (key === 'justadded') _home.justAdded = (d && d.items) || [];
@@ -394,14 +401,14 @@ function homeData(key) {
 var HOME_SLOTS = {
   eras:      { deps: ['eras'], skel: 'strip', title: 'eras', render: eraStrip },
   awards:    { deps: ['awards'], title: 'this week’s picks', render: awardsBlock, quiet: true },
-  foryou:    { deps: ['highlighted', 'badges'], skel: 'rail', title: 'made for you', render: function () { return rail('Made for you', _filterItems(_home.highlighted), '/browse?tab=highlighted'); } },
-  trending:  { deps: ['discover', 'badges'], skel: 'rail', title: 'trending', group: 'discover', groupTitle: 'trending and new releases', render: function () { return rail('Trending now', _filterItems(_home.trending), '/charts'); }, show: function () { return _homeFilter !== 'comps'; } },
+  foryou:    { deps: ['highlighted', 'badges'], skel: 'rail', title: 'highlighted', render: function () { var l = _filterItems(_home.highlighted); return l.length < 4 ? '' : rail('Highlighted', l, '/browse?tab=highlighted'); } },
+  trending:  { deps: ['discover', 'badges'], skel: 'rail', title: 'trending', group: 'discover', groupTitle: 'trending and new releases', render: function () { return rail('Hot this week', _filterItems(_home.trending), '/charts?tab=hot'); } },
   playlists: { deps: ['playlists'], lazy: true, title: 'community playlists', render: playlistRail, show: function () { return _homeFilter === 'all'; }, quiet: true },
-  newcomps:  { deps: ['discover', 'badges'], skel: 'rail', title: 'new comps', group: 'discover', groupTitle: 'new comps and edits', render: function () { return rail('New comps', _home.recent.filter(function (i) { return i._type === 'album'; }), '/browse?tab=recent'); }, show: function () { return _homeFilter !== 'edits'; } },
-  newedits:  { deps: ['discover', 'badges'], skel: 'rail', title: 'new edits', group: 'discover', render: function () { return rail('New edits', _home.recent.filter(function (i) { return i._type !== 'album'; }), '/browse?tab=recent'); }, show: function () { return _homeFilter !== 'comps'; } },
+  newcomps:  { deps: ['discover', 'badges'], skel: 'rail', title: 'new comps', group: 'discover', groupTitle: 'new comps and edits', render: function () { return rail('New comps', _home.recent.filter(function (i) { return i._type === 'album'; }), '/browse?tab=comps'); }, show: function () { return _homeFilter !== 'edits'; } },
+  newedits:  { deps: ['discover', 'badges'], skel: 'rail', title: 'new edits', group: 'discover', render: function () { return rail('New edits', _home.recent.filter(function (i) { return i._type !== 'album'; }), '/browse?tab=edits'); }, show: function () { return _homeFilter !== 'comps'; } },
   charts:    { deps: ['charts'], lazy: true, skel: 'list', title: 'top charts', render: chartsBlock },
   justadded: { deps: ['justadded', 'badges'], lazy: true, skel: 'rail', title: 'the newest archive comps', render: function () { return rail('Just added to the archive', _home.justAdded.map(_asArchive), '/archive?sort=newest'); }, show: function () { return _homeFilter !== 'edits'; } },
-  archive:   { deps: ['archive', 'badges'], lazy: true, skel: 'rail', title: 'the archive', render: function () { return rail('From the archive', _home.archive.map(_asArchive), '/archive'); } },
+  archive:   { deps: ['archive', 'badges'], lazy: true, skel: 'rail', title: 'the archive', render: function () { return rail('Dig through the archive', _home.archive.map(_asArchive), '/archive'); }, show: function () { return _homeFilter !== 'edits'; } },
 };
 function _asArchive(a) { return Object.assign({}, a, { _type: 'album', _archive: true }); }
 
@@ -581,11 +588,12 @@ function renderBody() {
   var body = document.getElementById('hm-body');
   if (!body) return;
   var recent = _recentPlayed().filter(function(t) { return t && t.id; });
+  var recentF = _filterItems(recent.map(function (t) { return Object.assign({}, t, { _type: t._type || 'track' }); }));
   var mostPlayed = (typeof getPlayTally === 'function' ? getPlayTally({ days: 30, min: 2, limit: 12 }) : [])
     .map(function (e) { return { id: e.id, _type: e._type, title: e.title, cover_url: e.cover_url, artists: { display_name: e.artist_name }, _plays: e.n }; });
 
   var html = '';
-  if (recent.length) html += quickGrid(recent);
+  if (recentF.length) html += quickGrid(recentF);
   html += newsCard();
   html += slotHTML('eras');
   html += slotHTML('awards');
@@ -601,7 +609,7 @@ function renderBody() {
   html += slotHTML('charts');
   html += slotHTML('justadded');
   html += slotHTML('archive');
-  html += rail('Recently played', recent.slice(0, 20).map(function(t) {
+  html += rail('Recently played', recentF.slice(0, 20).map(function(t) {
     return { id: t.id, _type: t._type, title: t.title, cover_url: t.cover_url, ia_url: t.ia_url, artists: { display_name: t.artist_name } };
   }), '/library');
   if (_homeFilter === 'all') html += promoCard();
@@ -624,7 +632,7 @@ function _hBindView(view) {
     e.preventDefault();
     e.stopPropagation();
     if (b.hasAttribute('data-play')) playItem(b.getAttribute('data-play'));
-    else if (b.hasAttribute('data-qplay')) homePlayRecent(+b.getAttribute('data-qplay'));
+    else if (b.hasAttribute('data-qplay')) homePlayRecent(b.getAttribute('data-qplay'));
     else homePlayHero(+b.getAttribute('data-hplay'));
   });
 }
@@ -669,22 +677,6 @@ function fillWelcome() {
     document.getElementById('hw-live-n').textContent = String(pres.count);
     live.hidden = false;
   }
-}
-function _hCountUp(root) {
-  var els = root.querySelectorAll('[data-to]');
-  var fmt = function (n) { return Math.round(n).toLocaleString(); };
-  if (_hReduce || typeof requestAnimationFrame !== 'function') {
-    Array.prototype.forEach.call(els, function (el) { el.textContent = fmt(+el.getAttribute('data-to')); });
-    return;
-  }
-  var t0 = 0, dur = 1500;
-  function step(t) {
-    if (!t0) t0 = t;
-    var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 4);
-    Array.prototype.forEach.call(els, function (el) { el.textContent = fmt(+el.getAttribute('data-to') * e); });
-    if (p < 1 && root.isConnected) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
 }
 
 // ── Spotlight hero ─────────────────────────────────────────────
@@ -741,13 +733,14 @@ function _heroSlide(s, i, n) {
   var art = _hImg(it.cover_url, 480), bg = _hImg(it.cover_url, 64);
   var imgAttr = function (src) { return eager ? 'src="' + _hEsc(src) + '"' : 'data-src="' + _hEsc(src) + '"'; };
   var meta = [];
+  var single = it._type === 'album' && it.is_archive && it.track_count === 1;
   if (who) {
-    var av = it.artists && it.artists.profile_image_url;
+    var av = !(it.is_archive && it.archive_artist_name) && it.artists && it.artists.profile_image_url;
     meta.push((av ? '<span class="hx-av"><img ' + imgAttr(_hImg(av, 64)) + ' alt="" onerror="this.parentNode.remove()"></span>' : '') + '<b>' + _hEsc(who) + '</b>');
   }
-  if (it._type === 'album' && it.track_count) meta.push(_hEsc(it.track_count) + (it.track_count === 1 ? ' track' : ' tracks'));
-  if (it._type !== 'album') meta.push('Edit');
-  if (it.play_count) meta.push(_hEsc(fmtNum(it.play_count)) + ' plays');
+  if (it._type === 'album' && it.track_count && !single) meta.push(_hEsc(it.track_count) + (it.track_count === 1 ? ' track' : ' tracks'));
+  if (it._type !== 'album' || single) meta.push('Edit');
+  if (it.play_count) meta.push(_hEsc(fmtNum(it.play_count)) + (it.play_count === 1 ? ' play' : ' plays'));
   if (s.kind === 'new' && it.created_at && typeof timeAgo === 'function') meta.push(_hEsc(timeAgo(it.created_at)));
   var note = (it._award && it._award.note) || it.description || '';
   var kindIcon = s.kind === 'award' ? HM_ICON.trophy : s.kind === 'new' ? HM_ICON.spark : HM_ICON.star;
@@ -763,7 +756,7 @@ function _heroSlide(s, i, n) {
       '</div>' +
       '<div class="hx-act">' +
         '<button type="button" class="hx-play" data-hplay="' + i + '" aria-label="Play ' + _hEsc(it.title) + '">' + HM_ICON.play + 'Play</button>' +
-        '<a class="hx-open" href="' + _hEsc(href) + '">' + (it._type === 'album' ? 'Open comp' : 'Open edit') + '</a>' +
+        '<a class="hx-open" href="' + _hEsc(href) + '">' + (it._type === 'album' && !single ? 'Open comp' : 'Open edit') + '</a>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -835,9 +828,8 @@ function _heroWire(hx, n) {
     go(_hero.idx + 1);
   });
   hx.addEventListener('click', function (e) {
-    var d = e.target.closest('[data-go]'), s = e.target.closest('[data-step]');
-    if (d) go(+d.getAttribute('data-go'), true);
-    else if (s) go(_hero.idx + (+s.getAttribute('data-step')), true);
+    var s = e.target.closest('[data-step]');
+    if (s) go(_hero.idx + (+s.getAttribute('data-step')), true);
   });
   hx.addEventListener('keydown', function (e) {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -880,7 +872,7 @@ window.homePlayHero = function (i) {
 
 // ── Jump back in ───────────────────────────────────────────────
 function quickGrid(recent) {
-  return '<div class="wv-quick-grid">' + recent.slice(0, 8).map(function(t, i) {
+  return '<div class="wv-quick-grid">' + recent.slice(0, 8).map(function(t) {
     var href = (t._type === 'album' ? '/album?id=' : '/track?id=') + encodeURIComponent(t.id);
     var canPlay = t._type === 'album' || t.ia_url;
     return '<a class="wv-quick-item" href="' + _hEsc(href) + '">' +
@@ -888,12 +880,12 @@ function quickGrid(recent) {
         (t.cover_url ? '<img src="' + _hEsc(_hImg(t.cover_url, 128)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
       '</div>' +
       '<div class="wv-quick-title">' + _hEsc(t.title || '') + '</div>' +
-      (canPlay ? '<button type="button" class="hm-qplay" data-qplay="' + i + '" aria-label="Play ' + _hEsc(t.title || '') + '">' + HM_ICON.play + '</button>' : '') +
+      (canPlay ? '<button type="button" class="hm-qplay" data-qplay="' + _hEsc(t.id) + '" aria-label="Play ' + _hEsc(t.title || '') + '">' + HM_ICON.play + '</button>' : '') +
     '</a>';
   }).join('') + '</div>';
 }
-window.homePlayRecent = function (i) {
-  var t = _recentPlayed().filter(function (x) { return x && x.id; })[i];
+window.homePlayRecent = function (id) {
+  var t = _recentPlayed().filter(function (x) { return x && x.id && String(x.id) === String(id); })[0];
   if (!t) return;
   if (t._type === 'album') {
     if (typeof playCompById === 'function') playCompById(t.id);
@@ -938,11 +930,12 @@ async function fillLeaks() {
 }
 
 // On this day in Ye history: tweets from this date in past years and album birthdays.
-var _otdCache = { at: 0, d: null };
+var _otdCache = { at: 0, md: '', d: null };
 async function fillOnThisDay() {
   if (_homeFilter !== 'all') return;
+  var t = new Date(), md = String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
   try {
-    if (!_otdCache.d || Date.now() - _otdCache.at > 30 * 60000) _otdCache = { at: Date.now(), d: await api('/ye/onthisday') };
+    if (!_otdCache.d || _otdCache.md !== md || Date.now() - _otdCache.at > 30 * 60000) _otdCache = { at: Date.now(), md: md, d: await api('/ye/onthisday?md=' + md) };
   } catch (_) { return; }
   var d = _otdCache.d, el = document.getElementById('home-otd');
   if (!el || !d || _homeFilter !== 'all') return;
@@ -1002,13 +995,14 @@ async function fillTrackerNew() {
 }
 
 // A one-time heads up about new corners of the site. Dismissed for good once closed.
-var WV_NEWS = { id: 'ye-archive-2026-09-28b', items: [
+var WV_NEWS = { id: 'ye-archive-2026-09-28b', until: '2026-10-31', items: [
   ['On this day', 'what ye tweeted, dropped and leaked on this date', '/resources?view=today'],
   ['Discography', 'producers, samples and previews for every album', '/resources?view=disco'],
   ['Song pages', 'every version of a song, leaks, credits and live shows', '/resources?view=song&t=Runaway'],
   ['Timeline', 'ye year by year', '/resources?view=timeline'],
 ] };
 function newsCard() {
+  if (Date.now() > Date.parse(WV_NEWS.until) || (!_hLoggedIn() && _hwShow())) return '';
   try { if (localStorage.getItem('wv_news_seen') === WV_NEWS.id) return ''; } catch (_) { return ''; }
   return '<div class="wv-news" id="wv-news"><div class="wv-news-h"><b>new on wavernrs</b><button onclick="closeNews()" aria-label="dismiss">✕</button></div><div class="wv-news-row">' +
     WV_NEWS.items.map(function (x) { return '<a href="' + x[2] + '" onclick="closeNews(true);navigate(this.getAttribute(\'href\'));return false;"><b>' + escHtml(x[0]) + '</b><span>' + escHtml(x[1]) + '</span></a>'; }).join('') + '</div></div>';
@@ -1044,13 +1038,13 @@ async function fillLiveLps() {
 
 // A quick way into the archive by era, using the covers we already have.
 function eraStrip() {
-  var eras = (_home.eras || []).filter(function (e) { return (e.total || 0) > 0; });
+  var eras = (_home.eras || []).filter(function (e) { return (e.comps || 0) > 0; });
   if (eras.length < 4) return '';
-  eras = eras.slice().sort(function (a, b) { return (b.total || 0) - (a.total || 0); }).slice(0, 14);
+  eras = eras.slice().sort(function (a, b) { return (b.comps || 0) - (a.comps || 0); }).slice(0, 14);
   return '<div class="home-section">' + _secHead('Browse by era', '/eras') +
     '<div class="wv-era-strip">' + eras.map(function (e) {
-      var n = (e.total || 0).toLocaleString();
-      return '<a class="wv-era-chip" href="' + _hEsc('/archive?era=' + encodeURIComponent(e.id)) + '">' +
+      var n = (e.comps || 0).toLocaleString() + (e.comps === 1 ? ' comp' : ' comps');
+      return '<a class="wv-era-chip" href="' + _hEsc('/browse?era=' + encodeURIComponent(e.id)) + '" title="' + _hEsc((e.total || 0).toLocaleString() + ' releases') + '">' +
         '<div class="wv-era-chip-cover" style="background:' + coverGradient(e.name || '') + ';">' +
           (e.cover ? '<img src="' + _hEsc(_hImg(e.cover, 96)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
         '</div>' +
@@ -1076,9 +1070,11 @@ var AWARD_SHORT = { edit: 'EOTW', comp: 'COTW', album: 'AOTW', yeditor: 'YOTW' }
 function awardsBlock() {
   var picks = (_home.awards || []).filter(function(p) { return p.album || p.editor; });
   if (!picks.length || _homeFilter !== 'all') return '';
-  var wk = picks[0].week ? new Date(picks[0].week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  var eotw = _home.awardsSource === 'eotw';
+  var wk = !eotw && picks[0].week ? new Date(picks[0].week + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  var heading = eotw ? 'Latest Edit of the Week' : (picks[0].week && picks[0].week === _home.awardsWeek ? 'This week\'s picks' : 'Latest picks');
   return '<div class="home-section">' +
-    '<div class="wv-sec-head"><h2 class="wv-sec-title"><a href="/awards">This week\'s picks</a></h2>' + (wk ? '<span class="wv-otw-week">Week of ' + _hEsc(wk) + '</span>' : '') + '</div>' +
+    '<div class="wv-sec-head"><h2 class="wv-sec-title"><a href="/awards">' + _hEsc(heading) + '</a></h2>' + (wk ? '<span class="wv-otw-week">Week of ' + _hEsc(wk) + '</span>' : '') + '</div>' +
     '<div class="wv-otw-grid">' + picks.map(function(p) {
       var chip = '<span class="wv-otw-chip wv-otw-' + _hEsc(p.category) + '">' + _hEsc(AWARD_SHORT[p.category] || '') + '</span>';
       if (p.editor) {
@@ -1120,9 +1116,10 @@ function rail(title, items, href) {
 
 function compCardHTML(item) {
   var isAlbum = item._type === 'album';
-  var artist = item._archive ? (item.archive_artist_name || item.artist_name || (item.artists && item.artists.display_name) || 'Archive')
-             : (item.artists ? (item.artists.display_name || '') : (item.artist_name || 'Unknown'));
-  var artistId = item.artists ? item.artists.id : null;
+  var single = isAlbum && (item.is_archive || item._archive) && item.track_count === 1;
+  var useArc = (item.is_archive || item._archive) && item.archive_artist_name;
+  var artist = useArc ? item.archive_artist_name : (item.artists && item.artists.display_name) || item.archive_artist_name || item.artist_name || (item._archive ? 'Archive' : 'Unknown');
+  var artistId = !useArc && item.artists ? item.artists.id : null;
   var href = _hrefFor(item);
   var b = _badges || {};
   var isVerified = artistId && (b.verified_artists || []).indexOf(artistId) !== -1;
@@ -1130,7 +1127,7 @@ function compCardHTML(item) {
   var isExclusive   = isAlbum ? (b.exclusive_albums || []).indexOf(item.id) !== -1   : (b.exclusive_tracks || []).indexOf(item.id) !== -1;
   var badges = (isHighlighted ? '<span class="wv-badge-hl-icon" title="Highlighted">★</span>' : '') +
                (isExclusive ? '<span class="wv-badge-ex-icon" title="Exclusive">◆</span>' : '');
-  var sub = (isAlbum ? 'Comp' : 'Edit') + ' · ' + _hEsc(artist) + (isVerified ? '<span class="wv-verified-icon" title="Verified">✓</span>' : '');
+  var sub = (isAlbum && !single ? 'Comp' : 'Edit') + ' · ' + _hEsc(artist) + (isVerified ? '<span class="wv-verified-icon" title="Verified">✓</span>' : '');
   _allItems[item.id] = _allItems[item.id] || item;
   return '<a class="wv-comp-card" href="' + _hEsc(href) + '">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';">' +

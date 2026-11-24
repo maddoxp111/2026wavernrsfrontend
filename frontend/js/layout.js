@@ -6,7 +6,6 @@
   // ── SVG icon paths (Heroicons outline 24×24) ─────────────────
   var ICONS = {
     headphones: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>',
-    radio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>',
     // Purpose-drawn on a single 24 grid: solid shapes, matched corner
     // radii, one optical weight. Filled rather than hairline-outlined so
     // they hold up at nav size and read as a set instead of stock clip art.
@@ -58,10 +57,11 @@
       dashboard: 'profile',
       adminpanel: 'admin',
       'playlist-builder': 'playlists',
+      artist: 'artists',
     };
     var KNOWN = ['browse', 'artists', 'stats', 'charts', 'archive', 'eras', 'library', 'resources',
       'feed', 'playlists', 'playlist', 'upload', 'settings', 'about', 'album', 'track', 'artist',
-      'search', 'community', 'radio', 'lp', 'radiopanel', 'modpanel', 'archivepanel', 'archivetrackers', 'profile', 'admin', 'playlists',
+      'search', 'community', 'lp', 'modpanel', 'archivepanel', 'archivetrackers', 'profile', 'admin', 'playlists',
       'music', 'tracker', 'notifications', 'wrapped', 'awards', 'whatsnew', 'games', 'status'];
     if (ALIAS[name]) return ALIAS[name];
     return KNOWN.indexOf(name) >= 0 ? name : '';
@@ -110,7 +110,7 @@
       '<a href="/library" onclick="navigate(\'/library\');return false;">' + icon('list') + '<span>Your Library</span></a>' +
       '<div class="wv-lib-tools">' +
         '<button class="wv-lib-add" title="History" onclick="navigate(\'/history\')">' + icon('history') + '</button>' +
-        (isLoggedIn ? '<button class="wv-lib-add" title="Upload" onclick="navigate(\'/upload\')">' + icon('plus') + '</button>' : '') +
+        '<button class="wv-lib-add" title="New playlist" aria-label="New playlist" onclick="window.wvNewPlaylist()">' + icon('plus') + '</button>' +
       '</div></div>' +
       '<div class="wv-lib-chips" id="wv-lib-chips">' +
         '<span class="wv-chip acc" data-k="recent" onclick="window._libFilter(\'recent\')">Recent</span>' +
@@ -121,10 +121,10 @@
       '<div class="wv-lib-find"><input id="wv-lib-q" placeholder="search your library" oninput="window._libSearch(this.value)"></div>';
   }
 
-  function _footHTML(isLoggedIn, profileHref) {
+  function _footHTML(isLoggedIn, profileHref, navHasFeed) {
     var html = '<div class="wv-side-foot">';
     if (isLoggedIn) {
-      html += '<a href="/feed" data-page="feed">Following</a>';
+      if (!navHasFeed) html += '<a href="/feed" data-page="feed">Following</a>';
       html += '<a href="' + profileHref + '" data-page="profile">Profile</a>';
       html += '<a href="/notifications" data-page="notifications">Notifications</a>';
       html += '<a href="/settings" data-page="settings">Settings</a>';
@@ -248,6 +248,7 @@
     html += _logoHTML();
     html += '<nav class="wv-sidebar-nav">';
     NAV_MAIN.forEach(function (n) { html += navItem(n[0], n[1], n[2], n[3]); });
+    if (isLoggedIn) html += navItem('feed', 'Following', '/feed', 'feed');
     html += '</nav>';
     html += '</div>';
 
@@ -256,7 +257,7 @@
     html += '<div class="wv-lib-list" id="wv-lib-list"></div>';
     html += '</div>';
 
-    html += _footHTML(isLoggedIn, profileHref);
+    html += _footHTML(isLoggedIn, profileHref, isLoggedIn);
     return html;
   }
 
@@ -302,10 +303,10 @@
         if (!_libData) { list.innerHTML = '<div class="wv-lib-empty" style="background:transparent;color:var(--text-3);font-size:12.5px;">Loading…</div>'; return; }
         if (_libKind === 'comps') items = (_libData.albums || []).map(function(a) { return { _type: 'album', id: a.id, title: a.title, cover_url: a.cover_url, artist_name: a.is_archive ? a.archive_artist_name : (a.artists && a.artists.display_name) }; });
         if (_libKind === 'edits') items = (_libData.tracks || []).map(function(t) { return { _type: 'track', id: t.id, title: t.title, cover_url: t.cover_url, artist_name: t.artists && t.artists.display_name }; });
-        if (_libKind === 'playlists') items = (_libData.playlists || []).map(function(p) { return { _type: 'playlist', id: p.id, title: p.title, sub: 'Playlist · ' + (p.track_count || 0) + ' tracks' }; });
+        if (_libKind === 'playlists') items = (_libData.playlists || []).map(function(p) { return { _type: 'playlist', id: p.id, title: p.title, sub: 'Playlist · ' + (p.track_count || 0) + ' songs' }; });
         if (!items.length) {
           var what = _libKind === 'playlists' ? 'playlists' : 'liked ' + _libKind;
-          list.innerHTML = '<div class="wv-lib-empty"><b>No ' + what + ' yet</b><p>' + (_libKind === 'playlists' ? 'make one from the menu on any edit' : 'tap the heart on anything and itll show up here') + '</p></div>';
+          list.innerHTML = '<div class="wv-lib-empty"><b>No ' + what + ' yet</b><p>' + (_libKind === 'playlists' ? 'tap + to start one, or add songs from any edit\u2019s menu' : 'tap the heart on anything and itll show up here') + '</p></div>';
           return;
         }
       }
@@ -333,6 +334,8 @@
       .catch(function() {});
   }
   window.refreshSidebarLibrary = function() { _libData = null; _renderLib(); if (_libKind !== 'recent') _loadLibData(); };
+  var _libStaleT = 0;
+  window.markSidebarLibraryStale = function () { clearTimeout(_libStaleT); _libStaleT = setTimeout(window.refreshSidebarLibrary, 1500); };
   // The player appends to recently_played; re-render when it does.
   window.addEventListener('storage', function(e) { if (e.key === 'recently_played') _renderLib(); });
   // Staff can fix a missing cover on any comp, not just their own.
@@ -392,7 +395,7 @@
         '<a href="/browse" class="sp-search-browse" title="Browse" onclick="navigate(\'/browse\');return false;">' + icon('archive') + '</a>' +
         '</div></div>' +
       '</div>';
-    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="var i=document.getElementById(\'search-q\');if(i){i.focus();if(i.select)i.select();}else navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
     html += _topRightHTML(isLoggedIn, user, '');
     return html;
   }
@@ -416,7 +419,7 @@
       _searchInputHTML('What do you want to play?') +
       '<button type="button" class="wv-kbd-chip" onmousedown="event.preventDefault()" onclick="event.stopPropagation();window._wvQuickOpen()" title="Quick search" aria-label="Open quick search">' + _kbdLabel() + '</button>' +
       '</div></div>';
-    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
+    html += '<button id="wv-search-btn-mobile" class="wv-icon-circle" onclick="var i=document.getElementById(\'search-q\');if(i){i.focus();if(i.select)i.select();}else navigate(\'/search\')" style="display:none;" aria-label="Search">' + icon('search') + '</button>';
     html += _topRightHTML(isLoggedIn, user,
       isLoggedIn && user ? '<a href="/upload" class="wv-pill wv-upload-pill" style="padding:7px 14px;font-size:12.5px;background:rgba(0,0,0,0.55);" onclick="navigate(\'/upload\');return false;">Upload</a>' : '');
     return html;
@@ -503,11 +506,13 @@
     _sugTimer = setTimeout(function() {
       var seq = ++_sugSeq;
       var base = (typeof API_BASE !== 'undefined' ? API_BASE : '/api');
+      var h = {};
+      try { var sa = typeof _siteAccessToken === 'function' ? _siteAccessToken() : null; if (sa) h['X-Site-Access'] = sa; } catch (_) {}
       var yeP = Promise.race([
-        fetch(base + '/ye/search?q=' + encodeURIComponent(q)).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+        fetch(base + '/ye/search?q=' + encodeURIComponent(q), { headers: h }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
         new Promise(function(res) { setTimeout(function() { res(null); }, 700); })
       ]);
-      fetch(base + '/search?q=' + encodeURIComponent(q))
+      fetch(base + '/search?q=' + encodeURIComponent(q), { headers: h })
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(d) { return yeP.then(function(ye) { if (d) d._ye = ye; return d; }); })
         .then(function(d) {
@@ -516,7 +521,7 @@
           var ye = d._ye || {}, enc = function (x) { return encodeURIComponent(x).replace(/'/g, '%27'); };
           (ye.albums || []).slice(0, 1).forEach(function(a) { rows.push(_sugRow('/resources?view=disco&album=' + enc(a.slug), a.cover_sm, a.title, 'Ye album · ' + a.year)); });
           (ye.songs || []).slice(0, 2).forEach(function(t) { rows.push(_sugRow('/resources?view=song&t=' + enc(t.title), t.cover, t.title, 'Ye song · ' + t.album)); });
-          (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist?id=' + a.id, a.profile_image_url, a.display_name, 'Artist', true)); });
+          (d.artists || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/artist?id=' + a.id, a.profile_image_url, a.display_name, 'Editor', true)); });
           (d.albums || []).slice(0, 4).forEach(function(a) { rows.push(_sugRow('/album?id=' + a.id, a.cover_url, a.title, 'Comp · ' + (a.artists ? a.artists.display_name : ''))); });
           (d.tracks || []).slice(0, 4).forEach(function(t) { rows.push(_sugRow('/track?id=' + t.id, t.cover_url || (t.albums && t.albums.cover_url), t.title, 'Edit · ' + (t.artists ? t.artists.display_name : ''))); });
           (d.archived || []).slice(0, 3).forEach(function(a) { rows.push(_sugRow('/album?id=' + a.id, a.cover_url, a.title, 'Archive · ' + (a.archive_artist_name || ''))); });
@@ -533,6 +538,14 @@
   document.addEventListener('click', function(e) { if (!e.target.closest('#wv-suggest') && !e.target.closest('.wv-topbar-search')) _closeSuggest(); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _closeSuggest(); });
   window.addEventListener('popstate', _closeSuggest);
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.origin !== location.origin || !/^\/(login|register)$/.test(a.pathname)) return;
+    if (a.search && !a.hasAttribute('data-wv-next')) return;
+    if (/^\/(login|register)$/.test(location.pathname)) return;
+    a.setAttribute('data-wv-next', '');
+    a.href = a.pathname + '?next=' + encodeURIComponent(location.pathname + location.search);
+  }, true);
 
   // ── Shared helper: resolve the current user's public profile URL ──
   function getProfileHref() {
@@ -1013,7 +1026,7 @@
     if (!n.entity_id) return '';
     var id = encodeURIComponent(n.entity_id);
     var et = String(n.entity_type || '');
-    if (et === 'community_post' || et === 'community' || (String(n.type || '').indexOf('community') === 0 && !et)) return '/community?post=' + id;
+    if (et === 'community_post' || et === 'community' || (String(n.type || '').indexOf('community') === 0 && !et)) return '/community?post=' + id + (n.sub_id ? '&c=' + encodeURIComponent(n.sub_id) : '');
     if (et === 'lp') return '/lp?id=' + id;
     if (et === 'track') return '/track?id=' + id;
     if (et === 'album') return '/album?id=' + id;
@@ -1602,17 +1615,6 @@
   }
   window._themeClasses = function (t) { return _themeClasses(t).join(' '); };
 
-  // One-off move to dark for anyone still on light or following their device.
-  // Runs once per browser; after that whatever they pick is respected.
-  (function _migrateToDark() {
-    try {
-      if (localStorage.getItem('wv_theme_dark_default') === '1') return;
-      localStorage.setItem('wv_theme_dark_default', '1');
-      var cur = localStorage.getItem('wv_theme');
-      if (cur !== 'dark') localStorage.setItem('wv_theme', 'dark');
-    } catch (_) {}
-  })();
-
   function _paintTheme(t) {
     var def = THEMES[t] || THEMES.dark;
     var add = _themeClasses(t);
@@ -1861,6 +1863,7 @@
   }
 
   function _checkSiteLock(theme) {
+    if (typeof _siteAccessToken === 'function' && _siteAccessToken()) return;
     // Already verified this session?
     if (sessionStorage.getItem('site_lock_verified')) return;
 
@@ -1962,14 +1965,21 @@
   // they stay up until an admin takes them down.
   try { localStorage.removeItem('wv_banners_dismissed'); } catch (_) {}
 
+  function _bannerEsc(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
   function _bannerBody(message) {
-    var esc = String(message || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return esc.replace(/https?:\/\/[^\s<]+/g, function (url) {
-      var href = url.replace(/[.,;:!?)\]]+$/, '');
-      var tail = url.slice(href.length);
-      return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + href + '</a>' + tail;
-    });
+    var raw = String(message || ''), out = '', last = 0, m;
+    var re = /https?:\/\/[^\s<>"]+/g;
+    while ((m = re.exec(raw))) {
+      var href = m[0].replace(/[.,;:!?)\]]+$/, '');
+      var dc = /^https?:\/\/(?:www\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\/[\w-]+/i.test(href);
+      out += _bannerEsc(raw.slice(last, m.index)) +
+        '<a href="' + _bannerEsc(href) + '" target="_blank" rel="noopener noreferrer">' + (dc ? 'Join our Discord' : _bannerEsc(href)) + '</a>';
+      last = m.index + href.length;
+      re.lastIndex = last;
+    }
+    return out + _bannerEsc(raw.slice(last));
   }
 
   window.renderSiteBanners = async function() {
@@ -1993,7 +2003,7 @@
   // Panel links come from the last answer the server gave for this login, so
   // they show on first paint and survive a check that fails while the API is
   // having a moment. The panels themselves still check on the server.
-  var _ROLE_FLAGS = { mod: 'wv_is_mod', archiver: 'wv_is_archiver', radio: 'wv_is_radio', at: 'wv_can_at' };
+  var _ROLE_FLAGS = { mod: 'wv_is_mod', archiver: 'wv_is_archiver', at: 'wv_can_at' };
   function _roleKey() { var t = localStorage.getItem('token') || ''; return t ? t.slice(-24) : ''; }
   function _roleCache() {
     try { var c = JSON.parse(localStorage.getItem('wv_roles') || 'null'); return c && c.k && c.k === _roleKey() ? c : null; } catch (_) { return null; }
@@ -2034,17 +2044,16 @@
         if (localStorage.getItem('token') !== token) return;
         var was = {};
         Object.keys(_ROLE_FLAGS).forEach(function (r) { was[r] = sessionStorage.getItem(_ROLE_FLAGS[r]) === 'true'; });
-        var now = { mod: was.mod, archiver: was.archiver, radio: was.radio, at: was.at };
+        var now = { mod: was.mod, archiver: was.archiver, at: was.at };
         if (results[0]) now.mod = !!results[0].is_mod;
         if (results[1]) now.archiver = !!results[1].is_archiver;
         if (results[0] && results[1]) now.at = !!results[1].can_archive_trackers || now.archiver || now.mod;
         else if (results[1] && results[1].can_archive_trackers) now.at = true;
-        now.radio = false;
         Object.keys(_ROLE_FLAGS).forEach(function (r) { sessionStorage.setItem(_ROLE_FLAGS[r], now[r] ? 'true' : 'false'); });
-        try { localStorage.setItem('wv_roles', JSON.stringify({ k: _roleKey(), mod: now.mod, archiver: now.archiver, radio: now.radio, at: now.at, ts: Date.now() })); } catch (_) {}
+        try { localStorage.setItem('wv_roles', JSON.stringify({ k: _roleKey(), mod: now.mod, archiver: now.archiver, at: now.at, ts: Date.now() })); } catch (_) {}
         // Pages read these flags at script time, before this answer lands, so
         // tell them once it has.
-        window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: now.mod, isArchiver: now.archiver, isRadio: now.radio, canArchiveTrackers: now.at } }));
+        window.dispatchEvent(new CustomEvent('wv-roles', { detail: { isMod: now.mod, isArchiver: now.archiver, canArchiveTrackers: now.at } }));
         var changed = Object.keys(_ROLE_FLAGS).some(function (r) { return was[r] !== now[r]; });
         if (changed) {
           var sidebar = document.getElementById('wv-sidebar');
@@ -2073,7 +2082,7 @@
   // failures — covers then load straight from their origin.
   var cdnFails = 0, cdnOff = false;
   // Hosts the CDN cannot fetch from; these load straight from their origin.
-  var NO_CDN = /(^|\.)yetour\.xyz$/i;
+  var NO_CDN = /(^|\.)(yetour\.xyz|wp\.com)$/i;
   try { cdnOff = sessionStorage.getItem('wv_cdn_off') === '1'; } catch (_) {}
   function sizeFor(img) {
     var w = img.getAttribute('width') || img.dataset.size;
@@ -2182,16 +2191,15 @@
 
 // ── Badge data: fetched once, cached for the session ────────────────────────
 (function () {
-  var _cache = null;
-  window.getBadgeData = async function () {
-    if (_cache) return _cache;
-    try {
+  var _p = null;
+  window.getBadgeData = function () {
+    if (!_p) {
       var base = typeof API_BASE !== 'undefined' ? API_BASE : '';
-      _cache = await (await fetch(base + '/badges')).json();
-    } catch { _cache = { verified_artists: [], highlighted_albums: [], exclusive_albums: [] }; }
-    return _cache;
+      _p = fetch(base + '/badges').then(function (r) { if (!r.ok) throw 0; return r.json(); }).catch(function () { _p = null; return { verified_artists: [], highlighted_albums: [], exclusive_albums: [] }; });
+    }
+    return _p;
   };
-  window.invalidateBadgeCache = function () { _cache = null; };
+  window.invalidateBadgeCache = function () { _p = null; };
   // Pre-warm the cache as soon as the script loads so badges are ready by render time
   window.getBadgeData();
 })();
@@ -2331,7 +2339,7 @@
     return '<div style="max-width:440px;width:100%;background:var(--surface);border-radius:18px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.6);">' +
       '<div style="font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);">Is this yours?</div>' +
       '<div style="font-size:13px;color:var(--text-2);line-height:1.55;margin:6px 0 16px;">' +
-        'these got added to your profile when you connected an account. tell us which ones you actually made...the rest go back to the archive.' +
+        'these are on your profile from the archive. tell us which ones you actually made...the rest go back to the archive.' +
       '</div>' +
       '<div style="height:4px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-bottom:16px;">' +
         '<div style="height:100%;width:' + pct + '%;background:var(--brand);border-radius:99px;transition:width .2s;"></div></div>' +
@@ -2362,12 +2370,20 @@
   async function submit(el) {
     el.innerHTML = '<div style="color:var(--text-2);font-size:14px;">Saving…</div>';
     try {
-      await fetch(API + '/oauth/review', {
+      var r = await fetch(API + '/oauth/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
         body: JSON.stringify({ decisions: decisions }),
       });
-    } catch (_) {}
+      if (!r.ok) throw 0;
+    } catch (_) {
+      el.innerHTML = '<div style="max-width:440px;width:100%;background:var(--surface);border-radius:18px;padding:22px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6);">' +
+        '<div style="font-size:14px;color:var(--text-2);line-height:1.55;margin-bottom:16px;">couldnt save that...try again</div>' +
+        '<button type="button" class="wv-pill brand" style="padding:11px 26px;font-weight:700;">Try again</button></div>';
+      var again = el.querySelector('button');
+      if (again) again.onclick = function () { submit(el); };
+      return;
+    }
     el.remove();
     document.body.style.overflow = '';
     if (decisions.some(function (d) { return !d.mine; })) location.reload();
@@ -2380,6 +2396,7 @@
   };
 
   (async function () {
+    try { if (sessionStorage.getItem('wv_review_none')) return; } catch (_) {}
     var d;
     try {
       var r = await fetch(API + '/oauth/review', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
@@ -2387,7 +2404,7 @@
       d = await r.json();
     } catch (_) { return; }
     items = (d && d.items) || [];
-    if (!items.length) return;
+    if (!items.length) { try { sessionStorage.setItem('wv_review_none', '1'); } catch (_) {} return; }
     var el = document.createElement('div');
     el.id = 'wv-review-overlay';
     el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -2419,19 +2436,41 @@ window.wvShowError = function (el, err, retryAttr) {
 
 // ── "can't reach wavernrs" banner ───────────────────────────────────────────
 (function () {
-  var el = null;
+  var el = null, timer = 0, wait = 20000;
+  function probe() {
+    clearTimeout(timer);
+    if (!el) return;
+    if (typeof api === 'function' && !document.hidden) api('/site/lock-status').catch(function () {});
+    timer = setTimeout(probe, wait);
+    wait = Math.min(60000, Math.round(wait * 1.5));
+  }
   function show() {
     if (el) return;
     el = document.createElement('div');
     el.id = 'wv-offline-bar';
     el.setAttribute('role', 'status');
-    el.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#5b4a2a;color:#ffe9b8;' +
-      'font-size:12.5px;font-weight:600;text-align:center;padding:7px 12px;padding-top:calc(7px + env(safe-area-inset-top));' +
-      'box-shadow:0 1px 0 rgba(0,0,0,.35);';
-    el.textContent = 'cant reach wavernrs rn...some stuff might not load. trying again…';
-    document.body.appendChild(el);
+    var host = document.getElementById('wv-content');
+    var base = 'z-index:9999;background:#5b4a2a;color:#ffe9b8;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;' +
+      'font-size:12.5px;font-weight:600;text-align:center;padding:7px 12px;box-shadow:0 1px 0 rgba(0,0,0,.35);';
+    el.style.cssText = host
+      ? 'position:sticky;top:0;' + base
+      : 'position:fixed;left:0;right:0;top:0;' + base + 'padding-top:calc(7px + env(safe-area-inset-top));';
+    var msg = document.createElement('span');
+    msg.textContent = 'cant reach wavernrs rn...some stuff might not load. trying again…';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Retry';
+    btn.style.cssText = 'background:rgba(255,233,184,.16);color:inherit;border:1px solid rgba(255,233,184,.4);border-radius:99px;padding:3px 12px;font:inherit;cursor:pointer;';
+    btn.onclick = function () { wait = 20000; probe(); };
+    el.appendChild(msg);
+    el.appendChild(btn);
+    var bn = document.getElementById('wv-banners');
+    if (host) host.insertBefore(el, bn && bn.parentNode === host ? bn : host.firstChild);
+    else document.body.appendChild(el);
+    wait = 20000;
+    timer = setTimeout(probe, wait);
   }
-  function hide() { if (el) { el.remove(); el = null; } }
+  function hide() { clearTimeout(timer); timer = 0; if (el) { el.remove(); el = null; } }
   window.addEventListener('wv-api-down', show);
   window.addEventListener('wv-api-ok', hide);
 })();
@@ -2619,9 +2658,6 @@ window.wvOpenThemePicker = function () {
   });
   document.body.appendChild(wrap);
 };
-
-// Kept so older markup and shortcuts still land somewhere sensible.
-window.wvCycleTheme = function () { window.wvOpenThemePicker(); };
 
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.getElementById('wv-theme-btn');
@@ -2993,8 +3029,22 @@ window.wvVerifyPrompt = function (reason) {
     document.body.appendChild(wrap);
   }
   function later() { setTimeout(show, 1500); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', later);
-  else later();
+  var VIEWS = 'wv_page_views';
+  function bump() {
+    try { var n = (parseInt(localStorage.getItem(VIEWS), 10) || 0) + 1; localStorage.setItem(VIEWS, String(n)); return n; } catch (_) { return 0; }
+  }
+  function start() {
+    if (seen()) return;
+    if (bump() >= 2) { later(); return; }
+    window.addEventListener('wv-navigate', function onNav() {
+      if (seen() || bump() >= 2) {
+        window.removeEventListener('wv-navigate', onNav);
+        if (!seen()) later();
+      }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 
 // Imported descriptions can carry raw Discord markup: <@123> mentions, <#123>
@@ -3006,8 +3056,15 @@ window.wvCleanDiscordText = function (s) {
     .replace(/<@&\d{15,22}>/g, '@role')
     .replace(/<#\d{15,22}>/g, '#channel')
     .replace(/<t:(\d{9,11})(?::[a-zA-Z])?>/g, function (_, t) { try { return new Date(+t * 1000).toLocaleDateString(); } catch (e) { return ''; } })
+    .replace(/^[ \t]*-#[ \t]+/gm, '')
+    .replace(/^[ \t]*#{1,3}[ \t]+/gm, '')
+    .replace(/\|\|/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+};
+
+window.wvCleanTitle = function (t) {
+  return String(t || '').replace(/<@[&!]?\d+>?/g, ' ').replace(/\|\|/g, ' ').replace(/\\([\\`*_{}\[\]()#+\-.!|~>])/g, '$1').replace(/\s{2,}/g, ' ').trim() || 'Untitled';
 };
 
 // Long descriptions stay at three lines until someone asks for the rest.

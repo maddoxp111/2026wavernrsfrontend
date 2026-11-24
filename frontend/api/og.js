@@ -19,6 +19,21 @@ function clip(s, n) {
   return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t;
 }
 
+function cleanText(s) {
+  const t = String(s == null ? '' : s)
+    .replace(/^\s*-#\s*\*?\[Restored from[^\n]*$/gm, '')
+    .replace(/^\s*(#{1,3}|-#)\s+/gm, '')
+    .replace(/<a?:(\w+):\d+>/g, ':$1:')
+    .replace(/<@!?\d+>/g, '@member')
+    .replace(/<@&\d+>/g, '@role')
+    .replace(/<#\d+>/g, '#channel')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_~|`]{1,3}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clip(t, 200);
+}
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -34,7 +49,7 @@ async function getJSON(path) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 6000);
   try {
-    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json', 'x-wv-edge': 'og', 'user-agent': 'wavernrs-preview' } });
+    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json', 'x-wv-edge': process.env.WV_EDGE_KEY || '', 'user-agent': 'wavernrs-preview' } });
     if (!r.ok) return null;
     return await r.json();
   } catch (_) {
@@ -57,7 +72,7 @@ async function album(id) {
   const kind = d.is_archive ? 'Archive upload' : 'Comp';
   return {
     title: d.title + ' — ' + who,
-    description: d.description || joinParts([
+    description: cleanText(d.description) || joinParts([
       kind,
       d.track_count ? d.track_count + (d.track_count === 1 ? ' track' : ' tracks') : null,
       num(d.play_count) ? num(d.play_count) + ' plays' : null,
@@ -71,7 +86,7 @@ async function album(id) {
 async function track(id) {
   const d = await getJSON('/tracks/' + encodeURIComponent(id));
   if (!d || !d.title) return null;
-  const who = (d.artists && d.artists.display_name) || d.archive_artist_name || 'Unknown';
+  const who = d.display_artist || (d.artists && d.artists.display_name) || 'Unknown';
   return {
     title: d.title + ' — ' + who,
     description: joinParts([
@@ -91,8 +106,8 @@ async function artist(id) {
   if (!a || !a.display_name) return null;
   return {
     title: a.display_name + ' on wavernrs',
-    description: a.bio || joinParts([
-      a.users && a.users.username ? '@' + a.users.username : 'Artist',
+    description: cleanText(a.bio) || joinParts([
+      a.users && a.users.username ? '@' + a.users.username : 'Editor',
       num(a.track_count) ? num(a.track_count) + ' edits' : null,
       num(a.follower_count) ? num(a.follower_count) + ' followers' : null,
       'on wavernrs',
@@ -110,7 +125,7 @@ async function playlist(id) {
   const mosaic = Array.isArray(pl.mosaic) ? pl.mosaic.filter(Boolean) : [];
   return {
     title: pl.title + ' — playlist',
-    description: pl.description || joinParts([
+    description: cleanText(pl.description) || joinParts([
       pl.owner && pl.owner.username ? 'Playlist by @' + pl.owner.username : 'Playlist',
       n ? n + (n === 1 ? ' song' : ' songs') : null,
       'on wavernrs',
@@ -129,7 +144,7 @@ async function lp(id) {
   const cover = (d.now && d.now.track && d.now.track.cover_url) || ((d.items || [])[0] && d.items[0].track && d.items[0].track.cover_url);
   return {
     title: l.title + ' — listening party',
-    description: joinParts([state, 'Hosted by ' + host, (d.items || []).length ? (d.items.length + ' songs') : null, l.description || 'come listen together on wavernrs']),
+    description: joinParts([state, 'Hosted by ' + host, (d.items || []).length ? (d.items.length + ' songs') : null, cleanText(l.description) || 'come listen together on wavernrs']),
     image: cover || FALLBACK_IMAGE,
     type: 'website',
   };
@@ -263,12 +278,11 @@ const STATIC = {
   browse: ['Browse — new and trending comps', 'fresh uploads, trending comps and every era, all in one place'],
   archive: ['The archive — every Ye comp ever made', 'dig through tens of thousands of archived Ye comps and edits by era, artist and date'],
   'archive-artist': ['Archive yeditors — wavernrs', 'every yeditor in the wavernrs archive and the comps they made'],
-  radio: ['Radio — listen together on wavernrs', 'live community stations playing Ye comps and edits around the clock'],
   community: ['Community — wavernrs', 'posts, requests and finds from the wavernrs community'],
   tracker: ['Trackers — every comp and edit, era by era', 'the community trackers, matched to what you can play on wavernrs'],
   eras: ['Eras — every Ye era on wavernrs', 'comps and edits sorted era by era, from The College Dropout to Bully'],
-  music: ['Featured artists — wavernrs', 'every artist featured on Ye comps and edits, and where they show up'],
-  artists: ['Artists — the editors behind the comps', 'the yeditors and comp makers on wavernrs'],
+  music: ['Artists — wavernrs', 'every artist featured on Ye comps and edits, and where they show up'],
+  artists: ['Editors — the yeditors behind the comps', 'the yeditors and comp makers on wavernrs'],
   stats: ['Stats — wavernrs by the numbers', 'plays, uploads and eras across the whole site'],
   search: ['Search wavernrs', 'search comps, edits, artists, playlists and the Ye archive'],
   playlists: ['Playlists — wavernrs', 'community playlists of Ye comps and edits'],
@@ -281,7 +295,7 @@ const STATIC = {
 const PATHS = { home: '/', index: '/' };
 const PARAMS = {
   album: ['id'], track: ['id'], artist: ['id'], playlist: ['id'], lp: ['id'],
-  'archive-artist': ['a'], tracker: ['t'], music: ['a'], community: ['post'], radio: ['s'], search: ['q'],
+  'archive-artist': ['a'], tracker: ['t'], music: ['a'], community: ['post'], search: ['q'],
 };
 
 const LOADERS = {

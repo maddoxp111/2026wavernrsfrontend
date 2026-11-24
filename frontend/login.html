@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — log in</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
   <link rel="icon" type="image/x-icon" href="/icon.ico">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 <div class="wv-auth-page" id="auth-root">
@@ -28,6 +28,7 @@
     </div>
 
     <button class="wv-pill brand" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px;" id="login-btn" onclick="doLogin()">Log in</button>
+    <div style="font-size:12px;color:var(--text-3);margin-top:10px;text-align:center;line-height:1.5;">forgot your password? log in with Discord or Google if you connected one, or ask in the Discord</div>
 
     <div style="display:flex;align-items:center;gap:10px;margin:20px 0 4px;">
       <div style="flex:1;height:1px;background:var(--hair);"></div>
@@ -50,7 +51,7 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
 <script>
   // Apply saved theme
   try {
@@ -91,8 +92,12 @@
   // Where to go after a successful login (set when we bounced them here).
   function _postLoginTarget() {
     var next = new URLSearchParams(location.search).get('next');
-    // Only same-site paths — never redirect to an absolute/offsite URL.
-    if (next && next.charAt(0) === '/' && next.charAt(1) !== '/') return next;
+    if (next) {
+      try {
+        var u = new URL(next, location.origin);
+        if (u.origin === location.origin && !/^\/(login|register|auth-callback)(\.html)?$/.test(u.pathname)) return u.pathname + u.search + u.hash;
+      } catch (_) {}
+    }
     return '/index';
   }
 
@@ -101,6 +106,7 @@
   });
 
   function oauthLogin(provider) {
+    try { sessionStorage.setItem('wv_next', _postLoginTarget()); } catch (_) {}
     location.href = API_BASE + '/oauth/' + provider;
   }
 
@@ -124,7 +130,6 @@
       });
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.removeItem('wv_countdown_bypass');
       location.href = _postLoginTarget();
     } catch (err) {
       showAlert('alert-container', err.message);

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — claim your comps</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 
@@ -16,16 +16,16 @@
     <div style="color:var(--text-2);font-size:14px;line-height:1.6;margin-bottom:24px;">the archive saves comps from reddit, discord, untitled.stream, samply and MEGA. if some of them are yours, this is how you get them under your name, on your account, or taken down.</div>
 
     <div class="wv-card" style="padding:24px;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">1. Connect Reddit or Discord — your comps move to you automatically</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;">1. Connect Reddit or Discord, then pick your comps</div>
       <div style="font-size:14px;color:var(--text-2);line-height:1.7;">
-        comps from reddit are under your u/ name and comps from discord are tied to your discord account. go to <a href="/settings" style="color:var(--brand);font-weight:600;">Settings</a> and connect reddit (put a short code in your reddit bio or post it as a comment so we know its you) and/or discord. every comp and edit under those names moves to your wavernrs profile right away...nothing else to fill out.
+        comps from reddit are under your u/ name and comps from discord are tied to your discord account. connect them in <a href="/settings#claimable-box" style="color:var(--brand);font-weight:600;">Settings</a>, then check the ones you made under Comps that might be yours and theyll move to your profile.
       </div>
     </div>
 
     <div class="wv-card" style="padding:24px;margin-bottom:16px;">
       <div style="font-size:15px;font-weight:700;margin-bottom:10px;">2. Everything else — send a claim</div>
       <div style="font-size:14px;color:var(--text-2);line-height:1.7;margin-bottom:12px;">
-        for comps from reddit, untitled.stream, samply or MEGA, or ones listed under a name thats not yours, use the form below. it goes straight to the archive team. use it if:
+        for comps from untitled.stream, samply or MEGA, or ones listed under a name thats not yours, use the form below. it goes straight to the archive team. use it if:
       </div>
       <ul style="font-size:14px;color:var(--text-2);line-height:1.8;margin:0 0 12px 18px;padding:0;">
         <li><b style="color:var(--text);">Wrong name.</b> your comps are under a name or spelling you dont want. tell us what the profile should be called.</li>
@@ -38,7 +38,7 @@
 
     <div class="wv-card" style="padding:24px;margin-bottom:16px;" id="claim-form-card">
       <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Claim form</div>
-      <div id="claim-login" style="display:none;font-size:14px;color:var(--text-2);">you need an account so we know where to put the comps. <a href="/login" style="color:var(--brand);font-weight:600;">Log in</a> or <a href="/register" style="color:var(--brand);font-weight:600;">sign up</a>, then come back here</div>
+      <div id="claim-login" style="display:none;font-size:14px;color:var(--text-2);">you need an account so we know where to put the comps. <a href="/login?next=%2Fclaim" style="color:var(--brand);font-weight:600;">Log in</a> or <a href="/register?next=%2Fclaim" style="color:var(--brand);font-weight:600;">sign up</a>, then come back here</div>
       <form id="claim-form" style="display:none;flex-direction:column;gap:14px;" onsubmit="return submitClaim(event)">
         <label style="font-size:12.5px;color:var(--text-3);display:block;">What is this about?
           <select id="cf-type" class="wv-input" style="margin-top:6px;">
@@ -51,15 +51,15 @@
           </select></label>
         <label style="font-size:12.5px;color:var(--text-3);display:block;">Links to the comps on wavernrs (one per line...open the comp and copy the link)
           <textarea id="cf-links" class="wv-input" required style="margin-top:6px;min-height:80px;" placeholder="https://www.wavernrs.com/album?id=…"></textarea></label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
           <label style="font-size:12.5px;color:var(--text-3);display:block;">Name they're listed under now
             <input id="cf-listed" class="wv-input" style="margin-top:6px;" placeholder="u/someone"></label>
-          <label style="font-size:12.5px;color:var(--text-3);display:block;">Name you want (for renames)
+          <label id="cf-wanted-label" style="font-size:12.5px;color:var(--text-3);display:block;">Name you want (for renames)
             <input id="cf-wanted" class="wv-input" style="margin-top:6px;" placeholder="your artist name"></label>
         </div>
         <label id="cf-proof-label" style="font-size:12.5px;color:var(--text-3);display:block;">Proof it's yours (links, screenshots, original posts)
           <textarea id="cf-proof" class="wv-input" style="margin-top:6px;min-height:100px;" placeholder="link to the original reddit post, untitled project or discord message from your account, screenshot links...anything that shows you made it"></textarea></label>
-        <div style="font-size:12.5px;color:var(--text-3);">Photos or videos as proof (screenshots of your library, a screen recording...up to 100 MB each)
+        <div style="font-size:12.5px;color:var(--text-3);">Photos or videos as proof (screenshots of your library, a screen recording...up to 50 MB each)
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
             <label class="wv-pill" style="cursor:pointer;font-size:12.5px;padding:7px 14px;">Add photo / video<input type="file" accept="image/*,video/mp4,video/quicktime,video/webm" multiple style="display:none;width:auto;" onchange="uploadProof(this)"></label>
             <span id="cf-upload-status" style="font-size:12.5px;"></span>
@@ -84,10 +84,10 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
   initPlayer();
   function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -111,6 +111,7 @@
     var st = document.getElementById('cf-upload-status'), list = document.getElementById('cf-files');
     for (var i = 0; i < input.files.length; i++) {
       var f = input.files[i];
+      if (f.size > 50 * 1024 * 1024) { st.textContent = f.name + ' is over 50 MB'; continue; }
       st.textContent = 'Uploading ' + f.name + '…';
       try {
         var fd = new FormData(); fd.append('file', f);
@@ -126,7 +127,9 @@
     ev.preventDefault();
     var btn = document.getElementById('cf-submit'), st = document.getElementById('cf-status');
     btn.disabled = true; st.textContent = 'Sending…';
-    if (!document.getElementById('cf-proof').value.trim() && !_proofFiles.length) { st.textContent = 'add some proof first...links or a photo/video'; btn.disabled = false; return false; }
+    if (document.getElementById('cf-type').value !== 'misattributed') {
+      if (!document.getElementById('cf-proof').value.trim() && !_proofFiles.length) { st.textContent = 'add some proof first...links or a photo/video'; btn.disabled = false; return false; }
+    }
     try {
       await api('/claims', { method: 'POST', body: JSON.stringify({
         claim_type: document.getElementById('cf-type').value, comp_links: document.getElementById('cf-links').value, listed_as: document.getElementById('cf-listed').value,
@@ -153,8 +156,8 @@
       if (lab) lab.firstChild.nodeValue = isNotMine
         ? 'anything that helps us check (optional) '
         : "Proof it's yours (links, screenshots, original posts) ";
-      var w = document.getElementById('cf-wanted');
-      if (w) w.closest('label').style.opacity = isNotMine ? '.45' : '';
+      var wl = document.getElementById('cf-wanted-label');
+      if (wl) wl.firstChild.nodeValue = isNotMine ? 'Who actually made it (if you know) ' : 'Name you want (for renames) ';
     }
     if (sel) sel.addEventListener('change', syncProof);
     syncProof();

@@ -4,8 +4,6 @@
 //   - registers /sw.js with the same ?v stamp as layout.js (one worker per deploy)
 //   - adds the home-screen metas the shell doesn't (apple-touch-icon, iOS
 //     standalone/status bar, viewport-fit=cover for the safe-area padding)
-//   - offers an install card after real engagement (2+ visits or a minute
-//     on the site), with Share → Add to Home Screen steps on iOS Safari
 //   - tells people when a new version is ready without ever cutting off
 //     what they're listening to
 //   - toasts when the connection drops and comes back
@@ -17,9 +15,7 @@
   window._wvPwaInit = true;
 
   var SNOOZE_KEY = 'wv_pwa_snooze';
-  var VISITS_KEY = 'wv_pwa_visits';
   var SNOOZE_MS = 30 * 24 * 3600 * 1000;
-  var ENGAGED_MS = 60 * 1000;
 
   var deferred = null;          // stashed beforeinstallprompt event
   var card = null;              // current bottom card element
@@ -43,6 +39,7 @@
   var isIOSSafari = isIOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|Instagram|FBAN|FBAV|Line\//.test(ua);
   function toast(msg, kind, ms, opts) { if (typeof window.wvToast === 'function') window.wvToast(msg, kind || '', ms, opts); }
   function audioPlaying() {
+    if (typeof audio !== 'undefined' && audio && !audio.paused && !audio.ended) return true;
     var list = document.querySelectorAll('audio,video');
     for (var i = 0; i < list.length; i++) { if (!list[i].paused && !list[i].ended) return true; }
     return false;
@@ -197,37 +194,9 @@
     } catch (_) { return Promise.resolve('error'); }
   }
 
-  // ── When to offer install ──────────────────────────────────────────────
-  var eligibleAt = 0;
-  function snoozed() { var s = +ls(SNOOZE_KEY) || 0; return s > Date.now(); }
-  function onAppPage() { return !/^\/(login|register|auth-callback|status|offline)(\.html)?$/.test(location.pathname); }
-  function maybeOffer() {
-    return;
-    if (card || installed || isStandalone() || snoozed() || !onAppPage()) return;
-    if (!eligibleAt || Date.now() < eligibleAt) return;
-    if (!deferred && !isIOSSafari) return;
-    if (document.querySelector('.wv-sheet.open, .wv-sheet.show, [aria-modal="true"]')) return;
-    showInstallCard(false);
-  }
-  function countVisit() {
-    var n = +ls(VISITS_KEY) || 0;
-    var fresh = false;
-    try { fresh = !sessionStorage.getItem('wv_pwa_seen'); sessionStorage.setItem('wv_pwa_seen', '1'); } catch (_) {}
-    if (fresh) { n += 1; ls(VISITS_KEY, n); }
-    return n;
-  }
-  function scheduleOffer() {
-    if (isStandalone()) return;
-    var visits = countVisit();
-    var wait = visits >= 2 ? 8000 : ENGAGED_MS;
-    setTimeout(function () { eligibleAt = Date.now(); maybeOffer(); }, wait);
-    window.addEventListener('wv-navigate', function () { setTimeout(maybeOffer, 1200); });
-  }
-
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferred = e;
-    setTimeout(maybeOffer, 400);
   });
   window.addEventListener('appinstalled', function () {
     installed = true;
@@ -248,7 +217,7 @@
     updateReady = true;
     pendingReload = true;
     var el = showCard('update', '<div class="wvp-top"><span class="wvp-ic2">' + I.refresh + '</span><div class="wvp-txt"><div class="wvp-t">new version ready</div>' +
-      '<div class="wvp-s">refresh to get the latest wavernrs. ' + (audioPlaying() ? 'we’ll wait till you’re not listening.' : '') + '</div></div>' +
+      '<div class="wvp-s">refresh to get the latest wavernrs, or we’ll update when you open the next page' + (audioPlaying() ? ' once you’re not listening.' : '.') + '</div></div>' +
       '<button class="wvp-x" type="button" data-x aria-label="Later">' + I.x + '</button></div>' +
       '<div class="wvp-row"><button class="wvp-btn" type="button" data-later>Later</button><button class="wvp-btn primary" type="button" data-go>Refresh</button></div>', false);
     if (!el) return;
@@ -258,10 +227,11 @@
   }
   // A deferred refresh happens on the next in-app navigation, but never
   // while something is playing (a reload would cut the song off).
-  function onNavigateForUpdate() {
+  function onNavigateForUpdate(e) {
     if (!pendingReload || audioPlaying()) return;
     pendingReload = false;
-    location.reload();
+    if ((e.detail && e.detail.popstate) || !(e.detail && e.detail.url)) location.reload();
+    else location.assign(e.detail.url);
   }
 
   function registerSW() {
@@ -299,7 +269,7 @@
       if (cv && pv && cv === pv) return;
       showUpdateCard();
     });
-    window.addEventListener('wv-navigate', onNavigateForUpdate);
+    window.addEventListener('wv-navigate-start', onNavigateForUpdate);
   }
 
   // ── Connection toasts ──────────────────────────────────────────────────
@@ -337,7 +307,6 @@
   function boot() {
     headTags();
     if (isStandalone()) document.documentElement.classList.add('wv-standalone');
-    scheduleOffer();
     if (document.readyState === 'complete') setTimeout(registerSW, 1500);
     else window.addEventListener('load', function () { setTimeout(registerSW, 1500); });
     try { window.dispatchEvent(new CustomEvent('wv-pwa-ready')); } catch (_) {}

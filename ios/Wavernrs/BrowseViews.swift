@@ -119,7 +119,7 @@ struct HomeView: View {
             // First 5 (randomly ordered each launch) go into the carousel; rest become New Releases.
             featuredAlbums = Array(albums.prefix(5))
             newReleases = albums.count > 5 ? Array(albums.dropFirst(5)) : Array(albums.dropFirst())
-            trending = d.trending ?? []
+            trending = (d.trending ?? []).filter { $0.iaUrl != nil }
         } catch {
             self.error = "Couldn't load — Downloads still work offline."
         }
@@ -343,7 +343,7 @@ struct DiscoverView: View {
                     items = d.recent
                 case .trending:
                     let tracks = try await API.discoverTrending()
-                    items = tracks.map { .track($0) }
+                    items = tracks.filter { $0.iaUrl != nil }.map { .track($0) }
                 case .highlighted:
                     items = try await API.discoverHighlighted()
                 }

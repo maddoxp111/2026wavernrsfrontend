@@ -56,7 +56,7 @@
               'style="width:100%;margin-bottom:8px;" onkeydown="if(event.key===\'Enter\')_atpCreate()">' +
             '<div style="display:flex;gap:8px;align-items:center;">' +
               '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">' +
-                '<input type="checkbox" id="atp-new-public" checked> Public' +
+                '<input type="checkbox" id="atp-new-public"> Anyone with the link can open it' +
               '</label>' +
               '<button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="_atpCreate()">Create &amp; Add</button>' +
             '</div>' +
@@ -84,6 +84,10 @@
 
   // ── Open modal ─────────────────────────────────────────────────────────────
   function _open(track) {
+    if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+      if (typeof wvToast === 'function') wvToast('log in to save to playlists', null, 4000, { title: 'log in to save to playlists', action: 'Log in', onClick: function () { location.assign('/login?next=' + encodeURIComponent(location.pathname + location.search)); } });
+      return;
+    }
     _pending = track;
     _inject();
     var modal = document.getElementById('atp-modal');
@@ -189,17 +193,11 @@
       }
       statusEl.textContent = '';
       statusEl.className = '';
+      if (typeof window.markSidebarLibraryStale === 'function') { try { window.markSidebarLibraryStale(); } catch (_) {} }
       _close();
       if (typeof wvToast === 'function') wvToast('added to ' + name, 'success');
       else { statusEl.textContent = 'Added'; statusEl.className = 'playlist-modal-status success'; }
     }).catch(function (err) {
-      if (clip && err && err.status === 404 && !/playlist/i.test(String(err.message || ''))) {
-        statusEl.textContent = '';
-        _close();
-        if (typeof wvToast === 'function') wvToast('saving live clips to playlists isnt switched on yet...check back soon');
-        else alert('saving live clips to playlists isnt switched on yet');
-        return;
-      }
       if (err && (err.status === 409 || /already in/i.test(String(err.message || '')))) {
         statusEl.textContent = 'its already in this playlist';
       } else {
@@ -227,7 +225,7 @@
     var title = titleEl ? titleEl.value.trim() : '';
     if (!title) { if (titleEl) titleEl.focus(); return; }
     var isPublic = document.getElementById('atp-new-public') ?
-      document.getElementById('atp-new-public').checked : true;
+      document.getElementById('atp-new-public').checked : false;
 
     var statusEl = document.getElementById('atp-status');
     statusEl.textContent = 'Creating…';
@@ -249,7 +247,10 @@
 
   // ── Public API ─────────────────────────────────────────────────────────────
   window.openAddToPlaylist = _open;
-  window.invalidatePlaylistCache = function () { _cache = null; _cacheTs = 0; };
+  window.invalidatePlaylistCache = function () {
+    _cache = null; _cacheTs = 0;
+    if (typeof window.markSidebarLibraryStale === 'function') { try { window.markSidebarLibraryStale(); } catch (_) {} }
+  };
 
   // Helper
   function _esc(s) {

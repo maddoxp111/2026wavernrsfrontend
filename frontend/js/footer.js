@@ -5,17 +5,17 @@
   var STATS_KEY = 'wv_footer_stats_v1';
   var STATS_TTL = 10 * 60 * 1000;
   var SEEN_KEY = 'wv_whatsnew_seen';
-  var HIDE_PATHS = /^\/(games|playlist-builder|upload|login|register|offline|auth-callback|adminpanel|modpanel|archivepanel|archivetrackers|radiopanel|claim)(\.html)?\/?$/;
+  var HIDE_PATHS = /^\/(games|playlist-builder|upload|login|register|offline|auth-callback|adminpanel|modpanel|archivepanel|archivetrackers|claim)(\.html)?\/?$/;
 
   var COLS = [
     ['Listen', [
       ['Home', '/'], ['Browse', '/browse'], ['Charts', '/charts'], ['Listening parties', '/lp'], ['Playlists', '/playlists']
     ]],
     ['Explore', [
-      ['Archive', '/archive'], ['Ye archive', '/resources'], ['Trackers', '/tracker'], ['Discography', '/resources?view=disco'], ['On this day', '/resources?view=today'], ['Eras', '/eras']
+      ['Archive', '/archive'], ['Artists', '/music'], ['Ye archive', '/resources'], ['Trackers', '/archive?view=trackers'], ['Discography', '/resources?view=disco'], ['On this day', '/resources?view=today'], ['Eras', '/eras']
     ]],
     ['Community', [
-      ['Community', '/community'], ['Editors', '/artists'], ['Hall of Fame', '/awards'], ['Your recap', '/wrapped'], ['Games', '/games'], ['Discord', DISCORD, 'ext']
+      ['Community', '/community'], ['Editors', '/artists'], ['Hall of Fame', '/awards'], ['Your recap', '/wrapped'], ['Discord', DISCORD, 'ext']
     ]],
     ['wavernrs', [
       ['What\u2019s new', '/whatsnew', 'new'], ['Notifications', '/notifications'], ['Status', '/status'], ['About', '/about'], ['Settings', '/settings']

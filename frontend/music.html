@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>wavernrs — artists</title>
   <meta name="description" content="every artist featured on wavernrs edits and comps: bios, popular songs, and who they show up with most.">
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="ma-style">
     #ma-root { --ma-radius: 18px; }
     #ma-root button { font-family: inherit; }
@@ -206,10 +206,10 @@
 <div id="view">
   <div id="ma-root"><div class="loading"><div class="spinner"></div></div></div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 initPlayer();
 (function () {
@@ -241,7 +241,7 @@ initPlayer();
     play: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.2-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6Z"/></svg>',
     playSm: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.2-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6Z"/></svg>',
     shuffle: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
-    share: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    share: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     pin: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
     cal: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
     note: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
@@ -256,7 +256,7 @@ initPlayer();
   /* ───────────── list view ───────────── */
   var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   var SORTS = { tracks: 'Most features', plays: 'Most played', comps: 'Most comps', name: 'A–Z' };
-  function showSpot() { return !st.q && !st.letter && _items.length >= 3; }
+  function showSpot() { return !st.q && !st.letter && st.sort !== 'name' && _items.length >= 3; }
 
   function renderList() {
     document.title = 'Artists — wavernrs';
@@ -273,6 +273,7 @@ initPlayer();
       '</div>' +
       '<nav class="ma-az" id="ma-az" aria-label="Jump to letter">' +
         '<button type="button" data-letter="" class="' + (!st.letter ? 'on' : '') + '" aria-pressed="' + (!st.letter) + '">All</button>' +
+        '<button type="button" data-letter="#" class="' + (st.letter === '#' ? 'on' : '') + '" aria-pressed="' + (st.letter === '#') + '" aria-label="Artists starting with a number or symbol">#</button>' +
         LETTERS.map(function (L) { var on = st.letter === L.toLowerCase(); return '<button type="button" data-letter="' + L.toLowerCase() + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '" aria-label="Artists starting with ' + L + '">' + L + '</button>'; }).join('') +
       '</nav>' +
       '<div class="wv-tile-grid ma-grid" id="ma-grid"></div>' +
@@ -293,8 +294,9 @@ initPlayer();
       loadList(true);
     });
     root.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       var t = e.target.closest('[data-href]');
-      if (t && root.contains(t)) { e.preventDefault(); go(t.getAttribute('data-href')); }
+      if (t && root.contains(t) && t.tagName !== 'A') { e.preventDefault(); go(t.getAttribute('data-href')); }
     });
     root.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -343,7 +345,7 @@ initPlayer();
     if (reset) {
       _items = []; _offset = 0; _hasMore = false;
       grid.innerHTML = skeletons(18);
-      spot.innerHTML = (!st.q && !st.letter) ? spotSkeleton() : '';
+      spot.innerHTML = (!st.q && !st.letter && st.sort !== 'name') ? spotSkeleton() : '';
       more.innerHTML = '';
     }
     if (_loading && !reset) return;
@@ -352,7 +354,6 @@ initPlayer();
     if (btn) { btn.disabled = true; btn.innerHTML = 'loading…'; }
     var qs = 'limit=' + PAGE + '&offset=' + _offset + '&sort=' + st.sort;
     if (st.q) qs += '&q=' + encodeURIComponent(st.q);
-    else if (st.letter) qs += '&q=' + encodeURIComponent(st.letter);
     if (st.letter) qs += '&starts=' + encodeURIComponent(st.letter);
     var d;
     try { d = await api('/music-artists?' + qs); }
@@ -371,7 +372,8 @@ initPlayer();
     var dbRows = raw.filter(function (a) { return !a.primary; }).length;
     _offset += PAGE;
     var got = raw;
-    if (st.letter) got = raw.filter(function (a) { return String(a.name || '').trim().toLowerCase().charAt(0) === st.letter; });
+    if (st.letter === '#') got = raw.filter(function (a) { return /^[^a-z]/i.test(String(a.name || '').trim()); });
+    else if (st.letter) got = raw.filter(function (a) { return String(a.name || '').trim().toLowerCase().charAt(0) === st.letter; });
     var seen = {};
     _items.forEach(function (a) { seen[a.artist_key] = 1; });
     got = got.filter(function (a) { if (seen[a.artist_key]) return false; seen[a.artist_key] = 1; return true; });
@@ -412,28 +414,16 @@ initPlayer();
   }
 
   /* ───────────── detail view ───────────── */
-  var FEAT_RE = /(?:[(\[](?:feat\.?|ft\.?|featuring|with)|\s(?:feat\.?|ft\.?|featuring))\s+([^)\]]+)/gi;
-  var FEAT_GATE = /(\s|[(\[])(feat\.?|ft\.?|featuring)\s|[(\[]with\s/i;
-  var FEAT_SPLIT = /\s*(?:,|&|\+|\s+x\s+|\s+and\s+|\/)\s*/i;
-  var FEAT_SKIP = /(remix|prod|version|edit|demo|remaster|intro|outro|live|bonus|instrumental)/i;
-  var ALIAS = { ye: 'kanyewest', kanye: 'kanyewest', yeezy: 'kanyewest', traviscott: 'travisscott' };
-  function featKey(n) { var k = String(n || '').replace(/\$/g, 's').replace(/&/g, 'and').replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); return ALIAS[k] || k; }
   function localRelated(tracks, self) {
+    if (typeof window.wvFeatNames !== 'function') return [];
     var counts = {}, names = {};
     (tracks || []).forEach(function (t) {
-      var title = String(t.title || '');
-      if (!FEAT_GATE.test(title)) return;
-      var seen = {}, re = new RegExp(FEAT_RE.source, 'gi'), m;
-      while ((m = re.exec(title))) {
-        m[1].replace(/tyler,\s*the\s+creator/gi, 'Tyler The Creator').split(FEAT_SPLIT).forEach(function (raw) {
-          var x = raw.replace(/^[\s.-]+|[\s.-]+$/g, '');
-          if (x.length < 2 || x.length > 40 || FEAT_SKIP.test(x)) return;
-          var k = featKey(x);
-          if (!k || k === self || k === 'kanyewest' || seen[k]) return;
-          seen[k] = 1; counts[k] = (counts[k] || 0) + 1;
-          names[k] = names[k] || {}; names[k][x] = (names[k][x] || 0) + 1;
-        });
-      }
+      (window.wvFeatNames(t.title) || []).forEach(function (f) {
+        var k = f && f.key;
+        if (!k || k === self) return;
+        counts[k] = (counts[k] || 0) + 1;
+        names[k] = names[k] || {}; names[k][f.name] = (names[k][f.name] || 0) + 1;
+      });
     });
     return Object.keys(counts).filter(function (k) { return counts[k] >= 2; }).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 8).map(function (k) {
       var nm = Object.keys(names[k]).sort(function (a, b) { return names[k][b] - names[k][a]; })[0];
@@ -560,7 +550,7 @@ initPlayer();
     var href = '/album?id=' + encodeURIComponent(c.id);
     return '<a class="wv-comp-card" href="' + esc(href) + '" data-href="' + esc(href) + '" style="text-decoration:none;color:inherit;"><div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + grad(c.title || '') + ';border-radius:14px;">' +
       (c.cover_url ? '<img src="' + esc(img(c.cover_url, 320)) + '" alt="" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.remove()">' : '') +
-      '</div></div><div class="wv-comp-card-title">' + esc(c.title || '') + '</div><div class="wv-comp-card-artist">' + esc([c.archive_artist_name || '', primary ? '' : plural(c.feature_count || 0, 'song')].filter(Boolean).join(' · ')) + '</div></a>';
+      '</div></div><div class="wv-comp-card-title">' + esc(c.title || '') + '</div><div class="wv-comp-card-artist">' + esc([c.editor_name || c.archive_artist_name || '', primary ? '' : plural(c.feature_count || 0, 'song')].filter(Boolean).join(' · ')) + '</div></a>';
   }
 
   function detailSkeleton() {
@@ -570,6 +560,7 @@ initPlayer();
   }
 
   async function share(a) {
+    if (typeof window.wvShare === 'function') { window.wvShare({ url: location.origin + artistHref(a.artist_key), title: a.name, artist: 'artist on wavernrs', cover: a.photo || '' }); return; }
     var url = location.origin + artistHref(a.artist_key);
     var title = a.name + ' on wavernrs';
     if (navigator.share && matchMedia('(pointer: coarse)').matches) {
@@ -624,22 +615,22 @@ initPlayer();
           '<div class="ma-actions">' +
             '<button type="button" class="ma-play" data-act="play"' + (_queue.length ? '' : ' disabled') + '>' + I.play + 'Play</button>' +
             '<button type="button" class="ma-ghost" data-act="shuffle"' + (_queue.length ? '' : ' disabled') + '>' + I.shuffle + 'Shuffle</button>' +
-            '<button type="button" class="ma-ghost ma-icon-btn" data-act="share" aria-label="Copy link to ' + esc(a.name) + '" title="Share">' + I.share + '</button>' +
+            '<button type="button" class="ma-ghost ma-icon-btn" data-act="share" aria-label="Share ' + esc(a.name) + '" title="Share">' + I.share + '</button>' +
           '</div>' +
         '</div>' +
       '</header>' +
       '<div class="ma-cols">' +
         '<section aria-labelledby="ma-pop-h"><h2 class="ma-h2" id="ma-pop-h">Popular</h2>' +
           (pop.length ? '<div class="ma-list" id="ma-pop">' + pop.map(row).join('') + '</div>' : '<div class="wv-empty">no songs yet</div>') +
-          (tracks.length > pop.length ? '<button type="button" class="ma-expander" data-act="all" aria-expanded="false" aria-controls="ma-all">See all ' + esc(num(tracks.length)) + ' songs</button>' : '') +
+          (tracks.length > pop.length ? '<button type="button" class="ma-expander" data-act="all" aria-expanded="false" aria-controls="ma-all">' + esc(allSongsLabel(a, tracks)) + '</button>' : '') +
           '<div class="ma-all" id="ma-all" hidden></div>' +
         '</section>' +
         '<div id="ma-about-slot">' + aboutHtml + '</div>' +
       '</div>' +
       relatedRow(related) +
-      (comps.length ? '<section class="ma-comps" aria-labelledby="ma-comps-h"><h2 class="ma-h2" id="ma-comps-h">' + (a.primary ? 'Most-liked comps' : 'Comps they\'re on') + ' <small>' + esc(num(comps.length)) + '</small></h2>' +
+      (comps.length ? '<section class="ma-comps" aria-labelledby="ma-comps-h"><h2 class="ma-h2" id="ma-comps-h">' + (a.primary ? 'Most-liked comps' : 'Comps they\'re on') + ' <small>' + esc(comps.length < (a.comps || 0) ? 'top ' + num(comps.length) + ' of ' + num(a.comps) : num(comps.length)) + '</small></h2>' +
         '<div class="ma-comp-grid" id="ma-comp-grid">' + comps.slice(0, 12).map(function (c) { return compCard(c, a.primary); }).join('') + '</div>' +
-        (comps.length > 12 ? '<div class="ma-more"><button type="button" class="ma-pill-btn" data-act="comps">Show all ' + esc(num(comps.length)) + ' comps</button></div>' : '') +
+        (comps.length > 12 ? '<div class="ma-more"><button type="button" class="ma-pill-btn" data-act="comps">Show ' + esc(num(comps.length - 12)) + ' more</button></div>' : '') +
       '</section>' : '');
     try { if (typeof currentTrack !== 'undefined' && currentTrack && currentTrack.id) markNow(currentTrack.id); } catch (_) {}
     if (hasAboutApi && !ab && _detail.about_pending) pollAbout(a, 0);
@@ -678,8 +669,6 @@ initPlayer();
         if (t && typeof window.addToQueue === 'function') window.addToQueue(trackItem(t));
         return;
       }
-      var al = e.target.closest('[data-album]');
-      if (al) { e.preventDefault(); e.stopPropagation(); go('/album?id=' + encodeURIComponent(al.getAttribute('data-album'))); return; }
       var act = e.target.closest('[data-act]');
       if (act) {
         var k = act.getAttribute('data-act');
@@ -695,16 +684,24 @@ initPlayer();
         }
         return;
       }
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var al = e.target.closest('[data-album]');
+      if (al) { e.preventDefault(); e.stopPropagation(); go('/album?id=' + encodeURIComponent(al.getAttribute('data-album'))); return; }
       var r = e.target.closest('.ma-row[role="button"]');
       if (r) { playFrom(r.getAttribute('data-tid'), false); return; }
       var h = e.target.closest('[data-href]');
-      if (h) { e.preventDefault(); go(h.getAttribute('data-href')); }
+      if (h && h.tagName !== 'A') { e.preventDefault(); go(h.getAttribute('data-href')); }
     });
     root.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       var r = e.target.closest('.ma-row[role="button"]');
       if (r && e.target === r) { e.preventDefault(); playFrom(r.getAttribute('data-tid'), false); }
     });
+  }
+
+  function allSongsLabel(a, tracks) {
+    var n = (tracks || []).length;
+    return n < ((a && a.tracks) || 0) ? 'See top ' + num(n) + ' songs' : 'See all ' + num(n) + ' songs';
   }
 
   var _allShown = 0;
@@ -715,7 +712,7 @@ initPlayer();
     var open = box.hidden;
     box.hidden = !open;
     btn.setAttribute('aria-expanded', open);
-    btn.textContent = open ? 'Hide full list' : 'See all ' + num((_detail.tracks || []).length) + ' songs';
+    btn.textContent = open ? 'Hide full list' : allSongsLabel(_detail.artist || {}, _detail.tracks || []);
     if (open && !_allShown) {
       box.innerHTML = '<h3 class="ma-h2" style="font-size:16px;margin-top:4px;">All songs <small>by plays</small></h3><div class="ma-list" id="ma-all-list"></div>';
       moreAll();

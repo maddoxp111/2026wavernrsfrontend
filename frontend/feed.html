@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Following — wavernrs</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .fd-wrap { max-width: 1040px; margin: 0 auto; padding-bottom: 56px; min-width: 0; }
     .fd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -65,6 +65,10 @@
     .fd-sec { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 30px 0 14px; }
     .fd-sec h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.03em; color: var(--text); }
     .fd-sec span { font-size: 12.5px; color: var(--text-3); }
+    .fd-sec span a { color: var(--brand); font-weight: 700; text-decoration: none; }
+    .fd-btn.busy { opacity: .65; pointer-events: none; }
+    #fd-root a.wv-comp-card-title { display: block; }
+    #fd-root a.wv-comp-card-title:hover { text-decoration: underline; }
     .fd-sugs { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 14px; }
     .fd-sug { position: relative; overflow: hidden; border-radius: 12px; background: var(--surface); padding: 0 0 14px; text-align: center; display: flex; flex-direction: column; align-items: center; min-width: 0; }
     .fd-sug-bg { width: 100%; height: 78px; position: relative; overflow: hidden; }
@@ -144,11 +148,11 @@
     <div id="fd-body"></div>
   </div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
 (function () {
   initPlayer();
@@ -159,7 +163,6 @@
     items: [],
     hasMore: false,
     nextBefore: null,
-    offset: 0,
     loading: false,
     loadingMore: false,
     err: null,
@@ -223,7 +226,7 @@
     $('fd-head').innerHTML =
       '<div style="min-width:0"><div class="fd-eyebrow">your people</div><h1 class="fd-h1">Following</h1>' +
       '<p class="fd-sub">new edits and comps from the creators you follow</p></div>' +
-      ((playable || comps) ? '<button type="button" class="fd-btn pri" data-act="playlatest">' + ICON.play + 'Play latest drops</button>' : '');
+      ((playable || comps) ? '<button type="button" class="fd-btn pri' + (F.playBusy ? ' busy' : '') + '" data-act="playlatest">' + ICON.play + 'Play latest drops</button>' : '');
   }
   function followCount() {
     if (F.follows) return F.follows.length;
@@ -269,8 +272,8 @@
     var aHref = a.id ? '/artist?id=' + encodeURIComponent(a.id) : '';
     var fresh = F.seenPrev && t(it.created_at) > F.seenPrev;
     var n = typeof it.track_count === 'number' ? it.track_count : null;
-    var kind = comp ? '<span class="fd-tag comp">new comp</span>' + (n ? '<span>' + n + (n === 1 ? ' song' : ' songs') + '</span>' : '')
-                    : '<span class="fd-tag">new edit</span>' + (it.play_count ? '<span>' + num(it.play_count) + ' plays</span>' : '');
+    var kind = comp ? '<span class="fd-tag comp">comp</span>' + (n ? '<span>' + n + (n === 1 ? ' song' : ' songs') + '</span>' : '')
+                    : '<span class="fd-tag">edit</span>' + (it.play_count ? '<span>' + num(it.play_count) + ' plays</span>' : '');
     var canPlay = comp || !!it.ia_url;
     return '<article class="fd-card' + (fresh ? ' fresh' : '') + '" data-act="open" data-href="' + esc(href) + '" tabindex="0" aria-label="' + esc((comp ? 'comp ' : 'edit ') + (it.title || '') + ' by ' + (a.display_name || '')) + '">' +
       '<div class="fd-cov" style="background:' + grad(it.title) + '">' + img(it.cover_url) + '</div>' +
@@ -370,7 +373,7 @@
         (it.cover_url ? '<img src="' + esc(it.cover_url) + '" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.opacity=0">' : '') +
         (canPlay ? '<button type="button" class="wv-cover-play-btn" data-act="play" data-id="' + esc(it.id) + '" aria-label="Play ' + esc(it.title || '') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v15.78a1.5 1.5 0 0 0 2.3 1.27l12.5-7.89a1.5 1.5 0 0 0 0-2.54L6.3 2.84Z"/></svg></button>' : '') +
       '</div></div>' +
-      '<div class="wv-comp-card-title">' + esc(it.title || 'Untitled') + '</div>' +
+      '<a class="wv-comp-card-title" href="' + esc(href) + '" data-nav="' + esc(href) + '">' + esc(it.title || 'Untitled') + '</a>' +
       '<div class="wv-comp-card-artist">' + (comp ? 'Comp' + (typeof it.track_count === 'number' ? ' · ' + it.track_count + ' songs' : '') : 'Edit') + ' · ' + esc(ago(it.created_at)) + '</div></div>';
   }
 
@@ -428,7 +431,7 @@
     var mine = followingSet();
     var list = F.sugs.filter(function (a) { return !mine[a.id] || F.followed[a.id] !== undefined; }).slice(0, big ? 8 : 6);
     if (!list.length) return '';
-    return '<div id="fd-sugs-slot"><div class="fd-sec"><h2>Creators to follow</h2><span>popular on wavernrs</span></div><div class="fd-sugs">' + list.map(function (a) {
+    return '<div id="fd-sugs-slot"><div class="fd-sec"><h2>Creators to follow</h2><span>popular on wavernrs · <a href="/artists" data-nav="/artists">Show all</a></span></div><div class="fd-sugs">' + list.map(function (a) {
       var href = '/artist?id=' + encodeURIComponent(a.id);
       var on = F.followed[a.id] === true;
       var meta = [];
@@ -479,6 +482,10 @@
       if (on) toast('following ' + name + ' · their drops will show up here');
       else toast('unfollowed ' + name, '', 6000, { title: 'unfollowed ' + name, action: 'Undo', onClick: function () { var b = document.querySelector('.fd-fbtn[data-id="' + CSS.escape(id) + '"]'); if (b) toggleFollow(b, id); else api('/artists/' + encodeURIComponent(id) + '/follow', { method: 'POST' }).then(function () { F.followed[id] = true; }).catch(function () {}); } });
       F.dirty = true;
+      if (F.tab !== 'following') {
+        clearTimeout(F.reT);
+        F.reT = setTimeout(function () { if (!$('fd-root') || root !== $('fd-root')) return; F.dirty = false; load(true); }, 600);
+      }
     }).catch(function (e) {
       btn.removeAttribute('aria-busy');
       toast((e && e.status === 400 && e.message) ? e.message : 'couldnt update that follow...try again', 'error');
@@ -504,16 +511,45 @@
     if (isComp(it)) { if (typeof addAlbumToQueue === 'function') addAlbumToQueue(it.id); return; }
     if (typeof addToQueue === 'function') addToQueue(trackObj(it));
   }
-  function playLatest() {
-    var list = F.items.filter(function (i) { return !isComp(i) && i.ia_url; }).slice(0, 30).map(trackObj);
-    if (!list.length) {
-      var c = F.items.filter(isComp)[0];
-      if (c && typeof playCompById === 'function') playCompById(c.id, { album: c });
-      return;
+  function compQueue(album) {
+    if (typeof window.wvCompQueue === 'function') {
+      return new Promise(function (ok) { ok(window.wvCompQueue(album)); }).then(function (q) { return Array.isArray(q) ? q : []; }, function () { return []; });
     }
-    if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') { setPlayerQueue(list, 0); playQueueIndex(0); }
-    else playTrack(list[0]);
-    toast('playing ' + list.length + ' latest drop' + (list.length === 1 ? '' : 's'));
+    return api('/albums/' + encodeURIComponent(album.id) + '/tracks').then(function (rows) {
+      return (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; }).map(function (t) {
+        var o = trackObj({ id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || album.cover_url || null, artists: t.artists || album.artists, artist_id: t.artist_id || album.artist_id });
+        o.album_id = album.id; o._album_id = album.id; o._album_title = album.title || null; o._album_cover = album.cover_url || null;
+        return o;
+      });
+    }).catch(function () { return []; });
+  }
+  function playLatest() {
+    if (F.playBusy) return;
+    var picks = [], comps = 0, edits = 0;
+    F.items.forEach(function (it) {
+      if (isComp(it)) { if (comps < 6) { picks.push(it); comps++; } }
+      else if (it.ia_url && edits < 30) { picks.push(it); edits++; }
+    });
+    if (!picks.length) return;
+    F.playBusy = true;
+    var btn = document.querySelector('#fd-head [data-act="playlatest"]');
+    if (btn) btn.classList.add('busy');
+    Promise.all(picks.map(function (it) { return isComp(it) ? compQueue(it) : Promise.resolve([trackObj(it)]); })).then(function (parts) {
+      F.playBusy = false;
+      var b = document.querySelector('#fd-head [data-act="playlatest"]');
+      if (b) b.classList.remove('busy');
+      var q = [], drops = 0;
+      parts.forEach(function (p) { if (p && p.length) { drops++; q = q.concat(p); } });
+      q = q.slice(0, 200);
+      if (!q.length) { toast('nothing here can play right now', 'error'); return; }
+      if (typeof setPlayerQueue === 'function' && typeof playQueueIndex === 'function') { setPlayerQueue(q, 0); playQueueIndex(0); }
+      else if (typeof playTrack === 'function') playTrack(q[0]);
+      toast('playing ' + q.length + ' track' + (q.length === 1 ? '' : 's') + ' from ' + drops + ' drop' + (drops === 1 ? '' : 's'));
+    }).catch(function () {
+      F.playBusy = false;
+      var b = document.querySelector('#fd-head [data-act="playlatest"]');
+      if (b) b.classList.remove('busy');
+    });
   }
 
   // ── Wiring ───────────────────────────────────────────────────────────
@@ -569,10 +605,7 @@
   // ── Data ─────────────────────────────────────────────────────────────
   function feedUrl(more) {
     var q = '/feed?limit=' + PAGE;
-    if (more) {
-      if (F.nextBefore) q += '&before=' + encodeURIComponent(F.nextBefore);
-      else q += '&offset=' + F.offset;
-    }
+    if (more && F.nextBefore) q += '&before=' + encodeURIComponent(F.nextBefore);
     return q;
   }
   function absorb(d, more) {
@@ -584,7 +617,6 @@
       fresh = fresh.filter(function (i) { return !have[i._type + i.id]; });
       F.items = F.items.concat(fresh);
     } else F.items = fresh;
-    F.offset += raw.length;
     F.hasMore = !!(d && d.has_more);
     F.nextBefore = (d && d.next_before) || null;
     if (d && typeof d.following_count === 'number') F.followingCount = d.following_count;
@@ -594,7 +626,6 @@
     var gen = F.gen;
     F.loading = !silent;
     F.err = null;
-    F.offset = 0;
     F.nextBefore = null;
     rerender();
     api(feedUrl(false)).then(function (d) {
@@ -653,7 +684,7 @@
   var root = $('fd-root');
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
-  window._pageCleanup.push(function () { F.gen++; });
+  window._pageCleanup.push(function () { F.gen++; clearTimeout(F.reT); });
   load(false);
 })();
 </script>

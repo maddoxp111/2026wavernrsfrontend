@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive trackers</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 <div id="view">
@@ -66,10 +66,10 @@
   <div class="wv-empty">Loading…</div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 var AT = { list: [], sel: null, eras: null, staff: false, access: null, searchT: null };
 var AT_TAGS = [['', 'No tag'], ['⭐', '⭐ Best'], ['🏆', '🏆 One of the best'], ['💎', '💎 Hidden gem'], ['⌛', '⌛ Older']];
@@ -181,7 +181,9 @@ function atMainHTML() {
         : '<div style="font-weight:800;font-size:18px;">' + atEsc(t.name) + '</div>') +
     '</div>' +
     '<div class="at-card"><div class="at-h">People</div><div class="at-people">' + people + '</div>' +
-      (t.can_edit ? '<div class="at-row"><input class="wv-input" id="at-member-name" placeholder="add someone by username" onkeydown="if(event.key===\'Enter\')atAddMember()"><button class="wv-pill" onclick="atAddMember()">Add</button></div><div id="at-member-msg" class="at-msg"></div>' : '') +
+      (t.can_edit ? '<div class="at-row"><input class="wv-input" id="at-member-name" placeholder="add someone by username" onkeydown="if(event.key===\'Enter\')atAddMember()"><button class="wv-pill" onclick="atAddMember()">Add</button></div>' : '') +
+      (t.member && !t.is_owner ? '<div class="at-row"><button class="wv-pill" style="color:var(--red);" onclick="atLeave()">Leave tracker</button></div>' : '') +
+      '<div id="at-member-msg" class="at-msg"></div>' +
     '</div>' +
     (t.can_edit ? '<div class="at-card"><div class="at-h">Add comps and edits</div><div class="at-row"><input class="wv-input" id="at-search" placeholder="search the archive, or paste a comp link" oninput="atSearch()" onkeydown="if(event.key===\'Enter\')atSearch(true)"></div><div id="at-res" class="at-res"></div></div>' : '') +
     '<div class="at-card"><div class="at-h">On this tracker<span class="sp" style="font-weight:600;letter-spacing:0;text-transform:none;">' + t.entries.length + '</span></div>' +
@@ -305,11 +307,20 @@ window.atAddMember = async function () {
   catch (e) { atMsg('at-member-msg', e.message || 'couldnt add them', true); }
 };
 
-window.atRemoveMember = async function (uid) {
-  var t = atCur(); if (!t) return;
-  if (!confirm('take them off this tracker?')) return;
-  try { var d = await api('/trackers/archive/' + t.id + '/members/' + encodeURIComponent(uid), { method: 'DELETE' }); atReplace(d.tracker); }
-  catch (e) { atMsg('at-member-msg', e.message || 'couldnt remove them', true); }
+window.atRemoveMember = async function (uid, self) {
+  var t = atCur(); if (!t) return false;
+  if (!confirm(self ? 'leave ' + t.name + '? you wont be able to edit it anymore' : 'take them off this tracker?')) return false;
+  try { var d = await api('/trackers/archive/' + t.id + '/members/' + encodeURIComponent(uid), { method: 'DELETE' }); atReplace(d.tracker); return true; }
+  catch (e) { atMsg('at-member-msg', e.message || (self ? 'couldnt leave it' : 'couldnt remove them'), true); return false; }
+};
+
+window.atLeave = async function () {
+  var me = typeof getUser === 'function' ? getUser() : null;
+  if (!me || !me.id) { atMsg('at-member-msg', 'log in again to leave this tracker', true); return; }
+  if (!(await atRemoveMember(me.id, true))) return;
+  AT.sel = null;
+  await atLoad();
+  atToast('you left the tracker');
 };
 
 window.atGrant = async function () {

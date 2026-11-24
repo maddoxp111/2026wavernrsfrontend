@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>wavernrs — your recap</title>
   <meta name="description" content="your wavernrs recap: top plays, creators, eras, likes and achievements in one shareable story.">
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     #view:has(#wr-stage) { padding-bottom: 14px; }
     .wr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 2px 0 14px; }
@@ -167,6 +167,7 @@
     @keyframes wr-breathe { 50% { transform: scale(.9); opacity: .6; } }
 
     .wr-side { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+    .wr-side[hidden] { display: none !important; }
     .wr-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
     .wr-panel h3 { margin: 0 0 10px; font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
     .wr-sidecard { display: flex; gap: 14px; align-items: stretch; }
@@ -258,7 +259,7 @@
             <span>a story-sized image of your top plays and stats</span>
             <div class="bt">
               <button type="button" class="wr-sbtn pri" id="wr-side-save"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>Save image</button>
-              <button type="button" class="wr-sbtn" id="wr-side-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>Copy link</button>
+              <button type="button" class="wr-sbtn" id="wr-side-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9h11v11H9zM5 15H4V4h11v1"/></svg>Copy image</button>
             </div>
           </div>
         </div>
@@ -271,10 +272,10 @@
     </aside>
   </div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 (function () {
   if (typeof initPlayer === 'function') initPlayer();
@@ -347,7 +348,13 @@
     var since = rangeStart(range);
     var list = Object.keys(all).map(function (k) { var e = all[k]; if (e && !e.id) e.id = k; return e; })
       .filter(function (e) { return e && e.id && (Number(e.n) || 0) > 0; });
-    var inR = list.filter(function (e) { return !since || (Number(e.last) || 0) >= since; });
+    var inRange = function (e) {
+      if (range === 'year' && typeof window.tallyCountYear === 'function') return window.tallyCountYear(e, YEAR);
+      if (range === '30d' && typeof window.tallyCountSince === 'function') return window.tallyCountSince(e, since);
+      return !since || (Number(e.last) || 0) >= since ? (Number(e.n) || 0) : 0;
+    };
+    var inR = list.map(function (e) { return range === 'all' ? e : Object.assign({}, e, { n: inRange(e) }); })
+      .filter(function (e) { return (Number(e.n) || 0) > 0; });
     var total = 0, comps = 0, edits = 0;
     inR.forEach(function (e) { total += Number(e.n) || 0; if (e._type === 'album') comps++; else edits++; });
     var top = inR.slice().sort(function (a, b) { return (b.n - a.n) || ((b.last || 0) - (a.last || 0)); }).slice(0, 5);
@@ -656,7 +663,7 @@
         '<h2 class="wr-h wr-in" style="--d:60ms">you hearted</h2>' +
         '<div class="wr-num md wr-pop" style="--d:160ms" data-count="' + likes.total + '">' + num(likes.total) + '</div>' +
         '<p class="wr-p wr-in" style="--d:260ms;font-weight:700">' + num(likes.tracks) + ' ' + plural(likes.tracks, 'edit') + ' &middot; ' + num(likes.comps) + ' ' + plural(likes.comps, 'comp') + '</p>' +
-        (pct && pct <= 50 ? '<div class="wr-chipsrow wr-in" style="--d:320ms"><span class="wr-pill gold">' + svg(ICON.tastemaker, 14, 2) + 'top ' + pct + '% of likers on wavernrs</span></div>' : '') +
+        (pct && pct <= 50 ? '<div class="wr-chipsrow wr-in" style="--d:320ms"><span class="wr-pill gold">' + svg(ICON.tastemaker, 14, 2) + 'top ' + pct + '% of likers on wavernrs' + (range !== 'all' ? ', all time' : '') + '</span></div>' : '') +
         '<div class="wr-grow"></div>' +
         (chart ? '<div class="wr-in" style="--d:380ms"><div class="wr-chart" aria-hidden="true">' + chart + '</div><div class="wr-axis">' + axis + '</div></div>' : '') +
         (range !== '30d' && S.peak ? '<p class="wr-p wr-in" style="--d:480ms;margin-top:3cqw;font-size:3.6cqw">your biggest month was <b>' + esc(S.peak) + '</b></p>' : '')) });
@@ -754,7 +761,10 @@
     S.i = 0; S.t = 0; S.paused = false; S.ended = false;
     paintPause();
     go(0, true);
-    makeCard();
+    var empty = model.slides.length === 1 && model.slides[0].key === 'empty';
+    var side = $('wr-side'); if (side) side.hidden = empty;
+    ['wr-prev', 'wr-next'].forEach(function (id) { var b = $(id); if (b) b.style.visibility = empty ? 'hidden' : ''; });
+    if (!empty) makeCard();
   }
 
   function paintPause() {
@@ -910,8 +920,9 @@
     glow(W * .9, H * .08, 700, 'hsla(' + ((hue.h1 + 40) % 360) + ',90%,65%,.35)');
     glow(W * .05, H * .72, 800, 'hsla(' + hue.h2 + ',90%,60%,.22)');
 
-    return Promise.all([loadImage('/logo.png'), loadImage(m.avatar, 240)].concat(m.top.slice(0, 5).map(function (t, i) { return loadImage(t.cover_url, i === 0 ? 640 : 160); }))).then(function (ims) {
+    return Promise.all([loadImage('/logo.png'), loadImage(m.avatar, 240)].concat(m.top.slice(0, 5).map(function (t, i) { return loadImage(t.cover_url, i === 0 ? 640 : 320); }))).then(function (ims) {
       var logo = ims[0], av = ims[1], covers = ims.slice(2);
+      cv._covers = covers;
       var X = 90;
       if (logo) { ctx.save(); rr(ctx, X, 96, 64, 64, 16); ctx.clip(); ctx.drawImage(logo, X, 96, 64, 64); ctx.restore(); }
       ctx.fillStyle = '#fff';
@@ -1044,6 +1055,7 @@
         S.cardBlob = b;
         S.cardURL = URL.createObjectURL(b);
         paintCard();
+        if (!S.cardRetried && m.top.slice(0, 3).some(function (t, i) { return t.cover_url && !cv._covers[i]; })) { S.cardRetried = true; setTimeout(function () { if (S.alive && gen === S.cardGen) makeCard(); }, 4000); }
       });
     }).catch(function () { cardFailed(); });
   }
@@ -1058,7 +1070,7 @@
     if (sp) sp.innerHTML = '<img src="' + S.cardURL + '" alt="">';
     ['wr-save', 'wr-share'].forEach(function (id) { var b = $(id); if (b) b.disabled = false; });
     var shareB = $('wr-share');
-    if (shareB && !canShareFiles()) shareB.innerHTML = svg('M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1', 16, 2.2) + 'Copy link';
+    if (shareB && !canShareFiles()) shareB.innerHTML = svg('M9 9h11v11H9zM5 15H4V4h11v1', 16, 2.2) + 'Copy image';
   }
   function fileName() { return 'wavernrs-recap-' + (S.range === 'year' ? YEAR : S.range === '30d' ? '30-days' : 'all-time') + '.png'; }
   function canShareFiles() {
@@ -1071,10 +1083,13 @@
     document.body.appendChild(a); a.click(); a.remove();
     if (typeof wvToast === 'function') wvToast('saved your recap card');
   }
-  function copyLink() {
-    var url = location.origin + '/wrapped';
-    var ok = function () { if (typeof wvToast === 'function') wvToast('link copied'); };
-    try { navigator.clipboard.writeText(url).then(ok, function () { if (typeof wvToast === 'function') wvToast(url); }); } catch (_) { if (typeof wvToast === 'function') wvToast(url); }
+  function copyImage() {
+    if (!S.cardBlob) { if (typeof wvToast === 'function') wvToast('your card is still drawing...'); return; }
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      try {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': S.cardBlob })]).then(function () { if (typeof wvToast === 'function') wvToast('card copied, paste it anywhere'); }, saveCard);
+      } catch (_) { saveCard(); }
+    } else saveCard();
   }
   function shareCard() {
     if (canShareFiles()) {
@@ -1082,7 +1097,7 @@
       navigator.share({ files: [new File([S.cardBlob], fileName(), { type: 'image/png' })], title: 'my wavernrs recap', text: 'my wavernrs recap' }).catch(function () {});
       return;
     }
-    copyLink();
+    copyImage();
   }
 
   function setFull(on) {
@@ -1135,10 +1150,12 @@
     var bs = document.querySelectorAll('#wr-seg button');
     for (var k = 0; k < bs.length; k++) { var on = bs[k].getAttribute('data-range') === S.range; bs[k].classList.toggle('on', on); bs[k].setAttribute('aria-selected', on ? 'true' : 'false'); }
     var bt = $('wr-brandtxt'); if (bt) bt.textContent = 'wavernrs recap · ' + RANGE_SHORT[S.range];
+    var yb = document.querySelector('#wr-seg [data-range="year"]'); if (yb) yb.textContent = String(YEAR);
   }
 
   function load(range) {
     S.range = range;
+    S.cardRetried = false;
     try { localStorage.setItem('wv_recap_range', range); } catch (_) {}
     setRangeUI();
     try { var u = new URL(location.href); if (u.searchParams.get('range') !== range) { u.searchParams.set('range', range); history.replaceState(history.state, '', u.pathname + u.search); } } catch (_) {}
@@ -1269,7 +1286,7 @@
       if (b) go(Number(b.getAttribute('data-i')) || 0);
     });
     $('wr-side-save').addEventListener('click', function () { if (S.cardURL) saveCard(); else if (typeof wvToast === 'function') wvToast('your card is still drawing...'); });
-    $('wr-side-link').addEventListener('click', copyLink);
+    $('wr-side-link').addEventListener('click', copyImage);
     $('wr-full').innerHTML = I_EXPAND;
     paintPause();
 

@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — sign up</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
   <link rel="icon" type="image/x-icon" href="/icon.ico">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 <div class="wv-auth-page" id="auth-root">
@@ -50,12 +50,12 @@
     </button>
 
     <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-2);">
-      already have an account? <a href="/login" style="color:var(--brand);font-weight:500;">Log in</a>
+      already have an account? <a href="/login" id="login-link" style="color:var(--brand);font-weight:500;">Log in</a>
     </div>
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
 <script>
   try {
     if (localStorage.getItem('wv_theme_dark_default') !== '1') {
@@ -77,11 +77,31 @@
     if (el) el.innerHTML = '';
   }
 
+  function _postLoginTarget(fallback) {
+    var next = new URLSearchParams(location.search).get('next');
+    if (next) {
+      try {
+        var u = new URL(next, location.origin);
+        if (u.origin === location.origin && !/^\/(login|register|auth-callback)(\.html)?$/.test(u.pathname)) return u.pathname + u.search + u.hash;
+      } catch (_) {}
+    }
+    return fallback === undefined ? '/dashboard' : fallback;
+  }
+
+  (function () {
+    var next = _postLoginTarget('');
+    if (next) document.getElementById('login-link').href = '/login?next=' + encodeURIComponent(next);
+  })();
+
   document.getElementById('password2').addEventListener('keydown', e => {
     if (e.key === 'Enter') doRegister();
   });
 
   function oauthLogin(provider) {
+    try {
+      var next = _postLoginTarget('');
+      if (next) sessionStorage.setItem('wv_next', next); else sessionStorage.removeItem('wv_next');
+    } catch (_) {}
     location.href = API_BASE + '/oauth/' + provider;
   }
 
@@ -106,8 +126,7 @@
       });
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.removeItem('wv_countdown_bypass');
-      location.href = '/dashboard';
+      location.href = _postLoginTarget();
     } catch (err) {
       showAlert('alert-container', err.message);
       btn.textContent = 'Create account';

@@ -12,7 +12,7 @@
   var IS_MAC = /Mac|iPhone|iPad|iPod/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent || '');
   var MOD = IS_MAC ? '⌘' : 'Ctrl';
   var RECENT_KEY = 'wv_palette_recent';
-  var BLOCKERS = ['wv-lockscreen', 'wv-cd-overlay', 'wv-review-overlay', 'wv-down'];
+  var BLOCKERS = ['wv-lockscreen', 'wv-review-overlay', 'wv-down'];
 
   // ── utils ─────────────────────────────────────────────────────────────────
   function esc(s) {
@@ -125,12 +125,10 @@
     shield: svg('<path d="M11.6 2.35a1.1 1.1 0 0 1 .8 0l6.9 2.7c.42.17.7.57.7 1.02v5.24c0 4.65-3.15 8.97-7.72 10.44a.9.9 0 0 1-.56 0C7.15 20.28 4 15.96 4 11.31V6.07c0-.45.28-.85.7-1.02Z"/>'),
     info: svg('<path fill-rule="evenodd" d="M12 2.7a9.3 9.3 0 1 0 0 18.6 9.3 9.3 0 0 0 0-18.6Zm0 3.5a1.55 1.55 0 1 1 0 3.1 1.55 1.55 0 0 1 0-3.1Zm1.4 11.6h-2.8v-6.7h2.8Z"/>'),
     search: svg('<path fill-rule="evenodd" d="M10.7 2.7a8.05 8.05 0 1 0 4.9 14.44l3.62 3.62a1.4 1.4 0 0 0 1.98-1.98l-3.62-3.62A8.05 8.05 0 0 0 10.7 2.7Zm0 2.8a5.25 5.25 0 1 1 0 10.5 5.25 5.25 0 0 1 0-10.5Z"/>'),
-    radio: stroke('<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>'),
     headphones: stroke('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>'),
     history: svg('<path d="M13 3a9 9 0 1 1-8.66 11.3l1.94-.5A7 7 0 1 0 8.5 6.5L11 9H4V2l2.6 2.6A9 9 0 0 1 13 3Zm-1 4h2v5.2l3.6 2.1-1 1.7L12 13.4Z"/>'),
     playlist: svg('<rect x="3" y="4.6" width="13" height="2.6" rx="1.3"/><rect x="3" y="9.7" width="13" height="2.6" rx="1.3"/><rect x="3" y="14.8" width="8" height="2.6" rx="1.3"/><path d="M17.2 9.2c0-.6.64-.97 1.16-.67l3.2 1.85a.77.77 0 0 1 0 1.34l-3.2 1.85a.77.77 0 0 1-1.16-.67Z" transform="translate(-1 5)"/>'),
     tracker: svg('<path d="M5.2 3.3h13.6a2 2 0 0 1 2 2v13.4a2 2 0 0 1-2 2H5.2a2 2 0 0 1-2-2V5.3a2 2 0 0 1 2-2Zm2.3 4.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.3.25a.85.85 0 1 0 0 1.7h5.9a.85.85 0 1 0 0-1.7Zm-3.3 3.6a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.3.25a.85.85 0 1 0 0 1.7h5.9a.85.85 0 1 0 0-1.7Zm-3.3 3.6a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Zm3.3.25a.85.85 0 1 0 0 1.7h3.9a.85.85 0 1 0 0-1.7Z"/>'),
-    games: svg('<path d="M7.3 6.5h9.4a5 5 0 0 1 4.93 4.17l.9 5.3a2.75 2.75 0 0 1-4.72 2.35l-2.05-2.22H8.24l-2.05 2.22a2.75 2.75 0 0 1-4.72-2.35l.9-5.3A5 5 0 0 1 7.3 6.5Zm.45 3.1a.9.9 0 0 0-.9.9v.9h-.9a.9.9 0 1 0 0 1.8h.9v.9a.9.9 0 1 0 1.8 0v-.9h.9a.9.9 0 1 0 0-1.8h-.9v-.9a.9.9 0 0 0-.9-.9Zm8.35.4a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Zm-1.9 2.4a1.05 1.05 0 1 0 0 2.1 1.05 1.05 0 0 0 0-2.1Z"/>'),
     stats: svg('<path d="M4.3 3.2a1.1 1.1 0 0 1 1.1 1.1v14.1c0 .17.13.3.3.3h14a1.1 1.1 0 0 1 0 2.2h-14a2.5 2.5 0 0 1-2.5-2.5V4.3a1.1 1.1 0 0 1 1.1-1.1Z"/><path d="M19.9 7.1a1.1 1.1 0 0 1 .05 1.55l-4.2 4.5a1.1 1.1 0 0 1-1.52.08l-2.35-2-3.1 3.3a1.1 1.1 0 0 1-1.6-1.5l3.8-4.05a1.1 1.1 0 0 1 1.52-.08l2.34 2 3.5-3.75a1.1 1.1 0 0 1 1.56-.05Z"/>'),
     pulse: stroke('<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>'),
     sparkle: svg('<path d="M12 2.5c.4 0 .74.28.82.67l.72 3.49a5.3 5.3 0 0 0 4.14 4.14l3.49.72a.84.84 0 0 1 0 1.64l-3.49.72a5.3 5.3 0 0 0-4.14 4.14l-.72 3.49a.84.84 0 0 1-1.64 0l-.72-3.49a5.3 5.3 0 0 0-4.14-4.14l-3.49-.72a.84.84 0 0 1 0-1.64l3.49-.72a5.3 5.3 0 0 0 4.14-4.14l.72-3.49A.84.84 0 0 1 12 2.5Z"/>'),
@@ -185,9 +183,8 @@
     ['history', 'History', '/history', 'history', 'recently played listening history', 'i'],
     ['playlists', 'Playlists', '/playlists', 'playlist', 'mixes lists', 'p'],
     ['feed', 'Following', '/feed', 'feed', 'feed follows friends activity', 'f'],
-    ['tracker', 'Tracker', '/tracker', 'tracker', 'leaks unreleased eras songs'],
+    ['trackers', 'Trackers', '/archive?view=trackers', 'tracker', 'curated trackers lists comps edits sheets uyt yedits eras'],
     ['eras', 'Eras', '/eras', 'grid', 'era albums periods'],
-    ['games', 'Games', '/games', 'games', 'play guess heardle'],
     ['stats', 'Stats', '/stats', 'stats', 'numbers totals analytics'],
     ['wrapped', 'Recap', '/wrapped', 'sparkle', 'wrapped year in review your year'],
     ['notifications', 'Notification center', '/notifications', 'bell', 'alerts inbox activity', 'n'],
@@ -209,6 +206,8 @@
     ['ye-quiz', 'Daily Ye quiz', '/resources?view=quiz', 'quiz', 'quiz trivia game daily'],
     ['ye-yeezy', 'Yeezy archive', '/resources?view=yeezy', 'shirt', 'yeezy clothing merch fashion gap'],
     ['ye-tours', 'Ye tours', '/resources?view=tours', 'pin', 'tours concerts shows setlists performances'],
+    ['ye-insta', 'Ye Instagram', '/resources?view=insta', 'feed', 'instagram ig posts'],
+    ['ye-yews', 'Yews', '/resources?view=yews', 'megaphone', 'news articles press'],
   ];
   var GO = {};
   PAGES.forEach(function (p) { if (p[5]) GO[p[5]] = p; });
@@ -263,7 +262,7 @@
   }
   function surprise() {
     toast('finding something good…');
-    fetch(API + '/archive/random?n=1').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    api('/archive/random?n=1').then(function (d) {
       var it = d && d.items && d.items[0];
       if (!it || !it.id) throw new Error('none');
       if (typeof window.playCompById === 'function') window.playCompById(it.id, { album: it, quiet: true }).then(function (ok) {
@@ -745,7 +744,8 @@
     // Strong local hits (a page or action name) lead; music follows; then
     // looser local matches so typos still land somewhere.
     var top = strong.slice(0, 6);
-    var rest = strong.slice(6).concat(weak).slice(0, top.length ? 4 : 8);
+    var hasLive = liveGroups.some(function (g) { return g.items && g.items.length; });
+    var rest = hasLive ? strong.slice(6, 10) : strong.slice(6).concat(weak).slice(0, top.length ? 4 : 8);
     var shown = {};
     top.concat(rest).forEach(function (x) { shown[x.id] = 1; });
     liveGroups = liveGroups.map(function (g) {
@@ -1007,7 +1007,7 @@
     el = document.createElement('div');
     el.id = 'wvp-gochip';
     el.setAttribute('role', 'status');
-    var keys = ['h', 'b', 'c', 'a', 'y', 'r', 'l', 'p'];
+    var keys = ['h', 'b', 'c', 'a', 'y', 'm', 'l', 'p'].filter(function (k) { return GO[k]; });
     el.innerHTML = '<b>go to</b>' + keys.map(function (k) { return '<span><kbd>' + k.toUpperCase() + '</kbd>' + esc(GO[k][1].toLowerCase()) + '</span>'; }).join('');
     document.body.appendChild(el);
   }
@@ -1072,6 +1072,10 @@
     if (existing) { existing.remove(); return; }
     if (isOpen()) close(true);
     styleOnce();
+    var NAV_GO = ['home', 'browse', 'charts', 'archive', 'resources', 'music', 'library', 'playlists'];
+    function goRows(nav) {
+      return PAGES.filter(function (p) { return p[5] && (NAV_GO.indexOf(p[0]) >= 0) === nav; }).map(function (p) { return [['G', 'then', p[5].toUpperCase()], p[1]]; });
+    }
     var SECTIONS = [
       { t: 'Playback', rows: [
         [['Space'], 'Play or pause'],
@@ -1086,24 +1090,12 @@
       { t: 'Navigation', rows: [
         [[MOD, 'K'], 'Command palette'],
         [['/'], 'Search'],
-        [['G', 'then', 'H'], 'Home'],
-        [['G', 'then', 'B'], 'Browse'],
-        [['G', 'then', 'C'], 'Charts'],
-        [['G', 'then', 'A'], 'Archive'],
-        [['G', 'then', 'Y'], 'Ye archive'],
-        [['G', 'then', 'L'], 'Your library'],
-        [['G', 'then', 'P'], 'Playlists'],
-      ] },
+      ].concat(goRows(true)) },
       { t: 'General', rows: [
         [['T'], 'Theme picker'],
         [['?'], 'This sheet'],
         [['Esc'], 'Close what’s open'],
-        [['G', 'then', 'S'], 'Settings'],
-        [['G', 'then', 'E'], 'Editors'],
-        [['G', 'then', 'U'], 'Upload'],
-        [['G', 'then', 'N'], 'Notifications'],
-        [['G', 'then', 'I'], 'History'],
-      ] },
+      ].concat(goRows(false)) },
     ];
     (window.wvShortcutsExtra || []).forEach(function (x) {
       if (!x || !x.keys || !x.label) return;

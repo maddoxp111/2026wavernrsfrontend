@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — tracker</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 
@@ -118,7 +118,6 @@
     #view .tk-back { color:var(--text-2); display:inline-flex; align-items:center; gap:6px; min-height:32px; }
     #view .tk-era { display:block; border-radius:12px; outline-offset:4px; }
     #view .tk-era .cv { position:relative; background:var(--surface-2); }
-      background:var(--brand); color:#14121c; box-shadow:0 2px 8px rgba(0,0,0,.35); }
     #view .tk-era .mt { display:flex; justify-content:space-between; gap:6px; white-space:nowrap; }
     #view .tk-find { display:flex; align-items:center; gap:10px; height:48px; padding:0 4px 0 16px; margin:0 0 20px; border-radius:14px;
       background:var(--surface-2); border:1px solid transparent; color:var(--text-3); transition:border-color .15s, background .15s, box-shadow .15s; }
@@ -194,10 +193,10 @@
   <div id="tk-body"></div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
   var TK_TAGS = { '\u2b50': 'every edit on it is amazing', '\ud83d\uddd1': 'only the leak is bad', '\ud83e\udd16': 'every edit on it used AI', '\ud83c\udfc6': 'Tracker pick', '\u2728': 'Highlighted', '\ud83d\udcab': 'Highlighted', '\ud83d\udc8e': 'Gem', '\u231b': 'Older comp', '\ud83d\udeae': 'Not recommended' };
   function tkTagHint(tag) { var out = []; for (var k in TK_TAGS) if (tag.indexOf(k) >= 0) out.push(TK_TAGS[k]); return out.join(' · ') || 'Tracker tag'; }
@@ -291,7 +290,7 @@
             (t.art ? ' · ' + t.art.toLocaleString() + ' pieces of art' : '') +
             (t.url ? ' · <a href="' + esc(t.url) + '" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600;">source</a>' : '') + '</div>' +
           (t.staff && t.by && t.by.length ? '<div class="tk-sub" style="margin-top:4px;">a wavernrs tracker by ' + esc(listNames(t.by)) + '</div>' : '') +
-          (t.staff && t.blurb ? '<div class="tk-sub" style="margin-top:4px;">' + esc(t.blurb) + '</div>' : '') +
+          (t.blurb ? '<div class="tk-sub" style="margin-top:4px;">' + esc(t.blurb) + '</div>' : '') +
           (t.combined && t.sources ? '<div class="tk-sub" style="margin-top:4px;">this mixes ' + esc(listNames(t.sources.map(function (x) { return x.short; }))) +
             ' together. if a comp is on more than one it only shows once, with a badge for each tracker that has it.</div>' : '') +
         '</div>' +
@@ -897,7 +896,7 @@
     var slug = p.get('t'), era = p.get('era');
     var qk = p.get('kind');
     var kind = (qk === 'edit' || qk === 'art' || qk === 'sheet' || qk === 'missing') ? qk : 'comp';
-    if (!slug) { navigate('/archive'); return; }
+    if (!slug) { navigate('/archive?view=trackers'); return; }
     if (typeof initPlayer === 'function') initPlayer();
     _slug = slug; _kind = kind;
     _q = String(p.get('q') || '').slice(0, 120);

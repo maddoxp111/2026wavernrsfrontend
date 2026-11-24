@@ -16,6 +16,16 @@ struct Artist: Codable, Identifiable, Hashable {
     }
 }
 
+extension Artist {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? ""
+        displayName = try? c.decodeIfPresent(String.self, forKey: .displayName)
+        profileImageUrl = try? c.decodeIfPresent(String.self, forKey: .profileImageUrl)
+        isVerified = try? c.decodeIfPresent(Bool.self, forKey: .isVerified)
+    }
+}
+
 struct ArtistFull: Codable, Identifiable, Hashable {
     let id: String
     let displayName: String?
@@ -322,7 +332,7 @@ struct IdentifiableString: Identifiable {
 
 struct FollowStatus: Codable {
     let following: Bool
-    let followerCount: Int
+    let followerCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case following

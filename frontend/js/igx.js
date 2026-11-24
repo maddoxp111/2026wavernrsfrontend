@@ -253,7 +253,7 @@
     }
 
     function listOf(key) {
-      return key === 'reels' ? S.reels : key === 'tagged' ? S.tagged : key === 'search' ? S.results : key === 'explore' ? S.explore : S.posts;
+      return key === 'reels' ? S.reels : key === 'tagged' ? S.tagged : key === 'saved' ? S.posts.filter(function (p) { return S.saves.has(p.code); }) : key === 'search' ? S.results : key === 'explore' ? S.explore : S.posts;
     }
 
     function tileHTML(p, i, key, cls) {
@@ -298,6 +298,7 @@
     }
     function emptyState(kind) {
       if (kind === 'tagged') return '<div class="igx-empty"><div class="igx-empty-i">' + icon('tagged', 38) + '</div><b>Photos and videos of ye</b><span>When people tag ye in photos and videos, they’ll appear here.</span></div>';
+      if (kind === 'saved') return '<div class="igx-empty"><div class="igx-empty-i">' + icon('save', 38) + '</div><b>Save posts for later</b><span>Tap the bookmark on any post and it shows up here, on this device.</span></div>';
       return '<div class="igx-empty"><div class="igx-empty-i">' + icon('grid', 38) + '</div><b>No posts yet</b></div>';
     }
 
@@ -330,6 +331,7 @@
           '<button type="button" role="tab" data-a="ptab" data-k="grid" class="on" aria-label="Posts">' + icon('grid', 24) + '</button>' +
           '<button type="button" role="tab" data-a="ptab" data-k="reels" aria-label="Reels">' + icon('reels', 24) + '</button>' +
           '<button type="button" role="tab" data-a="ptab" data-k="tagged" aria-label="Tagged">' + icon('tagged', 24) + '</button>' +
+          '<button type="button" role="tab" data-a="ptab" data-k="saved" aria-label="Saved">' + icon('save', 24) + '</button>' +
         '</div>' +
         '<div class="igx-grid" data-g="profile"></div>' +
         '<div class="igx-foot">posts from the <a href="' + CREDIT_URL + '" target="_blank" rel="noopener">YE INSTAGRAM ARCHIVE</a> ❤️</div>';
@@ -347,7 +349,7 @@
       var P = S.data && S.data.profile;
       v.innerHTML =
         barHTML(
-          S.full ? ib('exit', 'back', 'Back', 26) : '<span class="igx-bar-sp"></span>',
+          ib('exit', 'back', 'Back to the archive', 26),
           '<b class="igx-uname">' + esc(P ? P.username : 'ye') + '</b>' + (P ? badge(14) : ''),
           ib('bell', 'bell', 'Notifications') + ib('more-p', 'more', 'Options'),
           'igx-bar-p'
@@ -374,7 +376,7 @@
       if (S.built.home) return;
       S.built.home = 1;
       v.innerHTML =
-        barHTML('<span class="igx-word">Instagram</span>' + icon('chev', 14, 'igx-word-c'), '', ib('bell', 'heart', 'Notifications') + ib('dm', 'dm', 'Messages'), 'igx-bar-h') +
+        barHTML(ib('exit', 'back', 'Back to the archive', 26) + '<span class="igx-word">Instagram</span>' + icon('chev', 14, 'igx-word-c'), '', ib('bell', 'heart', 'Notifications') + ib('dm', 'dm', 'Messages'), 'igx-bar-h') +
         '<div class="igx-scroll"><div class="igx-feed" data-f="home"></div></div>';
       startFeed(v.querySelector('.igx-feed'), v.querySelector('.igx-scroll'), 'grid', 0, false);
     }
@@ -383,7 +385,7 @@
       if (S.built.search) return;
       S.built.search = 1;
       v.innerHTML =
-        '<div class="igx-bar igx-bar-s"><label class="igx-search">' + icon('search', 16) + '<input type="search" placeholder="Search" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search posts"></label></div>' +
+        '<div class="igx-bar igx-bar-s">' + ib('exit', 'back', 'Back to the archive', 26) + '<label class="igx-search">' + icon('search', 16) + '<input type="search" placeholder="Search" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Search posts"></label></div>' +
         '<div class="igx-scroll"><div class="igx-grid igx-explore" data-g="explore"></div><div class="igx-sres" data-g="res" hidden></div></div>';
       var ex = v.querySelector('[data-g="explore"]');
       fillGrid(ex, 'explore', function (i) { return i % 12 === 0 ? ' igx-big' : i % 12 === 6 ? ' igx-big igx-bigr' : ''; });
@@ -414,7 +416,7 @@
       var html = S.reels.map(function (p, i) { return reelHTML(p, i); }).join('');
       v.innerHTML =
         '<div class="igx-reels" data-f="reels">' + html + '</div>' +
-        '<div class="igx-rtop"><b>Reels</b><span>' + ib('mute', 'volOff', 'Sound', 22) + ib('cam', 'camera', 'Camera', 24) + '</span></div>';
+        '<div class="igx-rtop"><span style="align-items:center">' + ib('exit', 'back', 'Back to the archive', 24) + '<b>Reels</b></span><span>' + ib('mute', 'volOff', 'Sound', 22) + ib('cam', 'camera', 'Camera', 24) + '</span></div>';
       watchVideos(v);
       v.querySelectorAll('.igx-reel').forEach(function (r) { r.dataset.n = '1'; });
     }
@@ -444,7 +446,7 @@
       var v = ensureView('dm');
       if (S.built.dm) return;
       S.built.dm = 1;
-      v.innerHTML = barHTML('<span class="igx-bar-sp"></span>', '<b class="igx-uname">ye</b>' + badge(14), ib('dm', 'camera', 'New message'), 'igx-bar-p') +
+      v.innerHTML = barHTML(ib('exit', 'back', 'Back to the archive', 26), '<b class="igx-uname">ye</b>' + badge(14), ib('dm', 'camera', 'New message'), 'igx-bar-p') +
         '<div class="igx-scroll"><div class="igx-empty"><div class="igx-empty-i">' + icon('dm', 38) + '</div><b>Your messages</b><span>direct messages arent part of the archive.</span></div></div>';
     }
 
@@ -690,6 +692,7 @@
       persist();
       app.querySelectorAll('.igx-post[data-code="' + code + '"] [data-a="save"]').forEach(function (b) { b.innerHTML = icon(on ? 'saveOn' : 'save', 24); });
       toast(on ? 'Saved' : 'Removed from saved');
+      if (S.ptab === 'saved') paintProfileGrid();
     }
     function burst(host) {
       var b = host.querySelector('.igx-burst'); if (!b) return;

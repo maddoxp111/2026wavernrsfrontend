@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — admin</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 
@@ -37,6 +37,7 @@
   <div style="background:var(--elevated);border-radius:var(--r-lg);padding:32px 28px 24px;max-width:380px;width:calc(100% - 40px);box-shadow:0 8px 40px rgba(0,0,0,0.3);">
     <div id="confirm-title" style="font-size:17px;font-weight:700;margin-bottom:10px;"></div>
     <div id="confirm-msg"   style="font-size:14px;color:var(--text-2);line-height:1.55;margin-bottom:24px;"></div>
+    <div id="confirm-extra" style="display:none;flex-direction:column;gap:8px;margin:-12px 0 20px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button id="confirm-cancel" class="btn btn-secondary" onclick="_confirmResolve(false)">Cancel</button>
       <button id="confirm-ok"     class="btn btn-danger"    onclick="_confirmResolve(true)">Delete</button>
@@ -76,12 +77,12 @@
     <button class="wv-admin-tab"        id="atab-eratags"  onclick="showAdminTab('eratags')">Era Tags</button>
     <button class="wv-admin-tab"        id="atab-users"    onclick="showAdminTab('users')">Users</button>
     <button class="wv-admin-tab"        id="atab-content"  onclick="showAdminTab('content')">Content</button>
-    <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Lockdown</button>
+    <button class="wv-admin-tab"        id="atab-lockdown"    onclick="showAdminTab('lockdown')">🔒 Password gate</button>
     <button class="wv-admin-tab"        id="atab-moderators" onclick="showAdminTab('moderators')">Moderators</button>
     <button class="wv-admin-tab"        id="atab-archivers"  onclick="showAdminTab('archivers')">Archivers</button>
     <button class="wv-admin-tab"        id="atab-tracker"  onclick="showAdminTab('tracker')">Tracker</button>
-    <button class="wv-admin-tab"        id="atab-trackermatch" onclick="showAdminTab('trackermatch')">Tracker Matching</button>
     <button class="wv-admin-tab"        id="atab-tourvideos" onclick="showAdminTab('tourvideos')">Tour Videos</button>
+    <button class="wv-admin-tab"        id="atab-yespotlight" onclick="showAdminTab('yespotlight')">Ye Spotlight</button>
     <button class="wv-admin-tab"        id="atab-badges"   onclick="showAdminTab('badges')">Badges</button>
   </div>
 
@@ -127,6 +128,10 @@
 
   <!-- ── Users tab ──────────────────────────────────────── -->
   <div id="tab-users" style="display:none;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <input type="text" id="users-q" class="wv-input" placeholder="search by username..." style="flex:1;min-width:200px;max-width:340px;padding:9px 14px;" oninput="usersSearchInput()">
+      <span id="users-count" style="font-size:12px;color:var(--text-3);"></span>
+    </div>
     <div id="users-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
@@ -143,7 +148,7 @@
   <div id="tab-lockdown" style="display:none;">
     <div style="max-width:500px;">
       <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Site Lockdown</h2>
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Password gate</h2>
         <p style="font-size:14px;color:var(--text-2);margin:0 0 24px;line-height:1.6;">
           when its locked people need a password to get into any page on the site. the admin panel always works tho.
         </p>
@@ -156,7 +161,7 @@
             <div style="font-size:12px;color:var(--text-3);" id="lock-status-sub">anyone can use the site</div>
           </div>
           <div id="lock-toggle-btn" style="margin-left:auto;">
-            <button id="btn-lock-toggle" class="btn btn-secondary" onclick="toggleSiteLock()">Enable Lockdown</button>
+            <button id="btn-lock-toggle" class="btn btn-secondary" onclick="toggleSiteLock()">Turn on the gate</button>
           </div>
         </div>
 
@@ -167,7 +172,7 @@
             <input type="password" id="lock-password" class="wv-input" placeholder="set access password..." style="flex:1;padding:10px 14px;">
             <button class="btn btn-primary" onclick="saveLockPassword()">Save</button>
           </div>
-          <div style="font-size:12px;color:var(--text-3);margin-top:6px;">people type this password to get into the site. leave it empty to turn off the password gate (dont do that while its locked).</div>
+          <div style="font-size:12px;color:var(--text-3);margin-top:6px;">people type this password to get into the site while its locked</div>
         </div>
 
         <div id="lockdown-status" style="font-size:13px;"></div>
@@ -253,21 +258,21 @@
     </div>
   </div>
 
-  <div id="tab-trackermatch" style="display:none;">
-    <div style="max-width:900px;">
+  <div id="tab-yespotlight" style="display:none;">
+    <div style="max-width:760px;">
       <div style="background:var(--surface-2);border-radius:20px;padding:28px;">
-        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Trackers › Matching</h2>
+        <h2 style="font-size:18px;font-weight:700;margin:0 0 6px;">Ye Archive › Spotlight</h2>
         <p style="font-size:14px;color:var(--text-2);margin:0 0 16px;line-height:1.6;">
-          every tracker comp that isnt linked to a comp on the site yet. pick the right one from the suggestions or search for it, or import it from its link (reddit posts get checked for links in the post and comments, base64 too). imported comps get linked here once they finish. <b>not on the site</b> keeps it in the not available list and takes it off this one. matches that are a sure thing get linked on their own every few hours.
+          the featured song on the Ye archive page, written as JSON. it needs a <code>title</code> and an <code>audio</code> id. <b>Clear</b> removes the one saved here and the page goes back to the built-in spotlight. saving needs this browser to be logged in with a staff account.
         </p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-          <input id="tm-q" class="wv-input" style="flex:1;min-width:200px;padding:10px 14px;" placeholder="filter..." oninput="renderTrackerMatch()">
-          <button class="btn btn-primary btn-sm" id="tm-auto" onclick="autoTrackerMatch(this)">Match the sure ones</button>
-          <button class="btn btn-secondary btn-sm" onclick="importTrackerMatch(null, this)">Import everything with a link</button>
+        <div id="ys-source" style="font-size:12px;color:var(--text-3);margin-bottom:8px;"></div>
+        <textarea id="ys-json" class="wv-input" rows="14" spellcheck="false" style="width:100%;font-family:monospace;font-size:12.5px;line-height:1.5;resize:vertical;" placeholder='{ "title": "...", "audio": "..." }'></textarea>
+        <div id="ys-err" style="font-size:13px;color:var(--red);margin-top:8px;white-space:pre-wrap;"></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="ys-save" onclick="saveYeSpotlight()">Save</button>
+          <button class="btn btn-secondary" id="ys-clear" onclick="clearYeSpotlight()">Clear</button>
+          <span id="ys-status" style="font-size:13px;"></span>
         </div>
-        <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text-2);margin-bottom:12px;"><input type="checkbox" id="tm-rename"> also rename the comp to the trackers title and creator</label>
-        <div id="tm-count" style="font-size:12px;color:var(--text-3);margin-bottom:10px;"></div>
-        <div id="tm-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
   </div>
@@ -318,9 +323,9 @@
 </div><!-- /admin-content -->
 </div><!-- /view -->
 
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
 <script>
   var adminPw = null;
   var activeAdminTab = 'banners';
@@ -347,11 +352,14 @@
   // ── Custom confirm modal ──────────────────────────────────────
   var _confirmResolve = null;
 
-  function adminConfirm(title, msg, okLabel) {
+  function adminConfirm(title, msg, okLabel, extraHtml) {
     return new Promise(function(resolve) {
       document.getElementById('confirm-title').textContent = title;
       document.getElementById('confirm-msg').textContent   = msg;
       document.getElementById('confirm-ok').textContent    = okLabel || 'Delete';
+      var extra = document.getElementById('confirm-extra');
+      extra.innerHTML = extraHtml || '';
+      extra.style.display = extraHtml ? 'flex' : 'none';
       var modal = document.getElementById('confirm-modal');
       modal.style.display = 'flex';
       _confirmResolve = function(result) {
@@ -463,83 +471,56 @@
     catch (e) { btn.disabled = false; alert(e.message); }
   }
 
-  var _tm = [], _tmT = {}, _tmImp = {};
-  async function loadTrackerMatch() {
-    var box = document.getElementById('tm-list');
-    box.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    document.getElementById('tm-count').textContent = 'finding matches...';
-    try { var r = await Promise.all([adminApi('/admin/tracker-match'), adminApi('/admin/tracker-match/imports').catch(function () { return {}; })]); _tm = r[0].items || []; _tmImp = r[1].pending || {}; }
-    catch (e) { box.innerHTML = '<div style="color:var(--red,#e5484d);font-size:13px;">' + _tvEsc(e.message) + '</div>'; return; }
-    renderTrackerMatch();
-  }
-  function _tmCand(key, a) {
-    return '<div style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;background:var(--surface-2);">' +
-      '<div style="width:40px;height:40px;border-radius:6px;overflow:hidden;background:var(--surface-3);flex:none;">' + (a.cover_url ? '<img src="' + _tvEsc(a.cover_url) + '" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.remove()">' : '') + '</div>' +
-      '<div style="min-width:0;flex:1;"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _tvEsc(a.title) + (a.sure ? ' <span style="font-size:10.5px;font-weight:800;color:var(--brand);letter-spacing:.04em;">SURE</span>' : '') + '</div>' +
-      '<div style="font-size:11.5px;color:var(--text-3);">' + _tvEsc(a.creator) + (a.owner ? ' · on ' + _tvEsc(a.owner) + 's profile' : '') + ' · ' + a.tracks + ' track' + (a.tracks === 1 ? '' : 's') + '</div></div>' +
-      '<a href="/album?id=' + _tvEsc(a.id) + '" target="_blank" style="font-size:12px;">open</a>' +
-      '<button class="btn btn-primary btn-sm" onclick="doTrackerMatch(\'' + _tvEsc(key) + '\', \'' + _tvEsc(a.id) + '\', this)">Match</button></div>';
-  }
-  function renderTrackerMatch() {
-    var box = document.getElementById('tm-list'); if (!box) return;
-    var q = ((document.getElementById('tm-q') || {}).value || '').toLowerCase().trim();
-    var list = _tm.filter(function (e) { return !q || (e.name + ' ' + (e.creator || '') + ' ' + (e.era || '') + ' ' + e.tracker_name).toLowerCase().indexOf(q) >= 0; });
-    var sure = _tm.filter(function (e) { return e.suggestions.some(function (a) { return a.sure; }); }).length;
-    document.getElementById('tm-count').textContent = _tm.length + ' unmatched · ' + _tm.filter(function (e) { return e.suggestions.length; }).length + ' with suggestions · ' + sure + ' sure';
-    if (!list.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-3);padding:10px 0;">' + (_tm.length ? 'nothing matches that filter' : 'every tracker comp is matched') + '</div>'; return; }
-    box.innerHTML = list.map(function (e) {
-      var links = (e.links || []).map(function (u) { return '<a href="' + _tvEsc(u) + '" target="_blank" rel="noopener" style="font-size:11.5px;">' + _tvEsc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 34)) + '</a>'; }).join(' · ');
-      return '<div data-tm="' + _tvEsc(e.key) + '" style="padding:12px;border-radius:14px;background:var(--surface);margin-bottom:8px;">' +
-        '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;"><b style="font-size:14px;">' + (e.starred ? '⭐ ' : '') + _tvEsc(e.name) + '</b><span style="font-size:12.5px;color:var(--text-2);">' + _tvEsc(e.creator || 'no creator listed') + '</span>' +
-        '<span style="font-size:11.5px;color:var(--text-3);">' + _tvEsc(e.tracker_name) + ' · ' + _tvEsc(e.era || '') + '</span></div>' +
-        (links ? '<div style="margin-top:3px;">' + links + '</div>' : '') +
-        '<div style="display:flex;flex-direction:column;gap:5px;margin-top:9px;">' + (e.suggestions.length ? e.suggestions.map(function (a) { return _tmCand(e.key, a); }).join('') : '<div style="font-size:12px;color:var(--text-3);">no suggestions, search for it below</div>') + '</div>' +
-        '<div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;"><input class="wv-input" style="flex:1;min-width:200px;padding:7px 12px;font-size:13px;" placeholder="search the site for this comp..." oninput="searchTrackerMatch(this)">' +
-        '<button class="btn btn-secondary btn-sm" onclick="importTrackerMatch(\'' + _tvEsc(e.key) + '\', this)">' + (_tmImp[e.key] ? (_tmImp[e.key].failed ? 'Import failed, retry' : 'Importing...') : 'Import from link') + '</button>' +
-        '<button class="btn btn-secondary btn-sm" onclick="skipTrackerMatch(\'' + _tvEsc(e.key) + '\', this)">Not on the site</button></div>' +
-        (_tmImp[e.key] && _tmImp[e.key].failed ? '<div style="font-size:11.5px;color:var(--red,#e5484d);margin-top:5px;">' + _tvEsc(String(_tmImp[e.key].failed).slice(0, 200)) + '</div>' : '') +
-        '<div class="tm-res" style="display:flex;flex-direction:column;gap:5px;margin-top:6px;"></div></div>';
-    }).join('');
-  }
-  function searchTrackerMatch(inp) {
-    var row = inp.closest('[data-tm]'), key = row.getAttribute('data-tm'), out = row.querySelector('.tm-res');
-    clearTimeout(_tmT[key]);
-    _tmT[key] = setTimeout(async function () {
-      var q = inp.value.trim();
-      if (q.length < 2) { out.innerHTML = ''; return; }
-      var d; try { d = await adminApi('/admin/tracker-match/search?q=' + encodeURIComponent(q)); } catch (e) { out.innerHTML = '<div style="font-size:12px;color:var(--red,#e5484d);">' + _tvEsc(e.message) + '</div>'; return; }
-      out.innerHTML = (d.items || []).length ? d.items.map(function (a) { return _tmCand(key, a); }).join('') : '<div style="font-size:12px;color:var(--text-3);">nothing found</div>';
-    }, 250);
-  }
-  function _tmDrop(key) { _tm = _tm.filter(function (x) { return x.key !== key; }); renderTrackerMatch(); }
-  async function doTrackerMatch(key, id, btn) {
-    btn.disabled = true; btn.textContent = 'Matching...';
-    try { await adminApi('/admin/tracker-match', { method: 'POST', body: JSON.stringify({ key: key, album_id: id, rename: !!(document.getElementById('tm-rename') || {}).checked }) }); _tmDrop(key); }
-    catch (e) { btn.disabled = false; btn.textContent = 'Match'; alert(e.message); }
-  }
-  async function skipTrackerMatch(key, btn) {
-    btn.disabled = true;
-    try { await adminApi('/admin/tracker-match/skip', { method: 'POST', body: JSON.stringify({ key: key }) }); _tmDrop(key); }
-    catch (e) { btn.disabled = false; alert(e.message); }
-  }
-  async function importTrackerMatch(key, btn) {
-    btn.disabled = true; var was = btn.textContent; btn.textContent = key ? 'Queuing...' : 'Finding links...';
+  function _ysSet(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+  function _ysErr(e) { return e && e.status === 401 ? 'log in on this browser with a staff account to edit the spotlight' : (e && e.message) || 'something went wrong'; }
+
+  async function loadYeSpotlight() {
+    var ta = document.getElementById('ys-json');
+    if (!ta) return;
+    _ysSet('ys-err', ''); _ysSet('ys-status', ''); _ysSet('ys-source', 'loading...');
     try {
-      var d = await adminApi('/admin/tracker-match/import', { method: 'POST', body: JSON.stringify(key ? { keys: [key] } : {}) });
-      if (key) { var it = (d.items || [])[0]; if (!it || !it.url) { btn.textContent = 'No usable link'; return; } _tmImp[key] = { url: it.url }; btn.textContent = 'Importing...'; }
-      else { btn.textContent = 'Queued ' + (d.queued || 0) + (d.no_link ? ' · ' + d.no_link + ' had no usable link' : ''); (d.items || []).forEach(function (x) { if (x.url) _tmImp[x.key] = { url: x.url }; }); setTimeout(renderTrackerMatch, 1500); }
-    } catch (e) { btn.disabled = false; btn.textContent = was; alert(e.message); }
+      var d = await api('/ye/spotlight/raw');
+      var v = d ? d.value : null;
+      ta.value = v == null ? '' : (typeof v === 'string' ? v : JSON.stringify(v, null, 2));
+      _ysSet('ys-source', d && d.source === 'setting' ? 'saved on the site' : d && d.source === 'file' ? 'coming from the built-in file (nothing saved on the site yet)' : '');
+    } catch (e) {
+      _ysSet('ys-source', '');
+      _ysSet('ys-err', escHtml(_ysErr(e)));
+    }
   }
-  async function autoTrackerMatch(btn) {
-    btn.disabled = true; btn.textContent = 'Matching...';
-    try { var d = await adminApi('/admin/tracker-match/auto', { method: 'POST' }); btn.textContent = d.matched ? 'Matched ' + d.matched : 'Nothing sure left'; await loadTrackerMatch(); }
-    catch (e) { btn.textContent = 'Match the sure ones'; alert(e.message); }
-    setTimeout(function () { btn.disabled = false; btn.textContent = 'Match the sure ones'; }, 2500);
+
+  async function saveYeSpotlight() {
+    _ysSet('ys-err', ''); _ysSet('ys-status', '');
+    var raw = (document.getElementById('ys-json').value || '').trim();
+    if (!raw) { _ysSet('ys-err', 'paste the spotlight JSON first, or hit Clear to take it down'); return; }
+    var obj;
+    try { obj = JSON.parse(raw); }
+    catch (e) { _ysSet('ys-err', escHtml('thats not valid JSON: ' + e.message)); return; }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) { _ysSet('ys-err', 'the spotlight has to be a JSON object like { "title": "...", "audio": "..." }'); return; }
+    var btn = document.getElementById('ys-save'); btn.disabled = true;
+    try {
+      await api('/ye/spotlight', { method: 'PUT', body: JSON.stringify({ spotlight: obj }) });
+      await loadYeSpotlight();
+      _ysSet('ys-status', '<span style="color:var(--green);">saved</span>');
+    } catch (e) { _ysSet('ys-err', escHtml(_ysErr(e))); }
+    btn.disabled = false;
+  }
+
+  async function clearYeSpotlight() {
+    if (!await adminConfirm('Clear the spotlight?', 'the Ye archive page stops showing the spotlight you saved here', 'Clear')) return;
+    _ysSet('ys-err', ''); _ysSet('ys-status', '');
+    var btn = document.getElementById('ys-clear'); btn.disabled = true;
+    try {
+      await api('/ye/spotlight', { method: 'PUT', body: JSON.stringify({ spotlight: null }) });
+      await loadYeSpotlight();
+      _ysSet('ys-status', '<span style="color:var(--green);">cleared</span>');
+    } catch (e) { _ysSet('ys-err', escHtml(_ysErr(e))); }
+    btn.disabled = false;
   }
 
   function showAdminTab(tab) {
     activeAdminTab = tab;
-    ['banners','eratags','users','content','lockdown','moderators','archivers','tracker','trackermatch','tourvideos','badges'].forEach(function(t) {
+    ['banners','eratags','users','content','lockdown','moderators','archivers','tracker','tourvideos','yespotlight','badges'].forEach(function(t) {
       var panel = document.getElementById('tab-' + t);
       var btn   = document.getElementById('atab-' + t);
       if (panel) panel.style.display = t === tab ? '' : 'none';
@@ -554,7 +535,7 @@
     if (tab === 'archivers')  loadArchivers();
     if (tab === 'tracker')    loadTrackerSheet();
     if (tab === 'tourvideos') loadTourVideos();
-    if (tab === 'trackermatch') loadTrackerMatch();
+    if (tab === 'yespotlight') loadYeSpotlight();
     if (tab === 'badges')     { searchBadgeArtists(); searchBadgeAlbums(); _doSearchBadgeTracks(); }
   }
 
@@ -775,9 +756,12 @@
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-2);border-radius:12px;cursor:grab;user-select:none;transition:opacity 0.15s,background 0.15s;';
       row.innerHTML =
         '<span style="color:var(--text-3);font-size:16px;cursor:grab;flex-shrink:0;">⠿</span>' +
-        '<span class="badge" style="flex:1;">' + escHtml(t.name) + '</span>' +
+        '<span class="badge" style="flex:1;cursor:text;" title="click to rename">' + escHtml(t.name) + '</span>' +
         '<span style="color:var(--text-3);font-size:11px;margin-right:4px;">' + t.id.slice(0,8) + '…</span>' +
+        '<button class="btn btn-secondary btn-sm" title="Move up"' + (i === 0 ? ' disabled' : '') + ' onclick="event.stopPropagation();saveEraTagOrder(' + i + ',' + (i - 1) + ')">↑</button>' +
+        '<button class="btn btn-secondary btn-sm" title="Move down"' + (i === tags.length - 1 ? ' disabled' : '') + ' onclick="event.stopPropagation();saveEraTagOrder(' + i + ',' + (i + 1) + ')">↓</button>' +
         '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteEraTag(\'' + t.id + '\')">Delete</button>';
+      row.querySelector('.badge').addEventListener('click', function(e) { e.stopPropagation(); startEraRename(row, t); });
 
       row.addEventListener('dragstart', function(e) {
         _dragSrcIdx = i;
@@ -807,20 +791,60 @@
   }
 
   async function saveEraTagOrder(srcIdx, destIdx) {
+    if (destIdx < 0 || destIdx >= eraTagsCache.length || srcIdx === destIdx) return;
     var tags = eraTagsCache.slice();
     var moved = tags.splice(srcIdx, 1)[0];
     tags.splice(destIdx, 0, moved);
     eraTagsCache = tags;
     renderEraTagsDraggable(tags);
     try {
-      await Promise.all(tags.map(function(t, i) {
+      var results = await Promise.all(tags.map(function(t, i) {
         return fetch(API_BASE + '/eratags/' + t.id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPw },
           body: JSON.stringify({ position: i }),
         });
       }));
+      if (results.some(function(r) { return !r.ok; })) throw new Error('some positions didnt save');
     } catch (err) { showMsg('admin-alert', 'Reorder failed: ' + err.message); loadEraTags(); }
+  }
+
+  function startEraRename(row, t) {
+    var badge = row.querySelector('.badge');
+    if (!badge) return;
+    row.draggable = false;
+    var wrap = document.createElement('span');
+    wrap.style.cssText = 'flex:1;display:flex;gap:6px;align-items:center;min-width:0;user-select:text;';
+    wrap.innerHTML = '<input class="wv-input" maxlength="60" style="flex:1;min-width:0;padding:6px 10px;font-size:13px;user-select:text;">' +
+      '<button class="btn btn-primary btn-sm">Save</button><button class="btn btn-secondary btn-sm">Cancel</button>';
+    var inp = wrap.querySelector('input');
+    var btns = wrap.querySelectorAll('button');
+    inp.value = t.name;
+    badge.replaceWith(wrap);
+    btns[0].addEventListener('click', function(e) { e.stopPropagation(); renameEraTag(t, inp.value, btns[0]); });
+    btns[1].addEventListener('click', function(e) { e.stopPropagation(); renderEraTagsDraggable(eraTagsCache); });
+    inp.addEventListener('click', function(e) { e.stopPropagation(); });
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') renameEraTag(t, inp.value, btns[0]);
+      else if (e.key === 'Escape') renderEraTagsDraggable(eraTagsCache);
+    });
+    inp.focus();
+    inp.select();
+  }
+
+  async function renameEraTag(t, name, btn) {
+    name = String(name || '').trim();
+    if (!name) { showMsg('admin-alert', 'type a name'); return; }
+    if (name === t.name) { renderEraTagsDraggable(eraTagsCache); return; }
+    if (btn) btn.disabled = true;
+    try {
+      await adminApi('/eratags/' + t.id, { method: 'PATCH', body: JSON.stringify({ name: name }) });
+      clearMsg('admin-alert');
+      loadEraTags();
+    } catch (err) {
+      if (btn) btn.disabled = false;
+      showMsg('admin-alert', 'Rename failed: ' + err.message);
+    }
   }
 
   async function createEraTag() {
@@ -850,23 +874,38 @@
 
   // ── Users ─────────────────────────────────────────────────────
 
+  var _usersTimer = null, _usersGen = 0;
+  function usersSearchInput() {
+    clearTimeout(_usersTimer);
+    _usersTimer = setTimeout(loadUsers, 300);
+  }
+
   async function loadUsers() {
     var el = document.getElementById('users-list');
+    var q = ((document.getElementById('users-q') || {}).value || '').trim();
+    var gen = ++_usersGen;
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      var users = await adminApi('/admin/users');
+      var users = await adminApi('/admin/users' + (q ? '?q=' + encodeURIComponent(q) : ''));
+      if (gen !== _usersGen) return;
+      var cnt = document.getElementById('users-count');
+      if (cnt) cnt.textContent = q ? users.length + ' match' + (users.length === 1 ? '' : 'es') + (users.length >= 100 ? ' (first 100)' : '') : 'the 100 newest accounts';
       if (!users.length) {
-        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no users</div>';
+        el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">' + (q ? 'no users match that' : 'no users') + '</div>';
         return;
       }
       el.innerHTML = '<table class="admin-table">' +
         '<thead><tr><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>' +
         '<tbody>' + users.map(function(u) {
+          var bi = u.ban_info || {};
           var status = u.banned
-            ? '<span style="color:var(--red);font-weight:600;font-size:13px;">Banned</span>'
+            ? (bi.banned_until
+                ? '<span style="color:var(--orange);font-weight:600;font-size:13px;">Timed out until ' + escHtml(new Date(bi.banned_until).toLocaleString()) + '</span>'
+                : '<span style="color:var(--red);font-weight:600;font-size:13px;">Banned</span>') +
+              (bi.reason ? '<div style="font-size:12px;color:var(--text-3);margin-top:2px;">' + escHtml(bi.reason) + '</div>' : '')
             : '<span style="color:var(--green);font-weight:600;font-size:13px;">Active</span>';
           var actions = u.banned
-            ? '<button class="btn btn-secondary btn-sm" onclick="unbanUser(\'' + u.id + '\')">Unban</button>'
+            ? '<button class="btn btn-secondary btn-sm" onclick="unbanUser(\'' + u.id + '\')">' + (bi.banned_until ? 'End timeout' : 'Unban') + '</button>'
             : '<button class="btn btn-secondary btn-sm" onclick="timeoutUser(\'' + u.id + '\')" style="margin-right:6px;">Timeout</button>' +
               '<button class="btn btn-danger btn-sm" onclick="banUser(\'' + u.id + '\')">Ban</button>';
           return '<tr>' +
@@ -877,6 +916,7 @@
           '</tr>';
         }).join('') + '</tbody></table>';
     } catch (err) {
+      if (gen !== _usersGen) return;
       el.innerHTML = '<div style="color:var(--red);">Failed: ' + escHtml(err.message) + '</div>';
     }
   }
@@ -893,10 +933,16 @@
   }
 
   async function timeoutUser(id) {
-    var hours = prompt('how many hours should the timeout be?');
-    if (!hours || isNaN(hours)) return;
+    var ok = await adminConfirm('Timeout user?', 'they get blocked from the site until the timeout ends', 'Timeout',
+      '<select id="timeout-hours" class="wv-input" style="width:100%;padding:9px 12px;">' +
+        '<option value="1">1 hour</option><option value="24" selected>24 hours</option><option value="168">7 days</option><option value="720">30 days</option>' +
+      '</select>' +
+      '<input type="text" id="timeout-reason" class="wv-input" maxlength="200" placeholder="reason (optional)" style="width:100%;padding:9px 12px;">');
+    if (!ok) return;
+    var hours = parseInt((document.getElementById('timeout-hours') || {}).value, 10) || 24;
+    var reason = ((document.getElementById('timeout-reason') || {}).value || '').trim();
     try {
-      await adminApi('/admin/users/' + id + '/timeout', { method: 'POST', body: JSON.stringify({ hours: parseInt(hours) }) });
+      await adminApi('/admin/users/' + id + '/timeout', { method: 'POST', body: JSON.stringify({ hours: hours, reason: reason || null }) });
       loadUsers();
     } catch (err) { showMsg('admin-alert', err.message); }
   }
@@ -948,14 +994,17 @@
     var type = activeContentTab === 'edits' ? 'edit' : 'comp';
     if (!await adminConfirm(
       'Delete ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : '') + '?',
-      'these get deleted for good. you cant undo this'
+      type === 'comp' ? 'it goes to the recycle bin (Archive panel > Deleted). only the last 60 deleted comps can be restored' : 'this cant be undone'
     )) return;
     var endpoint = activeContentTab === 'edits' ? '/admin/tracks/bulk-delete' : '/admin/albums/bulk-delete';
     try {
-      await adminApi(endpoint, { method: 'POST', body: JSON.stringify({ ids: ids }) });
+      var r = await adminApi(endpoint, { method: 'POST', body: JSON.stringify({ ids: ids }) });
+      var n = r && typeof r.deleted === 'number' ? r.deleted : ids.length;
+      var failed = (r && r.failed) || [];
       _selectedIds.clear();
-      showMsg('admin-alert', '&#x2713; Deleted ' + ids.length + ' ' + type + (ids.length !== 1 ? 's' : ''), 'success');
-      setTimeout(function() { clearMsg('admin-alert'); }, 3000);
+      if (failed.length) showMsg('admin-alert', 'Deleted ' + n + ', ' + failed.length + ' failed: ' + (failed[0].error || 'unknown error'));
+      else showMsg('admin-alert', '✓ Deleted ' + n + ' ' + type + (n !== 1 ? 's' : ''), 'success');
+      setTimeout(function() { clearMsg('admin-alert'); }, failed.length ? 8000 : 3000);
       loadContent();
     } catch (err) { showMsg('admin-alert', err.message); }
   }
@@ -1038,8 +1087,8 @@
           : '<a href="/album?id=' + item.id + '" style="color:var(--brand);">' + escHtml(item.title) + '</a>';
         var artistName = escHtml((item.artists && item.artists.display_name) || '');
         var editBtn = isEdits
-          ? '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'track\',\'' + item.id + '\',' + JSON.stringify(item.title) + ',null)" style="margin-right:6px;">Edit</button>'
-          : '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'comp\',\'' + item.id + '\',' + JSON.stringify(item.title) + ',' + JSON.stringify(item.description||'') + ')" style="margin-right:6px;">Edit</button>';
+          ? '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'track\',\'' + item.id + '\',' + escHtml(JSON.stringify(item.title)) + ',null)" style="margin-right:6px;">Edit</button>'
+          : '<button class="btn btn-secondary btn-sm" onclick="openEditModal(\'comp\',\'' + item.id + '\',' + escHtml(JSON.stringify(item.title)) + ',' + escHtml(JSON.stringify(item.description||'')) + ')" style="margin-right:6px;">Edit</button>';
         var deleteBtn = isEdits
           ? '<button class="btn btn-danger btn-sm" onclick="deleteTrack(\'' + item.id + '\')">Remove</button>'
           : '<button class="btn btn-danger btn-sm" onclick="deleteComp(\'' + item.id + '\')">Remove</button>';
@@ -1064,13 +1113,13 @@
   }
 
   async function deleteTrack(id) {
-    if (!await adminConfirm('Delete edit?', 'this edit gets deleted for good')) return;
+    if (!await adminConfirm('Delete edit?', 'this cant be undone')) return;
     try { await adminApi('/admin/tracks/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
 
   async function deleteComp(id) {
-    if (!await adminConfirm('Delete comp?', 'this comp and its whole tracklist get deleted for good')) return;
+    if (!await adminConfirm('Delete comp?', 'it goes to the recycle bin (Archive panel > Deleted). only the last 60 deleted comps can be restored')) return;
     try { await adminApi('/admin/albums/' + id, { method: 'DELETE' }); _selectedIds.delete(id); loadContent(); }
     catch (err) { showMsg('admin-alert', err.message); }
   }
@@ -1083,16 +1132,8 @@
       var data = await adminApi('/admin/site-lock');
       _updateLockUI(data.locked, data.passwordSet);
     } catch (err) {
-      // 404 = backend not yet deployed with lockdown support — show graceful message
-      if (err.message && err.message.includes('404')) {
-        if (statusEl) statusEl.innerHTML =
-          '<span style="color:var(--text-3);font-size:13px;">⏳ lockdown needs the newest backend deploy...push the backend changes and wait for Railway to redeploy</span>';
-        // Still show the UI in default unlocked state
-        _updateLockUI(false, false);
-      } else {
-        if (statusEl) statusEl.innerHTML =
-          '<span style="color:var(--red);">couldnt load the lockdown state: ' + escHtml(err.message) + '</span>';
-      }
+      if (statusEl) statusEl.innerHTML =
+        '<span style="color:var(--red);">couldnt load the password gate state: ' + escHtml(err.message) + '</span>';
     }
   }
 
@@ -1105,19 +1146,21 @@
       dot.style.background = 'var(--red)';
       label.textContent = 'Site is LOCKED';
       sub.textContent = 'people need the access password to get in';
-      btn.textContent = 'Disable Lockdown';
+      btn.textContent = 'Turn off the gate';
       btn.className = 'btn btn-danger';
     } else {
       dot.style.background = 'var(--green)';
       label.textContent = 'Site is open';
       sub.textContent = 'anyone can use the site';
-      btn.textContent = 'Enable Lockdown';
+      btn.textContent = 'Turn on the gate';
       btn.className = 'btn btn-secondary';
     }
+    btn.disabled = !locked && !passwordSet;
+    btn.title = btn.disabled ? 'set an access password first' : '';
     document.getElementById('lockdown-status').innerHTML =
       passwordSet
         ? '<span style="color:var(--green);">✓ Access password is set</span>'
-        : '<span style="color:var(--yellow);">⚠ no access password set...set one before you turn on lockdown</span>';
+        : '<span style="color:var(--yellow);">⚠ no access password set...set one before you turn on the gate</span>';
   }
 
   async function toggleSiteLock() {
@@ -1150,18 +1193,20 @@
 
   // ── Moderators ────────────────────────────────────────────────
 
-  var _allAdminUsers = [];
+  async function _lookupUser(username, resultEl) {
+    try {
+      return await adminApi('/admin/users/lookup?username=' + encodeURIComponent(username));
+    } catch (err) {
+      resultEl.innerHTML = '<span style="color:var(--red);">' + escHtml(err.message) + '</span>';
+      return null;
+    }
+  }
 
   async function loadModerators() {
     var el = document.getElementById('moderators-list');
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       var mods = await adminApi('/admin/moderators');
-      // Also preload users list for lookup
-      if (!_allAdminUsers.length) {
-        var users = await adminApi('/admin/users').catch(function() { return []; });
-        _allAdminUsers = users || [];
-      }
       if (!mods.length) {
         el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no moderators yet</div>';
         return;
@@ -1188,21 +1233,8 @@
     var username = inputEl ? inputEl.value.trim() : '';
     if (!username) { resultEl.innerHTML = '<span style="color:var(--red);">type a username</span>'; return; }
 
-    // Preload users list if needed
-    if (!_allAdminUsers.length) {
-      try {
-        _allAdminUsers = await adminApi('/admin/users');
-      } catch (err) {
-        resultEl.innerHTML = '<span style="color:var(--red);">couldnt load users: ' + escHtml(err.message) + '</span>';
-        return;
-      }
-    }
-
-    var match = _allAdminUsers.find(function(u) { return u.username && u.username.toLowerCase() === username.toLowerCase(); });
-    if (!match) {
-      resultEl.innerHTML = '<span style="color:var(--red);">User "' + escHtml(username) + '" not found</span>';
-      return;
-    }
+    var match = await _lookupUser(username, resultEl);
+    if (!match) return;
 
     resultEl.innerHTML = '<span style="color:var(--text-2);">Found: <strong>' + escHtml(match.username) + '</strong>...adding</span>';
 
@@ -1232,10 +1264,6 @@
     el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
       var archivers = await adminApi('/admin/archivers');
-      if (!_allAdminUsers.length) {
-        var users = await adminApi('/admin/users').catch(function() { return []; });
-        _allAdminUsers = users || [];
-      }
       if (!archivers.length) {
         el.innerHTML = '<div style="color:var(--text-3);font-size:14px;padding:16px 0;">no archivers yet</div>';
         return;
@@ -1262,20 +1290,8 @@
     var username = inputEl ? inputEl.value.trim() : '';
     if (!username) { resultEl.innerHTML = '<span style="color:var(--red);">type a username</span>'; return; }
 
-    if (!_allAdminUsers.length) {
-      try {
-        _allAdminUsers = await adminApi('/admin/users');
-      } catch (err) {
-        resultEl.innerHTML = '<span style="color:var(--red);">couldnt load users: ' + escHtml(err.message) + '</span>';
-        return;
-      }
-    }
-
-    var match = _allAdminUsers.find(function(u) { return u.username && u.username.toLowerCase() === username.toLowerCase(); });
-    if (!match) {
-      resultEl.innerHTML = '<span style="color:var(--red);">User "' + escHtml(username) + '" not found</span>';
-      return;
-    }
+    var match = await _lookupUser(username, resultEl);
+    if (!match) return;
 
     resultEl.innerHTML = '<span style="color:var(--text-2);">Found: <strong>' + escHtml(match.username) + '</strong>...adding</span>';
 
@@ -1306,7 +1322,7 @@
   function openEditModal(type, id, title, description) {
     _editType = type;
     _editId = id;
-    document.getElementById('edit-modal-title').textContent = type === 'comp' ? 'Edit Comp' : 'Edit Edit';
+    document.getElementById('edit-modal-title').textContent = type === 'comp' ? 'Edit Comp' : 'Rename edit';
     document.getElementById('edit-modal-title-input').value = title || '';
     var descGroup = document.getElementById('edit-modal-desc-group');
     descGroup.style.display = type === 'comp' ? '' : 'none';
@@ -1365,7 +1381,7 @@
         var isV = a.is_verified;
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);">' +
           '<div>' +
-            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(a.display_name) + '</span>' +
+            '<span style="font-size:14px;font-weight:600;">' + escHtml(a.display_name) + '</span>' +
             (isV ? '<span class="wv-verified-icon" style="margin-left:6px;">✓</span>' : '') +
           '</div>' +
           '<button class="btn btn-sm ' + (isV ? 'btn-primary' : 'btn-secondary') + '" onclick="setBadgeArtist(\'' + a.id + '\',' + !isV + ')">' +
@@ -1374,7 +1390,7 @@
         '</div>';
       }).join('');
     } catch (e) {
-      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escHtml(e.message) + '</div>';
     }
   }
 
@@ -1402,7 +1418,7 @@
         var isH = a.is_highlighted, isE = a.is_exclusive;
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);gap:10px;flex-wrap:wrap;">' +
           '<div>' +
-            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(a.title) + '</span>' +
+            '<span style="font-size:14px;font-weight:600;">' + escHtml(a.title) + '</span>' +
             (isH ? '<span class="wv-badge-hl-icon" style="margin-left:6px;">★</span>' : '') +
             (isE ? '<span class="wv-badge-ex-icon" style="margin-left:4px;">◆</span>' : '') +
           '</div>' +
@@ -1417,7 +1433,7 @@
         '</div>';
       }).join('');
     } catch (e) {
-      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escHtml(e.message) + '</div>';
     }
   }
 
@@ -1449,8 +1465,8 @@
         var artist = (t.artists && t.artists.display_name) ? t.artists.display_name : '';
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--glass-medium-border);gap:10px;flex-wrap:wrap;">' +
           '<div>' +
-            '<span style="font-size:14px;font-weight:600;">' + escapeHtmlAdmin(t.title) + '</span>' +
-            (artist ? '<span style="font-size:12px;color:var(--text-3);margin-left:6px;">by ' + escapeHtmlAdmin(artist) + '</span>' : '') +
+            '<span style="font-size:14px;font-weight:600;">' + escHtml(t.title) + '</span>' +
+            (artist ? '<span style="font-size:12px;color:var(--text-3);margin-left:6px;">by ' + escHtml(artist) + '</span>' : '') +
             (isH ? '<span class="wv-badge-hl-icon" style="margin-left:6px;">★</span>' : '') +
             (isE ? '<span class="wv-badge-ex-icon" style="margin-left:4px;">◆</span>' : '') +
           '</div>' +
@@ -1465,7 +1481,7 @@
         '</div>';
       }).join('');
     } catch (e) {
-      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escapeHtmlAdmin(e.message) + '</div>';
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;">' + escHtml(e.message) + '</div>';
     }
   }
 

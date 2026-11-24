@@ -29,7 +29,6 @@
   }
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (_) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
-  function reduced() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
   function fmtPlays(n) {
     n = +n || 0;
     if (!n) return '';
@@ -106,7 +105,9 @@
     var ctrl = null;
     try { ctrl = new AbortController(); } catch (_) {}
     var timer = setTimeout(function () { try { ctrl && ctrl.abort(); } catch (_) {} }, ms || 9000);
-    return fetch(API + path, ctrl ? { signal: ctrl.signal } : undefined)
+    var h = {};
+    try { var sa = typeof _siteAccessToken === 'function' ? _siteAccessToken() : null; if (sa) h['X-Site-Access'] = sa; } catch (_) {}
+    return fetch(API + path, { headers: h, signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { return r.ok ? r.json() : null; })
       .catch(function () { return null; })
       .then(function (d) { clearTimeout(timer); return d; });
@@ -133,7 +134,7 @@
     return (a.is_archive && a.archive_artist_name) || (a.artists && a.artists.display_name) || a.archive_artist_name || '';
   }
 
-  function build(q, d, ye, aa) {
+  function build(q, d, ye, aa, ma) {
     d = d || {}; ye = ye || {};
     var G = { ye: [], artists: [], comps: [], edits: [], archive: [] };
     (ye.albums || []).slice(0, 2).forEach(function (a) {
@@ -146,6 +147,13 @@
       G.ye.push({ kind: 'yesong', id: 'ys:' + t.title + ':' + (t.slug || ''), title: t.title, type: 'Ye song', sub: 'Ye song' + (t.album ? ' · ' + t.album : '') + (t.year ? ' · ' + t.year : ''),
         href: '/resources?view=song&t=' + enc(t.title), art: t.cover, pop: 5e4 });
     });
+    ((ma && ma.items) || []).filter(function (a) {
+      return a && a.name && a.artist_key && (a.photo || (a.tracks || 0) >= 10 || matchScore(a.name, q) >= 95);
+    }).slice(0, 2).forEach(function (a) {
+      G.artists.push({ kind: 'martist', id: 'ma:' + a.artist_key, title: a.name, type: 'Artist',
+        sub: 'Artist' + (a.tracks ? ' · ' + fmtPlays(a.tracks).replace(/ plays?$/, '') + (+a.tracks === 1 ? ' song' : ' songs') : ''),
+        href: '/music?a=' + enc(a.artist_key), art: a.photo, round: true, pop: +a.tracks || 0 });
+    });
     (d.artists || []).slice(0, 3).forEach(function (a) {
       if (!a || !a.id) return;
       G.artists.push({ kind: 'artist', id: 'ar:' + a.id, title: a.display_name || 'Editor', type: 'Editor', sub: 'Editor',
@@ -153,8 +161,8 @@
     });
     ((aa && aa.artists) || []).slice(0, 3).forEach(function (a) {
       if (!a || !a.slug) return;
-      G.artists.push({ kind: 'aartist', id: 'aa:' + a.slug, title: a.name, type: 'Archive artist',
-        sub: 'Archive artist' + (a.comp_count ? ' · ' + a.comp_count + (a.comp_count === 1 ? ' comp' : ' comps') : ''),
+      G.artists.push({ kind: 'aartist', id: 'aa:' + a.slug, title: a.name, type: 'Creator',
+        sub: 'Creator' + (a.comp_count ? ' · ' + a.comp_count + (a.comp_count === 1 ? ' comp' : ' comps') : ''),
         href: '/archive-artist?a=' + enc(a.slug), art: a.cover_url, round: true, pop: +a.play_count || 0 });
     });
     (d.albums || []).slice(0, 5).forEach(function (a) {
@@ -186,7 +194,7 @@
         return true;
       });
     });
-    var BIAS = { yealbum: 9, aartist: 4, artist: 12, comp: 4, yesong: 6, archive: 3, edit: 2 };
+    var BIAS = { martist: 14, yealbum: 9, aartist: 4, artist: 2, comp: 4, yesong: 6, archive: 3, edit: 2 };
     var top = null, best = 0;
     Object.keys(G).forEach(function (g) {
       G[g].forEach(function (it) {
@@ -196,12 +204,14 @@
         if (s > best) { best = s; top = it; }
       });
     });
+    var hasEd = G.artists.some(function (it) { return it.kind === 'artist'; });
+    var hasArt = G.artists.some(function (it) { return it.kind !== 'artist'; });
     var groups = [
-      { key: 'ye', label: 'Ye archive', items: G.ye },
-      { key: 'artists', label: 'Artists', items: G.artists },
       { key: 'comps', label: 'Comps', items: G.comps.slice(0, 4) },
       { key: 'edits', label: 'Edits', items: G.edits.slice(0, 4) },
+      { key: 'artists', label: hasEd && hasArt ? 'Artists & editors' : hasEd ? 'Editors' : 'Artists', items: G.artists },
       { key: 'archive', label: 'Archive', items: G.archive.slice(0, 4) },
+      { key: 'ye', label: 'Ye archive', items: G.ye },
     ].map(function (g) {
       return { key: g.key, label: g.label, items: g.items.filter(function (it) { return it !== top; }) };
     }).filter(function (g) { return g.items.length; });
@@ -221,11 +231,12 @@
       getJSON('/search?q=' + enc(q), 9000),
       getJSON('/ye/search?q=' + enc(q), 4000),
       getJSON('/archive/artists?q=' + enc(q) + '&limit=3', 4000),
+      getJSON('/music-artists?q=' + enc(q) + '&limit=3', 4000),
     ]).then(function (r) {
       delete _inflight[k];
-      if (!r[0] && !r[1] && !r[2]) return { q: q, top: null, groups: [], total: 0, ok: false, error: true };
-      var res = build(q, r[0], r[1], r[2]);
-      if (r[0] && r[1] && r[2]) cachePut(k, res);
+      if (!r[0] && !r[1] && !r[2] && !r[3]) return { q: q, top: null, groups: [], total: 0, ok: false, error: true };
+      var res = build(q, r[0], r[1], r[2], r[3]);
+      if (r[0] && r[1] && r[2] && r[3]) cachePut(k, res);
       return res;
     }, function () {
       delete _inflight[k];

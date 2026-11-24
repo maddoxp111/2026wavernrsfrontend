@@ -17,7 +17,7 @@ async function getJSON(path) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), 6000);
   try {
-    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json', 'x-wv-edge': 'og', 'user-agent': 'wavernrs-preview' } });
+    const r = await fetch(API + path, { signal: ctl.signal, headers: { accept: 'application/json', 'x-wv-edge': process.env.WV_EDGE_KEY || '', 'user-agent': 'wavernrs-preview' } });
     if (!r.ok) return null;
     return await r.json();
   } catch (_) {
@@ -52,7 +52,7 @@ async function albums() {
   if (!d) return out;
   for (const list of [d.trending, d.recent]) {
     for (const a of Array.isArray(list) ? list : []) {
-      if (a && a.id) out.push({ loc: q('/album', { id: a.id }), lastmod: day(a.created_at), changefreq: 'weekly', priority: '0.7' });
+      if (a && a.id) out.push({ loc: q(a._type === 'track' ? '/track' : '/album', { id: a.id }), lastmod: day(a.created_at), changefreq: 'weekly', priority: '0.7' });
     }
   }
   return out;

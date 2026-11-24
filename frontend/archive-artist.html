@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — archive artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .aa-back { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; font-size: 13px; font-weight: 600; color: var(--text-3); text-decoration: none; border-radius: var(--r-pill); }
     .aa-back:hover { color: var(--text); }
@@ -168,19 +168,18 @@
 <div id="view">
   <div class="loading"><div class="spinner"></div></div>
 </div>
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
 initPlayer();
 
 var AA_PAGE = 60;
-var AA_CLIENT_CAP = 6000;
 var AA_SORTS = ['newest', 'oldest', 'likes', 'plays', 'title'];
 var AA = window.AA = {
-  slug: '', data: null, mode: 'server', all: null, allDone: false,
-  items: [], view: null, shown: 0, total: 0, hasMore: false, loading: false, gen: 0,
+  slug: '', data: null, hero: '',
+  items: [], total: 0, hasMore: false, loading: false, gen: 0,
   sort: 'newest', kind: 'all', era: '', q: '', searchTimer: null, obs: null, stats: null,
 };
 if (!Array.isArray(window._pageCleanup)) window._pageCleanup = [];
@@ -211,7 +210,6 @@ function aaSpan(fromIso) {
   return y + ' yr' + (y === 1 ? '' : 's') + (m ? ' ' + m + ' mo' : '');
 }
 function aaReduced() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
-function aaIsEdit(c) { return Number(c.track_count) === 1; }
 
 var AA_ICON = {
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.6v14.8a1 1 0 0 0 1.5.86l12.3-7.4a1 1 0 0 0 0-1.72L8.5 3.74A1 1 0 0 0 7 4.6Z"/></svg>',
@@ -297,116 +295,59 @@ async function initArchiveArtist() {
   }
   if (window._wvNavGen !== navGen || !document.getElementById('view')) return;
   AA.data = data;
-  AA.mode = Array.isArray(data.timeline) ? 'server' : 'client';
-  document.title = (data.name || 'creator') + ' — wavernrs archive';
+  document.title = (AA.slug === 'unknown' ? 'Uncredited uploads' : (data.name || 'creator')) + ' — wavernrs archive';
 
-  if (AA.mode === 'server') {
-    AA.items = data.comps || [];
-    AA.total = typeof data.total === 'number' ? data.total : data.comp_count;
-    AA.hasMore = !!data.has_more;
-    AA.stats = {
-      counts: data.counts || { all: data.comp_count, comps: data.comp_count - (data.edit_count || 0), edits: data.edit_count || 0 },
-      timeline: data.timeline, first: data.first, newest: data.newest,
-      eras: data.eras || data.top_eras || [], untagged: data.untagged || 0,
-      favorites: data.fan_favorites || [], similar: data.similar || [],
-    };
-  } else {
-    AA.all = (data.comps || []).slice();
-    AA.allDone = !data.has_more;
-    AA.stats = aaDerive(AA.all, data);
-  }
-  aaRender();
-  if (AA.mode === 'client') {
-    aaApplyClientView(true);
-    if (!AA.allDone) aaLoadAllClient(navGen);
-  } else {
-    aaRenderGrid(true);
-  }
-}
-
-function aaDerive(list, data) {
-  var months = {}, eras = {}, comps = 0, edits = 0, first = null, untagged = 0;
-  list.forEach(function (c) {
-    if (aaIsEdit(c)) edits++; else comps++;
-    var d = aaDateOf(c);
-    if (d) {
-      var m = String(d).slice(0, 7);
-      if (/^\d{4}-\d{2}$/.test(m)) months[m] = (months[m] || 0) + 1;
-      if (!first || new Date(d) < new Date(first)) first = d;
-    }
-    var e = c.era_tags && c.era_tags.name;
-    if (e) eras[e] = (eras[e] || 0) + 1; else untagged++;
-  });
-  var complete = AA.allDone;
-  var favs = list.filter(function (c) { return (Number(c.external_likes) || 0) > 0; })
-    .sort(function (a, b) { return (b.external_likes || 0) - (a.external_likes || 0) || (b.play_count || 0) - (a.play_count || 0); }).slice(0, 6);
-  return {
-    counts: complete ? { all: list.length, comps: comps, edits: edits }
-      : { all: data.comp_count, comps: Math.max(0, data.comp_count - (data.edit_count || 0)), edits: data.edit_count || 0 },
-    timeline: complete ? Object.keys(months).sort().map(function (m) { return { m: m, n: months[m] }; }) : null,
-    first: complete ? first : null,
-    newest: data.newest,
-    eras: complete ? Object.keys(eras).map(function (n) { return { name: n, comps: eras[n] }; }).sort(function (a, b) { return b.comps - a.comps; }) : (data.top_eras || []),
-    untagged: complete ? untagged : 0,
-    favorites: complete ? favs : [],
-    similar: [],
+  AA.items = data.comps || [];
+  AA.total = typeof data.total === 'number' ? data.total : data.comp_count;
+  AA.hasMore = !!data.has_more;
+  AA.stats = {
+    counts: data.counts || { all: data.comp_count, comps: data.comp_count - (data.edit_count || 0), edits: data.edit_count || 0 },
+    timeline: data.timeline || [], first: data.first, newest: data.newest,
+    eras: data.eras || data.top_eras || [], untagged: data.untagged || 0,
+    favorites: data.fan_favorites || [], similar: data.similar || [],
   };
-}
-
-async function aaLoadAllClient(navGen) {
-  var gen = AA.gen;
-  var slug = AA.slug;
-  try {
-    while (AA.all.length < AA_CLIENT_CAP) {
-      var d = await api('/archive/artists/' + encodeURIComponent(slug) + '?limit=1000&offset=' + AA.all.length);
-      if (window._wvNavGen !== navGen || AA.slug !== slug) return;
-      var got = (d && d.comps) || [];
-      AA.all = AA.all.concat(got);
-      if (!d.has_more || !got.length) break;
-    }
-  } catch (e) {
-    if (e && e.navAborted) return;
-  }
-  if (window._wvNavGen !== navGen || !document.getElementById('aa-grid')) return;
-  AA.allDone = true;
-  AA.stats = aaDerive(AA.all, AA.data);
-  aaRenderInsights();
-  aaRenderToolbar();
-  var plain = AA.sort === 'newest' && AA.kind === 'all' && !AA.era && !AA.q;
-  aaApplyClientView(!plain || gen !== AA.gen);
+  aaRender();
+  aaRenderGrid(true);
 }
 
 function aaRender() {
   var d = AA.data, s = AA.stats;
   var view = document.getElementById('view');
   if (!view) return;
-  var hero = d.cover_url || (s.favorites[0] && s.favorites[0].cover_url) || ((AA.items.length ? AA.items : (AA.all || [])).filter(function (c) { return c.cover_url; })[0] || {}).cover_url || '';
-  if (typeof window.setPageBgImage === 'function') window.setPageBgImage(hero || '', d.name || '');
+  var uncredited = AA.slug === 'unknown';
+  var name = uncredited ? 'Uncredited uploads' : d.name;
+  var hero = d.cover_url || (s.favorites[0] && s.favorites[0].cover_url) || (AA.items.filter(function (c) { return c.cover_url; })[0] || {}).cover_url || '';
+  AA.hero = hero;
+  if (typeof window.setPageBgImage === 'function') window.setPageBgImage(hero || '', name || '');
   var topEras = (d.top_eras || []).slice(0, 2).map(function (e) { return '<b>' + escHtml(e.name) + '</b>'; });
   var meta = [];
   if (topEras.length) meta.push('mostly ' + topEras.join(' and '));
   if (d.newest) meta.push('latest ' + escHtml(aaShortDate(d.newest)));
   var aliases = (d.aliases || []).slice(0, 6);
-  var initial = String(d.name || '?').replace(/^u\//i, '').replace(/[^a-z0-9]/gi, '').charAt(0) || '?';
+  var initial = String(name || '?').replace(/^u\//i, '').replace(/[^a-z0-9]/gi, '').charAt(0) || '?';
+  var selfUrl = location.origin + '/archive-artist?a=' + encodeURIComponent(AA.slug);
+  var claimQ = '&listed=' + encodeURIComponent(d.name || '') + '&links=' + encodeURIComponent(selfUrl);
 
   view.innerHTML =
     '<a class="aa-back" href="/archive?view=artists">' + AA_ICON.back + 'Archive</a>' +
     '<section class="aa-hero">' +
-      '<div class="aa-av" style="background:' + coverGradient(d.name || '') + ';">' +
+      '<div class="aa-av" style="background:' + coverGradient(name || '') + ';">' +
         '<div class="aa-av-ini" aria-hidden="true">' + escHtml(initial) + '</div>' +
         (hero ? '<img src="' + escHtml(aaImg(hero, 480)) + '" alt="" onerror="this.remove()">' : '') +
       '</div>' +
       '<div class="aa-hero-body">' +
         '<div class="aa-kicker">' + AA_ICON.archive + 'Archived creator</div>' +
         '<div id="aa-otw" style="margin:6px 0 0;"></div>' +
-        '<h1 class="aa-name">' + escHtml(d.name) + '</h1>' +
+        '<h1 class="aa-name">' + escHtml(name) + '</h1>' +
         '<div class="aa-meta">' + (meta.join(' · ') || 'saved to the wavernrs archive') + '</div>' +
         (aliases.length ? '<div class="aa-alias">also goes by ' + aliases.map(escHtml).join(' · ') + '</div>' : '') +
         '<div class="aa-actions">' +
           '<button class="aa-play" id="aa-playall" data-act="playall">' + AA_ICON.play + '<span>Play all</span></button>' +
           '<button class="aa-ghost" data-act="shuffle">' + AA_ICON.shuffle + 'Shuffle</button>' +
           '<button class="aa-ghost" data-act="share" aria-label="Share this creator">' + AA_ICON.share + '<span>Share</span></button>' +
+          (d.editor && d.editor.id ? '<a class="aa-ghost" href="/artist?id=' + encodeURIComponent(d.editor.id) + '" style="min-height:44px;box-sizing:border-box;text-decoration:none;" title="' + escHtml((d.editor.display_name || '') + ' on wavernrs') + '">Editor profile</a>' : '') +
         '</div>' +
+        (uncredited ? '' : '<div style="margin-top:10px;font-size:12.5px;color:var(--text-3);">is this you? <a href="' + escHtml('/claim?type=transfer' + claimQ) + '">claim these</a> · <a href="' + escHtml('/claim?type=remove' + claimQ) + '">request removal</a></div>') +
       '</div>' +
     '</section>' +
     '<div class="aa-stats" id="aa-stats"></div>' +
@@ -432,6 +373,7 @@ function aaRender() {
   aaRenderToolbar();
   aaWatch();
 
+  if (uncredited) return;
   api('/awards/editor?name=' + encodeURIComponent(d.name)).then(function (r) {
     var box = document.getElementById('aa-otw');
     if (!box || !r || !r.awards || !r.awards.length) return;
@@ -450,10 +392,10 @@ function aaRenderInsights() {
   var first = s.first;
   var tiles = [
     { k: 'Releases', icon: AA_ICON.disc, v: d.comp_count, d: aaNum(counts.comps) + ' comp' + (counts.comps === 1 ? '' : 's') + ' · ' + aaNum(counts.edits) + ' edit' + (counts.edits === 1 ? '' : 's') },
-    { k: 'Edits', icon: AA_ICON.wave, v: counts.edits, d: 'single-track releases' },
+    { k: 'Top era', icon: AA_ICON.disc, text: (s.eras[0] && s.eras[0].name) || '—', d: s.eras[0] ? aaNum(s.eras[0].comps) + ' release' + (s.eras[0].comps === 1 ? '' : 's') : 'no eras tagged yet' },
     { k: 'Plays', icon: AA_ICON.headphones, v: d.play_count || 0, d: 'on wavernrs' },
     { k: 'Likes', icon: AA_ICON.heart, v: d.external_likes || 0, d: 'on the original posts' },
-    { k: 'Active since', icon: AA_ICON.cal, text: first ? aaShortDate(first) : (AA.mode === 'client' && !AA.allDone ? '…' : '—'), d: first ? aaSpan(first) + ' of releases' : (AA.mode === 'client' && !AA.allDone ? 'counting...' : '') },
+    { k: 'Active since', icon: AA_ICON.cal, text: first ? aaShortDate(first) : '—', d: first ? aaSpan(first) + ' of releases' : '' },
   ];
   statsEl.innerHTML = tiles.map(function (t) {
     return '<div class="aa-stat"><div class="k">' + t.icon + escHtml(t.k) + '</div>' +
@@ -506,11 +448,8 @@ function aaCountUp(root) {
 
 function aaHeatmapHTML() {
   var s = AA.stats;
-  var tl = s.timeline;
+  var tl = s.timeline || [];
   var head = '<div class="aa-card"><div class="aa-card-h"><h2>Activity</h2></div>';
-  if (!tl) {
-    return head + '<div class="aa-card-sub">counting every release...</div><div class="wv-skel" style="height:120px;border-radius:8px;"></div></div>';
-  }
   if (!tl.length) return head + '<div class="aa-card-sub">no dated releases yet</div></div>';
   var byM = {}, max = 0, total = 0, peak = tl[0];
   tl.forEach(function (x) { byM[x.m] = x.n; total += x.n; if (x.n > max) max = x.n; if (x.n > peak.n) peak = x; });
@@ -594,13 +533,13 @@ function aaPlayBtn(id, title) {
 
 function aaFavHTML(c, i) {
   var era = c.era_tags && c.era_tags.name;
-  return '<div class="aa-fav" data-act="open" data-id="' + escHtml(c.id) + '" role="link" tabindex="0" aria-label="' + escHtml(c.title || 'Untitled') + '">' +
+  return '<a class="aa-fav" href="/album?id=' + encodeURIComponent(c.id) + '" data-act="open" data-id="' + escHtml(c.id) + '" style="text-decoration:none;color:inherit" aria-label="' + escHtml(c.title || 'Untitled') + '">' +
     '<div class="aa-fav-art" style="background:' + coverGradient(c.title || '') + ';">' +
       (c.cover_url ? '<img src="' + escHtml(aaImg(c.cover_url, 340)) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
       '<span class="aa-fav-rank">' + (i + 1) + '</span>' + aaPlayBtn(c.id, c.title) +
     '</div>' +
     '<div class="aa-fav-t">' + escHtml(c.title || 'Untitled') + '</div>' +
-    '<div class="aa-fav-s"><span class="aa-heart">♥</span> ' + aaNum(c.external_likes) + (era ? ' · ' + escHtml(era) : '') + (Number(c.track_count) > 1 ? ' · ' + c.track_count + ' tracks' : '') + '</div></div>';
+    '<div class="aa-fav-s"><span class="aa-heart">♥</span> ' + aaNum(c.external_likes) + (era ? ' · ' + escHtml(era) : '') + (Number(c.track_count) > 1 ? ' · ' + c.track_count + ' tracks' : '') + '</div></a>';
 }
 
 function aaSimHTML(a) {
@@ -674,8 +613,7 @@ function aaFilterChanged(keepToolbar) {
     var on = b.getAttribute('data-era') === AA.era;
     b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
   });
-  if (AA.mode === 'client') aaApplyClientView(true);
-  else aaRenderGrid(true);
+  aaRenderGrid(true);
 }
 
 function aaCardHTML(item) {
@@ -687,14 +625,14 @@ function aaCardHTML(item) {
   if (item.external_likes) bits.push('<span class="aa-heart">♥</span> ' + aaNum(item.external_likes));
   var tc = Number(item.track_count);
   var tag = tc === 1 ? 'edit' : tc > 1 ? tc + ' tracks' : '';
-  return '<div class="wv-comp-card" data-act="open" data-id="' + escHtml(item.id) + '" role="link" tabindex="0" aria-label="' + escHtml(item.title || 'Untitled') + '">' +
+  return '<a class="wv-comp-card" href="/album?id=' + encodeURIComponent(item.id) + '" data-act="open" data-id="' + escHtml(item.id) + '" style="text-decoration:none;color:inherit" aria-label="' + escHtml(item.title || 'Untitled') + '">' +
     '<div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner" style="background:' + coverGradient(item.title || '') + ';border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,0.18);">' +
       (tag ? '<span class="aa-tag">' + escHtml(tag) + '</span>' : '') +
       (item.cover_url ? '<img src="' + escHtml(item.cover_url) + '" loading="lazy" decoding="async" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;" onerror="this.style.opacity=0">' : '') +
       (tc === 0 ? '' : aaPlayBtn(item.id, item.title)) +
     '</div></div>' +
     '<div class="wv-comp-card-title">' + escHtml(item.title || 'Untitled') + '</div>' +
-    '<div class="wv-comp-card-artist">' + (bits.join(' · ') || '&nbsp;') + '</div></div>';
+    '<div class="wv-comp-card-artist">' + (bits.join(' · ') || '&nbsp;') + '</div></a>';
 }
 
 function aaSkelCards(n) {
@@ -755,65 +693,17 @@ async function aaRenderGrid(reset) {
   aaMaybeMore();
 }
 
-function aaClientList() {
-  var list = AA.all || [];
-  if (AA.kind === 'comps') list = list.filter(function (c) { return !aaIsEdit(c); });
-  else if (AA.kind === 'edits') list = list.filter(aaIsEdit);
-  if (AA.era) list = list.filter(function (c) { var n = c.era_tags && c.era_tags.name; return AA.era === '__none' ? !n : n === AA.era; });
-  if (AA.q) { var q = AA.q.toLowerCase(); list = list.filter(function (c) { return String(c.title || '').toLowerCase().indexOf(q) >= 0; }); }
-  var t = function (c) { var x = new Date(aaDateOf(c) || 0).getTime(); return isNaN(x) ? 0 : x; };
-  var n = function (v) { return Number(v) || 0; };
-  if (AA.sort === 'oldest') list = list.slice().sort(function (a, b) { return t(a) - t(b); });
-  else if (AA.sort === 'likes') list = list.slice().sort(function (a, b) { return n(b.external_likes) - n(a.external_likes) || n(b.play_count) - n(a.play_count) || t(b) - t(a); });
-  else if (AA.sort === 'plays') list = list.slice().sort(function (a, b) { return n(b.play_count) - n(a.play_count) || n(b.external_likes) - n(a.external_likes) || t(b) - t(a); });
-  else if (AA.sort === 'title') list = list.slice().sort(function (a, b) { return String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base', numeric: true }); });
-  return list;
-}
-
-function aaApplyClientView(reset) {
-  var grid = document.getElementById('aa-grid');
-  if (!grid) return;
-  AA.view = aaClientList();
-  AA.total = AA.view.length;
-  if (reset) {
-    AA.gen++;
-    AA.shown = 0;
-    grid.innerHTML = '';
-  }
-  if (!AA.view.length) {
-    grid.innerHTML = AA.allDone || !(AA.q || AA.era || AA.kind !== 'all') ? aaEmptyHTML() : aaSkelCards(12);
-    AA.shown = 0;
-  } else {
-    aaClientMore();
-  }
-  aaUpdateCount();
-}
-
-function aaClientMore() {
-  var grid = document.getElementById('aa-grid');
-  if (!grid || !AA.view) return;
-  if (AA.shown >= AA.view.length) return;
-  var next = AA.view.slice(AA.shown, AA.shown + AA_PAGE);
-  AA.shown += next.length;
-  grid.insertAdjacentHTML('beforeend', next.map(aaCardHTML).join(''));
-  AA.items = AA.view.slice(0, AA.shown);
-  aaUpdateCount();
-  aaMaybeMore();
-}
-
 function aaUpdateCount() {
   var el = document.getElementById('aa-count');
   var more = document.getElementById('aa-more');
-  var shown = AA.mode === 'client' ? AA.shown : AA.items.length;
+  var shown = AA.items.length;
   var total = AA.total || 0;
-  var partial = AA.mode === 'client' && !AA.allDone;
-  var capped = AA.mode === 'client' && AA.allDone && AA.all && AA.data && AA.all.length < AA.data.comp_count;
   var filtered = AA.q || AA.era || AA.kind !== 'all';
   if (el) {
-    el.textContent = !total ? '' : (filtered ? aaNum(total) + (partial ? '+' : '') + ' match' + (total === 1 && !partial ? '' : 'es') : 'showing ' + aaNum(Math.min(shown, total)) + ' of ' + aaNum(partial || capped ? AA.data.comp_count : total));
+    el.textContent = !total ? '' : (filtered ? aaNum(total) + ' match' + (total === 1 ? '' : 'es') : 'showing ' + aaNum(Math.min(shown, total)) + ' of ' + aaNum(total));
   }
   if (more) {
-    var left = AA.mode === 'client' ? AA.shown < (AA.view || []).length : AA.hasMore;
+    var left = AA.hasMore;
     if (!left && !AA.loading) more.textContent = shown > AA_PAGE ? 'that’s all ' + aaNum(shown) : '';
   }
   var btn = document.getElementById('aa-top');
@@ -831,8 +721,7 @@ function aaMaybeMore() {
 
 function aaNext() {
   if (!document.getElementById('aa-grid')) return;
-  if (AA.mode === 'client') { if (AA.view && AA.shown < AA.view.length) aaClientMore(); }
-  else if (AA.hasMore && !AA.loading) aaRenderGrid(false);
+  if (AA.hasMore && !AA.loading) aaRenderGrid(false);
 }
 
 function aaWatch() {
@@ -896,8 +785,13 @@ function aaOnClick(e) {
   var el = e.target.closest('[data-act]');
   if (!el) return;
   var act = el.getAttribute('data-act');
-  if (act === 'play') { e.stopPropagation(); playCompById(el.getAttribute('data-id')); return; }
-  if (act === 'open') { navigate('/album?id=' + encodeURIComponent(el.getAttribute('data-id'))); return; }
+  if (act === 'play') { e.preventDefault(); e.stopPropagation(); playCompById(el.getAttribute('data-id')); return; }
+  if (act === 'open') {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    navigate('/album?id=' + encodeURIComponent(el.getAttribute('data-id')));
+    return;
+  }
   if (act === 'playall') { aaPlayAll(); return; }
   if (act === 'shuffle') { aaShuffle(); return; }
   if (act === 'share') { aaShare(); return; }
@@ -915,7 +809,7 @@ function aaOnClick(e) {
   }
   if (act === 'clearq') { e.preventDefault(); AA.q = ''; aaFilterChanged(); var i = document.getElementById('aa-q'); if (i) i.focus(); return; }
   if (act === 'clearall') { AA.q = ''; AA.era = ''; AA.kind = 'all'; aaFilterChanged(); return; }
-  if (act === 'retry') { if (AA.mode === 'client') aaApplyClientView(true); else aaRenderGrid(true); return; }
+  if (act === 'retry') { aaRenderGrid(true); return; }
   if (act === 'retrymore') { AA.hasMore = true; aaRenderGrid(false); return; }
 }
 
@@ -938,7 +832,7 @@ async function aaFetchTracks(list) {
 
 async function aaPlayAll() {
   var btn = document.getElementById('aa-playall');
-  var source = (AA.mode === 'client' ? (AA.view || AA.all || []) : AA.items).filter(function (c) { return Number(c.track_count) !== 0; });
+  var source = AA.items.filter(function (c) { return Number(c.track_count) !== 0; });
   var picks = source.slice(0, 15);
   if (!picks.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
   if (btn) btn.disabled = true;
@@ -969,7 +863,7 @@ async function aaPlayAll() {
 }
 
 function aaShuffle() {
-  var pool = (AA.mode === 'client' ? (AA.all || []) : AA.items.concat(AA.stats.favorites || [])).filter(function (c) { return Number(c.track_count) !== 0; });
+  var pool = AA.items.concat(AA.stats.favorites || []).filter(function (c) { return Number(c.track_count) !== 0; });
   var comps = pool.filter(function (c) { return (Number(c.track_count) || 0) > 1; });
   var use = comps.length ? comps : pool;
   if (!use.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
@@ -979,6 +873,10 @@ function aaShuffle() {
 }
 
 function aaShare() {
+  if (typeof window.wvShare === 'function' && AA.data) {
+    window.wvShare({ url: location.href, title: AA.slug === 'unknown' ? 'Uncredited uploads' : AA.data.name, artist: 'archived creator on wavernrs', cover: AA.hero || '' });
+    return;
+  }
   var url = location.origin + '/archive-artist?a=' + encodeURIComponent(AA.slug);
   var title = (AA.data && AA.data.name ? AA.data.name : 'this creator') + ' on the wavernrs archive';
   if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '')) {

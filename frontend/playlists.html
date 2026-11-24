@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs stream — playlists</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <title>wavernrs — playlists</title>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .plh-sk { background: var(--surface-2); border-radius: 8px; position: relative; overflow: hidden; }
     .plh-sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--hair-strong), transparent); animation: plh-shine 1.4s ease-in-out infinite; }
@@ -244,11 +244,11 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
 (function () {
   if (typeof initPlayer === 'function') initPlayer();
@@ -269,6 +269,7 @@
   var featured = [];
   var slideIdx = 0, slideTimer = null, slidePaused = false;
   var detailMix = null, detailIdx = -1, ticker = null;
+  var pushedMix = false;
 
   var IC = {
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.5 4.6v14.8a1 1 0 0 0 1.53.85l11.6-7.4a1 1 0 0 0 0-1.7L9.03 3.75A1 1 0 0 0 7.5 4.6Z"/></svg>',
@@ -334,7 +335,8 @@
     if (fresh.length >= 5) out.push({ key: 'fresh', title: 'Fresh drops', label: 'Fresh', tag: 'new edits', desc: 'the newest edits people uploaded', tracks: fresh, hue: 'freshdrops' });
     var picks = ((awards && awards.picks) || []).filter(function (p) { return p && p.album && p.album.id; });
     if (picks.length) {
-      out.push({ key: 'awards', title: 'Awards picks', label: 'Awards', tag: 'this week', desc: 'the comps the editors picked this week, a few songs from each',
+      var eotwSrc = awards && awards.source === 'eotw';
+      out.push({ key: 'awards', title: eotwSrc ? 'Edit of the Week winners' : 'Awards picks', label: eotwSrc ? 'EOTW' : 'Awards', tag: eotwSrc ? 'latest winners' : 'this week', desc: eotwSrc ? 'the latest Edit of the Week winners, a few songs from each' : 'the comps the editors picked this week, a few songs from each',
         covers: picks.map(function (p) { return p.album.cover_url; }).filter(Boolean).slice(0, 4), tracks: null, hue: 'awards',
         load: function () {
           return Promise.all(picks.slice(0, 8).map(function (p) {
@@ -704,12 +706,14 @@
   };
 
   // ── Playback ─────────────────────────────────────────────────────────────
-  function queueItem(t) {
-    return { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null, artist_name: t.artist_name || '', album_id: t.album_id || null, artist_id: t.artist_id || null };
+  function queueItem(t, ctx) {
+    var o = { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null, artist_name: t.artist_name || '', album_id: t.album_id || null, artist_id: t.artist_id || null };
+    if (ctx) o._ctx = ctx;
+    return o;
   }
 
-  function playList(list, idx, shuffle, onChange) {
-    var q = list.filter(function (t) { return t && t.ia_url; }).map(queueItem);
+  function playList(list, idx, shuffle, onChange, ctx) {
+    var q = list.filter(function (t) { return t && t.ia_url; }).map(function (t) { return queueItem(t, ctx); });
     if (!q.length) { toast('nothing in there can play yet'); return; }
     if (shuffle) for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var tmp = q[i]; q[i] = q[j]; q[j] = tmp; }
     setPlayerQueue(q, idx || 0, onChange || null);
@@ -720,7 +724,7 @@
   function playMix(m, shuffle) {
     ensureTracks(m).then(function (tracks) {
       if (!tracks.length) { toast('nothing in that mix can play right now'); return; }
-      playList(tracks, 0, shuffle, detailMix === m ? onDetailChange : null);
+      playList(tracks, 0, shuffle, detailMix === m ? onDetailChange : null, 'Mix · ' + m.title);
       if (detailMix === m) setTimeout(syncRows, 80);
     }).catch(function () { toast('couldnt load that mix...try again', 'error'); });
   }
@@ -745,6 +749,7 @@
     var slot = document.getElementById('plh-detail-slot');
     slot.hidden = false;
     renderDetail(true);
+    if (!/[?&]mix=/.test(location.search)) { history.pushState(null, '', '/playlists?mix=' + encodeURIComponent(key)); pushedMix = true; }
     syncUrl();
     var sc = document.getElementById('wv-content');
     if (sc && sc.scrollTo) sc.scrollTo(0, 0); else window.scrollTo(0, 0);
@@ -761,6 +766,7 @@
   window.plsOpenMix = openMix;
 
   function closeMix() {
+    if (pushedMix) { pushedMix = false; history.back(); return; }
     var was = detailMix ? detailMix.key : '';
     detailMix = null;
     if (ticker) { clearInterval(ticker); ticker = null; }
@@ -859,7 +865,7 @@
     var cur = typeof currentTrack !== 'undefined' && currentTrack ? currentTrack.id : null;
     if (cur === m.tracks[i].id && typeof audio !== 'undefined' && audio && audio.src && typeof togglePlay === 'function') { togglePlay(); setTimeout(syncRows, 60); return; }
     detailIdx = i;
-    playList(m.tracks, i, false, onDetailChange);
+    playList(m.tracks, i, false, onDetailChange, 'Mix · ' + m.title);
     setTimeout(syncRows, 60);
   }
 
@@ -906,7 +912,7 @@
     if ((b = t.closest('[data-q]'))) {
       e.stopPropagation();
       var tr = detailMix && detailMix.tracks && detailMix.tracks[+b.getAttribute('data-q')];
-      if (tr && typeof window.addToQueue === 'function') window.addToQueue(queueItem(tr));
+      if (tr && typeof window.addToQueue === 'function') window.addToQueue(queueItem(tr, 'Mix · ' + detailMix.title));
       return;
     }
     if (t.closest('a')) return;

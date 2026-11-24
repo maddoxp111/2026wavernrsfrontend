@@ -326,6 +326,7 @@ img { display: block; }
 .wv-input:hover { background: var(--surface-3); }
 .wv-input:focus { border-color: var(--text); background: var(--surface-3); }
 .wv-input::placeholder { color: var(--text-3); }
+textarea.wv-input { border-radius: var(--r-md); }
 
 /* =========================================================
    Sidebar
@@ -1391,6 +1392,9 @@ input::placeholder, textarea::placeholder { color:var(--text-3); }
 .admin-table tbody tr:hover td {
   background: var(--glass-pill-bg);
 }
+@media (max-width: 700px) {
+  .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
 
 /* =========================================================
    Site Lockscreen (shown when site lockdown is enabled)
@@ -1569,40 +1573,6 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
   background: rgba(245,158,11,0.2); color: #f59e0b;
   font-size: 9px; font-weight: 900; flex-shrink: 0;
   vertical-align: middle; margin-left: 3px; line-height: 1;
-}
-
-/* ── Countdown lockdown overlay ───────────────────────────────────────────── */
-#wv-cd-overlay {
-  position: fixed; inset: 0; z-index: 99999;
-  background: var(--page-bg-base, #0a0612);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-.wv-cd-inner { text-align: center; max-width: 480px; width: 100%; }
-.wv-cd-logo {
-  font-size: 36px; font-weight: 800; letter-spacing: -0.04em;
-  background: linear-gradient(135deg, #a78bfa, #818cf8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text; margin-bottom: 8px;
-}
-.wv-cd-sub { font-size: 16px; color: var(--text-2); margin-bottom: 48px; }
-.wv-cd-timer {
-  display: flex; gap: 12px; justify-content: center; margin-bottom: 48px; flex-wrap: wrap;
-}
-.wv-cd-unit {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  background: var(--glass-medium-bg, rgba(255,255,255,0.06));
-  border: 1px solid var(--glass-medium-border, rgba(255,255,255,0.1));
-  border-radius: 16px; padding: 18px 22px; min-width: 76px;
-}
-.wv-cd-unit span { font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-.wv-cd-unit label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); cursor: default; }
-.wv-cd-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-.wv-cd-pw-wrap { max-width: 360px; margin: 0 auto; }
-@media (max-width: 480px) {
-  .wv-cd-unit { padding: 14px 16px; min-width: 62px; }
-  .wv-cd-unit span { font-size: 30px; }
-  .wv-cd-logo { font-size: 28px; }
 }
 
 /* ── Up Next queue panel ───────────────────────────────────── */
@@ -1958,7 +1928,7 @@ details[open] > .era-summary .era-chevron { transform: rotate(90deg); }
    hairline borders on surfaces, tight radii, hover lifts.
    ========================================================= */
 .lg-large, .lg-medium, .lg-small, .wv-card, .card, .modal-box, #wv-queue-panel,
-.wv-playlist-card, .era-section, .wv-lock-card, .wv-auth-card, .wv-cd-unit,
+.wv-playlist-card, .era-section, .wv-lock-card, .wv-auth-card,
 #wv-more-menu, #wv-notif-panel {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
@@ -2471,13 +2441,15 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* ── Compare tracklists ───────────────────────────────────────────────────── */
 .wv-cmp-overlay {
   position: fixed; inset: 0; z-index: 10001; display: grid; place-items: center;
+  grid-template-columns: minmax(0, 1fr);
   background: rgba(0, 0, 0, .62); padding: 20px;
 }
 .wv-cmp-card {
   background: var(--surface-1, #15151f); border: 1px solid var(--hair);
-  border-radius: var(--r-lg, 14px); width: min(880px, 100%); max-height: 86vh;
+  border-radius: var(--r-lg, 14px); width: min(880px, 100%); max-height: 86vh; min-width: 0;
   display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
 }
+.wv-cmp-head select { flex: 1 1 0; min-width: 0; }
 .wv-cmp-head {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 16px 18px; border-bottom: 1px solid var(--hair);
@@ -2503,7 +2475,7 @@ html, body { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .wv-cmp-list li { margin-bottom: 3px; overflow-wrap: anywhere; }
 .wv-cmp-none { font-size: 12.5px; color: var(--text-3); }
 .wv-cmp-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-@media (max-width: 760px) { .wv-cmp-cols { grid-template-columns: 1fr; } .wv-cmp-body { padding: 14px; } }
+@media (max-width: 760px) { .wv-cmp-cols { grid-template-columns: 1fr; } .wv-cmp-body { padding: 14px; } .wv-cmp-overlay { padding: 12px; } .wv-cmp-card { max-height: calc(100dvh - 24px); } }
 
 /* ── Most played ──────────────────────────────────────────────────────────── */
 .wv-top-list { display: flex; flex-direction: column; gap: 6px; }
@@ -3481,6 +3453,7 @@ a.wv-pl-pub { display: block; color: inherit; text-decoration: none; }
 .pb-icon:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
 .pb-icon:disabled { opacity: .3; cursor: default; }
 .pb-remove:hover:not(:disabled) { color: var(--red); }
+.pb-jump { display: none; }
 
 @media (min-width: 861px) {
   .pb-move { opacity: 0; transition: opacity .12s; }
@@ -3492,12 +3465,14 @@ a.wv-pl-pub { display: block; color: inherit; text-decoration: none; }
   .pb-list { order: 1; }
   .pb-results { max-height: 52vh; }
   .pb-grip { display: none; }
+  .pb-jump { display: inline-flex; }
 }
 @media (max-width: 520px) {
   .pb-pane { padding: 12px; border-radius: 10px; }
   .pb-head { flex-direction: column; align-items: flex-start; }
   .pb-cover { width: 132px; height: 132px; }
   .pb-num { display: none; }
+  .pb-icon { width: 40px; height: 40px; }
 }
 
 /* Skins */
@@ -3910,7 +3885,7 @@ a.wv-pl-pub { display: block; color: inherit; text-decoration: none; }
 .wv-ed-track .ed-ttl { flex: 1; padding: 7px 10px; font-size: 13px; }
 .wv-lp-live { width: 7px; height: 7px; border-radius: 50%; background: #e0245e; margin-left: auto; flex: none; box-shadow: 0 0 0 3px rgba(224, 36, 94, .22); }
 
-/* Radio and listening parties are live: no skipping, seeking, shuffling or speed changes */
+/* Listening parties are live: no skipping, seeking, shuffling or speed changes */
 .wv-live .player-controls button[onclick="skipPrev()"],
 .wv-live .player-controls button[onclick="skipNext()"],
 .wv-live .pfs-controls button[onclick="skipPrev()"],

@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — creator studio</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="st-studio-css">
     .st-wrap { max-width: 1180px; margin: 0 auto; padding: 24px 0 56px; }
     .st-card { background: var(--surface); border-radius: 14px; padding: 22px; position: relative; }
@@ -218,7 +218,7 @@
 <!-- Edit Edit Modal -->
 <div class="modal-overlay" id="edit-track-modal">
   <div class="modal" style="max-width:min(520px,100%);">
-    <div class="modal-title">Edit Edit</div>
+    <div class="modal-title">Edit track</div>
     <div class="form-group">
       <label>Title *</label>
       <input type="text" id="edit-track-title" placeholder="Track name">
@@ -283,6 +283,17 @@
         <span id="edit-album-tracklist-saved" style="font-size:12px;color:var(--green);opacity:0;transition:opacity 0.4s;">Saved</span>
       </label>
       <div id="edit-album-tracklist" class="tracklist" style="margin-top:4px;"></div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:6px;">drag or use the arrows to reorder</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;white-space:nowrap;">
+          Add songs
+          <input type="file" id="edit-album-add-files" accept="audio/*,.flac,.wav,.mp3,.m4a,.aiff,.aif,.ogg,.opus,.aac,.alac" multiple style="display:none" onchange="albumAddSongs(this)">
+        </label>
+        <span id="edit-album-add-status" style="font-size:12px;color:var(--text-secondary);"></span>
+      </div>
+    </div>
+    <div class="form-group">
+      <a id="edit-album-owner-link" href="/album" style="font-size:13px;color:var(--brand);font-weight:600;">Release, sides &amp; collaborators →</a>
     </div>
     <div id="edit-album-alert" style="margin-top:8px;"></div>
     <div class="modal-footer">
@@ -293,11 +304,11 @@
 </div>
 </div><!-- #view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -416,9 +427,10 @@
       if (rest[3] && statsData && statsData.total_followers == null) statsData.total_followers = rest[3].follower_count;
       artist._followers = statsData && statsData.total_followers != null ? statsData.total_followers : (rest[3] ? rest[3].follower_count : null);
       render();
+      stOpenEditFromQuery();
     } catch (err) {
       var msg = String((err && err.message) || err || '');
-      if (msg.indexOf('401') !== -1) return navigate('/login');
+      if (msg.indexOf('401') !== -1) return navigate('/login?next=' + encodeURIComponent(location.pathname + location.search));
       var box = document.getElementById('dashboard');
       if (box) {
         box.removeAttribute('aria-busy');
@@ -436,9 +448,16 @@
     loadDashboard();
   }
 
-  function eraTagOptions(selectedId) {
-    return '<option value="">No era tag</option>' +
-      eraTags.map(function (t) { return '<option value="' + escHtml(t.id) + '"' + (selectedId == t.id ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; }).join('');
+  function stOpenEditFromQuery() {
+    var want = new URLSearchParams(location.search).get('edit');
+    if (!want) return;
+    var item = uploads.find(function (u) { return u._type === 'album' && u.id === want && !u.collab; });
+    if (item) openEditAlbumModal(item);
+  }
+
+  function stEraSelect(id, selectedId) {
+    document.getElementById(id).innerHTML = '<option value="">No era tag</option>' +
+      (eraTags || []).map(function (t) { return '<option value="' + escHtml(t.id) + '"' + (selectedId === t.id ? ' selected' : '') + '>' + escHtml(t.name) + '</option>'; }).join('');
   }
 
   function render() {
@@ -506,46 +525,15 @@
         '</div>' +
 
         '<aside class="st-card st-side" aria-labelledby="st-ep-title">' +
-          '<h2 class="st-h" id="st-ep-title" style="font-size:16px;margin-bottom:14px;">Edit profile</h2>' +
-          '<div class="form-group">' +
-            '<label for="edit-name">Display name</label>' +
-            '<input type="text" id="edit-name" value="' + escHtml(artist.display_name || '') + '" placeholder="your name">' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label for="edit-bio">Bio</label>' +
-            '<textarea id="edit-bio" rows="3" placeholder="say something about yourself…">' + escHtml(artist.bio || '') + '</textarea>' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label for="edit-avatar">Profile picture</label>' +
-            '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">' +
-              '<img id="profile_image_url-preview" src="' + escHtml(artist.profile_image_url || '') + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--surface-2);' + (artist.profile_image_url ? '' : 'display:none;') + '">' +
-              '<div>' +
-                '<input type="file" id="profile-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage(\'profile-img-file\', \'profile_image_url\')">' +
-                '<button class="st-btn" style="min-height:36px;" onclick="document.getElementById(\'profile-img-file\').click()">Upload photo</button>' +
-                '<span id="profile_image_url-status" style="font-size:12px;color:var(--text-2);margin-left:8px;"></span>' +
-              '</div>' +
+          '<h2 class="st-h" id="st-ep-title" style="font-size:16px;margin-bottom:14px;">Your profile</h2>' +
+          '<div style="display:flex;align-items:center;gap:12px;">' +
+            '<div class="st-hero-av" style="width:56px;height:56px;font-size:22px;box-shadow:none;background:' + coverGradient(artist.display_name || '') + ';">' + initial + avatar + '</div>' +
+            '<div style="min-width:0;">' +
+              '<div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(artist.display_name || 'you') + '</div>' +
+              '<div style="font-size:12.5px;color:var(--text-2);">@' + escHtml((me && me.username) || '') + '</div>' +
             '</div>' +
-            '<input type="url" id="edit-avatar" pattern="https?://.+" title="paste an image link that starts with https://" value="' + escHtml(artist.profile_image_url || '') + '" placeholder="or paste an image link">' +
           '</div>' +
-          '<div class="form-group">' +
-            '<label for="edit-banner">Banner image</label>' +
-            '<div style="margin-bottom:8px;">' +
-              '<input type="file" id="banner-img-file" accept="image/*" style="display:none" onchange="uploadProfileImage(\'banner-img-file\', \'banner_url\')">' +
-              '<button class="st-btn" style="min-height:36px;" onclick="document.getElementById(\'banner-img-file\').click()">Upload banner</button>' +
-              '<span id="banner_url-status" style="font-size:12px;color:var(--text-2);margin-left:8px;"></span>' +
-            '</div>' +
-            '<input type="url" id="edit-banner" pattern="https?://.+" title="paste an image link that starts with https://" value="' + escHtml(artist.banner_url || '') + '" placeholder="or paste a banner link">' +
-          '</div>' +
-          '<div class="form-group">' +
-            '<label for="edit-location">Location</label>' +
-            '<input type="text" id="edit-location" value="' + escHtml(artist.location || '') + '" placeholder="City, Country">' +
-          '</div>' +
-          '<div class="form-group" style="margin-bottom:0;">' +
-            '<label for="edit-website">Website</label>' +
-            '<input type="url" id="edit-website" value="' + escHtml(artist.website || '') + '" placeholder="https://...">' +
-          '</div>' +
-          '<div id="profile-alert" style="margin-top:10px;"></div>' +
-          '<button class="st-btn brand" style="width:100%;margin-top:12px;" onclick="saveProfile()">Save changes</button>' +
+          '<a class="st-btn" href="/settings" style="width:100%;margin-top:14px;">' + ST_ICON.edit + 'Edit profile</a>' +
         '</aside>' +
       '</div>';
 
@@ -998,7 +986,7 @@
     var title = inp ? inp.value.trim() : '';
     if (!title) { if (inp) inp.focus(); return; }
     try {
-      var pl = await api('/playlists', { method: 'POST', body: JSON.stringify({ title: title, is_public: true }) });
+      var pl = await api('/playlists', { method: 'POST', body: JSON.stringify({ title: title, is_public: false }) });
       if (inp) inp.value = '';
       toggleNewPlaylistForm();
       if (typeof window.invalidatePlaylistCache === 'function') window.invalidatePlaylistCache();
@@ -1017,32 +1005,6 @@
       renderDashboardPlaylists();
     } catch (err) {
       alert('couldnt delete the playlist: ' + err.message);
-    }
-  }
-
-  async function saveProfile() {
-    clearAlert('profile-alert');
-    const updates = {
-      display_name: document.getElementById('edit-name').value.trim(),
-      bio: document.getElementById('edit-bio').value.trim(),
-      profile_image_url: document.getElementById('edit-avatar').value.trim(),
-      banner_url: document.getElementById('edit-banner').value.trim(),
-      location: document.getElementById('edit-location').value.trim(),
-      website: document.getElementById('edit-website').value.trim(),
-    };
-    if (!updates.display_name) return showAlert('profile-alert', 'you need a display name');
-    try {
-      var keepFollowers = artist._followers;
-      artist = await api(`/artists/${artist.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-      });
-      artist._followers = keepFollowers;
-      var nameEl = document.querySelector('.st-hero-name');
-      if (nameEl) nameEl.textContent = artist.display_name || '';
-      showAlert('profile-alert', '✓ profile saved', 'success');
-    } catch (err) {
-      showAlert('profile-alert', err.message);
     }
   }
 
@@ -1102,11 +1064,7 @@
     document.getElementById('edit-track-title').value = track.title || '';
     document.getElementById('edit-track-cover').value = track.cover_url || '';
     document.getElementById('edit-track-desc').value = track.description || '';
-    api('/eratags').then(tags => {
-      document.getElementById('edit-track-era').innerHTML =
-        '<option value="">No era tag</option>' +
-        (tags || []).map(t => `<option value="${escHtml(t.id)}" ${track.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
-    }).catch(() => {});
+    stEraSelect('edit-track-era', track.era_tag_id);
     document.getElementById('edit-track-modal').classList.add('open');
     stFocusIn('edit-track-modal');
   }
@@ -1149,31 +1107,30 @@
     document.getElementById('edit-album-title').value = album.title || '';
     document.getElementById('edit-album-cover').value = album.cover_url || '';
     document.getElementById('edit-album-desc').value = album.description || '';
-    api('/eratags').then(tags => {
-      document.getElementById('edit-album-era').innerHTML =
-        '<option value="">No era tag</option>' +
-        (tags || []).map(t => `<option value="${escHtml(t.id)}" ${album.era_tag_id === t.id ? 'selected' : ''}>${escHtml(t.name)}</option>`).join('');
-    }).catch(() => {});
+    stEraSelect('edit-album-era', album.era_tag_id);
+    document.getElementById('edit-album-owner-link').href = '/album?id=' + encodeURIComponent(album.id) + '#owner-tools';
+    document.getElementById('edit-album-add-status').textContent = '';
     // Fetch album tracks for the tracklist reorder UI
     _albumTracks = [];
     document.getElementById('edit-album-tracklist-section').style.display = 'none';
     document.getElementById('edit-album-modal').classList.add('open');
     stFocusIn('edit-album-modal');
     api(`/albums/${album.id}`).then(function(fullAlbum) {
-      var tracks = (fullAlbum.tracks || []).slice().sort(function(a, b) {
-        return (a.position || 0) - (b.position || 0);
-      });
+      if (editingAlbumId !== album.id) return;
+      var tracks = (fullAlbum.album_tracks || []).slice().sort(function (a, b) { return (a.position || 0) - (b.position || 0); }).map(function (x) { return Object.assign({}, x.tracks || {}, { track_id: x.track_id }); });
       _albumTracks = tracks;
-      if (tracks.length > 0) {
-        document.getElementById('edit-album-tracklist-section').style.display = '';
-        renderAlbumTracklist();
-      }
+      document.getElementById('edit-album-tracklist-section').style.display = '';
+      renderAlbumTracklist();
     }).catch(function() {});
   }
 
   function renderAlbumTracklist() {
     var el = document.getElementById('edit-album-tracklist');
     if (!el) return;
+    var n = _albumTracks.length;
+    var ib = function (label, text, onclick, off) {
+      return '<button type="button" aria-label="' + label + '" title="' + label + '"' + (off ? ' disabled' : '') + ' onclick="' + onclick + '" style="flex-shrink:0;background:none;border:0;padding:4px 7px;font-size:15px;line-height:1;color:var(--text-secondary);cursor:' + (off ? 'default;opacity:.3' : 'pointer') + ';">' + text + '</button>';
+    };
     el.innerHTML = _albumTracks.map(function(track, i) {
       return '<div class="tracklist-item" draggable="true" id="ati-' + i + '"' +
         ' ondragstart="albumDragStart(event,' + i + ')"' +
@@ -1185,8 +1142,77 @@
         '<div class="tracklist-info" style="flex:1;min-width:0;">' +
           '<div class="tracklist-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(track.title || track.track_title || '') + '</div>' +
         '</div>' +
+        ib('Move up', '↑', 'albumMoveTrack(' + i + ',-1)', i === 0) +
+        ib('Move down', '↓', 'albumMoveTrack(' + i + ',1)', i === n - 1) +
+        ib('Remove song', '×', 'albumRemoveTrack(' + i + ')', false) +
       '</div>';
     }).join('');
+  }
+
+  function albumMoveTrack(i, dir) {
+    var j = i + dir;
+    if (j < 0 || j >= _albumTracks.length) return;
+    var tmp = _albumTracks[i];
+    _albumTracks[i] = _albumTracks[j];
+    _albumTracks[j] = tmp;
+    renderAlbumTracklist();
+    saveAlbumTracklist();
+  }
+
+  function stSetAlbumTrackCount(albumId, n) {
+    uploads.forEach(function (u) { if (u._type === 'album' && u.id === albumId) u.track_count = n; });
+    renderUploads();
+  }
+
+  async function albumRemoveTrack(i) {
+    var t = _albumTracks[i];
+    if (!t || !confirm('remove this song from the comp?')) return;
+    var albumId = editingAlbumId;
+    try {
+      await api('/tracks/' + encodeURIComponent(t.track_id || t.id), { method: 'DELETE' });
+      if (editingAlbumId === albumId) {
+        var k = _albumTracks.indexOf(t);
+        if (k !== -1) _albumTracks.splice(k, 1);
+        renderAlbumTracklist();
+        stSetAlbumTrackCount(albumId, _albumTracks.length);
+      }
+    } catch (err) {
+      showAlert('edit-album-alert', 'couldnt remove that song: ' + (err.message || 'error'));
+    }
+  }
+
+  async function albumAddSongs(input) {
+    var files = [].slice.call((input && input.files) || []);
+    if (input) input.value = '';
+    var albumId = editingAlbumId;
+    if (!files.length || !albumId) return;
+    var album = uploads.find(function (u) { return u._type === 'album' && u.id === albumId; }) || {};
+    var st = document.getElementById('edit-album-add-status');
+    var added = 0, failed = '';
+    for (var i = 0; i < files.length; i++) {
+      if (editingAlbumId !== albumId) break;
+      if (st) st.textContent = 'Uploading ' + (i + 1) + '/' + files.length;
+      var f = files[i];
+      try {
+        var form = new FormData();
+        form.append('file', f);
+        form.append('title', String(f.name || '').replace(/\.[^.]+$/, '').trim() || 'Untitled');
+        form.append('album_id', albumId);
+        form.append('track_position', String(_albumTracks.reduce(function (m, x) { var p = Number(x.track_position); return isFinite(p) && p >= m ? p + 1 : m; }, _albumTracks.length)));
+        if (album.era_tag_id) form.append('era_tag_id', album.era_tag_id);
+        var track = await apiUpload('/tracks', form);
+        if (editingAlbumId === albumId) {
+          _albumTracks.push(Object.assign({}, track, { track_id: track.id }));
+          renderAlbumTracklist();
+        }
+        added++;
+      } catch (err) {
+        failed = 'couldnt upload ' + (f.name || 'that file') + ': ' + (err.message || 'error');
+        break;
+      }
+    }
+    if (added) stSetAlbumTrackCount(albumId, editingAlbumId === albumId ? _albumTracks.length : (album.track_count || 0) + added);
+    if (st) st.textContent = failed || (added ? '✓ added ' + added + ' song' + (added === 1 ? '' : 's') : '');
   }
 
   function albumDragStart(e, i) {
@@ -1230,7 +1256,7 @@
   async function saveAlbumTracklist() {
     if (!editingAlbumId) return;
     var trackPayload = _albumTracks.map(function(t, i) {
-      return { track_id: t.track_id || t.id, position: i + 1 };
+      return { track_id: t.track_id || t.id, position: i };
     });
     try {
       await api('/albums/' + editingAlbumId + '/tracklist', {
@@ -1276,6 +1302,11 @@
     const file = input?.files?.[0];
     if (!file) return;
     const statusEl = document.getElementById(statusId);
+    if (file.size > 10 * 1024 * 1024) {
+      if (statusEl) statusEl.textContent = 'thats over 10 MB';
+      input.value = '';
+      return;
+    }
     if (statusEl) statusEl.textContent = 'Uploading…';
     try {
       const form = new FormData();
@@ -1285,48 +1316,9 @@
       if (urlEl) urlEl.value = result.url;
       if (statusEl) statusEl.textContent = '✓ uploaded';
     } catch (err) {
-      if (statusEl) statusEl.textContent = 'Upload failed';
+      if (statusEl) statusEl.textContent = (err && err.message) || 'Upload failed';
     }
   }
-
-  async function uploadProfileImage(inputId, field) {
-    const input = document.getElementById(inputId);
-    const file = input?.files?.[0];
-    if (!file) return;
-    const statusEl = document.getElementById(`${field}-status`);
-    if (statusEl) statusEl.textContent = 'Uploading…';
-    try {
-      const form = new FormData();
-      form.append('image', file);
-      const result = await apiUpload('/upload/image', form);
-      const url = result.url;
-      if (field === 'profile_image_url') {
-        document.getElementById('edit-avatar').value = url;
-        const preview = document.getElementById('profile_image_url-preview');
-        if (preview) { preview.src = url; preview.style.display = ''; }
-      } else if (field === 'banner_url') {
-        document.getElementById('edit-banner').value = url;
-      }
-      if (statusEl) statusEl.textContent = 'Saving…';
-
-      // Auto-save immediately — don't force the user to also click "Save Profile"
-      if (artist && artist.id) {
-        await api(`/artists/${artist.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({ [field]: url }),
-        });
-        // Keep local artist object in sync
-        artist[field] = url;
-      }
-
-      if (statusEl) statusEl.textContent = '✓ Saved';
-      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
-    } catch (err) {
-      if (statusEl) statusEl.textContent = 'Upload failed';
-      alert('image upload failed: ' + err.message);
-    }
-  }
-
 
   function stDestroyCharts() {
     _stCharts.forEach(function (c) { try { c.destroy(); } catch (_) {} });
@@ -1503,7 +1495,7 @@
   })();
 
   if (isLoggedIn()) loadDashboard();
-  else navigate('/login');
+  else navigate('/login?next=' + encodeURIComponent(location.pathname + location.search));
 </script>
 </body>
 </html>

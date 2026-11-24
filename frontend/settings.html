@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — settings</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
 </head>
 <body>
 
@@ -78,22 +78,22 @@
 
         <div class="wv-form-field">
           <label class="wv-form-label">Display name *</label>
-          <input class="wv-input" type="text" id="edit-name" placeholder="your name">
+          <input class="wv-input" type="text" id="edit-name" placeholder="your name" maxlength="40">
         </div>
 
         <div class="wv-form-field">
           <label class="wv-form-label">Bio</label>
-          <textarea class="wv-input" id="edit-bio" rows="3" placeholder="say something about yourself…" style="border-radius:var(--r-md);resize:vertical;"></textarea>
+          <textarea class="wv-input" id="edit-bio" rows="3" maxlength="600" placeholder="say something about yourself…" style="border-radius:var(--r-md);resize:vertical;"></textarea>
         </div>
 
         <div class="wv-form-field">
           <label class="wv-form-label">Location</label>
-          <input class="wv-input" type="text" id="edit-location" placeholder="City, Country">
+          <input class="wv-input" type="text" id="edit-location" placeholder="City, Country" maxlength="60">
         </div>
 
         <div class="wv-form-field">
           <label class="wv-form-label">Website</label>
-          <input class="wv-input" type="url" id="edit-website" placeholder="https://…">
+          <input class="wv-input" type="url" id="edit-website" placeholder="https://…" maxlength="200">
         </div>
 
         <!-- Hidden fields updated by image uploads -->
@@ -125,7 +125,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:14px;font-weight:500;" id="settings-username">Username</div>
-            <div style="font-size:12px;color:var(--text-2);">the name you log in with</div>
+            <div style="font-size:12px;color:var(--text-2);">your @handle on comments and posts</div>
           </div>
         </div>
 
@@ -143,6 +143,19 @@
           </div>
           <div id="cp-alert" style="font-size:13px;margin-bottom:10px;"></div>
           <button class="wv-pill brand" onclick="changePassword()">Update Password</button>
+        </div>
+
+        <div id="set-password-section" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--hair);">
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Add a password</div>
+          <div id="sp-sub" style="font-size:12px;color:var(--text-2);margin-bottom:14px;">so you can also log in with your username</div>
+          <div class="wv-form-field" style="margin-bottom:10px;">
+            <input class="wv-input" type="password" id="sp-new" placeholder="New password (6 to 72 characters)" autocomplete="new-password" maxlength="72">
+          </div>
+          <div class="wv-form-field" style="margin-bottom:14px;">
+            <input class="wv-input" type="password" id="sp-confirm" placeholder="Confirm password" autocomplete="new-password" maxlength="72">
+          </div>
+          <div id="sp-alert" style="font-size:13px;margin-bottom:10px;"></div>
+          <button class="wv-pill brand" onclick="setPassword()">Add password</button>
         </div>
 
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--hair);">
@@ -175,10 +188,22 @@
               <div>
                 <div style="font-size:14px;font-weight:500;">Reddit</div>
                 <div id="reddit-status-label" style="font-size:12px;color:var(--text-2);">Not connected</div>
-                <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">connecting moves every comp and edit under your u/ name onto this account</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">lets you pick comps posted under your u/ name and add them to your profile</div>
               </div>
             </div>
             <button id="reddit-action-btn" class="wv-pill" onclick="redditAction()"></button>
+          </div>
+          <div id="reddit-verify" style="display:none;margin:10px 0 4px 32px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+              <span style="color:var(--text-2);">u/</span><input id="reddit-name" class="wv-input" placeholder="your Reddit username" style="width:220px;padding:7px 10px;font-size:13px;">
+              <button class="wv-pill" style="font-size:12px;padding:6px 12px;" onclick="redditGetCode()">Get my code</button>
+            </div>
+            <div id="reddit-steps" style="display:none;">
+              <div>1. copy this code: <b id="reddit-code" style="font-family:ui-monospace,monospace;font-size:14px;user-select:all;"></b></div>
+              <div>2. put the code on reddit...paste it in your profiles <b>About</b> text (Edit profile → About) and save, <i>or</i> post it as a comment anywhere, like on any r/yedits post.</div>
+              <div>3. <button class="wv-pill brand" style="font-size:12px;padding:6px 12px;" onclick="redditVerify()">Verify</button> <span id="reddit-verify-status" style="color:var(--text-2);"></span></div>
+              <div style="font-size:12px;color:var(--text-3);margin-top:6px;">a comment can take a few minutes to show up for us. you can delete the code after. connecting lets you pick comps posted under your u/ name and add them to your profile.</div>
+            </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;" id="lastfm-row">
             <div style="display:flex;align-items:center;gap:10px;">
@@ -190,18 +215,6 @@
               </div>
             </div>
             <button id="lastfm-action-btn" class="wv-pill" onclick="lastfmAction()"></button>
-          </div>
-          <div id="reddit-verify" style="display:none;margin:10px 0 4px 32px;padding:12px 14px;background:var(--surface-2);border-radius:var(--r-md);font-size:13px;line-height:1.6;">
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-              <span style="color:var(--text-2);">u/</span><input id="reddit-name" class="wv-input" placeholder="your Reddit username" style="width:220px;padding:7px 10px;font-size:13px;">
-              <button class="wv-pill" style="font-size:12px;padding:6px 12px;" onclick="redditGetCode()">Get my code</button>
-            </div>
-            <div id="reddit-steps" style="display:none;">
-              <div>1. copy this code: <b id="reddit-code" style="font-family:ui-monospace,monospace;font-size:14px;user-select:all;"></b></div>
-              <div>2. put the code on reddit...paste it in your profiles <b>About</b> text (Edit profile → About) and save, <i>or</i> post it as a comment anywhere, like on any r/yedits post.</div>
-              <div>3. <button class="wv-pill brand" style="font-size:12px;padding:6px 12px;" onclick="redditVerify()">Verify</button> <span id="reddit-verify-status" style="color:var(--text-2);"></span></div>
-              <div style="font-size:12px;color:var(--text-3);margin-top:6px;">a comment can take a few minutes to show up for us. you can delete the code after. every comp and edit under your u/ name moves onto this account.</div>
-            </div>
           </div>
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
@@ -237,13 +250,13 @@
 </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
 <script>
-  if (!isLoggedIn()) navigate('/login');
-  initPlayer();
+  if (!isLoggedIn()) navigate('/login?next=' + encodeURIComponent(location.pathname + location.search));
+  if (isLoggedIn()) initPlayer();
 
   var me = null;
   var artist = null;
@@ -265,6 +278,11 @@
       document.getElementById('edit-banner-url').value = artist.banner_url || '';
       document.getElementById('settings-username').textContent = '@' + (me.username || '');
       if (me.has_password) document.getElementById('change-password-section').style.display = '';
+      else {
+        document.getElementById('set-password-section').style.display = '';
+        document.getElementById('sp-sub').textContent = 'so you can also log in with @' + (me.username || '');
+      }
+      renderConnections();
 
       // Avatar display
       const wrap = document.getElementById('avatar-preview-wrap');
@@ -275,7 +293,7 @@
         document.getElementById('avatar-initials').textContent = initials;
       }
     } catch (err) {
-      if (err.message.includes('401')) return navigate('/login');
+      if (err.message.includes('401')) return navigate('/login?next=' + encodeURIComponent(location.pathname + location.search));
       showAlert('alert-container', 'couldnt load: ' + err.message);
     }
   }
@@ -304,6 +322,11 @@
     const file = input?.files?.[0];
     if (!file) return;
     const statusEl = document.getElementById(field+'-status');
+    if (file.size > 10 * 1024 * 1024) {
+      if (statusEl) statusEl.textContent = 'thats over 10 MB';
+      input.value = '';
+      return;
+    }
     if (statusEl) statusEl.textContent = 'Uploading…';
     try {
       const form = new FormData();
@@ -320,7 +343,7 @@
       }
       if (statusEl) statusEl.textContent = '✓ Uploaded';
     } catch (err) {
-      if (statusEl) statusEl.textContent = 'Upload failed';
+      if (statusEl) statusEl.textContent = (err && err.message) || 'Upload failed';
     }
   }
 
@@ -397,22 +420,23 @@
       m.textContent = 'name color saved'; m.style.color = 'var(--text-2)';
     } catch (e) { m.textContent = e.message; m.style.color = 'var(--red)'; }
   };
-  wvDvLoad();
+  if (isLoggedIn()) wvDvLoad();
 
   var _connections = { discord: false, google: false, reddit: false };
 
   async function loadConnections() {
+    var loading = document.getElementById('connections-loading');
+    loading.textContent = 'Loading…';
     try {
       _connections = await api('/oauth/connections');
       renderConnections();
       loadLastfm();
       loadClaimable();
-      document.getElementById('connections-loading').style.display = 'none';
+      loading.style.display = 'none';
       document.getElementById('connections-content').style.display = '';
     } catch (_) {
-      // Hide the whole section if the endpoint isn't ready yet
-      var section = document.getElementById('connections-loading').closest('.wv-settings-section');
-      if (section) section.style.display = 'none';
+      loading.style.display = '';
+      loading.innerHTML = 'couldnt load your connections <button class="wv-pill" onclick="loadConnections()">Retry</button>';
     }
   }
 
@@ -426,6 +450,7 @@
     } catch (_) { return; }
     if (!_claimable.length) { box.style.display = 'none'; return; }
     box.style.display = '';
+    var scrollToBox = location.hash === '#claimable-box';
     document.getElementById('claimable-list').innerHTML = _claimable.map(function (a) {
       return '<label style="display:flex;gap:10px;align-items:center;padding:7px 9px;border-radius:9px;background:var(--surface-2);cursor:pointer;">' +
         '<input type="checkbox" value="' + a.id + '" style="width:16px;height:16px;flex-shrink:0;">' +
@@ -439,6 +464,7 @@
         '<a href="/album?id=' + a.id + '" target="_blank" style="font-size:11.5px;color:var(--brand);font-weight:600;flex-shrink:0;">open</a>' +
       '</label>';
     }).join('');
+    if (scrollToBox && box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   window.claimToggleAll = function () {
     var boxes = document.querySelectorAll('#claimable-list input[type=checkbox]');
@@ -467,6 +493,10 @@
       var btn = document.getElementById(p + '-action-btn');
       btn.textContent = connected ? 'Disconnect' : 'Connect';
       btn.style.color = connected ? 'var(--red)' : '';
+      var other = p === 'discord' ? 'google' : p === 'google' ? 'discord' : null;
+      var onlyLogin = !!(connected && other && me && !me.has_password && !_connections[other]);
+      btn.disabled = onlyLogin;
+      btn.title = onlyLogin ? 'connect ' + (other === 'google' ? 'Google' : 'Discord') + ' or add a password first, or you wont be able to log back in' : '';
     }
   }
 
@@ -474,7 +504,7 @@
   async function loadLastfm() {
     try { _lastfm = await api('/lastfm/status'); } catch (_) { _lastfm = { available: false, connected: false }; }
     var row = document.getElementById('lastfm-row'); if (!row) return;
-    row.style.display = _lastfm.available ? '' : 'none';
+    row.style.display = _lastfm.available ? 'flex' : 'none';
     document.getElementById('lastfm-status-label').textContent = _lastfm.connected ? ('Connected' + (_lastfm.username ? ' as ' + _lastfm.username : '')) : 'Not connected';
     var btn = document.getElementById('lastfm-action-btn');
     btn.textContent = _lastfm.connected ? 'Disconnect' : 'Connect';
@@ -487,8 +517,10 @@
       try { await api('/lastfm/unlink', { method: 'DELETE' }); await loadLastfm(); } catch (err) { document.getElementById('connections-alert').textContent = 'Error: ' + err.message; }
       return;
     }
-    var token = localStorage.getItem('token');
-    location.href = API_BASE + '/lastfm/link?token=' + encodeURIComponent(token || '');
+    try {
+      var t = await api('/oauth/link-ticket', { method: 'POST', body: JSON.stringify({ provider: 'lastfm' }) });
+      location.href = API_BASE + '/lastfm/link?ticket=' + encodeURIComponent(t.ticket);
+    } catch (err) { document.getElementById('connections-alert').textContent = 'Error: ' + err.message; }
   }
   function redditAction() {
     if (_connections.reddit) { toggleConnection('reddit'); return; }
@@ -505,7 +537,8 @@
       var r = await api('/oauth/reddit/verify/check', { method: 'POST', body: JSON.stringify({ username: document.getElementById('reddit-name').value.trim() }) });
       _connections.reddit = true; _connections.reddit_username = r.username; renderConnections();
       document.getElementById('reddit-verify').style.display = 'none';
-      document.getElementById('connections-alert').textContent = 'reddit connected as u/' + r.username + (r.claimed ? '...' + r.claimed + ' comp' + (r.claimed === 1 ? '' : 's') + ' from the archive got moved to your profile' : '');
+      document.getElementById('connections-alert').textContent = 'reddit connected as u/' + r.username;
+      loadClaimable();
     } catch (e) { st.textContent = e.message; }
   }
   async function toggleConnection(provider) {
@@ -520,8 +553,12 @@
         document.getElementById('connections-alert').textContent = 'Error: ' + err.message;
       }
     } else {
-      var token = localStorage.getItem('token');
-      location.href = API_BASE + '/oauth/' + provider + '/link?token=' + encodeURIComponent(token);
+      try {
+        var t = await api('/oauth/link-ticket', { method: 'POST', body: JSON.stringify({ provider: provider }) });
+        location.href = API_BASE + '/oauth/' + provider + '/link?ticket=' + encodeURIComponent(t.ticket);
+      } catch (err) {
+        document.getElementById('connections-alert').textContent = 'Error: ' + err.message;
+      }
     }
   }
 
@@ -547,8 +584,35 @@
     }
   }
 
-  loadSettings();
-  loadConnections();
+  async function setPassword() {
+    var newPw = document.getElementById('sp-new').value;
+    var confirmPw = document.getElementById('sp-confirm').value;
+    var alertEl = document.getElementById('sp-alert');
+    alertEl.style.color = 'var(--red)'; alertEl.textContent = '';
+    if (!newPw || !confirmPw) { alertEl.textContent = 'fill in everything first'; return; }
+    if (newPw !== confirmPw) { alertEl.textContent = 'passwords dont match'; return; }
+    if (newPw.length < 6 || newPw.length > 72) { alertEl.textContent = 'passwords have to be 6 to 72 characters'; return; }
+    try {
+      await api('/auth/set-password', { method: 'POST', body: JSON.stringify({ newPassword: newPw }) });
+      if (me) me.has_password = true;
+      document.getElementById('sp-new').value = '';
+      document.getElementById('sp-confirm').value = '';
+      document.getElementById('set-password-section').style.display = 'none';
+      document.getElementById('change-password-section').style.display = '';
+      var cpAlert = document.getElementById('cp-alert');
+      cpAlert.style.color = 'var(--green)';
+      cpAlert.textContent = '✓ password added...you can log in with @' + ((me && me.username) || 'your username') + ' now';
+      renderConnections();
+    } catch (err) {
+      alertEl.style.color = 'var(--red)';
+      alertEl.textContent = err.message || 'couldnt add your password';
+    }
+  }
+
+  if (isLoggedIn()) {
+    loadSettings();
+    loadConnections();
+  }
 </script>
 </body>
 </html>

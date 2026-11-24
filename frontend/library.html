@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>wavernrs — your library</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style>
     .lib-wrap { max-width: 1180px; margin: 0 auto; padding-bottom: 48px; min-width: 0; }
     .lib-hero { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: stretch; margin-bottom: 22px; }
@@ -195,11 +195,11 @@
   </div>
 </div><!-- /view -->
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
 (function () {
   initPlayer();
@@ -267,9 +267,8 @@
   function nowIds() {
     try {
       var c = JSON.parse(localStorage.getItem('player_current') || 'null');
-      var a = document.querySelector('audio');
       if (!c) return {};
-      return { t: c.id || null, a: c._album_id || null, on: !!(a && !a.paused) };
+      return { t: c.id || null, a: c._album_id || null, on: !!(typeof audio !== 'undefined' && audio && !audio.paused) };
     } catch (_) { return {}; }
   }
 
@@ -288,9 +287,10 @@
     if (/^wvarchivebot$/i.test(n)) return 'archive';
     return n || 'Unknown';
   }
-  function trackObj(t) {
+  function trackObj(t, ctx) {
     var o = { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || (t.albums && t.albums.cover_url) || null, artist_name: trackArtist(t) };
     if (t.artists && t.artists.id) o.artist_id = t.artists.id;
+    if (ctx) o._ctx = ctx;
     return o;
   }
 
@@ -304,7 +304,7 @@
   var SORTS = {
     tracks: [['recent', 'Recently added'], ['title', 'Title'], ['artist', 'Artist'], ['plays', 'Most played']],
     albums: [['recent', 'Recently added'], ['title', 'Title'], ['artist', 'Creator'], ['plays', 'Most played']],
-    playlists: [['recent', 'Recently made'], ['title', 'Title'], ['size', 'Most songs']],
+    playlists: [['recent', 'Recently updated'], ['title', 'Title'], ['size', 'Most songs']],
     rated: [['recent', 'Recently rated'], ['high', 'Highest rated'], ['low', 'Lowest rated'], ['title', 'Title']],
     recent: []
   };
@@ -355,7 +355,7 @@
         '</div>' +
       '</div>' +
       '<a class="lib-recap" href="/wrapped" data-nav="/wrapped">' +
-        '<div><div class="lib-recap-k">wavernrs</div><div class="lib-recap-t">Your 2026 Recap</div></div>' +
+        '<div><div class="lib-recap-k">wavernrs</div><div class="lib-recap-t">Your ' + new Date().getFullYear() + ' Recap</div></div>' +
         '<span class="lib-recap-go"><span class="tx">see your year</span>' + ICON.arrow + '</span>' +
         '<svg class="bars" width="64" height="40" viewBox="0 0 64 40" aria-hidden="true"><g fill="rgba(255,255,255,0.55)"><rect x="0" y="22" width="8" height="18" rx="2"/><rect x="14" y="10" width="8" height="30" rx="2"/><rect x="28" y="16" width="8" height="24" rx="2"/><rect x="42" y="2" width="8" height="38" rx="2"/><rect x="56" y="26" width="8" height="14" rx="2"/></g></svg>' +
       '</a>';
@@ -528,7 +528,7 @@
 
   function renderComps() {
     var all = S.lib.albums || [];
-    if (!all.length) return empty(ICON.heartO, 'no liked comps yet', 'like a comp and itll show up here with one-tap play', '<a class="lib-btn pri" href="/discover" data-nav="/discover">Find comps</a>');
+    if (!all.length) return empty(ICON.heartO, 'no liked comps yet', 'like a comp and itll show up here with one-tap play', '<a class="lib-btn pri" href="/browse" data-nav="/browse">Find comps</a>');
     var q = norm(S.q).trim();
     var list = all.filter(function (a) { return matches(q, [a.title, albumArtist(a)]); })
       .sort(sorter('albums', function (x) { return x.title; }, albumArtist, function (x) { return x.liked_at; }));
@@ -561,7 +561,6 @@
   }
 
   function renderPlaylists() {
-    var u = (typeof getUser === 'function' && getUser()) || {};
     var q = norm(S.q).trim();
     var s = sortOf('playlists');
     var list = (S.lib.playlists || []).filter(function (p) { return matches(q, [p.title, p.description || '']); }).sort(function (a, b) {
@@ -577,8 +576,8 @@
     return '<div class="lib-grid">' +
       (q ? '' : '<a class="wv-comp-card lib-newpl" href="/playlist-builder" data-act="newpl"><div class="wv-comp-card-cover"><div class="wv-comp-card-cover-inner"><div class="box">' + ICON.plus + '</div></div></div><div class="wv-comp-card-title">New playlist</div><div class="wv-comp-card-artist">start from scratch</div></a>') +
       list.map(function (p) {
-        var pill = p.published_at ? '<span class="lib-pill pub">' + ICON.globe + 'Published</span>' : (p.is_public === false ? '<span class="lib-pill">' + ICON.lockS + 'Private</span>' : '');
-        var pl = { id: p.id, title: p.title, track_count: p.track_count || 0, cover_url: p.cover_url || null, mosaic: p.mosaic || [], owner: { id: u.id || '', username: u.username || '' } };
+        var pill = p.published_at ? '<span class="lib-pill pub">' + ICON.globe + 'Published</span>' : (p.is_public ? '<span class="lib-pill">Link only</span>' : '<span class="lib-pill">' + ICON.lockS + 'Private</span>');
+        var pl = { id: p.id, title: p.title, track_count: p.track_count || 0, cover_url: p.cover_url || null, mosaic: p.mosaic || [], owner: null };
         var inner = card ? window.wvPlaylistCardHTML(pl) :
           '<a class="wv-comp-card" href="/playlist?id=' + esc(p.id) + '" data-nav="/playlist?id=' + esc(p.id) + '"><div class="lib-cover" style="background:' + grad(p.title) + '"></div><div class="lib-tt">' + esc(p.title) + '</div></a>';
         return '<div class="lib-plwrap">' + pill + inner + '</div>';
@@ -649,7 +648,7 @@
     }
     var list = items.filter(function (it) { return matches(q, [it.title, it.artist_name || '']); });
     if (items.length) {
-      out += '<div class="lib-sec"><h2>Recently played</h2><span>' + items.length + ' on this device</span></div>';
+      out += '<div class="lib-sec"><h2>Recently played</h2><span>' + items.length + ' on this device · <a href="/history" data-nav="/history">See full history</a></span></div>';
       out += list.length ? '<div class="lib-grid">' + list.map(function (it) { return card(it); }).join('') + '</div>' : '<div class="lib-nores">nothing matches “' + esc(S.q) + '”</div>';
     }
     return out;
@@ -673,7 +672,7 @@
   function playList(list, startId, shuffle) {
     list = list.filter(function (t) { return t.ia_url; });
     if (!list.length) { toast('nothing here can play rn', 'error'); return; }
-    var q = list.map(trackObj);
+    var q = list.map(function (t) { return trackObj(t, 'Liked edits'); });
     var idx = 0;
     if (shuffle) {
       for (var i = q.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var x = q[i]; q[i] = q[j]; q[j] = x; }
@@ -726,11 +725,13 @@
     refreshAfterChange();
     api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function (r) {
       if (r && r.liked === true) api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).catch(function () {});
+      if (typeof window.refreshSidebarLibrary === 'function') { try { window.refreshSidebarLibrary(); } catch (_) {} }
       toast('removed from liked comps', '', 6000, {
         title: 'removed from liked comps', body: a.title || '', action: 'Undo',
         onClick: function () {
           api('/albums/' + encodeURIComponent(id) + '/like', { method: 'POST' }).then(function () {
             if (!findAlbum(id)) { S.lib.albums.splice(Math.min(idx, S.lib.albums.length), 0, a); refreshAfterChange(); }
+            if (typeof window.refreshSidebarLibrary === 'function') { try { window.refreshSidebarLibrary(); } catch (_) {} }
             toast('back in your liked comps');
           }).catch(function () { toast('couldnt undo that...try liking it again', 'error'); });
         }
@@ -814,7 +815,7 @@
         else if (typeof navigate === 'function') navigate('/track?id=' + encodeURIComponent(tid));
         break;
       }
-      case 'queue': { var tq = findTrack(id); if (tq && typeof addToQueue === 'function') addToQueue(trackObj(tq)); break; }
+      case 'queue': { var tq = findTrack(id); if (tq && typeof addToQueue === 'function') addToQueue(trackObj(tq, 'Liked edits')); break; }
       case 'addpl': {
         var ta = findTrack(id);
         if (ta && typeof window.openAddToPlaylist === 'function') window.openAddToPlaylist(trackObj(ta));
@@ -915,15 +916,9 @@
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
   var onMedia = function () { setTimeout(markNow, 30); };
-  document.addEventListener('play', onMedia, true);
-  document.addEventListener('pause', onMedia, true);
-  document.addEventListener('ended', onMedia, true);
-  document.addEventListener('loadstart', onMedia, true);
+  document.addEventListener('wv-player-state', onMedia);
   window._pageCleanup.push(function () {
-    document.removeEventListener('loadstart', onMedia, true);
-    document.removeEventListener('play', onMedia, true);
-    document.removeEventListener('pause', onMedia, true);
-    document.removeEventListener('ended', onMedia, true);
+    document.removeEventListener('wv-player-state', onMedia);
     S.gen++;
   });
 

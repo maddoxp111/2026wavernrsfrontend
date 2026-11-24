@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>wavernrs — artist</title>
-  <link rel="stylesheet" href="/css/style.css?v=94b29db58d28">
-  <script src="/js/status-card.js?v=94b29db58d28"></script>
-  <script src="/js/down.js?v=94b29db58d28"></script>
+  <title>wavernrs — editor</title>
+  <link rel="stylesheet" href="/css/style.css?v=261967381b39">
+  <script src="/js/status-card.js?v=261967381b39"></script>
+  <script src="/js/down.js?v=261967381b39"></script>
   <style id="ep-css">
     .ep-wrap { padding: 20px 0 48px; }
     .ep-hero { position: relative; border-radius: 16px; overflow: hidden; min-height: 300px; display: flex; align-items: flex-end; background: var(--ep-bg, var(--surface-2)); isolation: isolate; }
@@ -132,11 +132,11 @@
   </div>
 </div>
 
-<script src="/js/api.js?v=94b29db58d28"></script>
-<script src="/js/layout.js?v=94b29db58d28"></script>
-<script src="/js/player.js?v=94b29db58d28"></script>
-<script src="/js/router.js?v=94b29db58d28"></script>
-<script src="/js/playlists.js?v=94b29db58d28"></script>
+<script src="/js/api.js?v=261967381b39"></script>
+<script src="/js/layout.js?v=261967381b39"></script>
+<script src="/js/player.js?v=261967381b39"></script>
+<script src="/js/router.js?v=261967381b39"></script>
+<script src="/js/playlists.js?v=261967381b39"></script>
 <script>
   initPlayer();
 
@@ -149,6 +149,7 @@
   var _epSort = 'new';
   var _epEra = '';
   var _epEraNames = {};
+  var _epErasAll = false;
   var _epGen = (window._epGen || 0) + 1;
   window._epGen = _epGen;
 
@@ -194,28 +195,50 @@
 
   // Play the artist's whole catalogue: standalone edits plus every comp track.
   async function artistPlayAll(shuffle) {
-    var singles = uploads.filter(function (u) { return u._type === 'track' && u.ia_url; });
-    var albums = uploads.filter(function (u) { return u._type === 'album' && u.release_status !== 'draft' && !epIsUpcoming(u); });
-    if (!singles.length && !albums.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
+    var playable = uploads.filter(function (u) { return (u._type === 'track' && u.ia_url) || (u._type === 'album' && u.release_status !== 'draft' && !epIsUpcoming(u)); });
+    if (!playable.length) { if (typeof wvToast === 'function') wvToast('nothing to play here yet'); return; }
     if (typeof wvToast === 'function') wvToast('setting up the queue...');
     var who = artist.display_name || '';
-    var queue = singles.map(function (t) {
-      return { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || null, artist_name: who, album_id: null, artist_id: artistId };
-    });
-    var batches = await Promise.all(albums.slice(0, 12).map(function (a) {
-      return api('/albums/' + a.id + '/tracks').catch(function () { return []; });
-    }));
-    batches.forEach(function (rows, i) {
-      var a = albums[i];
-      (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; }).forEach(function (t) {
-        queue.push({ id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || a.cover_url || null, artist_name: who, album_id: a.id, artist_id: artistId, _album_id: a.id, _album_title: a.title, _album_cover: a.cover_url || null });
-      });
-    });
+    var albums = playable.filter(function (u) { return u._type === 'album'; }).slice(0, 40);
+    var albumTracks = {};
+    var nextAlbum = 0;
+    async function worker() {
+      while (nextAlbum < albums.length) {
+        var a = albums[nextAlbum++];
+        try {
+          var rows = await api('/albums/' + a.id + '/tracks');
+          albumTracks[a.id] = (rows || []).map(function (r) { return r.tracks || r; }).filter(function (t) { return t && t.ia_url; });
+        } catch (_) { albumTracks[a.id] = []; }
+      }
+    }
+    var workers = [];
+    for (var w = 0; w < Math.min(6, albums.length); w++) workers.push(worker());
+    await Promise.all(workers);
+    var queue = [];
+    var capped = false;
+    for (var k = 0; k < playable.length && !capped; k++) {
+      var u = playable[k];
+      var items;
+      if (u._type === 'track') {
+        items = [{ id: u.id, title: u.title, ia_url: u.ia_url, cover_url: u.cover_url || null, artist_name: who, album_id: null, artist_id: artistId }];
+      } else if (albumTracks[u.id]) {
+        items = albumTracks[u.id].map(function (t) {
+          return { id: t.id, title: t.title, ia_url: t.ia_url, cover_url: t.cover_url || u.cover_url || null, artist_name: who, album_id: u.id, artist_id: artistId, _album_id: u.id, _album_title: u.title, _album_cover: u.cover_url || null };
+        });
+      } else {
+        if (queue.length) capped = true;
+        continue;
+      }
+      for (var m = 0; m < items.length; m++) {
+        if (queue.length >= 400) { capped = true; break; }
+        queue.push(items[m]);
+      }
+    }
     if (!queue.length) { if (typeof wvToast === 'function') wvToast('nothing playable here yet', 'error'); return; }
     if (shuffle) for (var i = queue.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = queue[i]; queue[i] = queue[j]; queue[j] = t; }
     setPlayerQueue(queue, 0);
     playQueueIndex(0);
-    if (typeof wvToast === 'function') wvToast((shuffle ? 'shuffling ' : 'playing ') + queue.length + ' track' + (queue.length === 1 ? '' : 's'));
+    if (typeof wvToast === 'function') wvToast(capped ? (shuffle ? 'shuffling' : 'playing') + ' the newest ' + queue.length + ' tracks' : (shuffle ? 'shuffling ' : 'playing ') + queue.length + ' track' + (queue.length === 1 ? '' : 's'));
   }
 
   function artistPlayTrack(id) {
@@ -259,7 +282,7 @@
         api('/artists/' + artistId),
         api('/artists/' + artistId + '/tracks').catch(function () { return []; }),
         api('/albums/by-artist/' + artistId + '?lite=1').catch(function () { return []; }),
-        api('/artists/' + artistId + '/follow').catch(function () { return null; }),
+        isLoggedIn() ? api('/artists/' + artistId + '/follow').catch(function () { return null; }) : Promise.resolve(null),
       ]);
     } catch (err) {
       if (gen !== window._epGen) return;
@@ -277,8 +300,7 @@
 
     var fd = results[3];
     isFollowing = !!(fd && fd.following);
-    var fc = fd && typeof fd.follower_count === 'number' ? fd.follower_count : null;
-    followerCount = (fc == null || (fc === 0 && !isFollowing && (artist.follower_count || 0) > 0)) ? (artist.follower_count || 0) : fc;
+    followerCount = (fd && typeof fd.follower_count === 'number') ? fd.follower_count : (artist.follower_count || 0);
 
     document.title = (artist.display_name || 'Editor') + ' — wavernrs';
     if (typeof window.setPageBgImage === 'function') {
@@ -372,6 +394,7 @@
         (isOwner
           ? '<a href="/dashboard" class="ep-pill">Open studio</a>'
           : '<button class="ep-pill' + (isFollowing ? ' on' : '') + '" id="follow-btn" aria-pressed="' + isFollowing + '" onclick="toggleFollow()">' + (isFollowing ? 'Following' : 'Follow') + '</button>') +
+        (artist.archive && artist.archive.slug && artist.archive.comp_count ? '<a class="ep-pill" href="/archive-artist?a=' + encodeURIComponent(artist.archive.slug) + '">In the archive · ' + epNum(artist.archive.comp_count) + ' release' + (artist.archive.comp_count === 1 ? '' : 's') + '</a>' : '') +
         '<button class="ep-ib" onclick="shareArtist()" aria-label="Share profile" title="Share">' + EP_ICON.share + '</button>' +
       '</div>' +
 
@@ -535,8 +558,9 @@
       var sub = [];
       if (byName) sub.push('with ' + byName);
       sub.push(epIsEdit(item) ? 'Edit' : 'Comp');
+      if (!epIsEdit(item) && Number(item.track_count) > 1) sub.push(item.track_count + ' tracks');
       if (_epSort === 'plays') sub.push(epNum(item.play_count || 0) + ' plays');
-      else if (!isNaN(d) && d.getTime() > 0) sub.push(String(d.getFullYear()));
+      else if (item.original_date && !isNaN(d) && d.getTime() > 0) sub.push(String(d.getFullYear()));
       var t = escHtml(item.title || 'Untitled');
       return '<div class="wv-comp-card" onclick="navigate(\'' + epHref(item) + '\')">' +
         '<div class="wv-comp-card-cover">' +
@@ -572,10 +596,15 @@
     uploads.forEach(function (u) { var e = epEraOf(u); if (e) counts[e] = (counts[e] || 0) + 1; });
     var eras = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a] || a.localeCompare(b); });
     if (eras.length < 2) { box.innerHTML = ''; return; }
-    box.innerHTML = '<button class="art-era' + (!_epEra ? ' on' : '') + '" data-e="">all eras</button>' + eras.map(function (e) {
+    var shown = (_epErasAll || eras.length <= 8) ? eras : eras.slice(0, 8);
+    if (_epEra && shown.indexOf(_epEra) === -1 && eras.indexOf(_epEra) !== -1) shown = shown.concat([_epEra]);
+    box.innerHTML = '<button class="art-era' + (!_epEra ? ' on' : '') + '" data-e="">all eras</button>' + shown.map(function (e) {
       return '<button class="art-era' + (_epEra === e ? ' on' : '') + '" data-e="' + escHtml(e) + '">' + escHtml(e) + ' <span>' + counts[e] + '</span></button>';
-    }).join('');
+    }).join('') +
+      (eras.length > 8 ? '<button class="art-era" id="art-eras-more" aria-expanded="' + _epErasAll + '">' + (_epErasAll ? 'show less' : '+' + (eras.length - 8) + ' more') + '</button>' : '');
     box.querySelectorAll('[data-e]').forEach(function (b) { b.onclick = function () { epSetEra(b.getAttribute('data-e')); }; });
+    var more = document.getElementById('art-eras-more');
+    if (more) more.onclick = function () { _epErasAll = !_epErasAll; renderEraChips(); };
   }
 
   async function renderMoreEditors() {
