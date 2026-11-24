@@ -100,7 +100,7 @@ function atCur() { return AT.list.find(function (t) { return t.id === AT.sel; })
 function atThumb(u, px) { px = px || 96; return /^https?:\/\//.test(String(u || '')) ? 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=' + px + '&h=' + px + '&fit=cover&output=webp' : ''; }
 
 async function atInit() {
-  if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login'); return; }
+  if (typeof isLoggedIn === 'function' && !isLoggedIn()) { navigate('/login?next=' + encodeURIComponent(location.pathname + location.search)); return; }
   var chk;
   try { chk = await api('/trackers/archive/check'); } catch (e) { if (!e.navAborted) atView('<div class="wv-empty">' + atEsc(e.message || 'couldnt check your access') + '</div>'); return; }
   if (!chk || !chk.can_use) {
