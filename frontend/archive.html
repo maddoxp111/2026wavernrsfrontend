@@ -799,6 +799,11 @@ function arcSetStat(id, n, suffix) {
   _arcStatSet[id] = key;
   if (first) arcCountUp(b, n, suffix); else b.innerHTML = n.toLocaleString() + (suffix || '');
 }
+function arcStatGone(id) {
+  if (_arcStatSet[id]) return;
+  var b = document.querySelector('#arc-st-' + id + ' b');
+  if (b && b.querySelector('.skel')) b.textContent = '–';
+}
 
 function arcPrefetchTop() {
   if (_topComps || _arcTopReq) return;
@@ -815,10 +820,11 @@ function arcLoadStats() {
     if (typeof n === 'number') arcSetStat('rel', n);
     var pl = d && d.totals && d.totals.plays;
     if (typeof pl === 'number') arcSetStat('plays', pl);
-  }).catch(function () {});
+    else arcStatGone('plays');
+  }).catch(function () { arcStatGone('rel'); arcStatGone('plays'); });
   if (_arcView !== 'home') api('/archive/artists?limit=1').then(function (d) {
     if (d && typeof d.total === 'number') arcSetStat('art', d.total);
-  }).catch(function () {});
+  }).catch(function () { arcStatGone('art'); });
   if (_arcView === 'home' || _arcView === 'top') arcPrefetchTop();
   var topBtn = document.getElementById('arc-view-top');
   if (topBtn) ['pointerenter', 'focus', 'touchstart'].forEach(function (ev) { topBtn.addEventListener(ev, arcPrefetchTop, { passive: true }); });

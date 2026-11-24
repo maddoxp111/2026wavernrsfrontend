@@ -727,7 +727,7 @@
       if (items.length && items.every(function (x) { return typeof x.play_count === 'number'; })) L.numericPlays = true;
       s.items = s.items.concat(items);
       s.offset += items.length;
-      if (items.length < ARC_PAGE) s.done = true;
+      if (!items.length || (typeof s.total === 'number' ? s.offset >= s.total : items.length < ARC_PAGE)) s.done = true;
     }).catch(function (e) {
       if (e && e.status === 404 && s.offset === 0 && !s.items.length) return fetchSiteOld(s);
       throw e;

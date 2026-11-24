@@ -23,7 +23,7 @@
   // ── Auth + mod check ──────────────────────────────────────────────────────
   (function init() {
     var token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login'; return; }
+    if (!token) { window.location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search); return; }
 
     fetch(API_BASE + '/mod/check', {
       headers: { 'Authorization': 'Bearer ' + token },

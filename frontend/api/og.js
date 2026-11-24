@@ -143,7 +143,7 @@ async function lp(id) {
   const state = l.status === 'live' ? '🔴 Live now' : l.status === 'ended' ? 'Ended' : (l.starts_at ? 'Starts ' + new Date(l.starts_at).toUTCString().replace(/:\d\d GMT$/, ' UTC') : 'Starting soon');
   const cover = (d.now && d.now.track && d.now.track.cover_url) || ((d.items || [])[0] && d.items[0].track && d.items[0].track.cover_url);
   return {
-    title: l.title + ' — listening party',
+    title: /listening party\s*$/i.test(l.title) ? l.title : l.title + ' — listening party',
     description: joinParts([state, 'Hosted by ' + host, (d.items || []).length ? (d.items.length + ' songs') : null, cleanText(l.description) || 'come listen together on wavernrs']),
     image: cover || FALLBACK_IMAGE,
     type: 'website',
