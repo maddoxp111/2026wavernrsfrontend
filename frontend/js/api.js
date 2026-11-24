@@ -56,7 +56,7 @@ function friendlyError(msg, status, fallback) {
   if (!m) return `${fallback || 'something went wrong'} (${status})`;
   if (/<\/?(html|head|body|div|span|title)\b/i.test(m) || m.length > 300) return BUSY_MSG;
   // database and gateway trouble should never be shown in its raw form
-  if (/cloudflare|error code 5\d\d|connection timed out|schema cache|PGRST\d+|database is busy|could not query the database|fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|upstream|statement timeout|canceling statement|Connection terminated|AbortError|was aborted/i.test(m)) return BUSY_MSG;
+  if (/cloudflare|error code 5\d\d|connection timed out|schema cache|PGRST\d+|database is busy|could not query the database|fetch failed|ECONNRESET|ETIMEDOUT|socket hang up|upstream|statement timeout|canceling statement|Connection terminated|AbortError|was aborted|(column|relation|function) \S+ does not exist/i.test(m)) return BUSY_MSG;
   return m;
 }
 window.WV_BUSY_MSG = BUSY_MSG;
