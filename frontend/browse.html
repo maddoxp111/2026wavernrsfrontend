@@ -728,6 +728,25 @@
       s.items = s.items.concat(items);
       s.offset += items.length;
       if (items.length < ARC_PAGE) s.done = true;
+    }).catch(function (e) {
+      if (e && e.status === 404 && s.offset === 0 && !s.items.length) return fetchSiteOld(s);
+      throw e;
+    });
+  }
+  function fetchSiteOld(s) {
+    var seq = L.seq;
+    var eras = s.eras ? s.eras.split(',') : [];
+    var p = eras.length
+      ? Promise.all(eras.map(function (id) { return api('/discover/era/' + encodeURIComponent(id)).catch(function (e) { if (e && e.navAborted) throw e; return []; }); })).then(function (ls) { var all = []; ls.forEach(function (l) { if (Array.isArray(l)) all = all.concat(l); }); return all; })
+      : api('/discover').then(function (d) { return (d && Array.isArray(d.recent)) ? d.recent : []; });
+    return p.then(function (items) {
+      if (!L || L.seq !== seq) return;
+      var want = s.kind === 'edits' ? 'track' : 'album';
+      items = items.filter(function (x) { return x && x.id && (x._type === 'album' ? 'album' : 'track') === want; }).sort(cmpFor(S.sort));
+      s.items = items;
+      s.offset = items.length;
+      s.total = items.length;
+      s.done = true;
     });
   }
   function fetchStream(s) { return s.site ? fetchSite(s) : fetchArc(s); }

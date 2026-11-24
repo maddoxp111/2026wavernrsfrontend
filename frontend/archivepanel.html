@@ -2251,7 +2251,7 @@
     var value;
     if (action === 'delete') { if (!confirm('delete ' + ids.length + ' comp(s) and all their tracks? it goes to the recycle bin (Archive panel > Deleted). only the last 60 deleted comps can be restored')) return; }
     if (action === 'set_artist') { value = prompt('new artist name for ' + ids.length + ' comp(s)'); if (!value) return; }
-    try { var r = await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: action, value: value }) }); _mg.sel = {}; mgLoad(); if (_mg.editing && ids.indexOf(_mg.editing) >= 0) mgCloseEditor(); }
+    try { var r = await api('/archive-manage/comps/bulk', { method: 'POST', body: JSON.stringify({ ids: ids, action: action, value: value }) }); var bf = (r && r.failed) || []; _mg.sel = {}; mgLoad(); if (_mg.editing && ids.indexOf(_mg.editing) >= 0 && !bf.some(function(x) { return x.id === _mg.editing; })) mgCloseEditor(); if (bf.length) alert((r.done || 0) + ' done, ' + bf.length + ' failed: ' + (bf[0].error || 'unknown error')); }
     catch (e) { alert(e.message || 'Failed'); }
   };
   window.mgBulkMerge = async function() {

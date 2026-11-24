@@ -423,7 +423,12 @@
       if (d.trackers && nq.length >= 2) {
         trackers = d.trackers.filter(function (t) { return (' ' + norm([t.name, t.slug].join(' '))).indexOf(' ' + nq) >= 0 || (nq.length >= 5 && (' ' + norm(t.blurb) + ' ').indexOf(' ' + nq + ' ') >= 0); });
       }
-      var playlists = (d.pl && Array.isArray(d.pl.items)) ? d.pl.items.filter(function (p) { return p && p.id; }) : [];
+      var plWords = nq.split(' ').filter(Boolean);
+      var playlists = (d.pl && Array.isArray(d.pl.items)) ? d.pl.items.filter(function (p) {
+        if (!p || !p.id) return false;
+        var t = ' ' + norm(p.title) + ' ';
+        return plWords.every(function (w) { return t.indexOf(w) >= 0; });
+      }) : [];
       return { nq: nq, songs: songs, comps: comps, archived: archived, aTracks: aTracks, artists: artists, editors: editors, playlists: playlists, res: res, resTotal: (d.res && d.res.total) || res.length, yaItems: yaItems, tweetCount: ya.tweet_count || 0, trackers: trackers, badges: badges };
     }
 

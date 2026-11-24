@@ -1519,7 +1519,7 @@ window._ytBooted = false;
       document.getElementById('tw-top').innerHTML = '<div class="tw-prof"><img src="' + esc(pr.pfp || '') + '" alt="" referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'"><div><div class="tw-pn">' + esc(pr.name || 'ye') + '</div><div class="tw-pu">@' + esc(pr.username || 'kanyewest') + (pr.followers ? ' · ' + num(pr.followers) + ' followers' + (st.year ? ' in ' + esc(st.year) : '') : '') + '</div></div></div>';
       document.getElementById('tw-count').textContent = st.total.toLocaleString() + ' tweet' + (st.total === 1 ? '' : 's');
       var feed = document.getElementById('tw-feed');
-      feed.innerHTML = st.items.length ? st.items.map(card).join('') + (st.items.length < st.total ? '<div class="yt-more"><button class="wv-btn-ghost" id="tw-more">show more</button></div>' : '') : '<div class="yt-empty"><b>no tweets match</b>try something else</div>';
+      feed.innerHTML = st.items.length ? st.items.map(function (t) { return card(t); }).join('') +(st.items.length < st.total ? '<div class="yt-more"><button class="wv-btn-ghost" id="tw-more">show more</button></div>' : '') : '<div class="yt-empty"><b>no tweets match</b>try something else</div>';
       var mb = document.getElementById('tw-more'); if (mb) mb.onclick = function () { mb.disabled = true; load(true); };
     }
     root.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-share]'); if (b) { e.preventDefault(); shareTweet(b.getAttribute('data-share')); } });
