@@ -674,12 +674,14 @@
     var el = document.getElementById('album-container'); if (!el) return;
     el.innerHTML = '<div class="empty-state qc-removed"><div class="empty-icon">' + _qcIcon(26) + '</div>' +
       '<div class="empty-title">this was removed from the site</div>' +
-      '<div class="empty-desc">it got taken down while we cleaned up the archive (stuff like unfinished posts, loops and chat clips). if you think it should be back, let a mod know</div>' +
+      '<div class="empty-desc">it got taken down while we cleaned up the archive (stuff like snippets, shitposts, unfinished posts, loops and chat clips) or its waiting for a mod to check it. if you think it should be up, let a mod know</div>' +
       '<a href="/archive" class="btn btn-primary">browse the archive</a></div>';
   }
   function _qcBy(by) {
     by = String(by || '');
-    if (by === 'ai') return 'the AI';
+    if (by === 'ai' || by === 'ai2') return 'the AI';
+    if (by === 'rule:hold') return 'the import filter';
+    if (by === 'rule:sweep') return 'the junk sweep';
     if (by.indexOf('rule:') === 0) return 'an auto rule (' + by.slice(5).replace(/_/g, ' ') + ')';
     if (by.indexOf('staff:') === 0) return by.slice(6) || 'staff';
     return by || 'someone';
@@ -688,7 +690,14 @@
     var q = album && album.qc;
     var ban = document.getElementById('qc-banner');
     if (ban) {
-      if (q && q.hidden) {
+      if (q && q.hidden && (q.review || q.status === 'review')) {
+        ban.innerHTML = '<span class="qc-banner-ic">' + _qcIcon(18) + '</span>' +
+          '<div class="qc-banner-tx"><b>' + (q.held ? 'held for review' : 'waiting for review') + ', not on the site yet</b>' + (q.reason ? ' · ' + escHtml(q.reason) : '') + ' · by ' + escHtml(_qcBy(q.by)) + (q.at ? ' · ' + escHtml(timeAgo(q.at)) : '') +
+          '<div class="qc-banner-sub">' + (q.held ? 'the bot held this back when it was posted so it never went public. ' : '') + 'only staff can open this page rn. keep it to put it on the site, or keep it off and it moves to the Removed list</div></div>' +
+          '<button class="wv-pill brand" id="qc-bring-back" onclick="staffQcRestore()">put it on the site</button>' +
+          '<button class="wv-pill" id="qc-keep-off" onclick="staffQcRemove()">keep it off</button>';
+        ban.hidden = false;
+      } else if (q && q.hidden) {
         ban.innerHTML = '<span class="qc-banner-ic">' + _qcIcon(18) + '</span>' +
           '<div class="qc-banner-tx"><b>removed from the site</b>' + (q.reason ? ' · ' + escHtml(q.reason) : '') + ' · by ' + escHtml(_qcBy(q.by)) + (q.at ? ' · ' + escHtml(timeAgo(q.at)) : '') +
           '<div class="qc-banner-sub">only staff can open this page rn. everyone else sees a removed message and it doesnt show anywhere on the site</div></div>' +
@@ -704,32 +713,34 @@
   window.staffQcRemove = async function () {
     if (!album) return;
     var aid = album.id;
-    var reason = prompt('why is this coming off the site? (optional, only staff see it)', '');
+    var inReview = !!(album.qc && album.qc.hidden && (album.qc.review || album.qc.status === 'review'));
+    var reason = prompt(inReview ? 'why keep it off the site? (optional, only staff see it)' : 'why is this coming off the site? (optional, only staff see it)', '');
     if (reason === null) return;
     reason = String(reason).trim().slice(0, 300);
-    var btn = document.getElementById('staff-qc-rm'); if (btn) btn.disabled = true;
+    var btn = document.getElementById('staff-qc-rm') || document.getElementById('qc-keep-off'), other = document.getElementById('qc-bring-back'); if (btn) btn.disabled = true; if (other) other.disabled = true;
     try {
       await api('/archive-qc/remove', { method: 'POST', body: JSON.stringify({ ids: [aid], reason: reason }) });
       if (!album || album.id !== aid) return;
-      album.qc = Object.assign({}, album.qc || {}, { hidden: true, status: 'hidden', reason: reason || 'removed by staff', by: _qcMe(), score: null, kind: null, at: new Date().toISOString() });
+      album.qc = Object.assign({}, album.qc || {}, { hidden: true, status: 'hidden', reason: reason || 'removed by staff', by: _qcMe(), score: null, kind: null, at: new Date().toISOString(), held: false, review: false });
       paintQc();
       _sbMsg('removed from the site...nothing got deleted, bring it back anytime');
       var ban = document.getElementById('qc-banner'); if (ban && ban.scrollIntoView) ban.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } catch (e) { _sbMsg(_qcErr(e, 'couldnt remove it'), true); if (btn) btn.disabled = false; }
+    } catch (e) { _sbMsg(_qcErr(e, 'couldnt remove it'), true); if (btn) btn.disabled = false; if (other) other.disabled = false; }
   };
   window.staffQcRestore = async function () {
     if (!album) return;
     var aid = album.id;
-    var btn = document.getElementById('qc-bring-back'); if (btn) { btn.disabled = true; btn.textContent = 'bringing it back…'; }
+    var wasReview = !!(album.qc && (album.qc.review || album.qc.status === 'review'));
+    var btn = document.getElementById('qc-bring-back'), other = document.getElementById('qc-keep-off'); if (btn) { btn.disabled = true; btn.textContent = wasReview ? 'putting it on the site…' : 'bringing it back…'; } if (other) other.disabled = true;
     try {
       await api('/archive-qc/restore', { method: 'POST', body: JSON.stringify({ ids: [aid] }) });
       if (!album || album.id !== aid) return;
-      album.qc = Object.assign({}, album.qc || {}, { hidden: false, status: 'ok', reason: 'brought back', by: _qcMe(), at: new Date().toISOString() });
+      album.qc = Object.assign({}, album.qc || {}, { hidden: false, status: 'ok', reason: 'brought back', by: _qcMe(), at: new Date().toISOString(), held: false, review: false });
       paintQc();
-      if (typeof wvToast === 'function') wvToast('its back on the site');
+      if (typeof wvToast === 'function') wvToast(wasReview ? 'its on the site now' : 'its back on the site');
     } catch (e) {
-      if (typeof wvToast === 'function') wvToast(_qcErr(e, 'couldnt bring it back'), 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'bring it back'; }
+      if (typeof wvToast === 'function') wvToast(_qcErr(e, wasReview ? 'couldnt put it on the site' : 'couldnt bring it back'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = wasReview ? 'put it on the site' : 'bring it back'; } if (other) other.disabled = false;
     }
   };
   if (!window._albRolesHook) {
