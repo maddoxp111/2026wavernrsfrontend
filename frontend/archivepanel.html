@@ -3077,7 +3077,7 @@
       // only announce the notice when the reason changes, not on every 30s repaint
       var stall = stalled ? '<div class="qc-stall"' + (stalled !== Q.stallSaid ? ' role="alert"' : '') + '><b>' + (partial ? 'the AI checker is only partly running' : 'the AI checker is stalled') + '</b>' + esc(stalled) +
         (trDay && /held|new imports/i.test(stalled) ? '<small>today: ' + money(trUsed) + ' of ' + money(trDay) + ' used on held and new imports</small>' : '') +
-        '<small>' + (partial ? 'held posts still get checked first while todays allowance lasts. until the AI or you decide, they stay off the site' : 'held posts stay off the site and wait here for you until it runs again') + '</small></div>' : '';
+        '<small>' + (partial ? 'held posts still get a first look from the AI while todays allowance lasts. they stay off the site until someone keeps them' : 'held posts stay off the site and wait here for you') + '</small></div>' : '';
       Q.stallSaid = stalled || null;
       var tile = function (n, label, act, attn) { return (act ? '<button type="button" class="qc-tile' + (attn ? ' is-attn' : '') + '" data-qc-act="' + act + '">' : '<div class="qc-tile">') + '<div class="qc-tile-n">' + (c ? num(n) : '–') + '</div><div class="qc-tile-l">' + label + '</div>' + (act ? '</button>' : '</div>'); };
       box.innerHTML =
@@ -3308,6 +3308,7 @@
       if (last && last.started_at && (last.finished_at || last.started_at)) lines.push('<div style="color:var(--text-3);">before that: ' + (last.dry_run ? 'a preview' : 'a real sweep') + ' ' + esc(ago(last.finished_at || last.started_at)) + (last.complete ? '' : last.cancelled ? ' (stopped)' : last.error ? ' (failed)' : '') + ' · ' + num(last.hidden) + (last.dry_run ? ' would come off' : ' taken off') + ' · ' + num(last.reviewed) + ' to review</div>');
       if (s.env_off) lines.push('<div class="is-warn">the automatic run is switched off on the server (ARCHIVE_SWEEP=off). you can still run it from here</div>');
       else if (s.auto_done && s.auto_done.at) lines.push('<div style="color:var(--text-3);">a full sweep finished ' + esc(ago(s.auto_done.at)) + ', so it wont run on its own again</div>');
+      else if (started && (!s.auto || s.cancelled)) lines.push('<div style="color:var(--text-3);">' + (run ? 'started by hand, so it wont start on its own after this' : (s.cancelled ? 'it was stopped' : dry ? 'staff ran a preview' : 'staff ran it by hand') + ', so it wont start on its own again. hit <b>Run sweep</b> to ' + (dry ? 'do it for real' : s.cancelled ? 'run it again' : 'finish it')) + '</div>');
       else lines.push('<div style="color:var(--text-3);">it also runs once on its own about 10 min after the server starts, until one full real pass finishes</div>');
       var rules = s.rules || {}, rk = Object.keys(rules).filter(function (k) { return rules[k] && Number(rules[k].matched) > 0; }).sort(function (a, b) { return (Number(rules[b].matched) || 0) - (Number(rules[a].matched) || 0); });
       var rulesHtml = rk.length ? '<div class="qc-sw-rules">' + rk.map(function (k) {
@@ -3432,7 +3433,7 @@
       var box = $('qc-chan'); if (!box) return;
       var C = Q.ch;
       var head = '<div class="qc-head"><b>Channel rules</b>' + (C.pol ? '<span class="wv-chip">' + plural(Object.keys(C.pol.overrides).length, 'custom rule') + '</span>' : '') + '<button class="wv-see-all" data-qc-act="ch-reload">refresh</button></div>';
-      var sub = '<div class="qc-sub2">what the bot does with <b>new</b> posts in each Discord channel. channels without a custom rule use the default: the edits channels import, chat, snippet, beats, shitpost edits and repost channels are skipped, and a channel it doesnt recognise is held for review. this doesnt touch whats already on the site...thats the junk sweep (which leaves a channel alone if you set it to import). the bot only reads Discord, it never posts.</div>';
+      var sub = '<div class="qc-sub2">what the bot does with <b>new</b> posts in each Discord channel. channels without a custom rule use the default: the edits channels import, chat, snippet, beats, shitpost edits and repost channels are skipped, and a channel it doesnt recognise is held for review. this doesnt touch whats already on the site...thats the junk sweep (setting a channel to import turns off the sweeps channel rule for it, but its other rules like short clips and reposts still apply). the bot only reads Discord, it never posts.</div>';
       if (!C.pol) {
         box.innerHTML = '<div class="qc-box" id="qc-ch-card">' + head + sub + (C.err ? '<div class="qc-note is-bad">couldnt load the channel rules: ' + esc(C.err) + '</div><div class="qc-btns" style="justify-content:center;margin-top:0;"><button class="wv-pill" data-qc-act="ch-reload">try again</button></div>' : '<div class="loading"><div class="spinner"></div></div>') + '</div>';
         return;
